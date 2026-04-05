@@ -84,13 +84,16 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dkctrl-btns{display:flex;gap:4px;width:100%;justify-content:center}
 .dkwaves{flex:1;min-width:0}
 .dkbtn{width:33px;height:33px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:transparent;transition:all .14s;letter-spacing:.03em;flex-shrink:0}
-.dkbtn:disabled{opacity:.3;cursor:not-allowed}
-.dkbtn.dkcue{border-color:rgba(251,191,36,.45);color:var(--ylw)}
-.dkbtn.dkcue:hover:not(:disabled){background:rgba(251,191,36,.1)}
-.dkbtn.dkcue.ac{background:rgba(251,191,36,.18);border-color:var(--ylw);box-shadow:0 0 8px rgba(251,191,36,.35)}
-.dkbtn.dkplay{border-color:rgba(52,211,153,.4);color:var(--grn)}
-.dkbtn.dkplay:hover:not(:disabled){background:rgba(52,211,153,.1)}
-.dkbtn.dkplay.ac{background:rgba(52,211,153,.15);border-color:var(--grn)}
+.dkbtn:disabled{opacity:.25;cursor:not-allowed}
+/* CUE button states: dim → medium (playing) → bright (cue active) → pressed (extra bright) */
+.dkbtn.dkcue{border-color:rgba(251,191,36,.25);color:rgba(251,191,36,.35)}
+.dkbtn.dkcue.medium{border-color:rgba(251,191,36,.5);color:rgba(251,191,36,.7);background:rgba(251,191,36,.06)}
+.dkbtn.dkcue.ac{border-color:var(--ylw);color:var(--ylw);background:rgba(251,191,36,.2);box-shadow:0 0 10px rgba(251,191,36,.4)}
+/* PLAY button states: dim → blink (cue state) → bright (playing) */
+.dkbtn.dkplay{border-color:rgba(52,211,153,.25);color:rgba(52,211,153,.35)}
+.dkbtn.dkplay.ac{border-color:var(--grn);color:var(--grn);background:rgba(52,211,153,.18);box-shadow:0 0 10px rgba(52,211,153,.35)}
+.dkbtn.dkplay.blink{animation:play-blink 1s ease-in-out infinite}
+@keyframes play-blink{0%,100%{border-color:rgba(52,211,153,.25);color:rgba(52,211,153,.35);background:transparent;box-shadow:none}50%{border-color:var(--grn);color:var(--grn);background:rgba(52,211,153,.15);box-shadow:0 0 8px rgba(52,211,153,.3)}}
 .deck-row.compact .dkbtn{width:24px;height:24px}
 .deck-row.compact .dkctrl{width:56px;gap:3px}
 .deck-row.compact .dwov{height:14px;margin-bottom:1px}
@@ -157,7 +160,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .tcbtn.ac-mtc{color:var(--blu);border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12)}
 .tcbtn.ac-art{color:var(--org);border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.12)}
 /* SYNC / MASTER LED buttons — fixed position below timecode */
-.dksm{display:flex;gap:4px;align-items:center}
+.dksm{display:flex;gap:3px;align-items:center;margin-left:auto;flex-shrink:0}
 .dksm-btn{padding:2px 7px;border-radius:3px;font:700 8px var(--mn);letter-spacing:.05em;border:1px solid;background:transparent;transition:all .15s;cursor:default;min-width:42px;text-align:center}
 .dksm-sync{border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.2)}
 .dksm-sync.on{border-color:rgba(255,255,255,.6);color:#fff;background:rgba(255,255,255,.1);box-shadow:0 0 6px rgba(255,255,255,.15)}
@@ -1117,11 +1120,7 @@ function deckHTML(slot){
           ${!isHW?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
         </div>
       </div>
-      <div class="dksm" id="dksm${slot}">
-        <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}">SYNC</span>
-        <span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}">MASTER</span>
-      </div>
-      <div class="dktn"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span><span class="dktn-a" id="dta${slot}">${d.ar?` · ${d.ar}`:''}</span></div>
+      <div class="dktn"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span><span class="dktn-a" id="dta${slot}">${d.ar?` · ${d.ar}`:''}</span><div class="dksm" id="dksm${slot}"><span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}">SYNC</span><span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}">MASTER</span></div></div>
       <div class="dktn dktn-info"><span class="dbk-hd" id="dbk${slot}">—</span><span class="dktn-time" id="dtime${slot}">0:00.00 / --:--.--</span></div>
       <div class="dtbody">
         <div class="dkctrl">
@@ -1560,18 +1559,18 @@ function tick(){
     }
 
     // Smooth interpolated position for HW decks
-    // CDJ status arrives at ~5Hz with integer beatNum, causing display jumps
-    // Solution: maintain continuous _smoothPos that converges to CDJ target
     let displayPos=d.pos||0;
     if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
       const target=d.pos+(Date.now()-d._posTime);
-      if(d._smoothPos==null) d._smoothPos=target;
-      const diff=target-d._smoothPos;
-      if(Math.abs(diff)>2000){d._smoothPos=target;} // large jump: snap (seek/track change)
-      else{d._smoothPos+=diff*0.18;} // smooth convergence
+      if(d._smoothPos==null||d._stateChanged) {d._smoothPos=target;d._stateChanged=false;}
+      else{
+        const diff=target-d._smoothPos;
+        if(Math.abs(diff)>1000){d._smoothPos=target;} // large jump: snap
+        else{d._smoothPos+=diff*0.35;} // smooth convergence
+      }
       displayPos=d._smoothPos;
     }else if(d.type==='hw'){
-      d._smoothPos=displayPos;
+      d._smoothPos=null; // reset on stop/pause so next play snaps
     }
     const prog=d.dur>0?(displayPos/d.dur):0;
 
@@ -1668,10 +1667,21 @@ function tick(){
       const usbC=mc>0?MCOLORS[mc]:'';
       did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)');
     }
+    // CUE/PLAY button states — CDJ-3000 style
     const pb=el.querySelector('[data-a="play"]');
-    if(pb){pb.textContent=d.pl?'⏸':'▶';pb.classList.toggle('ac',d.pl);}
+    if(pb){
+      pb.textContent=d.pl?'⏸':'▶';
+      pb.classList.toggle('ac',d.pl);
+      pb.classList.toggle('blink',d.cu&&!d.pl); // blink in CUE state
+      pb.classList.remove('blink');
+      if(d.cu&&!d.pl) pb.classList.add('blink');
+    }
     const cub=el.querySelector('[data-a="cue"]');
-    if(cub)cub.classList.toggle('ac',d.cu&&!d.pl);
+    if(cub){
+      cub.classList.remove('ac','medium');
+      if(d.cu&&!d.pl) cub.classList.add('ac');       // CUE active: bright
+      else if(d.pl) cub.classList.add('medium');       // Playing: medium
+    }
 
 
     // Waveform — ALWAYS
@@ -1980,7 +1990,7 @@ if(E){
     if(newTid>0 && oldTid>0 && newTid!==oldTid){
       console.log(`[UI] P${status.playerNum} track change: ${oldTid} → ${newTid}`);
       dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;
-      dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;
+      dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
       dk._trackId=newTid;
       // Don't renderDecks() here — metadata will arrive shortly and trigger update
     } else if(newTid>0) dk._trackId=newTid;
@@ -1993,19 +2003,22 @@ if(E){
       if(dk._noTrackCount>=3 && dk.ld){
         console.log(`[UI] P${status.playerNum} track ejected`);
         dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
-        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;dk.baseBpm=0;dk.key='';dk._trackId=0;
+        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
         renderDecks();
       }
       return;
     }
     dk._noTrackCount=0;
     // STATE: IDLE=0, STOPPED=2, PLAYING=3, LOOPING=4, PAUSED=5, CUEDOWN=7
+    const wasPl=dk.pl, wasCu=dk.cu;
     dk.pl=status.state===3||status.state===4; // PLAYING or LOOPING
     dk.cu=status.state===7||status.state===8;  // CUEDOWN or PLATTERDOWN
+    if(dk.pl!==wasPl||dk.cu!==wasCu) dk._stateChanged=true;
     if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
-    if(status.bpmEffective)dk.bpm=Math.round(status.bpmEffective*10)/10;
-    else if(status.bpm)dk.bpm=Math.round(status.bpm*10)/10;
-    if(status.bpmTrack)dk.baseBpm=Math.round(status.bpmTrack*10)/10;
+    if(status.bpmEffective)dk.bpm=Math.round(status.bpmEffective*100)/100;
+    else if(status.bpm)dk.bpm=Math.round(status.bpm*100)/100;
+    // Use calculated baseBpm only if metadata hasn't provided authoritative value
+    if(status.bpmTrack&&!dk._metaBaseBpm)dk.baseBpm=Math.round(status.bpmTrack*100)/100;
     if(status.key)dk.key=_toCamelot(status.key);
     if(status.trackName)dk.tn=status.trackName;
     if(status.artistName)dk.ar=status.artistName;
@@ -2120,8 +2133,9 @@ if(E){
     const dk=DECKS[li];if(!dk)return;
     if(d.title)dk.tn=d.title;
     if(d.artist)dk.ar=d.artist;
-    if(d.key)dk.key=d.key;
+    if(d.key)dk.key=_toCamelot(d.key);
     if(d.duration>0)dk.dur=d.duration*1000; // seconds→ms
+    if(d.bpm>0){dk.baseBpm=d.bpm;dk._metaBaseBpm=true;} // metadata BPM is authoritative
     if(d.album)dk.album=d.album;
     console.log(`[UI] P${d.playerNum} meta: "${d.title}" by "${d.artist}"`);
     // Update track name in TCNet layer
