@@ -195,6 +195,25 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 .dk[data-st="play"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
 .dbk-hd{font:600 12px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;margin-left:auto;padding-left:6px;white-space:nowrap;flex-shrink:0}
 .dk[data-st="play"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
+.devbar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,0,0,.3);border:1px solid var(--bdr);border-radius:6px;margin-bottom:8px;min-height:44px;flex-wrap:wrap}
+.devbar-item{display:flex;align-items:center;gap:5px;padding:4px 8px;background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:5px;transition:border-color .2s}
+.devbar-item.dvi-play{border-color:rgba(52,211,153,.3)}
+.devbar-item.dvi-master{border-color:rgba(251,191,36,.4)}
+.dvi-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 11px var(--mn);flex-shrink:0;position:relative}
+.dvi-icon.cdj{background:rgba(52,211,153,.1);color:var(--grn);border:1px solid rgba(52,211,153,.2)}
+.dvi-icon.djm{background:rgba(167,139,250,.1);color:var(--pur);border:1px solid rgba(167,139,250,.2)}
+.dvi-state{position:absolute;bottom:-2px;right:-2px;font-size:8px;line-height:1}
+.dvi-info{display:flex;flex-direction:column;gap:1px;min-width:0}
+.dvi-model{font:500 10px var(--sn);color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dvi-badges{display:flex;gap:3px;align-items:center}
+.dvi-bd{padding:1px 4px;border-radius:2px;font:700 7px var(--mn);letter-spacing:.04em}
+.dvi-bd.master{background:rgba(251,191,36,.15);color:var(--ylw)}
+.dvi-bd.master.active{background:rgba(251,146,60,.25);color:var(--org)}
+.dvi-bd.sync{background:rgba(96,165,250,.1);color:var(--blu)}
+.dvi-bd.onair{background:rgba(248,113,113,.12);color:var(--red);animation:pulse-air 1s ease-in-out infinite}
+.dvi-sep{width:1px;height:28px;background:var(--bdr);margin:0 2px}
+.dvi-link{display:flex;align-items:center;gap:4px;padding:4px 6px}
+.dvi-link-icon{font:700 10px var(--mn);color:var(--grn)}
 .mode-bar{display:flex;align-items:center;gap:10px;padding:6px 18px;background:rgba(0,0,0,.25);border-bottom:1px solid var(--bdr);flex-shrink:0}
 .mode-label{font:600 10px var(--mn);color:var(--tx4);letter-spacing:.08em}
 .mode-btns{display:flex;gap:2px;background:rgba(0,0,0,.3);border-radius:5px;padding:2px;border:1px solid var(--bdr)}
@@ -235,6 +254,7 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
     <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
     <span style="font:400 11px var(--sn);color:var(--ylw)">START를 눌러 TCNet을 시작하세요</span>
   </div>
+  <div class="devbar" id="devBar" style="display:none"></div>
   <div id="faderSection" style="display:none">
     <div class="sl" style="font-size:9px">DJM 채널 페이더 → Arena Opacity</div>
     <div class="fstrip">
@@ -1661,6 +1681,45 @@ function updateHeader(){
   document.getElementById('stDecks').textContent=active;
   document.getElementById('stUp').textContent=run?Math.floor(up/60)+'m '+(up%60)+'s':'—';
   document.getElementById('stAlert').classList.toggle('hide',run);
+  updateDevBar();
+}
+function updateDevBar(){
+  const bar=document.getElementById('devBar');if(!bar)return;
+  const now=Date.now();
+  const hwDevs=pdjlDevices.filter(d=>!d.virtual&&now-d.lastSeen<10000);
+  if(hwDevs.length===0){bar.style.display='none';return;}
+  bar.style.display='flex';
+  // Sort: DJM first, then CDJ by playerNum
+  const djms=hwDevs.filter(d=>d.type==='DJM');
+  const cdjs=hwDevs.filter(d=>d.type==='CDJ').sort((a,b)=>(a.playerNum||0)-(b.playerNum||0));
+  let html='<div class="dvi-link"><span class="dvi-link-icon">⇄</span><span style="font:700 9px var(--mn);color:var(--grn)">LINK</span></div>';
+  if(djms.length){
+    html+='<div class="dvi-sep"></div>';
+    djms.forEach(d=>{
+      html+=`<div class="devbar-item"><div class="dvi-icon djm"><span style="font-size:9px">♪</span></div><div class="dvi-info"><div class="dvi-model">${d.name||'DJM'}</div></div></div>`;
+    });
+  }
+  cdjs.forEach(d=>{
+    const pn=d.playerNum||0;
+    const dk=pn>0?DECKS[pn-1]:null;
+    const isPlay=dk&&dk.pl;
+    const isMaster=dk&&dk.master;
+    const isSync=dk&&dk.sync;
+    const isOnAir=dk&&dk.onAir;
+    const cls=['devbar-item'];
+    if(isPlay)cls.push('dvi-play');
+    if(isMaster)cls.push('dvi-master');
+    html+=`<div class="dvi-sep"></div><div class="${cls.join(' ')}">`;
+    html+=`<div class="dvi-icon cdj">${pn}<span class="dvi-state">${isPlay?'▶':'⊖'}</span></div>`;
+    html+=`<div class="dvi-info"><div class="dvi-model">${d.name||'CDJ'}</div>`;
+    html+=`<div class="dvi-badges">`;
+    if(isMaster)html+=`<span class="dvi-bd master active">MASTER</span>`;
+    else html+=`<span class="dvi-bd master">MASTER</span>`;
+    if(isSync)html+=`<span class="dvi-bd sync">SYNC</span>`;
+    if(isOnAir)html+=`<span class="dvi-bd onair">ON AIR</span>`;
+    html+=`</div></div></div>`;
+  });
+  bar.innerHTML=html;
 }
 
 // ════ Tab rendering ══════════════════════════════════
