@@ -1550,10 +1550,10 @@ function tick(){
     }
 
     // Interpolate timecode for smooth display (HW mode: pos updates on beat boundaries)
+    // d.pos is in native track time (baseBPM), so interpolation rate = 1.0 (no pitch scaling)
     let displayPos=d.pos||0;
     if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
-      const pitchMul=1+(d.pitch||0)/100;
-      displayPos+=((Date.now()-d._posTime)*pitchMul);
+      displayPos+=(Date.now()-d._posTime);
     }
     const prog=d.dur>0?(displayPos/d.dur):0;
 
