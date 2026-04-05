@@ -2104,6 +2104,13 @@ if(E){
     if(curTab==='pdjl')renderPDJL();
   });
   loadInterfaces();
+  // Shutdown overlay
+  window.bridge.onQuitting?.(()=>{
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:12px';
+    ov.innerHTML='<div style="font:600 16px var(--sn);color:var(--tx);letter-spacing:.05em">종료 중...</div><div style="font:400 11px var(--mn);color:var(--tx3)">TCNet 연결 해제 및 소켓 정리</div>';
+    document.body.appendChild(ov);
+  });
 }
 
 function fTC(ms){if(!ms&&ms!==0)return'--:--:--:--';const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000),f=Math.floor((ms%1000)/33.33);return z(h)+':'+z(m)+':'+z(s)+':'+z(f);}

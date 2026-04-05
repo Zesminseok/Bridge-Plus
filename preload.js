@@ -21,4 +21,5 @@ contextBridge.exposeInMainWorld('bridge',{
   onTrackMeta:(cb)=>ipcRenderer.on('bridge:trackmeta',(_,d)=>cb(d)),
   requestArtwork:(d)=>ipcRenderer.invoke('bridge:requestArtwork',d),
   sendArtnet:(d)=>ipcRenderer.invoke('bridge:artTimeCode',d),
+  onQuitting:(cb)=>ipcRenderer.on('app:quitting',()=>cb()),
 });

@@ -115,22 +115,29 @@ ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTime
 ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
 
 app.whenReady().then(createWindow);
-let _cleaned=false;
-function cleanup(){
-  if(_cleaned)return;_cleaned=true;
-  saveBounds();
-  clearInterval(iv);
-  try{bridge?.stop();}catch(_){}
-  bridge=null;
-  try{_artSocket.close();}catch(_){}
+let _cleaned=false,_quitting=false;
+function doQuit(){
+  if(_quitting)return;_quitting=true;
+  // Show "shutting down" in renderer
+  try{win?.webContents.send('app:quitting');}catch(_){}
+  // Wait a frame for UI to render, then cleanup
+  setTimeout(()=>{
+    saveBounds();
+    clearInterval(iv);
+    try{bridge?.stop();}catch(_){}
+    bridge=null;
+    try{_artSocket.close();}catch(_){}
+    _cleaned=true;
+    // Wait 200ms for OptOut UDP packets to flush, then quit
+    setTimeout(()=>{
+      try{win?.destroy();}catch(_){}
+      app.quit();
+    },200);
+  },50);
+  // Force exit after 1s as safety net
+  setTimeout(()=>process.exit(0),1000).unref();
 }
-app.on('window-all-closed',()=>{
-  cleanup();
-  // Wait 200ms for OptOut UDP packets to flush, then quit
-  setTimeout(()=>{app.quit();},200);
-  // Force exit after 800ms as safety net
-  setTimeout(()=>process.exit(0),800).unref();
-});
-app.on('before-quit',()=>{cleanup();});
-app.on('will-quit',()=>{cleanup();setTimeout(()=>process.exit(0),300).unref();});
-app.on('activate',()=>{if(!_cleaned&&BrowserWindow.getAllWindows().length===0)createWindow();});
+app.on('window-all-closed',()=>{doQuit();});
+app.on('before-quit',(e)=>{if(!_quitting){e.preventDefault();doQuit();}});
+app.on('will-quit',()=>{if(!_cleaned){saveBounds();clearInterval(iv);try{bridge?.stop();}catch(_){}bridge=null;try{_artSocket.close();}catch(_){}_cleaned=true;}setTimeout(()=>process.exit(0),300).unref();});
+app.on('activate',()=>{if(!_quitting&&BrowserWindow.getAllWindows().length===0)createWindow();});
