@@ -73,8 +73,9 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* Zoom: scrolling RGB waveform + beat grid */
 .dwz{height:80px;margin:0 0 4px;background:rgba(0,0,0,.4);border-radius:3px;overflow:hidden;cursor:pointer;display:flex;position:relative}
 .dwz canvas{flex:1;height:100%;display:block;min-width:0}
-.wf-key{position:absolute;top:3px;right:8px;font:700 13px var(--mn);color:var(--grn);text-shadow:0 0 4px rgba(0,0,0,.8);pointer-events:none;z-index:2}
-.wf-bpm{position:absolute;bottom:3px;right:8px;font:600 11px var(--mn);color:rgba(255,255,255,.7);text-shadow:0 0 4px rgba(0,0,0,.8);pointer-events:none;z-index:2}
+.wf-key{position:absolute;top:3px;right:8px;font:700 13px var(--mn);color:var(--grn);pointer-events:none;z-index:2;background:rgba(0,0,0,.65);padding:1px 5px;border-radius:3px}
+.wf-bpm{position:absolute;bottom:3px;right:8px;font:600 11px var(--mn);color:rgba(255,255,255,.7);pointer-events:none;z-index:2;background:rgba(0,0,0,.65);padding:1px 5px;border-radius:3px}
+.wf-key:empty,.wf-bpm:empty{display:none}
 /* Expanded full-width deck — only widens, no height change */
 .dk.dk-wide{grid-column:1/-1}
 /* Left control column: album art on top, CUE+PLAY row below */
@@ -261,18 +262,6 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
     <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
     <span style="font:400 11px var(--sn);color:var(--ylw)">START를 눌러 TCNet을 시작하세요</span>
   </div>
-  <div class="devbar" id="devBar" style="display:none"></div>
-  <div id="faderSection" style="display:none">
-    <div class="sl" style="font-size:9px">DJM 채널 페이더 → Arena Opacity</div>
-    <div class="fstrip">
-      <div class="fch"><div class="fchl">CH 1</div><div class="fbar"><div class="fbarf" id="fb0" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv0">100%</div><div class="fair hide" id="fair0">ON AIR</div></div>
-      <div class="fch"><div class="fchl">CH 2</div><div class="fbar"><div class="fbarf" id="fb1" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv1">100%</div><div class="fair hide" id="fair1">ON AIR</div></div>
-      <div class="fch"><div class="fchl">CH 3</div><div class="fbar"><div class="fbarf" id="fb2" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv2">100%</div><div class="fair hide" id="fair2">ON AIR</div></div>
-      <div class="fch"><div class="fchl">CH 4</div><div class="fbar"><div class="fbarf" id="fb3" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv3">100%</div><div class="fair hide" id="fair3">ON AIR</div></div>
-      <div class="fsep"></div>
-      <div class="fch"><div class="fchl">MASTER</div><div class="fbar"><div class="fbarf" id="fbM" style="height:100%;background:var(--grn)"></div></div><div class="fval" id="fvM">—</div></div>
-    </div>
-  </div>
   <div class="sl">OUTPUT LAYERS</div>
   <div class="out-layers" id="outLayers"></div>
   <div class="mode-bar">
@@ -282,6 +271,7 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
       <button class="mode-btn ac" id="modeHW" onclick="switchMode('hw')">HARDWARE</button>
     </div>
     <span class="mode-hint" id="modeHint">CDJ 연결 시 자동 감지됩니다</span>
+    <span class="mode-hint" id="djmHint" style="display:none;color:var(--grn)"></span>
   </div>
   <div class="deck-area">
     <div id="hwSection" style="display:none">
@@ -295,10 +285,6 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
         <span style="font-size:18px;line-height:1">＋</span>
         <span>Virtual 덱 추가 <span style="color:var(--tx3);font-size:9px">(최대 8개)</span></span>
       </button>
-    </div>
-    <div id="djmSection" style="display:none">
-      <div class="sl mt">MIXER</div>
-      <div id="djmPanel"></div>
     </div>
   </div>
 </div>
@@ -1053,14 +1039,13 @@ function renderDecks(){
   document.getElementById('addDeckBtn').style.display=(!isHWMode&&slots.length<MAX_DECKS)?'':'none';
   document.getElementById('vtLabel').textContent=vtS.length?'VIRTUAL DECKS':'VIRTUAL DECKS — 덱 추가 버튼을 눌러 추가하세요';
 
+  // DJM 연결 상태를 mode-bar에 표시
   const djmDevs=pdjlDevices.filter(d=>d.type==='DJM');
-  // fader strip only shown when a DJM is connected via Pro DJ Link
-  document.getElementById('faderSection').style.display=djmDevs.length?'':'none';
-  const djmSec=document.getElementById('djmSection');
-  if(djmDevs.length){
-    djmSec.style.display='';
-    document.getElementById('djmPanel').innerHTML=`<div class="sgr">${djmDevs.map(d=>`<div class="srw"><span class="srl">${d.name}</span><span class="srv" style="color:var(--grn)">${d.ip}</span></div>`).join('')}</div>`;
-  }else djmSec.style.display='none';
+  const djmHint=document.getElementById('djmHint');
+  if(djmHint){
+    if(djmDevs.length){djmHint.style.display='';djmHint.textContent='♪ '+djmDevs.map(d=>d.name).join(', ')+' CONNECTED';}
+    else djmHint.style.display='none';
+  }
 
   // HW device list hidden in pure virtual mode
   const hwSecLabel=document.getElementById('hwSection');
@@ -1070,8 +1055,7 @@ function renderDecks(){
 }
 
 function deckHTML(slot){
-  const d=DECKS[slot],pct=Math.round((faders[slot]??0)/255*100);
-  const hasDJM=pdjlDevices.some(d=>d.type==='DJM');
+  const d=DECKS[slot];
   const isHW=d.type==='hw';
   const label=`PLAYER <span class="did-n">${slot+1}</span>`;
   if(!d.ld){
@@ -1085,10 +1069,10 @@ function deckHTML(slot){
       </div>
       ${isHW
         ?`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:80px;opacity:.5"><div style="font:400 13px var(--sn);color:var(--tx3)">${d.model?'로드 안됨':'CDJ 트랙 대기 중...'}</div><div style="font:400 9px var(--mn);color:var(--tx4);margin-top:4px">${d.model?'⬡ '+d.model+' — Empty Track':'CDJ에서 트랙을 로드하세요'}</div></div>`
-        :`${hasDJM?`<div class="dfrow"><span style="font:400 9px var(--mn);color:var(--tx3)">DJM${slot<4?' CH'+(slot+1):''}</span><div class="dfbar"><div class="dfbarf" id="dfd${slot}" style="width:${pct}%"></div></div><span class="dfpct" id="dfv${slot}">${pct}%</span></div>`:''}<div class="ddz"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">음원 드래그</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG</div></div>`}
+        :`<div class="ddz"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">음원 드래그</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG</div></div>`}
     </div>`;
   }
-  const artSrc=d.artUrl||'';
+  const artSrc=d.art||d.artUrl||'';
   return`<div class="dk" id="dk${slot}" data-st="stop">
     <div class="dshim"></div>
     <div class="dtop">
@@ -1121,11 +1105,6 @@ function deckHTML(slot){
         </div>
       </div>
     </div>
-    ${!isHW&&hasDJM?`<div class="dfrow">
-      <span style="font:400 9px var(--mn);color:var(--tx3)">DJM${slot<4?' CH'+(slot+1):''}</span>
-      <div class="dfbar"><div class="dfbarf" id="dfd${slot}" style="width:${pct}%"></div></div>
-      <span class="dfpct" id="dfv${slot}">${pct}%</span>
-    </div>`:''}
     <div class="dhw" id="dhw${slot}"><span class="dhwl" id="dhwl${slot}">${isHW?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL'}</span></div>
   </div>`;
 }
@@ -1542,18 +1521,17 @@ function tick(){
   Object.values(DECKS).forEach(d=>{
     const slot=d.slot;
     const el=document.getElementById('dk'+slot);if(!el)return;
-    const pct=slot<4?Math.round((faders[slot]??0)/255*100):100;
-
     // update virtual deck playback position — ALWAYS (not gated by run)
     if(d.type!=='hw'&&d.au&&d.ld){
       d.pos=d.au.currentTime*1000;
     }
 
     // Interpolate timecode for smooth display (HW mode: pos updates on beat boundaries)
-    // d.pos is in native track time (baseBPM), so interpolation rate = 1.0 (no pitch scaling)
+    // timecodeMs is track position; track advances at pitched rate in real-time
     let displayPos=d.pos||0;
     if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
-      displayPos+=(Date.now()-d._posTime);
+      const pitchMul=1+(d.pitch||0)/100;
+      displayPos+=((Date.now()-d._posTime)*pitchMul);
     }
     const prog=d.dur>0?(displayPos/d.dur):0;
 
@@ -1654,11 +1632,6 @@ function tick(){
     const cub=el.querySelector('[data-a="cue"]');
     if(cub)cub.classList.toggle('ac',d.cu&&!d.pl);
 
-    // DJM fader (only when running)
-    if(run){
-      const dfd=document.getElementById('dfd'+slot);if(dfd)dfd.style.width=pct+'%';
-      const dfv=document.getElementById('dfv'+slot);if(dfv)dfv.textContent=pct+'%';
-    }
 
     // Waveform — ALWAYS
     if(d.rgbWf){
@@ -1749,47 +1722,6 @@ function updateHeader(){
   document.getElementById('stDecks').textContent=active;
   document.getElementById('stUp').textContent=run?Math.floor(up/60)+'m '+(up%60)+'s':'—';
   document.getElementById('stAlert').classList.toggle('hide',run);
-  updateDevBar();
-}
-function updateDevBar(){
-  const bar=document.getElementById('devBar');if(!bar)return;
-  const now=Date.now();
-  const hwDevs=pdjlDevices.filter(d=>!d.virtual&&now-d.lastSeen<10000);
-  if(hwDevs.length===0){bar.style.display='none';return;}
-  bar.style.display='flex';
-  // Sort: DJM first, then CDJ by playerNum
-  const djms=hwDevs.filter(d=>d.type==='DJM');
-  const cdjs=hwDevs.filter(d=>d.type==='CDJ').sort((a,b)=>(a.playerNum||0)-(b.playerNum||0));
-  let html='<div class="dvi-link"><span class="dvi-link-icon">⇄</span><span style="font:700 9px var(--mn);color:var(--grn)">LINK</span></div>';
-  if(djms.length){
-    html+='<div class="dvi-sep"></div>';
-    djms.forEach(d=>{
-      html+=`<div class="devbar-item" style="border-color:rgba(52,211,153,.3)"><div class="dvi-icon djm" style="background:rgba(52,211,153,.15);color:var(--grn)"><span style="font-size:9px">♪</span></div><div class="dvi-info"><div class="dvi-model">${d.name||'DJM'}</div><div style="font:500 7px var(--mn);color:var(--grn);letter-spacing:.04em">CONNECTED</div></div></div>`;
-    });
-  }
-  cdjs.forEach(d=>{
-    const pn=d.playerNum||0;
-    const dk=pn>0?DECKS[pn-1]:null;
-    const isPlay=dk&&dk.pl;
-    const isMaster=dk&&dk.master;
-    const isSync=dk&&dk.sync;
-    const isOnAir=dk&&dk.onAir;
-    const cls=['devbar-item'];
-    if(isPlay)cls.push('dvi-play');
-    if(isMaster)cls.push('dvi-master');
-    if(isOnAir)cls.push('dvi-onair');
-    html+=`<div class="dvi-sep"></div><div class="${cls.join(' ')}">`;
-    html+=`<div class="dvi-icon cdj">${pn}<span class="dvi-state">${isPlay?'▶':'■'}</span></div>`;
-    html+=`<div class="dvi-info"><div class="dvi-model">${d.name||'CDJ'}</div>`;
-    html+=`<div class="dvi-badges">`;
-    // Only show MASTER when active, show SYNC always with on/off state
-    if(isMaster) html+=`<span class="dvi-bd master active">MASTER</span>`;
-    if(isSync) html+=`<span class="dvi-bd sync">SYNC</span>`;
-    else html+=`<span class="dvi-bd sync off">SYNC</span>`;
-    if(isOnAir) html+=`<span class="dvi-bd onair">ON AIR</span>`;
-    html+=`</div></div></div>`;
-  });
-  bar.innerHTML=html;
 }
 
 // ════ Tab rendering ══════════════════════════════════
