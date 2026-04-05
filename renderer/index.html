@@ -50,8 +50,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .fsep{width:1px;background:var(--bdr);height:50px;align-self:center;margin:0 2px}
 .sl{font:700 9px var(--lb);color:var(--tx3);letter-spacing:.12em;margin:0 0 8px;text-transform:uppercase}.sl.mt{margin-top:16px}
 .deck-area{display:flex;flex-direction:column;gap:8px}
-.deck-row{display:grid;gap:8px;grid-template-columns:repeat(2,1fr)}
-.deck-row.compact{gap:5px;grid-template-columns:repeat(3,1fr)}
+.deck-row{display:grid;gap:8px;grid-template-columns:repeat(3,1fr)}
+.deck-row.compact{gap:5px}
 .deck-row.compact .dk{font-size:0.95em}
 .deck-row.compact .dtop{padding:6px 10px 0}
 .deck-row.compact .din{margin-bottom:3px}
@@ -342,7 +342,7 @@ let cfg={nm:'BRIDGE29',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'au
   tcMidiOutId:'',
   tcArtnetIp:'255.255.255.255',tcArtnetPort:'6454'};
 
-const MAX_DECKS=8;
+const MAX_DECKS=6;
 const DECKS={};
 let glMode='hw'; // 'virtual' | 'hw'
 
@@ -1075,7 +1075,7 @@ function renderDecks(){
   const hwS=slots.filter(s=>DECKS[s].type==='hw');
   const vtS=slots.filter(s=>DECKS[s].type==='virtual');
   const totalDecks=slots.length;
-  const isCompact=totalDecks>=5; // compact layout when 5 or more decks
+  const isCompact=totalDecks>=4; // compact layout when 4+ decks (2 rows × 3 cols)
 
   const hwSec=document.getElementById('hwSection');
   const hwRow=document.getElementById('hwRow');
