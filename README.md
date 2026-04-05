@@ -14,7 +14,7 @@ Pioneer Pro DJ Link 네트워크의 CDJ/DJM 상태를 실시간으로 읽어 TCN
 | **Art-Net Timecode** | ArtTimeCode 패킷으로 SMPTE 타임코드 브로드캐스트 |
 | **LTC 오디오 출력** | AudioWorklet 기반 Linear Timecode 생성 |
 | **MIDI Clock/MTC** | BPM 동기화 및 MIDI Timecode 출력 |
-| **Virtual Deck** | 하드웨어 없이 로컬 MP3 파일로 테스트 가능 (최대 6덱) |
+| **Virtual Deck** | 하드웨어 없이 로컬 음원 파일로 테스트 가능 — MP3 · WAV · FLAC · AAC · OGG · M4A · AIFF (최대 6덱) |
 | **RGB 웨이브폼** | IIR 밴드스플릿 필터 — BLUE / RGB / 3BAND 컬러 프리셋 |
 | **CDJ-3000 웨이브폼** | 컬러/모노 프리뷰 + 디테일 웨이브폼 수신 |
 | **비트 그리드** | dbserver 비트그리드(0x2204) 파싱 + 오버레이 |
