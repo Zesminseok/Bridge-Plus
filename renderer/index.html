@@ -870,12 +870,12 @@ function drawZoomWaveform(slot,prog){
   // Beat grid overlaid — aligned to CDJ's beatInBar
   if(d.bpm>0&&dur>0){
     const beatMs=60000/d.bpm;
-    // Align grid phase using CDJ's beatInBar (1-4)
-    // Current beat index at posMs
-    const curBeatIdx=Math.round(posMs/beatMs);
-    // CDJ says we're on beatInBar (1=downbeat). Offset so barNum matches.
+    // Stable anchor: use d.pos (last CDJ-reported position) + d.beatInBar
+    // Both come from the same CDJ status update, so they're consistent
+    // Using interpolated posMs would oscillate at beat boundaries
     const bib=d.beatInBar||1;
-    const phaseOff=((curBeatIdx-(bib-1))%4+4)%4; // how many beats to shift
+    const anchorBeatIdx=Math.round((d.pos||0)/beatMs);
+    const phaseOff=((anchorBeatIdx-(bib-1))%4+4)%4;
     const firstBeat=Math.ceil((posMs-cX*msPerPx)/beatMs),lastBeat=Math.floor((posMs+(W-cX)*msPerPx)/beatMs);
     ctx.font='bold 9px "DM Mono",monospace';
     for(let b=firstBeat;b<=lastBeat;b++){
@@ -1064,17 +1064,39 @@ function deckHTML(slot){
   const isHW=d.type==='hw';
   const label=`PLAYER <span class="did-n">${slot+1}</span>`;
   if(!d.ld){
-    return`<div class="dk" id="dk${slot}" data-st="empty">
+    if(!isHW){
+      return`<div class="dk" id="dk${slot}" data-st="empty">
+        <div class="dtop"><div class="dhd"><span class="did" style="color:var(--tx3)">${label}</span><span class="dbadge bm">EMPTY</span><div class="dht" style="margin-left:auto"><button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button></div></div></div>
+        <div class="ddz"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">음원 드래그</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG</div></div>
+      </div>`;
+    }
+    // HW unloaded: same structure as loaded deck but with empty waveform placeholders
+    return`<div class="dk" id="dk${slot}" data-st="hw">
+      <div class="dshim"></div>
       <div class="dtop">
         <div class="dhd">
-          <span class="did" style="color:var(--tx3)">${label}</span>
-          <span class="dbadge bm">${isHW?'HW':'EMPTY'}</span>
-          ${!isHW?`<div class="dht" style="margin-left:auto"><button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button></div>`:''}
+          <span class="did" style="color:var(--pur)">${label}</span>
+          <span class="dbadge bp">HW</span>
+          <span class="dtc" style="color:var(--tx4)">--:--:--:--</span>
+        </div>
+        <div class="dktn"><span class="dktn-t" style="color:var(--tx4)">—</span></div>
+        <div class="dktn dktn-info"><span class="dbk-hd" style="color:var(--tx4)">— BPM</span><span class="dktn-time">--:--.-- / --:--.--</span></div>
+        <div class="dtbody">
+          <div class="dkctrl">
+            <div class="dkart"><span class="noart-icon">♪</span></div>
+            <div class="dkctrl-btns">
+              <button class="dkbtn dkcue" disabled>CUE</button>
+              <button class="dkbtn dkplay" disabled>▶</button>
+            </div>
+          </div>
+          <div class="dkwaves">
+            <div class="dwov" style="display:flex;align-items:center;justify-content:center"><span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span></div>
+            <div class="dwz" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px"><span style="font:400 12px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span></div>
+            <div class="dphs">${[1,2,3,4].map(()=>'<div class="dphs-seg"><div class="dphs-fill"></div></div>').join('')}</div>
+          </div>
         </div>
       </div>
-      ${isHW
-        ?`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:80px;opacity:.5"><div style="font:400 13px var(--sn);color:var(--tx3)">${d.model?'로드 안됨':'CDJ 트랙 대기 중...'}</div><div style="font:400 9px var(--mn);color:var(--tx4);margin-top:4px">${d.model?'⬡ '+d.model+' — Empty Track':'CDJ에서 트랙을 로드하세요'}</div></div>`
-        :`<div class="ddz"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">음원 드래그</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG</div></div>`}
+      <div class="dhw"><span class="dhwl">${d.model?'⬡ '+d.model:'⬡ HW'}</span></div>
     </div>`;
   }
   const artSrc=d.art||d.artUrl||'';
