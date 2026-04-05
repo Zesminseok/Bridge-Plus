@@ -1580,13 +1580,33 @@ function tick(){
       if(wzc&&wzc.width>0)drawZoomWaveform(slot,prog);
     }
 
-    // Beat phasor — ALWAYS
+    // Beat phasor — ALWAYS (but freeze when stopped)
     if(d.ld&&d.bpm>0){
       const beatMs=60000/d.bpm;
-      const barMs=beatMs*4;
-      const posInBar=d.pos%barMs;
-      const beatInBar=Math.floor(posInBar/beatMs)+1;
-      const phaseInBeat=(posInBar%beatMs)/beatMs;
+      let beatInBar, phaseInBeat;
+      if(d.type==='hw'&&d.beatInBar>0&&d._beatTime){
+        if(!d.pl){
+          // Stopped: freeze at current beat position
+          beatInBar=d.beatInBar;
+          phaseInBeat=0;
+        }else{
+          // Playing: use CDJ's beatInBar + wall-clock interpolation for smooth phase
+          beatInBar=d.beatInBar;
+          const elapsed=Date.now()-d._beatTime;
+          phaseInBeat=Math.min(0.99,elapsed/beatMs);
+          // Advance to next beat if elapsed > beatMs
+          if(elapsed>beatMs){
+            const extra=Math.floor(elapsed/beatMs);
+            beatInBar=((beatInBar-1+extra)%4)+1;
+            phaseInBeat=Math.min(0.99,(elapsed-extra*beatMs)/beatMs);
+          }
+        }
+      }else{
+        const barMs=beatMs*4;
+        const posInBar=displayPos%barMs;
+        beatInBar=Math.floor(posInBar/beatMs)+1;
+        phaseInBeat=(posInBar%beatMs)/beatMs;
+      }
       const blink=cfg.phasorMode==='blink';
       for(let b=1;b<=4;b++){
         const seg=document.getElementById('dphs'+slot+'_'+b);
@@ -1851,16 +1871,20 @@ if(E){
     ensureHWDeck(status.playerNum);
     const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
     // Track change detection — reset stale data when track changes or is ejected
-    if(status.trackId && dk._trackId && status.trackId !== dk._trackId){
+    const newTid=status.trackId||0;
+    const oldTid=dk._trackId||0;
+    if(newTid>0 && oldTid>0 && newTid!==oldTid){
+      console.log(`[UI] P${status.playerNum} track change: ${oldTid} → ${newTid}`);
       dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;
-      dk.baseBpm=0;dk.key='';
+      dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;
       renderDecks();
     }
-    if(status.trackId) dk._trackId=status.trackId;
+    if(newTid>0) dk._trackId=newTid;
     // If track ejected (hasTrack went false), reset
     if(!status.hasTrack && dk.ld){
-      dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;
-      dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.baseBpm=0;dk.key='';
+      console.log(`[UI] P${status.playerNum} track ejected`);
+      dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
+      dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.baseBpm=0;dk.key='';dk._trackId=0;
       renderDecks();return;
     }
     // STATE: PLAYING=2, LOOPING=3, CUEDOWN=5, CUEING=6
@@ -1876,9 +1900,10 @@ if(E){
     if(status.name)dk.model=status.name;
     if(status.p1Name)dk.stateName=status.p1Name;
     const wasLoaded=dk.ld;
-    dk.ld=status.hasTrack||dk.ld;
+    dk.ld=!!status.hasTrack;
     if(!wasLoaded&&dk.ld)renderDecks(); // re-render when track first loads
-    if(status.beatInBar)dk.beatInBar=status.beatInBar;
+    if(wasLoaded&&!dk.ld)renderDecks(); // re-render when track unloaded
+    if(status.beatInBar&&status.beatInBar!==dk.beatInBar){dk.beatInBar=status.beatInBar;dk._beatTime=Date.now();}
     dk.onAir=!!status.isOnAir;
     dk.master=!!status.isMaster;
     dk.sync=!!status.isSync;
@@ -1925,6 +1950,22 @@ if(E){
         if(noart){el.innerHTML=`<img src="${d.art}" alt="">`;}
       }
     }
+  });
+  // Track metadata from dbserver (title, artist, album, key, etc.)
+  window.bridge.onTrackMeta?.(d=>{
+    const li=d.playerNum-1;
+    const dk=DECKS[li];if(!dk)return;
+    if(d.title)dk.tn=d.title;
+    if(d.artist)dk.ar=d.artist;
+    if(d.key)dk.key=d.key;
+    if(d.duration>0)dk.dur=d.duration*1000; // seconds→ms
+    if(d.album)dk.album=d.album;
+    console.log(`[UI] P${d.playerNum} meta: "${d.title}" by "${d.artist}"`);
+    // Update track name in TCNet layer
+    if(window.bridge&&dk.tn){
+      window.bridge.updateLayer(li,{trackName:dk.tn,artistName:dk.ar||''});
+    }
+    renderDecks();
   });
   window.bridge.onDJMStatus?.(d=>{faders=d.faders;});
   window.bridge.onDJMMeter?.(ch=>{

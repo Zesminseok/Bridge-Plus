@@ -1072,7 +1072,11 @@ class BridgeCore {
 
         if(trackChanged){
           this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0 };
-          try{console.log(`[TC] P${p.playerNum} track change: beatNum=${p.beatNum} bpm=${p.bpm}`);}catch(_){}
+          try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} beatNum=${p.beatNum} bpm=${p.bpm}`);}catch(_){}
+          // Auto-request metadata from CDJ via dbserver
+          if(p.trackId>0 && p.hasTrack && rinfo?.address){
+            this.requestMetadata(rinfo.address, p.slot||3, p.trackId, p.playerNum);
+          }
         } else if(acc && p.beatNum > 0 && p.bpm > 0){
           const deltaBn = p.beatNum - acc.prevBn;
           if(deltaBn !== 0){
@@ -1201,108 +1205,321 @@ class BridgeCore {
   getActiveDevices(){ const now=Date.now(); return Object.values(this.devices).filter(d=>now-d.lastSeen<10000); }
   getPDJLPort(){ return this.pdjlPort; }
 
-  // ── dbserver artwork client (TCP 12523) ────
+  // ── dbserver metadata client (TCP 12523) ────
+  // Protocol: Deep-Symmetry/dysentery reverse engineering
+  // Flow: port discovery → greeting → setup → metadata query → render → parse
+
+  onTrackMetadata = null; // (playerNum, {title, artist, album, duration, artworkId, key, genre}) => {}
+
   /**
-   * Request album art from a CDJ via dbserver protocol.
-   * Based on Deep-Symmetry/dysentery reverse engineering.
-   * @param {string} ip  CDJ IP address
-   * @param {number} slot  media slot (1=CD, 2=SD, 3=USB, 4=collection)
-   * @param {number} artworkId  artwork ID from CDJ status trackId
-   * @param {number} playerNum  requesting player number
+   * Request track metadata + artwork from a CDJ via dbserver protocol.
    */
+  requestMetadata(ip, slot, trackId, playerNum){
+    if(!ip || !trackId) return;
+    const cacheKey = `${ip}_${slot}_${trackId}`;
+    if(this._metaReqCache?.[cacheKey]) return; // already requested
+    if(!this._metaReqCache) this._metaReqCache = {};
+    this._metaReqCache[cacheKey] = true;
+    this._dbserverMetadata(ip, slot, trackId, playerNum).catch(e=>{
+      console.warn(`[DBSRV] metadata request failed: ${e.message}`);
+      delete this._metaReqCache[cacheKey];
+    });
+  }
+
   requestArtwork(ip, slot, artworkId, playerNum){
     if(!ip || !artworkId) return;
-    const cacheKey = `${ip}_${slot}_${artworkId}`;
+    const cacheKey = `art_${ip}_${slot}_${artworkId}`;
     if(this._artCache[cacheKey]){
       this.onAlbumArt?.(playerNum, this._artCache[cacheKey]);
       return;
     }
-    this._dbserverRequest(ip, slot, artworkId, playerNum, cacheKey);
+    this._dbserverArtwork(ip, slot, artworkId, playerNum, cacheKey).catch(e=>{
+      console.warn(`[DBSRV] artwork request failed: ${e.message}`);
+    });
   }
 
-  async _dbserverRequest(ip, slot, artworkId, playerNum, cacheKey){
-    const PORT = 12523;
+  // ── dbserver field builders ────
+  _dbNum1(v){ return Buffer.from([0x0f, v&0xFF]); }
+  _dbNum2(v){ const b=Buffer.alloc(3); b[0]=0x10; b.writeUInt16BE(v,1); return b; }
+  _dbNum4(v){ const b=Buffer.alloc(5); b[0]=0x11; b.writeUInt32BE(v>>>0,1); return b; }
+
+  _dbBuildMsg(txId, type, args){
+    // Magic + txId(num4) + type(num2) + argCount(num1) + 12 type-tags(num1 each) + arg values
+    const magic = Buffer.from([0x87,0x23,0x49,0xae]);
+    const txField = this._dbNum4(txId);
+    const typeField = this._dbNum2(type);
+    const countField = this._dbNum1(args.length);
+    // Type tag array: 12 slots, each is _dbNum1
+    const tags = [];
+    for(let i=0;i<12;i++){
+      if(i<args.length) tags.push(this._dbNum1(args[i].tag));
+      else tags.push(this._dbNum1(0));
+    }
+    const parts = [magic, txField, typeField, countField, ...tags];
+    for(const a of args) parts.push(a.data);
+    return Buffer.concat(parts);
+  }
+
+  _dbArg4(v){ return { tag:0x06, data: this._dbNum4(v) }; }
+
+  _dbRMST(reqPlayer, menu, slot, trackType){
+    const v = ((reqPlayer&0xFF)<<24)|((menu&0xFF)<<16)|((slot&0xFF)<<8)|(trackType&0xFF);
+    return this._dbArg4(v);
+  }
+
+  // ── TCP connection + handshake ────
+  async _dbConnect(ip, spoofPlayer){
+    const net2 = require('net');
+    // Step 1: discover actual dbserver port
+    const realPort = await new Promise((res,rej)=>{
+      const s = new net2.Socket();
+      s.setTimeout(3000);
+      s.on('error', rej);
+      s.on('timeout', ()=>{s.destroy();rej(new Error('port discovery timeout'));});
+      s.connect(12523, ip, ()=>{
+        // Send "RemoteDBServ\0" with 4-byte length prefix
+        const msg = Buffer.alloc(4+12);
+        msg.writeUInt32BE(12, 0);
+        msg.write('RemoteDBServ', 4, 'ascii');
+        s.write(msg);
+      });
+      s.once('data', d=>{
+        s.destroy();
+        if(d.length>=2) res(d.readUInt16BE(0));
+        else rej(new Error('bad port response'));
+      });
+    });
+    console.log(`[DBSRV] ${ip} dbserver port=${realPort}`);
+
+    // Step 2: connect to actual port + greeting
+    const sock = new net2.Socket();
+    sock.setTimeout(5000);
+    await new Promise((res,rej)=>{
+      sock.on('error', rej);
+      sock.on('timeout', ()=>{sock.destroy();rej(new Error('connect timeout'));});
+      sock.connect(realPort, ip, ()=>{
+        // Greeting: send NumberField(4-byte) = 1
+        sock.write(this._dbNum4(1));
+        res();
+      });
+    });
+    // Wait for greeting echo
+    await new Promise((res,rej)=>{
+      sock.once('data', d=>{
+        if(d.length>=5 && d[0]===0x11) res();
+        else rej(new Error('bad greeting'));
+      });
+      sock.once('error', rej);
+    });
+
+    // Step 3: SETUP_REQ (type 0x0000, txId 0xfffffffe)
+    const setupMsg = this._dbBuildMsg(0xfffffffe, 0x0000, [this._dbArg4(spoofPlayer)]);
+    sock.write(setupMsg);
+    await this._dbReadResponse(sock); // wait for MENU_AVAILABLE (0x4000)
+
+    return sock;
+  }
+
+  _dbReadResponse(sock){
+    return new Promise((res,rej)=>{
+      const chunks = [];
+      let needed = -1;
+      const onData = d => {
+        chunks.push(d);
+        const buf = Buffer.concat(chunks);
+        // Parse: magic(4) + fields... minimal: look for message type
+        if(buf.length >= 12){
+          // We have enough to parse the header
+          sock.removeListener('data', onData);
+          res(buf);
+        }
+      };
+      sock.on('data', onData);
+      sock.once('error', rej);
+      setTimeout(()=>{sock.removeListener('data',onData);rej(new Error('response timeout'));}, 5000);
+    });
+  }
+
+  _dbReadFullResponse(sock){
+    return new Promise((res,rej)=>{
+      const chunks = [];
+      let timer = null;
+      const onData = d => {
+        chunks.push(d);
+        // Reset idle timer on each chunk
+        if(timer) clearTimeout(timer);
+        timer = setTimeout(()=>{
+          sock.removeListener('data', onData);
+          res(Buffer.concat(chunks));
+        }, 300); // 300ms idle = response complete
+      };
+      sock.on('data', onData);
+      sock.once('error', e=>{if(timer)clearTimeout(timer);rej(e);});
+      setTimeout(()=>{sock.removeListener('data',onData);if(timer)clearTimeout(timer);rej(new Error('full response timeout'));}, 8000);
+    });
+  }
+
+  // ── Parse metadata items from response ────
+  _dbParseItems(buf){
+    const items = [];
+    let pos = 0;
+    while(pos < buf.length - 4){
+      // Scan for magic bytes
+      if(buf[pos]!==0x87||buf[pos+1]!==0x23||buf[pos+2]!==0x49||buf[pos+3]!==0xae){pos++;continue;}
+      const msgStart = pos;
+      pos += 4; // skip magic
+      // Skip txId (num4 = 5 bytes)
+      if(pos+5>buf.length)break; pos+=5;
+      // Read message type (num2 = 3 bytes)
+      if(pos+3>buf.length)break;
+      const msgType = buf.readUInt16BE(pos+1);
+      pos+=3;
+      // Read arg count (num1 = 2 bytes)
+      if(pos+2>buf.length)break;
+      const argc = buf[pos+1];
+      pos+=2;
+      // Read 12 type tags (each num1 = 2 bytes)
+      const tags = [];
+      for(let i=0;i<12;i++){
+        if(pos+2>buf.length)break;
+        tags.push(buf[pos+1]);
+        pos+=2;
+      }
+      // Read arguments
+      const args = [];
+      for(let i=0;i<argc&&i<12;i++){
+        if(pos>=buf.length)break;
+        const ft = buf[pos];
+        if(ft===0x0f){args.push({type:'num1',val:buf[pos+1]});pos+=2;}
+        else if(ft===0x10){args.push({type:'num2',val:buf.readUInt16BE(pos+1)});pos+=3;}
+        else if(ft===0x11){args.push({type:'num4',val:buf.readUInt32BE(pos+1)});pos+=5;}
+        else if(ft===0x14){// blob
+          if(pos+5>buf.length)break;
+          const len=buf.readUInt32BE(pos+1); pos+=5;
+          args.push({type:'blob',val:buf.slice(pos,pos+len)});pos+=len;
+        }else if(ft===0x26){// string (UTF-16BE)
+          if(pos+5>buf.length)break;
+          const charCount=buf.readUInt32BE(pos+1); pos+=5;
+          const byteLen=charCount*2;
+          if(pos+byteLen>buf.length){args.push({type:'str',val:''});break;}
+          const strBuf=buf.slice(pos,pos+byteLen);
+          // Convert UTF-16BE to string
+          let str='';
+          for(let j=0;j<strBuf.length-1;j+=2){
+            const ch=strBuf.readUInt16BE(j);
+            if(ch===0)break;
+            str+=String.fromCharCode(ch);
+          }
+          args.push({type:'str',val:str});
+          pos+=byteLen;
+        }else{pos++;continue;} // unknown field, skip
+      }
+      if(msgType===0x4101){ // MENU_ITEM
+        items.push({msgType,args});
+      } else if(msgType===0x4002){ // ALBUM_ART
+        items.push({msgType,args});
+      }
+    }
+    return items;
+  }
+
+  async _dbserverMetadata(ip, slot, trackId, playerNum){
+    // Spoof as player 5 (unlikely to conflict with real CDJs 1-4)
+    const spoofPlayer = 5;
     let sock;
     try{
-      sock = new net.Socket();
-      sock.setTimeout(5000);
-      const bufs = [];
-      await new Promise((res,rej)=>{
-        sock.on('error', rej);
-        sock.on('timeout', ()=>rej(new Error('timeout')));
-        sock.connect(PORT, ip, ()=>{
-          console.log(`[DBSRV] connected to ${ip}:${PORT}`);
-          // Step 1: Send setup message (greeting)
-          // dbserver greeting: magic 4 bytes + transaction id
-          const greet = Buffer.alloc(4);
-          greet.writeUInt32BE(1, 0); // protocol number = 1
-          sock.write(greet);
-          res();
-        });
-      });
+      sock = await this._dbConnect(ip, spoofPlayer);
 
-      // Collect response data
-      const data = await new Promise((res,rej)=>{
-        const chunks = [];
-        let total = 0;
-        sock.on('data', d=>{
-          chunks.push(d);
-          total += d.length;
-          // dbserver responses are framed; look for JPEG header (FFD8)
-          const combined = Buffer.concat(chunks);
-          const jpegStart = combined.indexOf(Buffer.from([0xFF,0xD8]));
-          const jpegEnd = combined.indexOf(Buffer.from([0xFF,0xD9]), jpegStart>0?jpegStart:0);
-          if(jpegStart>=0 && jpegEnd>jpegStart){
-            res(combined.slice(jpegStart, jpegEnd+2));
-          }
-          // If we got artwork request response, send the actual request
-          if(total===4 && !this._dbGreetDone){
-            this._dbGreetDone = true;
-            // Send artwork request message (simplified dbserver query)
-            const req = this._buildArtworkRequest(slot, artworkId);
-            sock.write(req);
-          }
-        });
-        sock.on('end', ()=>{
-          const combined = Buffer.concat(chunks);
-          const jpegStart = combined.indexOf(Buffer.from([0xFF,0xD8]));
-          const jpegEnd = combined.indexOf(Buffer.from([0xFF,0xD9]), jpegStart>0?jpegStart:0);
-          if(jpegStart>=0 && jpegEnd>jpegStart) res(combined.slice(jpegStart, jpegEnd+2));
-          else rej(new Error('no JPEG found'));
-        });
-        sock.on('error', rej);
-        sock.on('timeout', ()=>rej(new Error('timeout')));
-      });
+      // Send REKORDBOX_METADATA_REQ (type 0x2002)
+      const txId = 1;
+      const rmst = this._dbRMST(spoofPlayer, 0x01, slot, 0x01);
+      const metaReq = this._dbBuildMsg(txId, 0x2002, [rmst, this._dbArg4(trackId)]);
+      sock.write(metaReq);
+      const menuAvail = await this._dbReadResponse(sock);
 
-      if(data && data.length>100){
-        const b64 = 'data:image/jpeg;base64,' + data.toString('base64');
-        this._artCache[cacheKey] = b64;
-        this.onAlbumArt?.(playerNum, b64);
-        console.log(`[DBSRV] artwork ${artworkId} from ${ip}: ${data.length}B`);
+      // Parse item count from MENU_AVAILABLE response
+      // Send RENDER_MENU_REQ (type 0x3000) to get all items
+      const renderReq = this._dbBuildMsg(txId+1, 0x3000, [
+        rmst, this._dbArg4(0), this._dbArg4(64),
+        this._dbArg4(0), this._dbArg4(64), this._dbArg4(0)
+      ]);
+      sock.write(renderReq);
+      const fullResp = await this._dbReadFullResponse(sock);
+
+      // Parse menu items
+      const items = this._dbParseItems(fullResp);
+      const meta = {};
+      for(const item of items){
+        if(item.msgType!==0x4101 || item.args.length<8)continue;
+        const itemType = item.args[6]?.val || 0;
+        const label1 = item.args[3]?.val || '';
+        switch(itemType){
+          case 0x0004: meta.title=label1; meta.artworkId=item.args[8]?.val||0; break;
+          case 0x0007: meta.artist=label1; break;
+          case 0x0002: meta.album=label1; break;
+          case 0x000b: meta.duration=item.args[1]?.val||0; break;
+          case 0x000d: meta.bpm=(item.args[1]?.val||0)/100; break;
+          case 0x000f: meta.key=label1; break;
+          case 0x0006: meta.genre=label1; break;
+        }
       }
+      console.log(`[DBSRV] P${playerNum} metadata:`, JSON.stringify(meta));
+
+      // Emit metadata
+      if(meta.title||meta.artist){
+        this.onTrackMetadata?.(playerNum, meta);
+      }
+
+      // Request artwork if available
+      if(meta.artworkId){
+        const artRmst = this._dbRMST(spoofPlayer, 0x08, slot, 0x01);
+        const artReq = this._dbBuildMsg(txId+2, 0x2003, [artRmst, this._dbArg4(meta.artworkId)]);
+        sock.write(artReq);
+        const artResp = await this._dbReadFullResponse(sock);
+        // Find JPEG in response
+        const jpegStart = artResp.indexOf(Buffer.from([0xFF,0xD8]));
+        const jpegEnd = artResp.lastIndexOf(Buffer.from([0xFF,0xD9]));
+        if(jpegStart>=0 && jpegEnd>jpegStart){
+          const jpeg = artResp.slice(jpegStart, jpegEnd+2);
+          const b64 = 'data:image/jpeg;base64,' + jpeg.toString('base64');
+          this._artCache[`art_${ip}_${slot}_${meta.artworkId}`] = b64;
+          this.onAlbumArt?.(playerNum, b64);
+          console.log(`[DBSRV] P${playerNum} artwork: ${jpeg.length}B`);
+        }
+      }
+
+      // Teardown
+      try{
+        const teardown = this._dbBuildMsg(0xfffffffe, 0x0100, []);
+        sock.write(teardown);
+      }catch(_){}
     }catch(e){
-      console.warn(`[DBSRV] artwork request failed: ${e.message}`);
+      throw e;
     }finally{
       try{sock?.destroy();}catch(_){}
-      this._dbGreetDone = false;
     }
   }
 
-  _buildArtworkRequest(slot, artworkId){
-    // Deep-Symmetry dbserver: artwork request
-    // Message type 0x2004, args: slot (int32), 0 (int32), artworkId (int32)
-    // Simplified framing: 4-byte length prefix + message body
-    const body = Buffer.alloc(24);
-    body.writeUInt32BE(0x10, 0);       // transaction id
-    body.writeUInt32BE(0x2004, 4);     // message type = artwork request
-    body.writeUInt32BE(0x03, 8);       // arg count = 3
-    body.writeUInt32BE(slot, 12);      // slot (USB=3, SD=2, CD=1)
-    body.writeUInt32BE(0, 16);         // always 0
-    body.writeUInt32BE(artworkId, 20); // artwork ID
-    const frame = Buffer.alloc(4 + body.length);
-    frame.writeUInt32BE(body.length, 0);
-    body.copy(frame, 4);
-    return frame;
+  async _dbserverArtwork(ip, slot, artworkId, playerNum, cacheKey){
+    const spoofPlayer = 5;
+    let sock;
+    try{
+      sock = await this._dbConnect(ip, spoofPlayer);
+      const artRmst = this._dbRMST(spoofPlayer, 0x08, slot, 0x01);
+      const artReq = this._dbBuildMsg(1, 0x2003, [artRmst, this._dbArg4(artworkId)]);
+      sock.write(artReq);
+      const artResp = await this._dbReadFullResponse(sock);
+      const jpegStart = artResp.indexOf(Buffer.from([0xFF,0xD8]));
+      const jpegEnd = artResp.lastIndexOf(Buffer.from([0xFF,0xD9]));
+      if(jpegStart>=0 && jpegEnd>jpegStart){
+        const jpeg = artResp.slice(jpegStart, jpegEnd+2);
+        const b64 = 'data:image/jpeg;base64,' + jpeg.toString('base64');
+        this._artCache[cacheKey] = b64;
+        this.onAlbumArt?.(playerNum, b64);
+      }
+      try{sock.write(this._dbBuildMsg(0xfffffffe,0x0100,[]));sock.destroy();}catch(_){}
+    }catch(e){throw e;}
+    finally{try{sock?.destroy();}catch(_){}}
   }
 }
 
