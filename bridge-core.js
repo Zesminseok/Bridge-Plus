@@ -1108,6 +1108,7 @@ class BridgeCore {
           });
         } else if(prev){
           prev.timecodeMs = timecodeMs;
+          prev._updateTime = Date.now();
         }
         p.ip = rinfo.address;
         p.timecodeMs = timecodeMs;

@@ -1518,7 +1518,15 @@ function tick(){
     const timeEl=document.getElementById('dtime'+slot);
     if(timeEl)timeEl.textContent=fTmMs(displayPos)+' / '+(d.dur>0?fTmMs(d.dur):'--:--.--');
     const bkEl=document.getElementById('dbk'+slot);
-    if(bkEl){const bpmStr=d.bpm?(d.type==='hw'?d.bpm.toFixed(1):Math.round(d.bpm).toString()):'—';bkEl.textContent=bpmStr+' BPM';}
+    if(bkEl){
+      if(d.bpm>0){
+        const base=d.baseBpm||d.bpm;
+        const eff=d.bpm;
+        const pitchPct=base>0?((eff-base)/base*100):0;
+        const pitchStr=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
+        bkEl.textContent=Math.round(base)+(Math.abs(eff-base)>0.05?'/'+eff.toFixed(1):'')+' BPM '+pitchStr;
+      } else bkEl.textContent='— BPM';
+    }
     const dtnEl=document.getElementById('dtn'+slot);if(dtnEl)dtnEl.textContent=d.tn||'—';
     const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar?' · '+d.ar:'';
     const dhwlEl=document.getElementById('dhwl'+slot);
@@ -1842,6 +1850,19 @@ if(E){
     const{layerIndex,status}=d;
     ensureHWDeck(status.playerNum);
     const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
+    // Track change detection — reset stale data when track changes or is ejected
+    if(status.trackId && dk._trackId && status.trackId !== dk._trackId){
+      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;
+      dk.baseBpm=0;dk.key='';
+      renderDecks();
+    }
+    if(status.trackId) dk._trackId=status.trackId;
+    // If track ejected (hasTrack went false), reset
+    if(!status.hasTrack && dk.ld){
+      dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;
+      dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.baseBpm=0;dk.key='';
+      renderDecks();return;
+    }
     // STATE: PLAYING=2, LOOPING=3, CUEDOWN=5, CUEING=6
     dk.pl=status.state===2||status.state===3; // playing or looping
     dk.cu=status.state===5||status.state===6;  // cue states
