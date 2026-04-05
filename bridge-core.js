@@ -134,20 +134,25 @@ function mkOptIn(port, uptime, nc){
  *   body[59]     = smpteMode
  *   body[148+n*16]= layerName[n] (16B ASCII, n=0-7)
  */
-function mkStatus(port, devices, layers, faders){
+function mkStatus(port, devices, layers, faders, hwMode){
   const b = Buffer.alloc(TC.SZ_ST);
   buildHdr(TC.STATUS).copy(b,0);
   const d = b.slice(24);  // body 276B
 
-  // nodeCount = number of active layers (matching official Bridge)
-  let nc=0; if(layers)for(let n=0;n<8;n++)if(layers[n])nc++;
+  // nodeCount = number of active layers OR hwMode slots (even if idle)
+  let nc=0;
+  for(let n=0;n<8;n++){
+    if(layers&&layers[n]) nc++;
+    else if(hwMode&&hwMode[n]) nc++;
+  }
   d.writeUInt16LE(nc||1, 0);
   d.writeUInt16LE(port||0, 2);     // nodeListenerPort
 
-  // layerSource[0-7] at body[10-17] — sequential player numbers (matching official Bridge)
+  // layerSource[0-7] at body[10-17] — always report hwMode slots as active
   for(let n=0;n<8;n++){
-    const layerData = layers && layers[n];
-    d[10+n] = layerData ? (n+1) : 0;
+    const hasLayer = layers && layers[n];
+    const isHW = hwMode && hwMode[n];
+    d[10+n] = (hasLayer || isHW) ? (n+1) : 0;
   }
 
   // layerStatus[0-7] at body[18-25]
@@ -308,7 +313,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
     let curMs = layerData.timecodeMs || 0;
     if(layerData.state === 3 && layerData._updateTime && layerData.bpm > 0) curMs += (Date.now() - layerData._updateTime);
     d.writeUInt32LE(u32(curMs), 12);    // currentPosition ms (interpolated)
-    d.writeUInt32LE(1000, 16);                          // speed (1000 = normal)
+    d.writeUInt32LE(layerData.state===3 ? 0x8000 : 0, 16);  // speed (0x8000=100%, 0=stopped)
     d.writeUInt32LE(0, 33);                             // beatNumber
     const bpm = layerData.bpm || 0;
     d.writeUInt32LE(Math.round(bpm * 100), 88);        // bpm ×100
@@ -774,7 +779,7 @@ class BridgeCore {
   }
 
   _sendStatus(){
-    const pkt = mkStatus(this.listenerPort, this.devices, this.layers, this.faders);
+    const pkt = mkStatus(this.listenerPort, this.devices, this.layers, this.faders, this.hwMode);
     // Debug: log layers state once per second (first 10 times)
     if(!this._stDbg)this._stDbg=0;
     if(this._stDbg<10 && Date.now()-this.startTime>2000){
@@ -1071,13 +1076,20 @@ class BridgeCore {
         let timecodeMs = 0;
 
         if(trackChanged){
-          this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0 };
-          try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} beatNum=${p.beatNum} bpm=${p.bpm}`);}catch(_){}
+          this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false };
+          try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} ip=${rinfo?.address}`);}catch(_){}
           // Auto-request metadata from CDJ via dbserver
           if(p.trackId>0 && p.hasTrack && rinfo?.address){
+            this._tcAcc[li].metaRequested = true;
             this.requestMetadata(rinfo.address, p.slot||3, p.trackId, p.playerNum);
           }
-        } else if(acc && p.beatNum > 0 && p.bpm > 0){
+        } else if(acc && !acc.metaRequested && p.trackId>0 && p.hasTrack && rinfo?.address){
+          // Retry metadata request if hasTrack became true after initial track change
+          acc.metaRequested = true;
+          try{console.log(`[TC] P${p.playerNum} metadata retry: trackId=${p.trackId} slot=${p.slot}`);}catch(_){}
+          this.requestMetadata(rinfo.address, p.slot||3, p.trackId, p.playerNum);
+        }
+        if(acc && p.beatNum > 0 && p.bpm > 0){
           const deltaBn = p.beatNum - acc.prevBn;
           if(deltaBn !== 0){
             const deltaMs = deltaBn * (60000 / p.bpm);
