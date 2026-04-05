@@ -673,10 +673,15 @@ class BridgeCore {
 
   stop(){
     if(!this.running && !this.txSocket) return; // already stopped
+    // Send OptOut BEFORE setting running=false (otherwise _send() is a no-op)
+    try{
+      const b=Buffer.alloc(TC.H); buildHdr(TC.OPTOUT).copy(b,0);
+      this._send(b,TC.P_BC);
+      console.log('[BridgeCore] sent TCNet OptOut');
+    }catch(_){}
     this.running = false;
     // clear all intervals and timeouts
     this._timers.forEach(t=>{clearInterval(t);clearTimeout(t);}); this._timers=[];
-    try{ const b=Buffer.alloc(TC.H); buildHdr(TC.OPTOUT).copy(b,0); this._send(b,TC.P_BC); }catch(_){}
     // close all UDP sockets including PDJL
     const sockets = [this.txSocket,this.rxSocket,this._loRxSocket,this._ipRxSocket,this.lPortSocket];
     if(this._pdjlSockets) this._pdjlSockets.forEach(s=>sockets.push(s));

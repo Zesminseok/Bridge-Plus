@@ -110,38 +110,20 @@ ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTime
 ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
 
 app.whenReady().then(createWindow);
-let _cleaned=false,_quitting=false;
+let _cleaned=false;
 function cleanup(){
   if(_cleaned)return;_cleaned=true;
-  console.log('[APP] cleanup: stopping bridge and closing sockets...');
+  console.log('[APP] cleanup start');
   saveBounds();
   clearInterval(iv);
-  // Stop bridge first (closes TCNet + PDJL sockets)
-  try{bridge?.stop();}catch(e){console.warn('[APP] bridge.stop error:',e.message);}
+  try{bridge?.stop();}catch(e){console.warn('[APP] bridge.stop:',e.message);}
   bridge=null;
-  // Close Art-Net socket
   try{_artSocket.close();}catch(_){}
-  console.log('[APP] cleanup complete');
+  console.log('[APP] cleanup done — scheduling force exit');
+  // Absolute safety net: force kill process after 500ms no matter what
+  setTimeout(()=>{console.log('[APP] force exit');process.exit(0);},500).unref();
 }
-function forceExit(){
-  console.log('[APP] force exit');
-  process.exit(0);
-}
-app.on('before-quit',(e)=>{
-  if(_quitting)return;
-  _quitting=true;
-  e.preventDefault();
-  cleanup();
-  // Give sockets 100ms to close, then force quit
-  setTimeout(()=>{app.quit();},100);
-  setTimeout(forceExit,500).unref();
-});
-app.on('window-all-closed',()=>{
-  if(!_quitting){_quitting=true;cleanup();}
-  app.quit();
-});
-app.on('will-quit',()=>{
-  if(!_cleaned)cleanup();
-  setTimeout(forceExit,300).unref();
-});
-app.on('activate',()=>{if(!_quitting&&BrowserWindow.getAllWindows().length===0)createWindow();});
+app.on('window-all-closed',()=>{cleanup();app.quit();});
+app.on('before-quit',()=>{cleanup();});
+app.on('will-quit',()=>{cleanup();});
+app.on('activate',()=>{if(!_cleaned&&BrowserWindow.getAllWindows().length===0)createWindow();});
