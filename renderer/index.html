@@ -39,6 +39,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .fbar{height:32px;background:rgba(255,255,255,.04);border-radius:3px;overflow:hidden;display:flex;align-items:flex-end}
 .fbarf{width:100%;border-radius:3px;transition:height .08s}
 .fval{font:600 10px var(--mn);color:var(--tx2);margin-top:2px;font-variant-numeric:tabular-nums}
+.fair{font:700 8px var(--mn);color:var(--red);text-align:center;margin-top:2px;letter-spacing:.04em;animation:pulse-air 1s ease-in-out infinite}
+@keyframes pulse-air{0%,100%{opacity:1}50%{opacity:.4}}
 .fsep{width:1px;background:var(--bdr);height:50px;align-self:center;margin:0 2px}
 .sl{font:500 11px var(--sn);color:var(--tx3);letter-spacing:.06em;margin:0 0 7px}.sl.mt{margin-top:14px}
 .deck-area{display:flex;flex-direction:column;gap:8px}
@@ -236,10 +238,10 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
   <div id="faderSection" style="display:none">
     <div class="sl" style="font-size:9px">DJM 채널 페이더 → Arena Opacity</div>
     <div class="fstrip">
-      <div class="fch"><div class="fchl">CH 1</div><div class="fbar"><div class="fbarf" id="fb0" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv0">100%</div></div>
-      <div class="fch"><div class="fchl">CH 2</div><div class="fbar"><div class="fbarf" id="fb1" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv1">100%</div></div>
-      <div class="fch"><div class="fchl">CH 3</div><div class="fbar"><div class="fbarf" id="fb2" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv2">100%</div></div>
-      <div class="fch"><div class="fchl">CH 4</div><div class="fbar"><div class="fbarf" id="fb3" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv3">100%</div></div>
+      <div class="fch"><div class="fchl">CH 1</div><div class="fbar"><div class="fbarf" id="fb0" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv0">100%</div><div class="fair hide" id="fair0">ON AIR</div></div>
+      <div class="fch"><div class="fchl">CH 2</div><div class="fbar"><div class="fbarf" id="fb1" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv1">100%</div><div class="fair hide" id="fair1">ON AIR</div></div>
+      <div class="fch"><div class="fchl">CH 3</div><div class="fbar"><div class="fbarf" id="fb2" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv2">100%</div><div class="fair hide" id="fair2">ON AIR</div></div>
+      <div class="fch"><div class="fchl">CH 4</div><div class="fbar"><div class="fbarf" id="fb3" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv3">100%</div><div class="fair hide" id="fair3">ON AIR</div></div>
       <div class="fsep"></div>
       <div class="fch"><div class="fchl">MASTER</div><div class="fbar"><div class="fbarf" id="fbM" style="height:100%;background:var(--grn)"></div></div><div class="fval" id="fvM">—</div></div>
     </div>
@@ -297,7 +299,7 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 const E=typeof window.bridge!=='undefined';
 let run=false,t0=0,up=0,pk=0,curTab='link';
 let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
-let faders=[255,255,255,255],pdjlPort=null;
+let faders=[255,255,255,255],onAirCh=[0,0,0,0],pdjlPort=null;
 // 설정 — 인터페이스 포함
 let cfg={nm:'BRIDGE29',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
   tcFps:'25',phasorMode:'scroll',wfColor:'rgb',wfCenter:'center',
@@ -1047,6 +1049,9 @@ function deckHTML(slot){
       <div class="dhd">
         <span class="did" id="did${slot}">${label}</span>
         <span class="dbadge bm" id="dbg${slot}">STOP</span>
+        <span class="dbadge br hide" id="dair${slot}">ON AIR</span>
+        <span class="dbadge bb hide" id="dsync${slot}">SYNC</span>
+        <span class="dbadge bg hide" id="dmst${slot}">MASTER</span>
         <span class="dtc" id="dtc${slot}">00:00:00:00</span>
         <div class="dht">
           <button class="dhtb" data-a="expand" data-i="${slot}" title="expand/collapse" style="font-size:10px;padding:3px 5px">⤢</button>
@@ -1483,6 +1488,7 @@ function tick(){
       const pct=Math.round(v/255*100);
       const fb=document.getElementById('fb'+i);if(fb)fb.style.height=pct+'%';
       const fv=document.getElementById('fv'+i);if(fv)fv.textContent=pct+'%';
+      const fa=document.getElementById('fair'+i);if(fa)fa.classList.toggle('hide',!onAirCh[i]);
     });
   }
 
@@ -1527,9 +1533,17 @@ function tick(){
     const bg=document.getElementById('dbg'+slot);
     if(bg){
       const _st=d.type==='hw'?'HW':d.scratch?'SCRATCH':d.pl?'PLAY':d.cu?'CUE':'STOP';
-      bg.textContent=_st;
-      bg.className='dbadge '+(d.type==='hw'?'bp':d.scratch?'bp':d.pl?'bg':d.cu?'by':'bm');
+      const isHwPlay=d.type==='hw'&&d.pl;
+      bg.textContent=d.type==='hw'?(d.pl?'PLAY':d.cu?'CUE':'HW'):d.scratch?'SCRATCH':d.pl?'PLAY':d.cu?'CUE':'STOP';
+      bg.className='dbadge '+(isHwPlay?'bg':d.type==='hw'?(d.cu?'by':'bp'):d.scratch?'bp':d.pl?'bg':d.cu?'by':'bm');
     }
+    // ON AIR / SYNC / MASTER badges (HW mode)
+    const bAir=document.getElementById('dair'+slot);
+    if(bAir)bAir.classList.toggle('hide',!d.onAir);
+    const bSync=document.getElementById('dsync'+slot);
+    if(bSync)bSync.classList.toggle('hide',!d.sync);
+    const bMst=document.getElementById('dmst'+slot);
+    if(bMst)bMst.classList.toggle('hide',!d.master);
     const did=document.getElementById('did'+slot);
     if(did)did.style.color=d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)';
     const pb=el.querySelector('[data-a="play"]');
@@ -1810,6 +1824,7 @@ if(E){
     up=d.uptime;pk=d.pkts||pk;
     if(d.hwMode)d.hwMode.forEach((hw,i)=>{if(DECKS[i])DECKS[i].type=hw?'hw':'virtual';});
     if(d.faders)faders=d.faders;
+    if(d.onAir)onAirCh=d.onAir;
     if(d.pdjlPort!=null)pdjlPort=d.pdjlPort;
     if(d.devices){pdjlDevices=d.devices;if(curTab==='pdjl')renderPDJL();}
   });
@@ -1828,6 +1843,10 @@ if(E){
     if(status.name)dk.model=status.name;
     dk.ld=status.hasTrack||dk.ld;
     if(status.beatInBar)dk.beatInBar=status.beatInBar;
+    dk.onAir=!!status.isOnAir;
+    dk.master=!!status.isMaster;
+    dk.sync=!!status.isSync;
+    if(status.pitch!==undefined)dk.pitch=Math.round(status.pitch*100)/100;
     // Request album art on track change (HW mode)
     if(status.trackId && status.trackId!==dk._lastTrackId && status.ip && status.slot){
       dk._lastTrackId=status.trackId;

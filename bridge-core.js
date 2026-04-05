@@ -358,45 +358,58 @@ function parsePDJL(msg){
   const name = msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
 
   if(type===PDJL.CDJ && msg.length>=0x90){
-    const pNum = msg[0x24]; if(pNum<1||pNum>4) return null;
-    const p1   = msg.length>0x7B ? msg[0x7B] : 0;
+    const pNum = msg[0x24]; if(pNum<1||pNum>6) return null;
+    const p1   = msg[0x7B];
     const state= P1_TO_STATE[p1] ?? STATE.IDLE;
-    const bpmEff = msg.length>0x7F ? msg.readUInt16BE(0x7E) : 0;
-    const bpmTrk = msg.length>0x93 ? msg.readUInt16BE(0x92) : 0;
-    const bpm    = bpmEff>0 ? bpmEff/100 : (bpmTrk>0 ? bpmTrk/100 : 0);
-    const beatNum   = msg.length>0xA7 ? msg.readUInt32BE(0xA4) : 0;
+    // BPM: uint32BE at 0x90 — top bit 0x80 = valid, lower 16 bits = BPM×100
+    const bpmRaw = msg.length>0x93 ? msg.readUInt32BE(0x90) : 0;
+    const bpmEff = (bpmRaw&0x80000000)&&bpmRaw!==0x80000000 ? (bpmRaw&0xFFFF)/100 : 0;
+    // Pitch: signed offset from 0x100000 at 0x8C
+    const pitchRaw = msg.length>0x8F ? msg.readUInt32BE(0x8C) : 0x100000;
+    const pitch = (pitchRaw-0x100000)/0x100000*100;
+    // Base BPM = effective / (1 + pitch/100)
+    const baseBpm = bpmEff>0&&Math.abs(pitch)>0.01 ? bpmEff/(1+pitch/100) : bpmEff;
+    const beatNum   = msg.length>0xA3 ? msg.readUInt32BE(0xA0) : 0;
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
+    const barsRemain = msg.length>0xA5 ? msg.readUInt16BE(0xA4) : 0;
+    const trackBeats = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
     const flags = msg.length>0x89 ? msg[0x89] : 0;
     return{
       kind:'cdj', playerNum:pNum, name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
       isPlaying: state===STATE.PLAYING,
-      bpm, bpmTrack:bpmTrk/100||0, bpmEffective:bpmEff/100||0,
+      bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
+      pitch,
       trackId: msg.readUInt32BE(0x2C),
       hasTrack: msg[0x29]>0,
-      slot:     msg[0x29],
-      beatNum,
-      beatInBar,
+      slot:     msg[0x28],
+      beatNum, beatInBar, barsRemain, trackBeats,
       firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
-      isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x08),
+      isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x01),
     };
   }
-  if(type===PDJL.DJM && msg.length>=0x30){
+  if(type===PDJL.DJM && msg.length>=0x70){
     // DJM Status (type 0x39, 248B, port 50002)
-    // 4 channel blocks at 24-byte intervals starting at 0x24
-    // Channel fader positions at 0x25, 0x27, 0x29, 0x2B (original offsets)
-    return{kind:'djm',name,channel:[msg[0x25]||0,msg[0x27]||0,msg[0x29]||0,msg[0x2B]||0]};
+    // 4 channel blocks: Ch1@0x24, Ch2@0x3C, Ch3@0x54, Ch4@0x6C (24B each)
+    // Fader: uint16BE at block start, range 0-0x3FF
+    const ch=[0x24,0x3C,0x54,0x6C].map(off=>{
+      const raw=msg.readUInt16BE(off);
+      return Math.round(raw/0x3FF*255);
+    });
+    return{kind:'djm',name,channel:ch};
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
-  // Per-channel post-fader level 0-255; offsets 0x54/0x68/0x7C/0x90 from beat-link analysis
-  if(type===PDJL.DJM_METER && msg.length>=0x98){
-    const ch=[msg[0x54]||0,msg[0x68]||0,msg[0x7C]||0,msg[0x90]||0];
-    // Debug log on first packet to help verify offsets
-    if(!parsePacket._djmMeterLogged){
-      parsePacket._djmMeterLogged=true;
-      const raw=[...msg.slice(0x40,0xA0)].map(b=>b.toString(16).padStart(2,'0')).join(' ');
-      console.log(`[DJM_METER] len=${msg.length} ch=[${ch}] raw[0x40..0xA0]: ${raw}`);
-    }
+  // 15-band spectrum per channel: base 0xA4, stride 0x3C, uint16BE per band
+  if(type===PDJL.DJM_METER && msg.length>=0x180){
+    const MBASE=0xA4, MSTEP=0x3C;
+    const ch=[0,1,2,3].map(c=>{
+      let peak=0;
+      for(let b=0;b<15;b++){
+        const off=MBASE+c*MSTEP+b*2;
+        if(off+1<msg.length){const v=msg.readUInt16BE(off);if(v>peak)peak=v;}
+      }
+      return Math.min(255,Math.round(peak/9200*255));
+    });
     return{kind:'djm_meter',name,ch};
   }
   // DJM Channels On-Air (type 0x03, 45B, port 50001)
