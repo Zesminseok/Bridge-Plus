@@ -3,6 +3,11 @@
 process.stdout?.on('error',()=>{});
 process.stderr?.on('error',()=>{});
 const{app,BrowserWindow,ipcMain}=require('electron');
+
+// Single instance lock — prevent duplicate app windows
+const gotLock=app.requestSingleInstanceLock();
+if(!gotLock){console.log('[APP] another instance running — quitting');app.quit();process.exit(0);}
+app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.focus();}});
 const path=require('path'),os=require('os'),fs=require('fs');
 const dgram=require('dgram');
 const{BridgeCore,getAllInterfaces}=require('./bridge-core');
