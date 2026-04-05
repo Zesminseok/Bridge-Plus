@@ -1558,19 +1558,22 @@ function tick(){
       if(curTxt!==txt){
         dtnEl.classList.remove('scrolling');
         dtnEl.textContent=txt;
-        // Measure after text set: does it overflow?
-        const cw=dtnEl.clientWidth, sw=dtnEl.scrollWidth;
-        if(sw>cw+5){
-          const inner=document.createElement('span');
-          inner.className='mq-inner';
-          inner.textContent=txt;
-          dtnEl.textContent='';
-          dtnEl.appendChild(inner);
-          const overflow=sw-cw;
-          dtnEl.style.setProperty('--scroll-dist','-'+overflow+'px');
-          dtnEl.style.setProperty('--scroll-dur',Math.max(4,overflow/25)+'s');
-          dtnEl.classList.add('scrolling');
-        }
+        // Measure overflow after layout settles
+        requestAnimationFrame(()=>{
+          if(!dtnEl.parentElement) return;
+          const cw=dtnEl.clientWidth, sw=dtnEl.scrollWidth;
+          if(sw>cw+5){
+            const inner=document.createElement('span');
+            inner.className='mq-inner';
+            inner.textContent=txt;
+            dtnEl.textContent='';
+            dtnEl.appendChild(inner);
+            const overflow=sw-cw;
+            dtnEl.style.setProperty('--scroll-dist','-'+overflow+'px');
+            dtnEl.style.setProperty('--scroll-dur',Math.max(5,overflow/25)+'s');
+            dtnEl.classList.add('scrolling');
+          }
+        });
       }
     }
     const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar?' · '+d.ar:'';
@@ -1965,23 +1968,28 @@ if(E){
     const{layerIndex,status}=d;
     ensureHWDeck(status.playerNum);
     const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
-    // Track change detection — reset stale data when track changes or is ejected
+    // Track change detection — reset stale data when track changes
     const newTid=status.trackId||0;
     const oldTid=dk._trackId||0;
     if(newTid>0 && oldTid>0 && newTid!==oldTid){
       console.log(`[UI] P${status.playerNum} track change: ${oldTid} → ${newTid}`);
       dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;
       dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;
-      renderDecks();
+      dk._trackId=newTid;
+      // Don't renderDecks() here — metadata will arrive shortly and trigger update
+    } else if(newTid>0) dk._trackId=newTid;
+    // If track ejected (hasTrack went false for 2+ consecutive status), reset
+    if(!status.hasTrack){
+      dk._noTrackCount=(dk._noTrackCount||0)+1;
+      if(dk._noTrackCount>=3 && dk.ld){
+        console.log(`[UI] P${status.playerNum} track ejected`);
+        dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
+        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.baseBpm=0;dk.key='';dk._trackId=0;
+        renderDecks();
+      }
+      return;
     }
-    if(newTid>0) dk._trackId=newTid;
-    // If track ejected (hasTrack went false), reset
-    if(!status.hasTrack && dk.ld){
-      console.log(`[UI] P${status.playerNum} track ejected`);
-      dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
-      dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.baseBpm=0;dk.key='';dk._trackId=0;
-      renderDecks();return;
-    }
+    dk._noTrackCount=0;
     // STATE: PLAYING=2, LOOPING=3, CUEDOWN=5, CUEING=6
     dk.pl=status.state===2||status.state===3; // playing or looping
     dk.cu=status.state===5||status.state===6;  // cue states
