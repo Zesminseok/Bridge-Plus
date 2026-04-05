@@ -1985,7 +1985,7 @@ if(E){
     // STATE: PLAYING=2, LOOPING=3, CUEDOWN=5, CUEING=6
     dk.pl=status.state===2||status.state===3; // playing or looping
     dk.cu=status.state===5||status.state===6;  // cue states
-    if(status.timecodeMs!=null){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
+    if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
     if(status.bpmEffective)dk.bpm=Math.round(status.bpmEffective*10)/10;
     else if(status.bpm)dk.bpm=Math.round(status.bpm*10)/10;
     if(status.bpmTrack)dk.baseBpm=Math.round(status.bpmTrack*10)/10;

@@ -208,9 +208,10 @@ function mkTime(layers, uptimeMs){
     const ld = layers && layers[n];
     if(ld){
       let ms = ld.timecodeMs || 0;
-      // Interpolate: if playing, add elapsed time since last beat update
+      // Interpolate: if playing, add elapsed time since last beat update (pitch-corrected)
       if(ld.state === 3 && ld._updateTime && ld.bpm > 0){
-        ms += (now - ld._updateTime);
+        const pitch = ld._pitch || 0;
+        ms += (now - ld._updateTime) * (1 + pitch / 100);
       }
       d.writeUInt32LE(u32(ms), n*4);
     }
@@ -1107,21 +1108,17 @@ class BridgeCore {
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
         if(acc && p.beatNum > 0 && p.bpm > 0){
+          // Absolute timecode: beatNum × beat duration (ms per beat at current BPM)
+          // This gives the correct position from track start, no drift
+          const msPerBeat = 60000 / p.bpm;
+          const absoluteMs = p.beatNum * msPerBeat;
           const deltaBn = p.beatNum - acc.prevBn;
-          if(deltaBn > 0){
-            const deltaMs = deltaBn * (60000 / p.bpm);
-            // Cap: max 2 seconds per update, ignore wild jumps
-            if(deltaMs < 2000){
-              acc.elapsedMs += deltaMs;
-            }
-            // Debug: log first 20 beat changes
-            if(acc.dbgCount < 20){
-              acc.dbgCount++;
-              try{console.log(`[TC] P${p.playerNum} beat=${p.beatNum} delta=${deltaBn} ms=${Math.round(acc.elapsedMs)} bpm=${p.bpm}`);}catch(_){}
-            }
+          if(deltaBn > 0 && acc.dbgCount < 20){
+            acc.dbgCount++;
+            try{console.log(`[TC] P${p.playerNum} beat=${p.beatNum} delta=${deltaBn} ms=${Math.round(absoluteMs)} bpm=${p.bpm}`);}catch(_){}
           }
           acc.prevBn = p.beatNum;
-          timecodeMs = Math.round(acc.elapsedMs);
+          timecodeMs = Math.round(absoluteMs);
         }
 
         const prev = this.layers[li];
@@ -1138,10 +1135,15 @@ class BridgeCore {
             totalLength: 0,
             beatPhase,
             deviceName:  p.name,
+            _pitch:      p.pitch || 0,
           });
         } else if(prev){
-          prev.timecodeMs = timecodeMs;
-          prev._updateTime = Date.now();
+          prev._pitch = p.pitch || 0;
+          // Only reset interpolation origin when timecode actually changed (new beat)
+          if(prev.timecodeMs !== timecodeMs){
+            prev.timecodeMs = timecodeMs;
+            prev._updateTime = Date.now();
+          }
         }
         p.ip = rinfo.address;
         p.timecodeMs = timecodeMs;
