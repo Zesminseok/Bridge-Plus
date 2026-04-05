@@ -139,6 +139,10 @@ ipcMain.handle('bridge:getInterfaces',()=>getAllInterfaces());
 ipcMain.handle('bridge:getDevices',()=>bridge?.getActiveDevices()||[]);
 ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTimeCode(ip,port,hh,mm,ss,ff,type);return{ok:true};});
 ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
+ipcMain.handle('bridge:setVirtualArt',(_,{slot,jpegBase64})=>{
+  if(bridge&&jpegBase64){bridge.setVirtualArt(slot,Buffer.from(jpegBase64,'base64'));}
+  return{ok:true};
+});
 
 app.whenReady().then(createWindow);
 let _cleaned=false,_quitting=false;

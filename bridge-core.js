@@ -642,6 +642,8 @@ class BridgeCore {
     this._artCache = {};  // trackId -> {playerNum, jpegBase64}
     this._beatGrids = {};  // playerNum -> [{beatInBar, bpm, timeMs}]
     this._dbConns  = {};  // ip -> net.Socket
+    this._virtualArt = {};  // slot -> Buffer (JPEG data for virtual deck artwork)
+    this._dbSrv = null;  // virtual dbserver (TCP 12523 emulation)
   }
 
   _resolveBroadcast(){
@@ -738,6 +740,7 @@ class BridgeCore {
       await this._startPDJLRx();
       this._startPDJLAnnounce();
     }
+    this._startVirtualDbServer();
 
     const nid = TC.NID[1].toString(16)+TC.NID[0].toString(16);
     console.log(`[v13] mode=${this.isLocalMode?'LOCAL(127.0.0.1)':'NETWORK'} bc=${this.broadcastAddr} localIP=${this.localAddr||'none'}`);
@@ -791,6 +794,10 @@ class BridgeCore {
       console.log('[BridgeCore] sockets closed');
     };
     setTimeout(closeSockets, 100);
+    // close virtual dbserver
+    try{this._dbSrv?.close();}catch(_){}
+    try{this._dbSrvProto?.close();}catch(_){}
+    this._dbSrv=null;this._dbSrvProto=null;
     // close dbserver TCP connections
     for(const [k,s] of Object.entries(this._dbConns)){
       try{s.removeAllListeners();s.destroy();}catch(_){}
@@ -1421,6 +1428,171 @@ class BridgeCore {
   getActiveNodes(){ const now=Date.now(); return Object.values(this.nodes).filter(n=>now-n.lastSeen<10000); }
   getActiveDevices(){ const now=Date.now(); return Object.values(this.devices).filter(d=>now-d.lastSeen<10000); }
   getPDJLPort(){ return this.pdjlPort; }
+
+  // ── Virtual dbserver (TCP 12523 emulation) ────
+  // Serves artwork for virtual decks so Resolume Arena can fetch album art
+  // Protocol: responds to port-discovery + greeting + artwork requests
+
+  /** Store artwork JPEG buffer for a virtual deck slot (0-based) */
+  setVirtualArt(slot, jpegBuf){
+    if(slot<0||slot>7) return;
+    this._virtualArt[slot] = jpegBuf;
+    console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B`);
+  }
+
+  _startVirtualDbServer(){
+    const net2 = require('net');
+    // Port discovery server on 12523 — tells clients our actual dbserver port
+    const REAL_PORT = 12524;  // actual protocol port
+
+    // 1) Port discovery listener on 12523
+    this._dbSrv = net2.createServer(sock=>{
+      sock.on('error',()=>{});
+      sock.once('data', d=>{
+        // Client sends 4-byte BE length + "RemoteDBServer\0"
+        const str = d.slice(4).toString('ascii').replace(/\0/g,'');
+        if(str === 'RemoteDBServer'){
+          const resp = Buffer.alloc(2);
+          resp.writeUInt16BE(REAL_PORT, 0);
+          sock.write(resp);
+          console.log(`[VDBSRV] port discovery → ${REAL_PORT}`);
+        }
+        sock.end();
+      });
+    });
+    this._dbSrv.on('error', e=>{
+      // Port 12523 may be in use by a real CDJ on the network
+      console.warn(`[VDBSRV] port 12523 bind failed: ${e.message} (real CDJ on network?)`);
+    });
+    this._dbSrv.listen(12523, '0.0.0.0', ()=>{
+      console.log('[VDBSRV] port discovery listening on 12523');
+    });
+
+    // 2) Actual protocol server on REAL_PORT
+    this._dbSrvProto = net2.createServer(sock=>{
+      sock.on('error',()=>{});
+      let phase = 'greeting';  // greeting → setup → ready
+      let buf = Buffer.alloc(0);
+
+      sock.on('data', d=>{
+        buf = Buffer.concat([buf, d]);
+
+        if(phase === 'greeting'){
+          // Client sends NumberField UInt32 = player number (5 bytes: 0x11 + 4B BE)
+          if(buf.length >= 5 && buf[0] === 0x11){
+            const player = buf.readUInt32BE(1);
+            console.log(`[VDBSRV] greeting from player ${player}`);
+            // Echo back greeting
+            sock.write(this._dbNum4(player));
+            buf = buf.slice(5);
+            phase = 'setup';
+          }
+          return;
+        }
+
+        if(phase === 'setup'){
+          // SETUP_REQ: magic(5) + txId(5) + type(3) + argc(2) + tags(17) + arg(5) = 37+ bytes
+          if(buf.length >= 32){
+            // Parse type
+            const typeOff = 10;  // after magic(5)+txId(5)
+            if(buf[typeOff] === 0x10){  // UInt16 field
+              const reqType = buf.readUInt16BE(typeOff+1);
+              if(reqType === 0x0000){  // SETUP
+                console.log('[VDBSRV] SETUP received');
+                // Reply with success: same format with type=0x4000
+                const resp = this._dbBuildMsg(0xfffffffe, 0x4000, [this._dbArg4(1)]);
+                sock.write(resp);
+                phase = 'ready';
+                buf = buf.length > 37 ? buf.slice(37) : Buffer.alloc(0);
+              }
+            }
+          }
+          return;
+        }
+
+        // phase === 'ready': handle artwork & metadata requests
+        if(buf.length >= 32){
+          this._handleVDbRequest(sock, buf);
+          buf = Buffer.alloc(0);
+        }
+      });
+    });
+    this._dbSrvProto.on('error', e=>{
+      console.warn(`[VDBSRV] proto port ${REAL_PORT} bind failed: ${e.message}`);
+    });
+    this._dbSrvProto.listen(REAL_PORT, '0.0.0.0', ()=>{
+      console.log(`[VDBSRV] protocol server listening on ${REAL_PORT}`);
+    });
+  }
+
+  _handleVDbRequest(sock, buf){
+    try{
+      // Parse message: magic(5) + txId(5) + type(3) + argc(2) + tags(17) + args...
+      if(buf.length < 32) return;
+      const txId = buf.readUInt32BE(1+1);  // UInt32 field at offset 1 (skip 0x11 tag)
+      // Correct txId parse: field[0]=0x11,val[1-4]; field2[5]=0x11,val[6-9]
+      const actualTxId = buf.readUInt32BE(6);
+      const reqType = buf.readUInt16BE(11);  // type field: 0x10 tag + 2B value
+
+      console.log(`[VDBSRV] request type=0x${reqType.toString(16)} txId=${actualTxId}`);
+
+      if(reqType === 0x2003){
+        // Artwork request — args: RMST(4B) + artworkId(4B)
+        // Find artwork from virtual decks
+        // RMST format: (reqPlayer<<24)|(menu<<16)|(slot<<8)|trackType
+        // artworkId is typically trackId-based
+        // For virtual decks, serve any stored artwork
+        const artBuf = this._findVirtualArt();
+        if(artBuf){
+          // Build response with artwork as binary blob
+          const resp = this._dbBuildArtResponse(actualTxId, artBuf);
+          sock.write(resp);
+          console.log(`[VDBSRV] artwork response: ${artBuf.length}B`);
+        } else {
+          // Empty response
+          const resp = this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]);
+          sock.write(resp);
+        }
+      } else if(reqType === 0x2002){
+        // Metadata request — return track info from layers
+        const metaResp = this._dbBuildMetaResponse(actualTxId);
+        sock.write(metaResp);
+      } else {
+        // Unknown request — send generic OK
+        const resp = this._dbBuildMsg(actualTxId, 0x4000+reqType, [this._dbArg4(0)]);
+        sock.write(resp);
+      }
+    }catch(e){
+      console.warn(`[VDBSRV] handleRequest error: ${e.message}`);
+    }
+  }
+
+  _findVirtualArt(){
+    // Return first available virtual deck artwork
+    for(const slot of Object.keys(this._virtualArt)){
+      const buf = this._virtualArt[slot];
+      if(buf && buf.length > 0) return buf;
+    }
+    return null;
+  }
+
+  _dbBuildArtResponse(txId, jpegBuf){
+    // Response: magic + txId + type(0x4003) + argc(1) + tags + binary(jpeg)
+    const artArg = { tag: 0x03, data: this._dbBinary(jpegBuf) };
+    return this._dbBuildMsg(txId, 0x4003, [artArg]);
+  }
+
+  _dbBuildMetaResponse(txId){
+    // Simple metadata response with track info from first active layer
+    for(let i=0;i<8;i++){
+      const ld = this.layers[i];
+      if(ld && ld.trackName){
+        const titleArg = { tag: 0x02, data: this._dbBinary(Buffer.from(ld.trackName,'utf8')) };
+        return this._dbBuildMsg(txId, 0x4002, [titleArg]);
+      }
+    }
+    return this._dbBuildMsg(txId, 0x4002, [this._dbArg4(0)]);
+  }
 
   // ── dbserver metadata client (TCP 12523) ────
   // Protocol: Deep-Symmetry/dysentery reverse engineering
