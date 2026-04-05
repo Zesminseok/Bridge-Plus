@@ -674,11 +674,16 @@ class BridgeCore {
   stop(){
     if(!this.running && !this.txSocket) return; // already stopped
     // Send OptOut BEFORE setting running=false (otherwise _send() is a no-op)
+    // Send multiple times on all TCNet ports to ensure Arena sees it
     try{
-      const b=Buffer.alloc(TC.H); buildHdr(TC.OPTOUT).copy(b,0);
-      this._send(b,TC.P_BC);
-      console.log('[BridgeCore] sent TCNet OptOut');
-    }catch(_){}
+      for(let i=0;i<3;i++){
+        const b=Buffer.alloc(TC.H); buildHdr(TC.OPTOUT).copy(b,0);
+        this._send(b,TC.P_BC);    // port 60000
+        this._send(b,TC.P_TIME);  // port 60001
+        this._send(b,TC.P_DATA);  // port 60002
+      }
+      console.log('[BridgeCore] sent TCNet OptOut x3 on all ports');
+    }catch(e){console.warn('[BridgeCore] OptOut error:',e.message);}
     this.running = false;
     // clear all intervals and timeouts
     this._timers.forEach(t=>{clearInterval(t);clearTimeout(t);}); this._timers=[];
