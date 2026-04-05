@@ -118,17 +118,19 @@ app.whenReady().then(createWindow);
 let _cleaned=false;
 function cleanup(){
   if(_cleaned)return;_cleaned=true;
-  console.log('[APP] cleanup start');
   saveBounds();
   clearInterval(iv);
-  try{bridge?.stop();}catch(e){console.warn('[APP] bridge.stop:',e.message);}
+  try{bridge?.stop();}catch(_){}
   bridge=null;
   try{_artSocket.close();}catch(_){}
-  console.log('[APP] cleanup done — scheduling force exit');
-  // Absolute safety net: force kill process after 500ms no matter what
-  setTimeout(()=>{console.log('[APP] force exit');process.exit(0);},500).unref();
 }
-app.on('window-all-closed',()=>{cleanup();app.quit();});
+app.on('window-all-closed',()=>{
+  cleanup();
+  // Wait 200ms for OptOut UDP packets to flush, then quit
+  setTimeout(()=>{app.quit();},200);
+  // Force exit after 800ms as safety net
+  setTimeout(()=>process.exit(0),800).unref();
+});
 app.on('before-quit',()=>{cleanup();});
-app.on('will-quit',()=>{cleanup();});
+app.on('will-quit',()=>{cleanup();setTimeout(()=>process.exit(0),300).unref();});
 app.on('activate',()=>{if(!_cleaned&&BrowserWindow.getAllWindows().length===0)createWindow();});
