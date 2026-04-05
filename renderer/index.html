@@ -191,9 +191,10 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 .dvm-st{display:flex;gap:1px;width:7px;flex-shrink:0;height:100%}
 .dvm-st .dvm{flex:1;width:3px;border-radius:0}
 .dktn{padding:0 0 3px;display:flex;align-items:baseline;gap:0;min-width:0;overflow:hidden}
-.dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex-shrink:1;min-width:0;position:relative}
-.dktn-t.scrolling{animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
-@keyframes marquee-scroll{0%{transform:translateX(0)}100%{transform:translateX(var(--scroll-dist,-100%))}}
+.dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex-shrink:1;min-width:0;position:relative;text-overflow:ellipsis}
+.dktn-t.scrolling{overflow:visible;text-overflow:clip}
+.dktn-t.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite;padding-right:60px}
+@keyframes marquee-scroll{0%{transform:translateX(0)}50%{transform:translateX(var(--scroll-dist,-100%))}50.01%{transform:translateX(80px)}100%{transform:translateX(0)}}
 .dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:2;min-width:0}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dk[data-st="play"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
@@ -1536,7 +1537,10 @@ function tick(){
     el.setAttribute('data-st',d.type==='hw'?'hw':d.pl?'play':d.cu?'cue':'stop');
     // Interpolate timecode for smooth display (HW mode: pos updates on beat boundaries)
     let displayPos=d.pos||0;
-    if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){displayPos+=(Date.now()-d._posTime);}
+    if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
+      const pitchMul=1+(d.pitch||0)/100; // pitch% → speed multiplier
+      displayPos+=((Date.now()-d._posTime)*pitchMul);
+    }
     const tc=document.getElementById('dtc'+slot);
     if(tc)tc.textContent=fTC(displayPos);
     const timeEl=document.getElementById('dtime'+slot);
@@ -1551,18 +1555,33 @@ function tick(){
     const dtnEl=document.getElementById('dtn'+slot);
     if(dtnEl){
       const txt=d.tn||'—';
-      if(dtnEl.textContent!==txt)dtnEl.textContent=txt;
+      // Check if text changed
+      const curTxt=dtnEl.querySelector('.mq-inner')?.textContent||dtnEl.textContent;
+      if(curTxt!==txt){
+        dtnEl.classList.remove('scrolling');
+        dtnEl.textContent=txt;
+      }
       // Marquee scroll for long titles
       const par=dtnEl.parentElement;
-      if(par&&dtnEl.scrollWidth>par.offsetWidth*0.6){
+      if(par&&dtnEl.scrollWidth>par.clientWidth+10){
         if(!dtnEl.classList.contains('scrolling')){
-          const dist=dtnEl.scrollWidth+40;
-          const dur=Math.max(5,dist/40);
+          // Wrap text in inner span for animation
+          const inner=document.createElement('span');
+          inner.className='mq-inner';
+          inner.textContent=txt;
+          dtnEl.textContent='';
+          dtnEl.appendChild(inner);
+          const dist=inner.offsetWidth+60;
           dtnEl.style.setProperty('--scroll-dist','-'+dist+'px');
-          dtnEl.style.setProperty('--scroll-dur',dur+'s');
+          dtnEl.style.setProperty('--scroll-dur',Math.max(6,dist/30)+'s');
           dtnEl.classList.add('scrolling');
         }
-      }else{dtnEl.classList.remove('scrolling');}
+      }else{
+        if(dtnEl.classList.contains('scrolling')){
+          dtnEl.classList.remove('scrolling');
+          dtnEl.textContent=txt;
+        }
+      }
     }
     const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar?' · '+d.ar:'';
     // Waveform key + BPM overlay
