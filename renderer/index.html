@@ -1352,33 +1352,101 @@ async function readID3Tags(file){
   return tags;
 }
 
-// BPM analysis — onset-strength autocorrelation, normalized to 80-180 BPM
+// BPM analysis — Spectral Flux + Generalized Autocorrelation (Rekordbox-style)
+// Based on: Tzanetakis DWT method + DJ software best practices
+// FFT window=1024, hop=512, spectral flux onset → GAC with √ exponent
 async function analyzeBPM(blob){
   try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:11025});
+    const ctx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:44100});
     const ab=await blob.arrayBuffer();
     const buf=await ctx.decodeAudioData(ab);
     ctx.close();
     const ch=buf.getChannelData(0),sr=buf.sampleRate;
-    const hopMs=10,hopSz=Math.round(sr*hopMs/1000); // 10ms frames
-    const maxFrames=Math.min(Math.floor(ch.length/hopSz),3000); // max 30s
-    // RMS energy
-    const energy=new Float32Array(maxFrames);
-    for(let i=0;i<maxFrames;i++){let e=0;const b=i*hopSz;for(let j=0;j<hopSz;j++)e+=ch[b+j]*ch[b+j];energy[i]=Math.sqrt(e/hopSz);}
-    // Onset strength: half-wave rectified flux
-    const flux=new Float32Array(maxFrames);
-    for(let i=1;i<maxFrames;i++)flux[i]=Math.max(0,energy[i]-energy[i-1]);
-    // autocorrelation over 250ms–2000ms lags = 30–240 BPM range
-    const minLag=Math.round(250/hopMs),maxLag=Math.round(2000/hopMs);
-    const nCorr=Math.min(maxFrames,1200); // analyse first 12s
-    let bestCorr=-1,bestLag=minLag;
-    for(let lag=minLag;lag<=Math.min(maxLag,maxFrames-1);lag++){
-      let corr=0;
-      for(let i=0;i<nCorr&&i+lag<maxFrames;i++)corr+=flux[i]*flux[i+lag];
-      if(corr>bestCorr){bestCorr=corr;bestLag=lag;}
+    const fftSz=1024,hopSz=512,halfFFT=fftSz/2;
+    // Analyse up to 30 seconds from the middle of the track (most stable BPM region)
+    const maxSamples=Math.min(ch.length, sr*30);
+    const startSample=Math.max(0, Math.floor((ch.length-maxSamples)/2));
+    const nFrames=Math.floor((maxSamples-fftSz)/hopSz);
+    if(nFrames<50) return 0;
+
+    // Hann window
+    const win=new Float32Array(fftSz);
+    for(let i=0;i<fftSz;i++) win[i]=0.5*(1-Math.cos(2*Math.PI*i/(fftSz-1)));
+
+    // Compute magnitude spectra for each frame
+    const mags=new Array(nFrames);
+    // Manual DFT (real only, limited bins) — optimized for beat detection
+    for(let f=0;f<nFrames;f++){
+      const off=startSample+f*hopSz;
+      const frame=new Float32Array(fftSz);
+      for(let i=0;i<fftSz;i++) frame[i]=(ch[off+i]||0)*win[i];
+      // Magnitude spectrum via DFT — only first 256 bins (~5.5kHz) matter for beat detection
+      const nBins=Math.min(256,halfFFT);
+      const mag=new Float32Array(nBins);
+      for(let k=0;k<nBins;k++){
+        let re=0,im=0;
+        const w=2*Math.PI*k/fftSz;
+        for(let n=0;n<fftSz;n++){re+=frame[n]*Math.cos(w*n);im-=frame[n]*Math.sin(w*n);}
+        mag[k]=Math.sqrt(re*re+im*im);
+      }
+      mags[f]=mag;
     }
+
+    // Spectral flux: sum of positive magnitude differences across bins
+    const nBins=mags[0].length;
+    const flux=new Float32Array(nFrames);
+    for(let f=1;f<nFrames;f++){
+      let sf=0;
+      for(let k=0;k<nBins;k++){
+        const d=mags[f][k]-mags[f-1][k];
+        if(d>0) sf+=d;
+      }
+      flux[f]=sf;
+    }
+
+    // Normalize flux
+    let fmx=0;
+    for(let i=0;i<nFrames;i++) if(flux[i]>fmx) fmx=flux[i];
+    if(fmx>0) for(let i=0;i<nFrames;i++) flux[i]/=fmx;
+
+    // Generalized Autocorrelation with √ exponent for sharper peaks
+    const hopMs=hopSz/sr*1000;
+    const minLag=Math.round(333/hopMs);  // ~180 BPM
+    const maxLag=Math.round(1000/hopMs); // ~60 BPM
+    const nCorr=Math.min(nFrames, Math.round(15000/hopMs)); // 15s window
+    const corr=new Float32Array(maxLag+1);
+
+    for(let lag=minLag;lag<=Math.min(maxLag,nFrames-1);lag++){
+      let c=0;
+      for(let i=0;i<nCorr&&i+lag<nFrames;i++) c+=Math.sqrt(flux[i]*flux[i+lag]);
+      corr[lag]=c;
+    }
+
+    // Find top 3 peaks for octave analysis
+    const peaks=[];
+    for(let lag=minLag+1;lag<maxLag&&lag<nFrames-1;lag++){
+      if(corr[lag]>corr[lag-1]&&corr[lag]>corr[lag+1]&&corr[lag]>0){
+        peaks.push({lag,val:corr[lag]});
+      }
+    }
+    peaks.sort((a,b)=>b.val-a.val);
+
+    if(peaks.length===0) return 0;
+
+    // Octave analysis: check if half-lag (double BPM) has strong energy
+    let bestLag=peaks[0].lag;
+    const halfLag=Math.round(bestLag/2);
+    if(halfLag>=minLag){
+      const halfVal=corr[halfLag]||0;
+      // If half-lag correlation is >70% of best, prefer the faster tempo
+      if(halfVal>peaks[0].val*0.7) bestLag=halfLag;
+    }
+
     const bpm=60000/(bestLag*hopMs);
-    let r=bpm;while(r>180)r/=2;while(r<80)r*=2;
+    // Normalize to 60-200 BPM range (DJ standard)
+    let r=bpm;while(r>200)r/=2;while(r<60)r*=2;
+    // Prefer 120-180 range for dance music
+    if(r<90&&r*2<=200) r*=2;
     return Math.round(r*10)/10;
   }catch(e){console.warn('[BPM]',e);return 0;}
 }
