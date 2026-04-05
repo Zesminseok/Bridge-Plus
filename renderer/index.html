@@ -696,7 +696,7 @@ async function buildRGBWaveform(blob, onChunk){
     // Pink-noise bandwidth correction: geometric-center freq per band
     // bass: 20-200Hz (√20*200≈63Hz), mid: 200-3000Hz (√200*3000≈775Hz), hi: 3000-20000Hz (√3000*20000≈7746Hz)
     // Correct = √(refF/centerF), ref=bass; treble gets less raw energy so boosted heavily
-    const gBass=5.5,gMid=6,gHi=22; // empirical + bandwidth-normalized
+    const gBass=3.0,gMid=3.5,gHi=8; // reduced gains — prevent all-band clipping to 1.0
     const wf=new Array(pts);
     const CHUNK=Math.max(200,Math.floor(pts/30)); // ~30 progress updates total
     // carry IIR filter state across all columns for continuity
@@ -759,16 +759,16 @@ function _wfBlend(r,g,b2,dimF){
     const B=Math.min(255,Math.round((rn*0xE1+gn*0x00+bn*0xFF)*dimF));
     return[R,G,B];
   }
-  // RGB (default): Rekordbox style — suppress non-dominant bands to prevent white wash
-  const mx=Math.max(r,g,b2)||0.001;
+  // RGB (default): Rekordbox style — dominant band selects hue, energy sets brightness
+  // Rekordbox colors: bass=blue(#2255FF), mid=green(#22DD66), treble=magenta/cyan(#CC44FF)
   const tot=r+g+b2||0.001;
-  // sat: 0 when all bands equal (r=g=b → white), 1 when single band dominates (pure color)
-  const sat=Math.max(0,(mx-tot/3)/(tot*2/3||0.001));
-  // High contrast when desaturated (sat→0), low contrast when vivid (sat→1)
-  const C=1.2+2.5*(1-sat);
-  const R=Math.min(255,Math.round(Math.pow(r/mx,C)*mx*255*dimF));
-  const G=Math.min(255,Math.round(Math.pow(g/mx,C)*mx*255*dimF));
-  const B=Math.min(255,Math.round(Math.pow(b2/mx,C)*mx*255*dimF));
+  const rn=r/tot, gn=g/tot, bn=b2/tot; // normalized shares (sum=1)
+  const energy=Math.min(1,Math.pow(tot/1.5,0.6)); // overall brightness from energy
+  // Color palette: bass→blue, mid→green, treble→pink/magenta
+  // Weighted blend by band dominance — dominant band "wins" the color
+  const R=Math.min(255,Math.round((rn*0.15+gn*0.30+bn*0.90)*energy*255*dimF));
+  const G=Math.min(255,Math.round((rn*0.35+gn*0.90+bn*0.20)*energy*255*dimF));
+  const B=Math.min(255,Math.round((rn*1.00+gn*0.40+bn*0.85)*energy*255*dimF));
   return[R,G,B];
 }
 // 3BAND stacked rendering helper: returns [{color,h},...] from bottom to top
