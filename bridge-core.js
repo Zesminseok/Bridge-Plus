@@ -139,14 +139,15 @@ function mkStatus(port, devices, layers, faders){
   buildHdr(TC.STATUS).copy(b,0);
   const d = b.slice(24);  // body 276B
 
-  d.writeUInt16LE(1, 0);           // nodeCount
+  // nodeCount = number of active layers (matching official Bridge)
+  let nc=0; if(layers)for(let n=0;n<8;n++)if(layers[n])nc++;
+  d.writeUInt16LE(nc||1, 0);
   d.writeUInt16LE(port||0, 2);     // nodeListenerPort
 
-  // layerSource[0-7] at body[10-17]
-  // Value must be 1 (active/internal) for Resolume to detect a player
+  // layerSource[0-7] at body[10-17] — sequential player numbers (matching official Bridge)
   for(let n=0;n<8;n++){
     const layerData = layers && layers[n];
-    d[10+n] = (layerData && layerData.state > 0) ? 1 : 0;
+    d[10+n] = layerData ? (n+1) : 0;
   }
 
   // layerStatus[0-7] at body[18-25]
@@ -163,16 +164,17 @@ function mkStatus(port, devices, layers, faders){
     }
   }
 
-  d[59] = 0x1E;  // smpteMode
-  d[60] = 0x01;  // autoMasterMode
+  d[59] = 0x1E;  // smpteMode = 30fps
+  d[60] = 0x00;  // autoMasterMode = 0 (matching official Bridge)
 
   // body[96-111]: device name
   d.write(TC.DEVICE.padEnd(16,'\0'), 96, 16, 'ascii');
 
   // layerName[0-7] at body[148-275] (16B ASCII × 8)
+  // Official Bridge puts CDJ model name here, NOT track name
   for(let n=0;n<8;n++){
     const layerData = layers && layers[n];
-    const name = layerData?.trackName ? layerData.trackName.slice(0,15) : '';
+    const name = layerData?.deviceName ? layerData.deviceName.slice(0,15) : '';
     if(name) d.write(name.padEnd(16,'\0'), 148+n*16, 16, 'ascii');
   }
 
@@ -1102,6 +1104,7 @@ class BridgeCore {
             trackId:     p.trackId,
             totalLength: 0,
             beatPhase,
+            deviceName:  p.name,
           });
         } else if(prev){
           prev.timecodeMs = timecodeMs;
@@ -1159,6 +1162,7 @@ class BridgeCore {
       totalLength: data.totalLength||0,
       trackName:   newTrackName,
       artistName:  newArtistName,
+      deviceName:  data.deviceName || (prev ? prev.deviceName : ''),
       beatPhase:   data.beatPhase||0,
       _updateTime: Date.now(),  // for timecode interpolation
     };
