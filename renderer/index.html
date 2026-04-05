@@ -1061,7 +1061,7 @@ function deckHTML(slot){
   const d=DECKS[slot],pct=Math.round((faders[slot]??0)/255*100);
   const hasDJM=pdjlDevices.some(d=>d.type==='DJM');
   const isHW=d.type==='hw';
-  const label=isHW?`<span class="did-n">${slot+1}</span>PLAYER`:`<span class="did-n">${slot+1}</span>PLAYER`;
+  const label=`PLAYER <span class="did-n">${slot+1}</span>`;
   if(!d.ld){
     return`<div class="dk" id="dk${slot}" data-st="empty">
       <div class="dtop">
@@ -2017,6 +2017,15 @@ if(E){
     dk.master=!!status.isMaster;
     dk.sync=!!status.isSync;
     if(status.pitch!==undefined)dk.pitch=Math.round(status.pitch*100)/100;
+    if(status.mediaColor!==undefined&&status.mediaColor!==dk._mediaColor){
+      dk._mediaColor=status.mediaColor;
+      const MCOLORS={0:'',1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
+      const c=MCOLORS[status.mediaColor]||'';
+      const el=document.getElementById('dk'+layerIndex);
+      if(el){el.style.borderColor=c||'';el.style.borderWidth=c?'2px':'';}
+      const did=document.getElementById('did'+layerIndex);
+      if(did)did.style.color=c||'';
+    }
     // Album art request disabled for now (dbserver protocol needs full implementation)
     // TODO: implement proper dbserver handshake (setup + query)
     if(false && status.trackId && status.trackId!==dk._lastTrackId && status.ip && status.slot){

@@ -408,6 +408,7 @@ function parsePDJL(msg){
       beatNum, beatInBar, barsRemain, trackBeats,
       firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
       isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x01),
+      mediaColor: msg.length>0xA8 ? msg[0xA8] : 0, // 0=Default,1=Pink,2=Red,3=Orange,4=Yellow,5=Green,6=Aqua,7=Blue,8=Purple
     };
   }
   if((type===PDJL.DJM || type===PDJL.DJM2) && msg.length>=0x70){
