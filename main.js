@@ -110,7 +110,7 @@ ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTime
 ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
 
 app.whenReady().then(createWindow);
-let _cleaned=false;
+let _cleaned=false,_quitting=false;
 function cleanup(){
   if(_cleaned)return;_cleaned=true;
   saveBounds();
@@ -119,11 +119,16 @@ function cleanup(){
   try{_artSocket.close();}catch(_){}
   bridge=null;
 }
-app.on('window-all-closed',()=>{cleanup();app.quit();});
+app.on('window-all-closed',()=>{
+  _quitting=true;
+  cleanup();
+  // Force immediate exit — cleanup is done, no reason to wait
+  setTimeout(()=>process.exit(0),200).unref();
+  app.quit();
+});
 app.on('will-quit',()=>{
   cleanup();
-  // Force exit after 500ms — don't let dangling sockets keep process alive
-  setTimeout(()=>process.exit(0),500).unref();
+  setTimeout(()=>process.exit(0),200).unref();
 });
-app.on('before-quit',()=>{cleanup();});
-app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow();});
+app.on('before-quit',()=>{_quitting=true;cleanup();});
+app.on('activate',()=>{if(!_quitting&&BrowserWindow.getAllWindows().length===0)createWindow();});

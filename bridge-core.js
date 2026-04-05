@@ -380,6 +380,13 @@ function parsePDJL(msg){
 
   if(type===PDJL.CDJ && msg.length>=0x90){
     const pNum = msg[0x24]; if(pNum<1||pNum>6) return null;
+    // Debug: dump 0xA0-0xB0 area for first packet per player to find media color
+    if(!parsePDJL._cdjDump)parsePDJL._cdjDump={};
+    if(!parsePDJL._cdjDump[pNum]){
+      parsePDJL._cdjDump[pNum]=true;
+      const end=Math.min(msg.length,0xC8);
+      console.log(`[CDJ] P${pNum} type=0x0A len=${msg.length} hex@0xA0: ${msg.slice(0xA0,end).toString('hex')}`);
+    }
     const p1   = msg[0x7B];
     const state= P1_TO_STATE[p1] ?? STATE.IDLE;
     // BPM: uint32BE at 0x90 — top bit 0x80 = valid, lower 16 bits = BPM×100
@@ -409,8 +416,6 @@ function parsePDJL(msg){
       beatNum, beatInBar, barsRemain, trackBeats,
       firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
       isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x01),
-      // USB media color from CDJ status packet at 0xA8 (DJ Link Ecosystem Analysis)
-      mediaColor: msg.length>0xA8 ? msg[0xA8] : 0,
     };
   }
   if((type===PDJL.DJM || type===PDJL.DJM2) && msg.length>=0x70){
@@ -502,6 +507,14 @@ function parsePDJL(msg){
     return null; // ignore beat grid (0x03) and others
   }
   if(type===PDJL.ANN){
+    // Media Slot Response (type 0x06, length > 0xA8) — contains USB color at 0xA8
+    if(msg.length>0xA8){
+      const pNum=msg.length>0x24?msg[0x24]:0;
+      const color=msg[0xA8];
+      if(color>=0&&color<=8){
+        return{kind:'media_slot',name,playerNum:pNum,mediaColor:color};
+      }
+    }
     return{kind:'announce',name,playerNum:msg.length>0x24?msg[0x24]:0};
   }
   return null;
@@ -1174,7 +1187,21 @@ class BridgeCore {
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
     }
-    // mediaColor now comes from CDJ status (type 0x0A) at offset 0xA8 — no separate handler needed
+    // Media Slot Response (type 0x06, long variant) — USB color
+    if(p.kind==='media_slot'&&p.playerNum>0&&p.mediaColor>0){
+      // Apply this color to all players that load from this player's USB
+      console.log(`[MEDIA] P${p.playerNum} USB color=${p.mediaColor}`);
+      for(const[k,dev]of Object.entries(this.devices)){
+        if(k.startsWith('cdj')&&dev.state){
+          // All players loading from this source get the same color
+          if(dev.state.trackDeviceId===p.playerNum||dev.playerNum===p.playerNum){
+            dev.state.mediaColor=p.mediaColor;
+            dev.mediaColor=p.mediaColor;
+            this.onCDJStatus?.(dev.playerNum-1,dev.state);
+          }
+        }
+      }
+    }
     if(p.kind==='cdj_wf'){
       this.onWaveformPreview?.(p.playerNum, {seg:p.seg, pts:p.pts, wfType:p.wfType});
     }
