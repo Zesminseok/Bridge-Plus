@@ -203,6 +203,7 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 .devbar-item{display:flex;align-items:center;gap:5px;padding:4px 8px;background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:5px;transition:border-color .2s}
 .devbar-item.dvi-play{border-color:rgba(52,211,153,.3)}
 .devbar-item.dvi-master{border-color:rgba(251,191,36,.4)}
+.devbar-item.dvi-onair{border-color:rgba(248,113,113,.4)}
 .dvi-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 11px var(--mn);flex-shrink:0;position:relative}
 .dvi-icon.cdj{background:rgba(52,211,153,.1);color:var(--grn);border:1px solid rgba(52,211,153,.2)}
 .dvi-icon.djm{background:rgba(167,139,250,.1);color:var(--pur);border:1px solid rgba(167,139,250,.2)}
@@ -213,7 +214,8 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 .dvi-bd{padding:1px 4px;border-radius:2px;font:700 7px var(--mn);letter-spacing:.04em}
 .dvi-bd.master{background:rgba(251,191,36,.15);color:var(--ylw)}
 .dvi-bd.master.active{background:rgba(251,146,60,.25);color:var(--org)}
-.dvi-bd.sync{background:rgba(96,165,250,.1);color:var(--blu)}
+.dvi-bd.sync{background:rgba(96,165,250,.15);color:var(--blu)}
+.dvi-bd.sync.off{background:rgba(255,255,255,.03);color:var(--tx4)}
 .dvi-bd.onair{background:rgba(248,113,113,.12);color:var(--red);animation:pulse-air 1s ease-in-out infinite}
 .dvi-sep{width:1px;height:28px;background:var(--bdr);margin:0 2px}
 .dvi-link{display:flex;align-items:center;gap:4px;padding:4px 6px}
@@ -1739,7 +1741,7 @@ function updateDevBar(){
   if(djms.length){
     html+='<div class="dvi-sep"></div>';
     djms.forEach(d=>{
-      html+=`<div class="devbar-item"><div class="dvi-icon djm"><span style="font-size:9px">♪</span></div><div class="dvi-info"><div class="dvi-model">${d.name||'DJM'}</div></div></div>`;
+      html+=`<div class="devbar-item" style="border-color:rgba(52,211,153,.3)"><div class="dvi-icon djm" style="background:rgba(52,211,153,.15);color:var(--grn)"><span style="font-size:9px">♪</span></div><div class="dvi-info"><div class="dvi-model">${d.name||'DJM'}</div><div style="font:500 7px var(--mn);color:var(--grn);letter-spacing:.04em">CONNECTED</div></div></div>`;
     });
   }
   cdjs.forEach(d=>{
@@ -1752,14 +1754,16 @@ function updateDevBar(){
     const cls=['devbar-item'];
     if(isPlay)cls.push('dvi-play');
     if(isMaster)cls.push('dvi-master');
+    if(isOnAir)cls.push('dvi-onair');
     html+=`<div class="dvi-sep"></div><div class="${cls.join(' ')}">`;
-    html+=`<div class="dvi-icon cdj">${pn}<span class="dvi-state">${isPlay?'▶':'⊖'}</span></div>`;
+    html+=`<div class="dvi-icon cdj">${pn}<span class="dvi-state">${isPlay?'▶':'■'}</span></div>`;
     html+=`<div class="dvi-info"><div class="dvi-model">${d.name||'CDJ'}</div>`;
     html+=`<div class="dvi-badges">`;
-    if(isMaster)html+=`<span class="dvi-bd master active">MASTER</span>`;
-    else html+=`<span class="dvi-bd master">MASTER</span>`;
-    if(isSync)html+=`<span class="dvi-bd sync">SYNC</span>`;
-    if(isOnAir)html+=`<span class="dvi-bd onair">ON AIR</span>`;
+    // Only show MASTER when active, show SYNC always with on/off state
+    if(isMaster) html+=`<span class="dvi-bd master active">MASTER</span>`;
+    if(isSync) html+=`<span class="dvi-bd sync">SYNC</span>`;
+    else html+=`<span class="dvi-bd sync off">SYNC</span>`;
+    if(isOnAir) html+=`<span class="dvi-bd onair">ON AIR</span>`;
     html+=`</div></div></div>`;
   });
   bar.innerHTML=html;

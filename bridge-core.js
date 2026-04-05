@@ -52,6 +52,7 @@ const P1_NAME = {
 const PDJL = {
   MAGIC: Buffer.from([0x51,0x73,0x70,0x74,0x31,0x57,0x6D,0x4A,0x4F,0x4C]),
   CDJ:0x0A, DJM:0x39, DJM2:0x29, ANN:0x06,
+  CDJ_MEDIA:0x28,  // CDJ media slot info (port 50002, 96B) — has USB color
   CDJ_WF:0x56,     // CDJ waveform preview (port 50002, ~1420B)
   DJM_ONAIR:0x03,  // DJM Channels On-Air (port 50001, 45B)
   DJM_METER:0x58,  // DJM VU Metering (port 50001, 524B)
@@ -408,7 +409,6 @@ function parsePDJL(msg){
       beatNum, beatInBar, barsRemain, trackBeats,
       firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
       isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x01),
-      mediaColor: msg.length>0xA8 ? msg[0xA8] : 0, // 0=Default,1=Pink,2=Red,3=Orange,4=Yellow,5=Green,6=Aqua,7=Blue,8=Purple
     };
   }
   if((type===PDJL.DJM || type===PDJL.DJM2) && msg.length>=0x70){
@@ -470,6 +470,25 @@ function parsePDJL(msg){
       return{kind:'djm_onair',name:name2,
         onAir:[msg[0x25]?1:0, msg[0x27]?1:0, msg[0x29]?1:0, msg[0x2B]?1:0]};
     }
+  }
+  // CDJ media slot info (type 0x28, ~96B) — contains USB color
+  if(type===PDJL.CDJ_MEDIA && msg.length>=0x2C){
+    const pNum = msg[0x24];
+    // Log first occurrence for debug
+    if(!parsePDJL._mediaDumped){
+      parsePDJL._mediaDumped=true;
+      try{
+        const hex=msg.slice(0x20,Math.min(msg.length,0x60)).toString('hex');
+        console.log(`[MEDIA] type=0x28 len=${msg.length} player=${pNum} hex@0x20: ${hex}`);
+      }catch(_){}
+    }
+    // Try to find color at various offsets based on prolink-connect analysis
+    // For 96B media packet: offset 0x27=deviceId, 0x2B=slot
+    const slot = msg.length>0x2B ? msg[0x2B] : 0;
+    // Color might be at different offset in this smaller packet
+    // Try 0x38 (common for 96B packets) or scan for non-zero
+    const color = msg.length>0x38 ? msg[0x38] : 0;
+    return{kind:'cdj_media', playerNum:pNum, name, slot, color};
   }
   // CDJ-3000 waveform preview (type 0x56, variable size)
   // Sub-types at byte 0x33: 0x02=mono preview, 0x03=beat grid, 0x25=color waveform
@@ -1169,6 +1188,19 @@ class BridgeCore {
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
+    }
+    if(p.kind==='cdj_media'){
+      const key = `cdj${p.playerNum}`;
+      if(this.devices[key]){
+        this.devices[key].mediaColor = p.color;
+        this.devices[key].lastSeen = Date.now();
+      }
+      // Pass mediaColor to CDJ status callback
+      const dk = this.devices[key];
+      if(dk?.state){
+        dk.state.mediaColor = p.color;
+        this.onCDJStatus?.(p.playerNum-1, dk.state);
+      }
     }
     if(p.kind==='cdj_wf'){
       this.onWaveformPreview?.(p.playerNum, {seg:p.seg, pts:p.pts, wfType:p.wfType});
