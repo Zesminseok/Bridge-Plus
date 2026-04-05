@@ -1428,7 +1428,10 @@ function loadFile(slot,f){
         });
       }
     });
-    d.au.addEventListener('ended',()=>{d.pl=false;d.pos=0;d.au.currentTime=0;});
+    d.au.addEventListener('ended',()=>{
+      if(d.scratch)return; // ignore during scrub/drag
+      d.pl=false;d.pos=d.dur||0; // stay at end, don't jump to start
+    });
     // VU meter: stereo L/R via ChannelSplitter → two AnalyserNodes
     try{
       if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
