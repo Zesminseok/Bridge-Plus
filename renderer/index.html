@@ -759,16 +759,12 @@ function _wfBlend(r,g,b2,dimF){
     const B=Math.min(255,Math.round((rn*0xE1+gn*0x00+bn*0xFF)*dimF));
     return[R,G,B];
   }
-  // RGB (default): Rekordbox style — dominant band selects hue, energy sets brightness
-  // Rekordbox colors: bass=blue(#2255FF), mid=green(#22DD66), treble=magenta/cyan(#CC44FF)
-  const tot=r+g+b2||0.001;
-  const rn=r/tot, gn=g/tot, bn=b2/tot; // normalized shares (sum=1)
-  const energy=Math.min(1,Math.pow(tot/1.5,0.6)); // overall brightness from energy
-  // Color palette: bass→blue, mid→green, treble→pink/magenta
-  // Weighted blend by band dominance — dominant band "wins" the color
-  const R=Math.min(255,Math.round((rn*0.15+gn*0.30+bn*0.90)*energy*255*dimF));
-  const G=Math.min(255,Math.round((rn*0.35+gn*0.90+bn*0.20)*energy*255*dimF));
-  const B=Math.min(255,Math.round((rn*1.00+gn*0.40+bn*0.85)*energy*255*dimF));
+  // RGB (default): Rekordbox RGB — r(bass)→Red, g(mid)→Green, b(treble)→Blue
+  // Contrast boost: suppress non-dominant channels for vivid color separation
+  const mx=Math.max(r,g,b2)||0.001;
+  const R=Math.min(255,Math.round(Math.pow(r/mx,1.8)*r*255*dimF));
+  const G=Math.min(255,Math.round(Math.pow(g/mx,1.8)*g*255*dimF));
+  const B=Math.min(255,Math.round(Math.pow(b2/mx,1.8)*b2*255*dimF));
   return[R,G,B];
 }
 // 3BAND stacked rendering helper: returns [{color,h},...] from bottom to top
@@ -898,8 +894,16 @@ function drawZoomWaveform(slot,prog){
       }
     }else{
       const [R,G,B]=_wfBlend(r,g,b2,dimF);
+      // Oscilloscope style: bright edges, dark center — gradient fill
+      const hh=y1-y0||1;
       for(let y=y0;y<=y1;y++){
-        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=alpha;
+        const dist=Math.abs(y-(y0+y1)/2)/(hh/2); // 0=center, 1=edge
+        const glow=0.25+0.75*dist*dist; // quadratic: center=25%, edge=100%
+        const idx=(y*W+px)*4;
+        px4[idx]=Math.round(R*glow);
+        px4[idx+1]=Math.round(G*glow);
+        px4[idx+2]=Math.round(B*glow);
+        px4[idx+3]=alpha;
       }
     }
   }
