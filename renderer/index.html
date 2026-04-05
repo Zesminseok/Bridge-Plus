@@ -315,7 +315,7 @@ let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
 // 설정 — 인터페이스 포함
 let cfg={nm:'BRIDGE29',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
-  tcFps:'25',phasorMode:'scroll',wfColor:'rgb',wfCenter:'center',
+  tcFps:'25',phasorMode:'blink',wfColor:'rgb',wfCenter:'center',
   tcLtcA:'',   // Layer A LTC 오디오 장치
   tcLtcB:'',   // Layer B LTC 오디오 장치
   tcLtcM:'',   // Layer M LTC 오디오 장치
@@ -738,14 +738,8 @@ function _wfBlend(r,g,b2,dimF){
     const B=Math.min(255,Math.round((rn*0xE1+gn*0x00+bn*0xFF)*dimF));
     return[R,G,B];
   }
-  // RGB (default): Rekordbox RGB — vivid additive #FF0000/#00FF00/#0000FF
-  // Softer contrast curve for brighter, more Rekordbox-like colors
-  const mx=Math.max(r,g,b2)||0.001;
-  const C=1.5;
-  const R=Math.min(255,Math.pow(r/mx,C)*r*255);
-  const G=Math.min(255,Math.pow(g/mx,C)*g*255);
-  const B=Math.min(255,Math.pow(b2/mx,C)*b2*255);
-  return[Math.round(R*dimF),Math.round(G*dimF),Math.round(B*dimF)];
+  // RGB (default): direct color mapping — bright Rekordbox style
+  return[Math.round(Math.min(1,r)*255*dimF),Math.round(Math.min(1,g)*255*dimF),Math.round(Math.min(1,b2)*255*dimF)];
 }
 // 3BAND stacked rendering helper: returns [{color,h},...] from bottom to top
 function _wf3BandStack(r,g,b2,totalH,dimF){
@@ -867,21 +861,18 @@ function drawZoomWaveform(slot,prog){
     }
   }
   ctx.putImageData(img,0,0);
-  // Beat grid overlaid — aligned to CDJ's beatInBar
+  // Beat grid overlaid — anchored to cached bar-start position
   if(d.bpm>0&&dur>0){
     const beatMs=60000/d.bpm;
-    // Stable anchor: use d.pos (last CDJ-reported position) + d.beatInBar
-    // Both come from the same CDJ status update, so they're consistent
-    // Using interpolated posMs would oscillate at beat boundaries
-    const bib=d.beatInBar||1;
-    const anchorBeatIdx=Math.round((d.pos||0)/beatMs);
-    const phaseOff=((anchorBeatIdx-(bib-1))%4+4)%4;
-    const firstBeat=Math.ceil((posMs-cX*msPerPx)/beatMs),lastBeat=Math.floor((posMs+(W-cX)*msPerPx)/beatMs);
+    const anchor=d._barAnchorMs||0;
+    const viewL=posMs-cX*msPerPx, viewR=posMs+(W-cX)*msPerPx;
+    const firstB=Math.ceil((viewL-anchor)/beatMs), lastB=Math.floor((viewR-anchor)/beatMs);
     ctx.font='bold 9px "DM Mono",monospace';
-    for(let b=firstBeat;b<=lastBeat;b++){
-      const bpx=Math.round((b*beatMs-posMs)/msPerPx+cX);
+    for(let b=firstB;b<=lastB;b++){
+      const bMs=anchor+b*beatMs;
+      const bpx=Math.round((bMs-posMs)/msPerPx+cX);
       if(bpx<1||bpx>=W-1)continue;
-      const barNum=(((b-phaseOff)%4)+4)%4+1;
+      const barNum=((b%4)+4)%4+1;
       if(barNum===1){
         ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);
         ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);
@@ -1803,7 +1794,7 @@ function renderSettings(){
     <div class="sgr">
       <div class="srw"><span class="srl">웨이브폼 색상</span><select class="ss" id="wfColorSel"><option value="blue" ${cfg.wfColor==='blue'?'selected':''}>BLUE (모노톤)</option><option value="rgb" ${cfg.wfColor==='rgb'?'selected':''}>RGB (저=R 중=G 고=B)</option><option value="3band" ${cfg.wfColor==='3band'?'selected':''}>3BAND (저=청 중=녹 고=백)</option></select></div>
       <div class="srw"><span class="srl">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
-      <div class="srw"><span class="srl">비트 페이저 모드</span><select class="ss" id="phasorModeSel"><option value="scroll" ${cfg.phasorMode==='scroll'?'selected':''}>Scroll (채우기)</option><option value="blink" ${cfg.phasorMode==='blink'?'selected':''}>Blink (깜빡임)</option></select></div>
+      <div class="srw"><span class="srl">비트 페이저 모드</span><select class="ss" id="phasorModeSel"><option value="blink" ${cfg.phasorMode==='blink'?'selected':''}>Static (기본)</option><option value="scroll" ${cfg.phasorMode==='scroll'?'selected':''}>Scroll (채우기)</option></select></div>
     </div>
     <div class="sl">TCNet 설정</div>
     <div class="sgr">
@@ -1870,7 +1861,7 @@ function renderSettings(){
   const wfCenterSel=el.querySelector('#wfCenterSel');
   if(wfCenterSel){wfCenterSel.value=cfg.wfCenter||'center';wfCenterSel.onchange=e=>{cfg.wfCenter=e.target.value;};}
   const phasorSel=el.querySelector('#phasorModeSel');
-  if(phasorSel){phasorSel.value=cfg.phasorMode||'scroll';phasorSel.onchange=e=>{cfg.phasorMode=e.target.value;};}
+  if(phasorSel){phasorSel.value=cfg.phasorMode||'blink';phasorSel.onchange=e=>{cfg.phasorMode=e.target.value;};}
   // MIDI output device list
   const midiSel=el.querySelector('#midiOutSel');
   if(midiSel&&_midiAccess){
@@ -2001,7 +1992,11 @@ if(E){
     dk.ld=!!status.hasTrack;
     if(!wasLoaded&&dk.ld)renderDecks(); // re-render when track first loads
     if(wasLoaded&&!dk.ld)renderDecks(); // re-render when track unloaded
-    if(status.beatInBar&&status.beatInBar!==dk.beatInBar){dk.beatInBar=status.beatInBar;dk._beatTime=Date.now();}
+    if(status.beatInBar&&status.beatInBar!==dk.beatInBar){
+      dk.beatInBar=status.beatInBar;dk._beatTime=Date.now();
+      // Cache beat grid anchor: ms position of bar start (beat 1)
+      if(dk.bpm>0){const bMs=60000/dk.bpm;dk._barAnchorMs=(dk.pos||0)-(status.beatInBar-1)*bMs;}
+    }
     dk.onAir=!!status.isOnAir;
     dk.master=!!status.isMaster;
     dk.sync=!!status.isSync;
@@ -2036,7 +2031,7 @@ if(E){
       } else {
         // dbserver preview waveform: {height:0-31, color:0-7}
         // Color at full brightness, height stored separately in mn/mx for shape
-        const cmap=[[.3,.3,.3],[1,.12,.12],[1,.55,.1],[1,.95,.15],[.12,1,.12],[.12,1,1],[.25,.4,1],[.8,.2,1]];
+        const cmap=[[.35,.35,.35],[1,.1,.1],[1,.5,.05],[1,.85,.1],[.1,.9,.1],[.1,.9,.9],[.2,.35,1],[.75,.15,1]];
         dk.rgbWf=d.pts.map(p=>{
           const [r,g,b]=cmap[p.color&7]||cmap[0];
           const h=p.height/31;
@@ -2076,7 +2071,7 @@ if(E){
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
     if(d.pts&&d.pts.length>0){
-      const cmap=[[.3,.3,.3],[1,.12,.12],[1,.55,.1],[1,.95,.15],[.12,1,.12],[.12,1,1],[.25,.4,1],[.8,.2,1]];
+      const cmap=[[.35,.35,.35],[1,.1,.1],[1,.5,.05],[1,.85,.1],[.1,.9,.1],[.1,.9,.9],[.2,.35,1],[.75,.15,1]];
       dk.rgbWfDetail=d.pts.map(p=>{
         const [r,g,b]=cmap[p.color&7]||cmap[0];
         const h=p.height/31;
