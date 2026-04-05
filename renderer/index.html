@@ -738,8 +738,13 @@ function _wfBlend(r,g,b2,dimF){
     const B=Math.min(255,Math.round((rn*0xE1+gn*0x00+bn*0xFF)*dimF));
     return[R,G,B];
   }
-  // RGB (default): direct color mapping — bright Rekordbox style
-  return[Math.round(Math.min(1,r)*255*dimF),Math.round(Math.min(1,g)*255*dimF),Math.round(Math.min(1,b2)*255*dimF)];
+  // RGB (default): Rekordbox style with mild contrast for vivid color separation
+  const mx=Math.max(r,g,b2)||0.001;
+  const C=1.3;
+  const R=Math.min(255,Math.round(Math.pow(r/mx,C)*r*255*dimF));
+  const G=Math.min(255,Math.round(Math.pow(g/mx,C)*g*255*dimF));
+  const B=Math.min(255,Math.round(Math.pow(b2/mx,C)*b2*255*dimF));
+  return[R,G,B];
 }
 // 3BAND stacked rendering helper: returns [{color,h},...] from bottom to top
 function _wf3BandStack(r,g,b2,totalH,dimF){
@@ -1545,11 +1550,19 @@ function tick(){
       d.pos=d.au.currentTime*1000;
     }
 
-    // Interpolate timecode for smooth display (HW mode: pos updates on beat boundaries)
-    // timecodeMs = (beatNum-1) * msPerBeat(baseBpm) → native track time, rate = 1.0
+    // Smooth interpolated position for HW decks
+    // CDJ status arrives at ~5Hz with integer beatNum, causing display jumps
+    // Solution: maintain continuous _smoothPos that converges to CDJ target
     let displayPos=d.pos||0;
     if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
-      displayPos+=(Date.now()-d._posTime);
+      const target=d.pos+(Date.now()-d._posTime);
+      if(d._smoothPos==null) d._smoothPos=target;
+      const diff=target-d._smoothPos;
+      if(Math.abs(diff)>2000){d._smoothPos=target;} // large jump: snap (seek/track change)
+      else{d._smoothPos+=diff*0.18;} // smooth convergence
+      displayPos=d._smoothPos;
+    }else if(d.type==='hw'){
+      d._smoothPos=displayPos;
     }
     const prog=d.dur>0?(displayPos/d.dur):0;
 
