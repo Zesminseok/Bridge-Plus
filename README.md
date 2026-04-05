@@ -10,11 +10,11 @@ Pioneer Pro DJ Link 네트워크의 CDJ/DJM 상태를 실시간으로 읽어 TCN
 |------|------|
 | **Pro DJ Link 수신** | CDJ 재생 상태, BPM, 피치, 비트 위치, 트랙 정보 자동 감지 |
 | **DJM 페이더/미터** | 채널 페이더 값 및 15-band VU 미터 실시간 모니터링 |
-| **TCNet 출력** | Resolume Arena/Wire에 타임코드 + 레이어 상태 전송 (최대 8레이어) |
+| **TCNet 출력** | Resolume Arena/Wire에 타임코드 + 레이어 상태 전송 (최대 6레이어) |
 | **Art-Net Timecode** | ArtTimeCode 패킷으로 SMPTE 타임코드 브로드캐스트 |
 | **LTC 오디오 출력** | AudioWorklet 기반 Linear Timecode 생성 |
 | **MIDI Clock/MTC** | BPM 동기화 및 MIDI Timecode 출력 |
-| **Virtual Deck** | 하드웨어 없이 로컬 MP3 파일로 테스트 가능 (최대 8덱) |
+| **Virtual Deck** | 하드웨어 없이 로컬 MP3 파일로 테스트 가능 (최대 6덱) |
 | **RGB 웨이브폼** | IIR 밴드스플릿 필터 — BLUE / RGB / 3BAND 컬러 프리셋 |
 | **CDJ-3000 웨이브폼** | 컬러/모노 프리뷰 + 디테일 웨이브폼 수신 |
 | **비트 그리드** | dbserver 비트그리드(0x2204) 파싱 + 오버레이 |

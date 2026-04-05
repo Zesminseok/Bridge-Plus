@@ -17,7 +17,7 @@
 body{background:var(--bg);color:var(--tx);font-family:var(--sn);-webkit-app-region:drag;user-select:none;overflow:hidden;font-weight:400}
 button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .font-mono{font-family:var(--mn)}.font-label{font-family:var(--lb)}
-.hdr{height:52px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);flex-shrink:0;z-index:50}
+.hdr{height:52px;padding:0 20px 0 80px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);flex-shrink:0;z-index:50;-webkit-app-region:drag}
 .logo{display:flex;align-items:center;gap:10px}
 .li{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--grn2),var(--grn));display:flex;align-items:center;justify-content:center;font:800 11px var(--mn);color:#003825}
 .tabs{display:flex;padding:0 20px;border-bottom:1px solid var(--bdr);background:var(--bg-lowest);flex-shrink:0;height:36px}
@@ -50,7 +50,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .fsep{width:1px;background:var(--bdr);height:50px;align-self:center;margin:0 2px}
 .sl{font:700 9px var(--lb);color:var(--tx3);letter-spacing:.12em;margin:0 0 8px;text-transform:uppercase}.sl.mt{margin-top:16px}
 .deck-area{display:flex;flex-direction:column;gap:8px}
-.deck-row{display:grid;gap:8px;grid-template-columns:repeat(3,1fr)}
+.deck-row{display:grid;gap:8px;grid-template-columns:repeat(2,1fr)}
 .deck-row.compact{gap:5px}
 .deck-row.compact .dk{font-size:0.95em}
 .deck-row.compact .dtop{padding:6px 10px 0}
@@ -391,7 +391,7 @@ function _toCamelot(k){
 
 
 // ════ SMPTE Timecode Engine — Output Layer routing ══════════════════
-// Input Layer (decks 1-8) → Output Layer (A/B/M) → LTC / MTC / Art-Net
+// Input Layer (decks 1-6) → Output Layer (A/B/M) → LTC / MTC / Art-Net
 
 const TC_FPS_TYPE = {'24':0,'25':1,'29.97':2,'30':3};
 
