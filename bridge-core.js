@@ -646,10 +646,12 @@ class BridgeCore {
   }
 
   stop(){
+    if(!this.running && !this.txSocket) return; // already stopped
     this.running = false;
-    this._timers.forEach(t=>clearInterval(t)); this._timers=[];
+    // clear all intervals and timeouts
+    this._timers.forEach(t=>{clearInterval(t);clearTimeout(t);}); this._timers=[];
     try{ const b=Buffer.alloc(TC.H); buildHdr(TC.OPTOUT).copy(b,0); this._send(b,TC.P_BC); }catch(_){}
-    // close all sockets including PDJL
+    // close all UDP sockets including PDJL
     const sockets = [this.txSocket,this.rxSocket,this._loRxSocket,this._ipRxSocket,this.lPortSocket];
     if(this._pdjlSockets) this._pdjlSockets.forEach(s=>sockets.push(s));
     else if(this.pdjlSocket) sockets.push(this.pdjlSocket);
@@ -659,10 +661,16 @@ class BridgeCore {
     this._pdjlSockets=[];
     try{this._pdjlAnnSock?.close();}catch(_){}
     this._pdjlAnnSock=null;
-    // close dbserver connections
-    for(const [k,s] of Object.entries(this._dbConns)){try{s.destroy();}catch(_){}}
+    // close dbserver TCP connections
+    for(const [k,s] of Object.entries(this._dbConns)){
+      try{s.removeAllListeners();s.destroy();}catch(_){}
+    }
     this._dbConns={};
-    console.log('[BridgeCore] stop: all sockets closed');
+    // remove all callbacks to prevent post-stop activity
+    this.onNodeDiscovered=null; this.onCDJStatus=null; this.onDJMStatus=null;
+    this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null;
+    this.onAlbumArt=null; this.onTrackMetadata=null;
+    console.log('[BridgeCore] stop: all sockets and connections closed');
   }
 
   /**
@@ -1461,10 +1469,10 @@ class BridgeCore {
       const txId = 1;
       const rmst = this._dbRMST(spoofPlayer, 0x01, slot, 0x01);
       const metaReq = this._dbBuildMsg(txId, 0x2002, [rmst, this._dbArg4(trackId)]);
+      console.log(`[DBSRV] P${playerNum} META_REQ: slot=${slot} trackId=${trackId} rmst=0x${((spoofPlayer<<24)|(0x01<<16)|(slot<<8)|0x01).toString(16)}`);
       sock.write(metaReq);
       const menuAvail = await this._dbReadResponse(sock);
-
-      // Parse item count from MENU_AVAILABLE response
+      console.log(`[DBSRV] P${playerNum} META_RESP: ${menuAvail.length}B hex=${menuAvail.slice(0,40).toString('hex')}`);
       // Send RENDER_MENU_REQ (type 0x3000) to get all items
       const renderReq = this._dbBuildMsg(txId+1, 0x3000, [
         rmst, this._dbArg4(0), this._dbArg4(64),

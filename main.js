@@ -89,5 +89,15 @@ ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTime
 ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
 
 app.whenReady().then(createWindow);
-app.on('window-all-closed',()=>{bridge?.stop();clearInterval(iv);app.quit();});
+app.on('window-all-closed',()=>{
+  bridge?.stop();clearInterval(iv);
+  try{_artSocket.close();}catch(_){}
+  app.quit();
+});
+app.on('will-quit',()=>{
+  bridge?.stop();clearInterval(iv);
+  try{_artSocket.close();}catch(_){}
+  // Force exit after 2s if sockets keep event loop alive
+  setTimeout(()=>process.exit(0),2000).unref();
+});
 app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow();});
