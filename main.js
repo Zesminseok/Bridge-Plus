@@ -33,7 +33,14 @@ let win,bridge,iv;
 // Window bounds persistence
 const cfgPath=path.join(app.getPath('userData'),'window-state.json');
 function loadBounds(){try{return JSON.parse(fs.readFileSync(cfgPath,'utf8'));}catch(_){return null;}}
-function saveBounds(){try{if(win&&!win.isMinimized()&&!win.isMaximized()){const b=win.getBounds();fs.writeFileSync(cfgPath,JSON.stringify(b));}}catch(_){}}
+function saveBounds(){
+  try{
+    if(!win||win.isDestroyed()) return;
+    const b=win.getBounds();
+    fs.writeFileSync(cfgPath,JSON.stringify(b));
+    console.log('[WIN] saved bounds:',JSON.stringify(b));
+  }catch(e){console.warn('[WIN] saveBounds error:',e.message);}
+}
 
 function createWindow(){
   const saved=loadBounds();
@@ -44,6 +51,11 @@ function createWindow(){
     backgroundColor:'#0a0c10',titleBarStyle:'hiddenInset',
     webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false},
   });
+  // Save bounds on move/resize (debounced) and on close
+  let _saveTmr;
+  const debounceSave=()=>{clearTimeout(_saveTmr);_saveTmr=setTimeout(saveBounds,500);};
+  win.on('move',debounceSave);
+  win.on('resize',debounceSave);
   win.on('close',()=>saveBounds());
   const p=path.join(__dirname,'renderer','index.html');
   win.loadFile(fs.existsSync(p)?p:path.join(__dirname,'index.html'));
@@ -99,6 +111,7 @@ ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridg
 
 app.whenReady().then(createWindow);
 function cleanup(){
+  saveBounds();
   try{bridge?.stop();}catch(_){}
   clearInterval(iv);
   try{_artSocket.close();}catch(_){}
