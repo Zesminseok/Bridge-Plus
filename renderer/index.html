@@ -783,8 +783,8 @@ function drawOverview(slot,prog){
     for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;if(p.mx>mxMax)mxMax=p.mx;}
     r/=cnt;g/=cnt;b/=cnt;
     const past=px/W<pos;
-    const dimF=past?1.0:.85;
-    const alpha=past?245:210;
+    const dimF=past?.45:1.0;
+    const alpha=past?160:245;
     const h=Math.max(1,Math.round(mxMax*mid*.92));
     const y0=Math.max(0,mid-h),y1=Math.min(H-1,mid+h);
     if((cfg.wfColor||'rgb')==='3band'){
@@ -803,21 +803,28 @@ function drawOverview(slot,prog){
     }
   }
   ctx.putImageData(img,0,0);
-  // Draw cue points (memory=white triangle, hot=colored triangle with letter)
+  // Draw cue points on overview (memory=white, hot=colored with letter)
   const _cueColors={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
   if(d.cuePoints&&d.dur>0){
-    ctx.font='bold 7px "DM Mono",monospace';
+    ctx.font='bold 8px "DM Mono",monospace';
     for(const cue of d.cuePoints){
       const cx=Math.round(cue.timeMs/d.dur*W);
       if(cx<0||cx>=W)continue;
-      const col=cue.type==='hot'?(_cueColors[cue.colorId]||'#00e676'):'rgba(255,255,255,.8)';
-      ctx.fillStyle=col;ctx.fillRect(cx-.5,0,1,H);
-      ctx.beginPath();ctx.moveTo(cx-3,0);ctx.lineTo(cx+3,0);ctx.lineTo(cx,4);ctx.closePath();
-      ctx.fill();
-      // Hot cue label (A-H)
+      const col=cue.type==='hot'?(_cueColors[cue.colorId]||'#00e676'):'#fff';
+      // Vertical line
+      ctx.strokeStyle=col;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+      // Triangle marker at top
+      ctx.fillStyle=col;
+      ctx.beginPath();ctx.moveTo(cx-4,0);ctx.lineTo(cx+4,0);ctx.lineTo(cx,6);ctx.closePath();ctx.fill();
+      // Label
       if(cue.type==='hot'&&cue.hotCueNum>0){
         const label=String.fromCharCode(64+cue.hotCueNum);
-        ctx.fillStyle=col;ctx.fillText(label,cx+2,10);
+        ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cx+1,0,9,10);
+        ctx.fillStyle=col;ctx.fillText(label,cx+2,9);
+      }else if(cue.type==='memory'){
+        ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(cx+1,0,9,10);
+        ctx.fillStyle='rgba(255,255,255,.8)';ctx.fillText('M',cx+2,9);
       }
     }
   }
@@ -1600,20 +1607,37 @@ function tick(){
     }
 
     // Smooth interpolated position for HW decks
-    // d.pos = last known position (from CDJ packet or Precise Position), d._posTime = when received
     let displayPos=d.pos||0;
-    if(d.type==='hw'&&d.pl&&d._posTime){
+    if(d.type==='hw'&&d._posTime){
       const elapsed=Date.now()-d._posTime;
-      const target=d.pos+elapsed;
-      if(d._stateChanged){d._smoothPos=d.pos;d._stateChanged=false;}
-      else if(d._smoothPos==null){d._smoothPos=target;}
-      else{
-        const diff=target-d._smoothPos;
-        if(Math.abs(diff)>2000){d._smoothPos=target;}
-        else{d._smoothPos+=diff*0.5;}
+      const isFresh=elapsed<200; // Precise Position: ~30ms interval, beat: ~500ms
+      if(d.pl){
+        if(isFresh&&d._hasPrecisePos){
+          // CDJ-3000 with frequent updates: minimal interpolation
+          const target=d.pos+elapsed;
+          if(d._stateChanged){d._smoothPos=d.pos;d._stateChanged=false;}
+          else if(d._smoothPos==null){d._smoothPos=target;}
+          else{d._smoothPos+=(target-d._smoothPos)*0.7;} // fast track
+          displayPos=d._smoothPos;
+        }else{
+          // CDJ-2000: beat-based, need more interpolation
+          const target=d.pos+elapsed;
+          if(d._stateChanged){d._smoothPos=d.pos;d._stateChanged=false;}
+          else if(d._smoothPos==null){d._smoothPos=target;}
+          else{
+            const diff=target-d._smoothPos;
+            if(Math.abs(diff)>2000){d._smoothPos=target;}
+            else{d._smoothPos+=diff*0.5;}
+          }
+          displayPos=d._smoothPos;
+        }
+      }else{
+        // Not playing: show exact pos from CDJ, no interpolation
+        displayPos=d.pos;
+        d._smoothPos=null;
+        d._stateChanged=false;
       }
-      displayPos=d._smoothPos;
-      // Clamp to track duration — don't run past the end
+      // Clamp to track duration
       if(d.dur>0&&displayPos>d.dur) displayPos=d.dur;
     }else if(d.type==='hw'){
       d._smoothPos=null;
@@ -2053,8 +2077,9 @@ if(E){
     // CDJ-3000 Precise Position — direct ms update, highest priority
     if(status._precisePos){
       const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
+      dk._hasPrecisePos=true;
       if(status.timecodeMs!=null){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
-      if(status.trackLengthSec>0&&(!dk.dur||dk.dur<=0)) dk.dur=status.trackLengthSec*1000;
+      if(status.trackLengthSec>0) dk.dur=status.trackLengthSec*1000;
       if(status.bpmEffective>0) dk.bpm=Math.round(status.bpmEffective*100)/100;
       return;
     }
@@ -2254,7 +2279,8 @@ if(E){
 function fTC(ms){if(!ms&&ms!==0)return'--:--:--:--';const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000),f=Math.floor((ms%1000)/33.33);return z(h)+':'+z(m)+':'+z(s)+':'+z(f);}
 function fTm(ms){if(!ms)return'0:00';return Math.floor(ms/60000)+':'+z(Math.floor((ms%60000)/1000));}
 // mm:ss.mm format (centiseconds)
-function fTmMs(ms){if(!ms&&ms!==0)return'--:--.--';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),cs=Math.floor((ms%1000)/10);return m+':'+z(s)+'.'+z(cs);}
+function fTmMs(ms){if(!ms&&ms!==0)return'--:--.---';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return m+':'+z(s)+'.'+z3(ml);}
+function z3(n){return n<10?'00'+n:n<100?'0'+n:''+n;}
 // Cue point time: mm:ss.cs (centiseconds, 2 digits)
 function fTcue(ms){if(!ms&&ms!==0)return'--:--.--';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),cs=Math.floor((ms%1000)/10);return z(m)+':'+z(s)+'.'+String(cs).padStart(2,'0');}
 // Bar.Beat counter like Rekordbox ("8.2")
