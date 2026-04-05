@@ -7,6 +7,7 @@
  * Packet layouts reverse-engineered from BRIDGE36 pcap captures.
  */
 const dgram = require('dgram');
+const net   = require('net');
 const os    = require('os');
 
 // ─────────────────────────────────────────────
@@ -51,6 +52,7 @@ const P1_NAME = {
 const PDJL = {
   MAGIC: Buffer.from([0x51,0x73,0x70,0x74,0x31,0x57,0x6D,0x4A,0x4F,0x4C]),
   CDJ:0x0A, DJM:0x39, ANN:0x06,
+  CDJ_WF:0x56,     // CDJ waveform preview (port 50002, ~1420B)
   DJM_ONAIR:0x03,  // DJM Channels On-Air (port 50001, 45B)
   DJM_METER:0x58,  // DJM VU Metering (port 50001, 524B)
 };
@@ -406,6 +408,32 @@ function parsePDJL(msg){
         onAir:[msg[0x25]||0, msg[0x26]||0, msg[0x27]||0, msg[0x29]||0]};
     }
   }
+  // CDJ-3000 waveform preview (type 0x56, variable size)
+  // Sub-types at byte 0x33: 0x02=mono preview, 0x03=beat grid, 0x25=color waveform
+  if(type===PDJL.CDJ_WF && msg.length>0x34){
+    const pNum = msg[0x2a]; // player number
+    const sub  = msg[0x33]; // sub-type
+    const seg  = msg.readUInt16BE(0x30); // segment index
+    if(sub===0x25 && msg.length>0x40){
+      // Color waveform: 2 bytes per point starting at 0x34
+      // Byte 1: high nibble = color (0-15), low nibble = extra
+      // Byte 2: height (0-255)
+      const pts=[];
+      for(let i=0x34;i<msg.length-1;i+=2){
+        pts.push({color:(msg[i]>>4)&0xF, height:msg[i+1]});
+      }
+      return{kind:'cdj_wf',playerNum:pNum,name,sub,seg,pts,wfType:'color'};
+    }
+    if(sub===0x02 && msg.length>0x40){
+      // Mono waveform preview: 1 byte per point starting at 0x34
+      const pts=[];
+      for(let i=0x34;i<msg.length;i++){
+        pts.push({height:msg[i]});
+      }
+      return{kind:'cdj_wf',playerNum:pNum,name,sub,seg,pts,wfType:'mono'};
+    }
+    return null; // ignore beat grid (0x03) and others
+  }
   if(type===PDJL.ANN){
     return{kind:'announce',name,playerNum:msg.length>0x24?msg[0x24]:0};
   }
@@ -449,6 +477,10 @@ class BridgeCore {
     this.onDJMStatus      = null;
     this.onDJMMeter       = null;
     this.onDeviceList     = null;
+    this.onWaveformPreview = null;  // (playerNum, {seg, pts, wfType}) => {}
+    this.onAlbumArt       = null;   // (playerNum, jpegBuffer) => {}
+    this._artCache = {};  // trackId -> {playerNum, jpegBase64}
+    this._dbConns  = {};  // ip -> net.Socket
   }
 
   _resolveBroadcast(){
@@ -559,6 +591,9 @@ class BridgeCore {
     this.txSocket=null; this.rxSocket=null; this._loRxSocket=null;
     this._ipRxSocket=null; this.lPortSocket=null; this.pdjlSocket=null;
     this._pdjlSockets=[];
+    // close dbserver connections
+    for(const [k,s] of Object.entries(this._dbConns)){try{s.destroy();}catch(_){}}
+    this._dbConns={};
     console.log('[BridgeCore] stop: all sockets closed');
   }
 
@@ -900,6 +935,7 @@ class BridgeCore {
         } else if(prev){
           prev.timecodeMs = timecodeMs;
         }
+        p.ip = rinfo.address;
         this.onCDJStatus?.(li, p);
       }
     }
@@ -921,6 +957,9 @@ class BridgeCore {
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
+    }
+    if(p.kind==='cdj_wf'){
+      this.onWaveformPreview?.(p.playerNum, {seg:p.seg, pts:p.pts, wfType:p.wfType});
     }
     if(p.kind==='announce'){
       const k=`dev_${rinfo.address}`;
@@ -983,6 +1022,110 @@ class BridgeCore {
   getActiveNodes(){ const now=Date.now(); return Object.values(this.nodes).filter(n=>now-n.lastSeen<10000); }
   getActiveDevices(){ const now=Date.now(); return Object.values(this.devices).filter(d=>now-d.lastSeen<10000); }
   getPDJLPort(){ return this.pdjlPort; }
+
+  // ── dbserver artwork client (TCP 12523) ────
+  /**
+   * Request album art from a CDJ via dbserver protocol.
+   * Based on Deep-Symmetry/dysentery reverse engineering.
+   * @param {string} ip  CDJ IP address
+   * @param {number} slot  media slot (1=CD, 2=SD, 3=USB, 4=collection)
+   * @param {number} artworkId  artwork ID from CDJ status trackId
+   * @param {number} playerNum  requesting player number
+   */
+  requestArtwork(ip, slot, artworkId, playerNum){
+    if(!ip || !artworkId) return;
+    const cacheKey = `${ip}_${slot}_${artworkId}`;
+    if(this._artCache[cacheKey]){
+      this.onAlbumArt?.(playerNum, this._artCache[cacheKey]);
+      return;
+    }
+    this._dbserverRequest(ip, slot, artworkId, playerNum, cacheKey);
+  }
+
+  async _dbserverRequest(ip, slot, artworkId, playerNum, cacheKey){
+    const PORT = 12523;
+    let sock;
+    try{
+      sock = new net.Socket();
+      sock.setTimeout(5000);
+      const bufs = [];
+      await new Promise((res,rej)=>{
+        sock.on('error', rej);
+        sock.on('timeout', ()=>rej(new Error('timeout')));
+        sock.connect(PORT, ip, ()=>{
+          console.log(`[DBSRV] connected to ${ip}:${PORT}`);
+          // Step 1: Send setup message (greeting)
+          // dbserver greeting: magic 4 bytes + transaction id
+          const greet = Buffer.alloc(4);
+          greet.writeUInt32BE(1, 0); // protocol number = 1
+          sock.write(greet);
+          res();
+        });
+      });
+
+      // Collect response data
+      const data = await new Promise((res,rej)=>{
+        const chunks = [];
+        let total = 0;
+        sock.on('data', d=>{
+          chunks.push(d);
+          total += d.length;
+          // dbserver responses are framed; look for JPEG header (FFD8)
+          const combined = Buffer.concat(chunks);
+          const jpegStart = combined.indexOf(Buffer.from([0xFF,0xD8]));
+          const jpegEnd = combined.indexOf(Buffer.from([0xFF,0xD9]), jpegStart>0?jpegStart:0);
+          if(jpegStart>=0 && jpegEnd>jpegStart){
+            res(combined.slice(jpegStart, jpegEnd+2));
+          }
+          // If we got artwork request response, send the actual request
+          if(total===4 && !this._dbGreetDone){
+            this._dbGreetDone = true;
+            // Send artwork request message (simplified dbserver query)
+            const req = this._buildArtworkRequest(slot, artworkId);
+            sock.write(req);
+          }
+        });
+        sock.on('end', ()=>{
+          const combined = Buffer.concat(chunks);
+          const jpegStart = combined.indexOf(Buffer.from([0xFF,0xD8]));
+          const jpegEnd = combined.indexOf(Buffer.from([0xFF,0xD9]), jpegStart>0?jpegStart:0);
+          if(jpegStart>=0 && jpegEnd>jpegStart) res(combined.slice(jpegStart, jpegEnd+2));
+          else rej(new Error('no JPEG found'));
+        });
+        sock.on('error', rej);
+        sock.on('timeout', ()=>rej(new Error('timeout')));
+      });
+
+      if(data && data.length>100){
+        const b64 = 'data:image/jpeg;base64,' + data.toString('base64');
+        this._artCache[cacheKey] = b64;
+        this.onAlbumArt?.(playerNum, b64);
+        console.log(`[DBSRV] artwork ${artworkId} from ${ip}: ${data.length}B`);
+      }
+    }catch(e){
+      console.warn(`[DBSRV] artwork request failed: ${e.message}`);
+    }finally{
+      try{sock?.destroy();}catch(_){}
+      this._dbGreetDone = false;
+    }
+  }
+
+  _buildArtworkRequest(slot, artworkId){
+    // Deep-Symmetry dbserver: artwork request
+    // Message type 0x2004, args: slot (int32), 0 (int32), artworkId (int32)
+    // Simplified framing: 4-byte length prefix + message body
+    const body = Buffer.alloc(24);
+    body.writeUInt32BE(0x10, 0);       // transaction id
+    body.writeUInt32BE(0x2004, 4);     // message type = artwork request
+    body.writeUInt32BE(0x03, 8);       // arg count = 3
+    body.writeUInt32BE(slot, 12);      // slot (USB=3, SD=2, CD=1)
+    body.writeUInt32BE(0, 16);         // always 0
+    body.writeUInt32BE(artworkId, 20); // artwork ID
+    const frame = Buffer.alloc(4 + body.length);
+    frame.writeUInt32BE(body.length, 0);
+    body.copy(frame, 4);
+    return frame;
+  }
 }
 
 module.exports = {

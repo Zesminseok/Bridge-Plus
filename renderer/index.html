@@ -680,6 +680,17 @@ async function buildRGBWaveform(blob, onChunk){
   }catch(e){console.warn('[rgbWf]',e);return null;}
 }
 
+// CDJ-3000 color waveform: nibble → RGB
+// Rekordbox color encoding from CDJ extended status packets
+function _cdjColorToRGB(c){
+  const map=[
+    [0,0,0],[1,.1,.1],[1,.4,0],[1,.9,0],[0,.8,0],[0,.8,.8],
+    [0,.2,1],[.5,0,1],[.5,.5,.5],[.7,0,0],[.8,.4,0],[.7,.7,0],
+    [0,.5,0],[0,.5,.5],[.2,0,.8],[.6,0,.6]
+  ];
+  return map[c&0xF]||[0,0,0];
+}
+
 // Waveform color: 3 presets — 'blue', 'rgb', '3band'
 // Source: Rekordbox ANLZ PWV4/PWV5/PWV6 + Deep-Symmetry/dysentery #9/#33
 function _wfBlend(r,g,b2,dimF){
@@ -1817,6 +1828,47 @@ if(E){
     if(status.name)dk.model=status.name;
     dk.ld=status.hasTrack||dk.ld;
     if(status.beatInBar)dk.beatInBar=status.beatInBar;
+    // Request album art on track change (HW mode)
+    if(status.trackId && status.trackId!==dk._lastTrackId && status.ip && status.slot){
+      dk._lastTrackId=status.trackId;
+      window.bridge.requestArtwork({ip:status.ip,slot:status.slot,artworkId:status.trackId,playerNum:status.playerNum});
+    }
+  });
+  // HW waveform preview from CDJ-3000
+  window.bridge.onWaveformPreview?.(d=>{
+    const li=d.playerNum-1;
+    const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
+    if(d.wfType==='color'&&d.pts&&d.pts.length>0){
+      // CDJ-3000 color waveform: accumulate segments
+      if(!dk._hwWfSegs)dk._hwWfSegs={};
+      dk._hwWfSegs[d.seg]=d.pts;
+      // Build full waveform from segments
+      const segs=Object.keys(dk._hwWfSegs).map(Number).sort((a,b)=>a-b);
+      const allPts=[];
+      for(const s of segs) allPts.push(...dk._hwWfSegs[s]);
+      // Convert CDJ color format to our rgbWf format
+      dk.rgbWf=allPts.map(p=>{
+        const [r,g,b]=_cdjColorToRGB(p.color);
+        const h=p.height/255;
+        return{r:r*h,g:g*h,b:b*h,mn:-h,mx:h};
+      });
+      dk.dur=dk.rgbWf.length*30; // approximate: ~30ms per waveform point
+    }
+  });
+  // HW album art from CDJ dbserver
+  window.bridge.onAlbumArt?.(d=>{
+    const li=d.playerNum-1;
+    const dk=DECKS[li];if(!dk)return;
+    dk.art=d.art;
+    const el=document.getElementById('dart'+li);
+    if(el){
+      const img=el.querySelector('img');
+      if(img)img.src=d.art;
+      else{
+        const noart=el.querySelector('.noart-icon');
+        if(noart){el.innerHTML=`<img src="${d.art}" alt="">`;}
+      }
+    }
   });
   window.bridge.onDJMStatus?.(d=>{faders=d.faders;});
   window.bridge.onDJMMeter?.(ch=>{

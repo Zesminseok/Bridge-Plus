@@ -65,6 +65,8 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onDJMStatus=f=>win?.webContents.send('bridge:djm',{faders:f});
     bridge.onDJMMeter=ch=>win?.webContents.send('bridge:djmmeter',ch);
     bridge.onDeviceList=devs=>win?.webContents.send('pdjl:devices',Object.values(devs));
+    bridge.onWaveformPreview=(pn,wf)=>win?.webContents.send('bridge:wfpreview',{playerNum:pn,...wf});
+    bridge.onAlbumArt=(pn,b64)=>win?.webContents.send('bridge:albumart',{playerNum:pn,art:b64});
     await bridge.start();push();
     return{ok:true,pdjlPort:bridge.getPDJLPort(),broadcastAddr:bridge.broadcastAddr};
   }catch(e){return{ok:false,err:e.message};}
@@ -78,6 +80,7 @@ ipcMain.handle('bridge:setHWMode',(_,{i,en})=>{bridge?.setHWMode(i,en);return{ok
 ipcMain.handle('bridge:getInterfaces',()=>getAllInterfaces());
 ipcMain.handle('bridge:getDevices',()=>bridge?.getActiveDevices()||[]);
 ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTimeCode(ip,port,hh,mm,ss,ff,type);return{ok:true};});
+ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
 
 app.whenReady().then(createWindow);
 app.on('window-all-closed',()=>{bridge?.stop();clearInterval(iv);app.quit();});
