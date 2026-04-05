@@ -51,7 +51,7 @@ const P1_NAME = {
 
 const PDJL = {
   MAGIC: Buffer.from([0x51,0x73,0x70,0x74,0x31,0x57,0x6D,0x4A,0x4F,0x4C]),
-  CDJ:0x0A, DJM:0x39, ANN:0x06,
+  CDJ:0x0A, DJM:0x39, DJM2:0x29, ANN:0x06,
   CDJ_WF:0x56,     // CDJ waveform preview (port 50002, ~1420B)
   DJM_ONAIR:0x03,  // DJM Channels On-Air (port 50001, 45B)
   DJM_METER:0x58,  // DJM VU Metering (port 50001, 524B)
@@ -388,14 +388,32 @@ function parsePDJL(msg){
       isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x01),
     };
   }
-  if(type===PDJL.DJM && msg.length>=0x70){
-    // DJM Status (type 0x39, 248B, port 50002)
-    // 4 channel blocks: Ch1@0x24, Ch2@0x3C, Ch3@0x54, Ch4@0x6C (24B each)
-    // Fader: uint16BE at block start, range 0-0x3FF
+  if((type===PDJL.DJM || type===PDJL.DJM2) && msg.length>=0x70){
+    // DJM Mixer Status (type 0x29 or 0x39, port 50002)
+    // Debug: hex dump first packet to find correct fader offsets
+    if(!parsePDJL._djmDumped){
+      parsePDJL._djmDumped=true;
+      try{
+        console.log(`[DJM] mixer status type=0x${type.toString(16)} len=${msg.length}`);
+        const hex=msg.slice(0x20,Math.min(0x80,msg.length)).toString('hex').match(/.{2}/g).join(' ');
+        console.log(`[DJM] hex@0x20: ${hex}`);
+        for(const base of [0x24,0x3C,0x54,0x6C]){
+          if(base+2>msg.length) break;
+          const vals=[];
+          for(let i=0;i<24&&base+i+1<msg.length;i+=2) vals.push(`+${i}:${msg.readUInt16BE(base+i).toString(16)}`);
+          console.log(`[DJM] block@0x${base.toString(16)}: ${vals.join(' ')}`);
+        }
+      }catch(_){}
+    }
     const ch=[0x24,0x3C,0x54,0x6C].map(off=>{
+      if(off+1>=msg.length) return 0;
       const raw=msg.readUInt16BE(off);
       return Math.round(raw/0x3FF*255);
     });
+    if(!parsePDJL._lastDjm || parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
+      parsePDJL._lastDjm=ch.slice();
+      try{console.log(`[DJM] faders=[${ch}]`);}catch(_){}
+    }
     return{kind:'djm',name,channel:ch};
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
@@ -416,9 +434,18 @@ function parsePDJL(msg){
   if(type===PDJL.DJM_ONAIR && msg.length>=0x2C){
     const name2 = msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
     if(name2.includes('DJM')){
-      // On-air flags: 0 or 1 at offsets 0x25-0x2B
+      // Debug: hex dump on-air packet to find all available data
+      if(!parsePDJL._onairDumped){
+        parsePDJL._onairDumped=true;
+        try{
+          const hex=msg.toString('hex').match(/.{2}/g).join(' ');
+          console.log(`[DJM] on-air packet len=${msg.length}: ${hex}`);
+        }catch(_){}
+      }
+      // On-air flags at byte 0x24+channel (1-based skipping 0x28 which is cross-fader assign)
+      // On-air flags at 2-byte intervals: 0x25, 0x27, 0x29, 0x2B
       return{kind:'djm_onair',name:name2,
-        onAir:[msg[0x25]||0, msg[0x26]||0, msg[0x27]||0, msg[0x29]||0]};
+        onAir:[msg[0x25]?1:0, msg[0x27]?1:0, msg[0x29]?1:0, msg[0x2B]?1:0]};
     }
   }
   // CDJ-3000 waveform preview (type 0x56, variable size)
@@ -481,7 +508,7 @@ class BridgeCore {
     this.hwMode  = new Array(8).fill(false);
     this.nodes   = {};
     this.devices = {};
-    this.faders  = [255,255,255,255];
+    this.faders  = [0,0,0,0];
     this.onAir   = [0,0,0,0];  // DJM Channels-On-Air flags
     this._tcAcc = new Array(8).fill(null);
 
@@ -498,14 +525,18 @@ class BridgeCore {
 
   _resolveBroadcast(){
     if(this.isLocalMode){ this.localAddr=null; return '127.0.0.1'; }
-    // detect own IP for unicast (Arena may bind to a specific interface)
+    // detect own IP for unicast — prefer non-link-local (main LAN where Resolume lives)
     this.localAddr = null;
+    let fallbackAddr = null;
     for(const iface of getAllInterfaces()){
       if(!iface.internal && iface.address!=='127.0.0.1'){
-        this.localAddr = iface.address;
-        break;
+        if(!iface.address.startsWith('169.254.')){
+          this.localAddr = iface.address;
+          break;
+        } else if(!fallbackAddr) fallbackAddr = iface.address;
       }
     }
+    if(!this.localAddr) this.localAddr = fallbackAddr;
     if(this.tcnetBindAddr && this.tcnetBindAddr!=='auto' && this.tcnetBindAddr!=='0.0.0.0'){
       this.localAddr = this.tcnetBindAddr;
     }
@@ -623,6 +654,10 @@ class BridgeCore {
     if(!this.running||!this.txSocket) return;
     try{ this.txSocket.send(buf, 0, buf.length, port, this.broadcastAddr); }catch(_){}
     if(!this.isLocalMode){
+      // Also send to 255.255.255.255 if broadcastAddr is subnet-specific
+      if(this.broadcastAddr!=='255.255.255.255'){
+        try{ this.txSocket.send(buf, 0, buf.length, port, '255.255.255.255'); }catch(_){}
+      }
       if(this.localAddr){
         try{ this.txSocket.send(buf, 0, buf.length, port, this.localAddr); }catch(_){}
       }
@@ -751,7 +786,8 @@ class BridgeCore {
       this.onNodeDiscovered?.(this.nodes[key]);
     }
     if(type===TC.APP){
-      console.log(`[${label}] APP from ${name} — responding to ${rinfo.address}:${rinfo.port}`);
+      if(!this._lPortDbg)this._lPortDbg={};
+      if(!this._lPortDbg['txapp_'+rinfo.address]){this._lPortDbg['txapp_'+rinfo.address]=true;console.log(`[${label}] APP from ${name} → ${rinfo.address}:${rinfo.port}`);}
       try{ this.txSocket?.send(mkAppResp(this.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
     }
     // 0x14 MetadataRequest — Arena asks for track metadata on a layer
@@ -768,9 +804,7 @@ class BridgeCore {
       const faderVal = this.faders ? (this.faders[li] || 0) : 0;
       const metricsPkt = mkDataMetrics(layerReq, layerData, faderVal);
       this._uc(metricsPkt, rinfo.port, rinfo.address);
-      if(layerData){
-        console.log(`[${label}] MetaResp(DATA) → ${rinfo.address}:${rinfo.port} layer=${layerReq} track="${layerData.trackName||''}" artist="${layerData.artistName||''}"`);
-      }
+      // MetaResp log suppressed (too frequent, causes FPS drop)
     }
   }
 
@@ -851,7 +885,7 @@ class BridgeCore {
         if(type===TC.APP){
           const body = msg.slice(TC.H);
           const lPort = body.length>=22 ? body.readUInt16LE(20) : this.listenerPort;
-          console.log(`[lPort] APP from ${name} — responding with AppResp to ${rinfo.address}:${rinfo.port}`);
+          if(!this._lPortDbg['app_'+rinfo.address]){this._lPortDbg['app_'+rinfo.address]=true;console.log(`[lPort] APP from ${name} → ${rinfo.address}:${rinfo.port}`);}
           try{ this.txSocket?.send(mkAppResp(this.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
         }
         if(type===0x14){
@@ -866,7 +900,7 @@ class BridgeCore {
           const faderVal = this.faders ? (this.faders[li] || 0) : 0;
           const metricsPkt = mkDataMetrics(layerReq, layerData, faderVal);
           this._uc(metricsPkt, rinfo.port, rinfo.address);
-          if(layerData) console.log(`[lPort] MetaResp(DATA) → ${rinfo.address}:${rinfo.port} layer=${layerReq} track="${layerData.trackName||''}"`);
+          // MetaResp log suppressed (too frequent);
         }
       });
       sock.on('error',(e)=>{
@@ -985,6 +1019,16 @@ class BridgeCore {
     if(!this._pdjlDbg[dbgK]){
       this._pdjlDbg[dbgK]=true;
       try{console.log(`[PDJL] packet type=0x${msg[10]?.toString(16)} from ${rinfo.address}:${rinfo.port} len=${msg.length} parsed=${p?.kind||'null'}`);}catch(_){}
+      // Extra debug: if from DJM IP (non-CDJ), dump hex header for analysis
+      if(!p || p.kind==='djm_onair'){
+        try{
+          const devName=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
+          if(devName.includes('DJM')){
+            console.log(`[DJM-DBG] type=0x${msg[10]?.toString(16)} len=${msg.length} name=${devName}`);
+            if(msg.length>0x24) console.log(`[DJM-DBG] hex@0x20: ${msg.slice(0x20,Math.min(0x30,msg.length)).toString('hex')}`);
+          }
+        }catch(_){}
+      }
     }
     if(!p) return;
     if(p.kind==='cdj'){
@@ -1004,12 +1048,21 @@ class BridgeCore {
         let timecodeMs = 0;
 
         if(trackChanged){
-          this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId };
+          this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0 };
+          try{console.log(`[TC] P${p.playerNum} track change: beatNum=${p.beatNum} bpm=${p.bpm}`);}catch(_){}
         } else if(acc && p.beatNum > 0 && p.bpm > 0){
-          const deltaBn = acc.prevBn - p.beatNum;
-          if(Math.abs(deltaBn) < 10 * 65536){
-            const deltaMs = (deltaBn / 65536) * (60000 / p.bpm);
-            acc.elapsedMs = Math.max(0, acc.elapsedMs + deltaMs);
+          const deltaBn = p.beatNum - acc.prevBn;
+          if(deltaBn !== 0){
+            const deltaMs = deltaBn * (60000 / p.bpm);
+            // Cap: max 2 seconds per update, ignore wild jumps
+            if(Math.abs(deltaMs) < 2000){
+              acc.elapsedMs = Math.max(0, acc.elapsedMs + deltaMs);
+            }
+            // Debug: log first 20 beat changes
+            if(acc.dbgCount < 20){
+              acc.dbgCount++;
+              try{console.log(`[TC] P${p.playerNum} beat=${p.beatNum} delta=${deltaBn} ms=${Math.round(acc.elapsedMs)} bpm=${p.bpm}`);}catch(_){}
+            }
           }
           acc.prevBn = p.beatNum;
           timecodeMs = Math.round(acc.elapsedMs);
@@ -1033,6 +1086,7 @@ class BridgeCore {
           prev.timecodeMs = timecodeMs;
         }
         p.ip = rinfo.address;
+        p.timecodeMs = timecodeMs;
         this.onCDJStatus?.(li, p);
       }
     }

@@ -251,10 +251,10 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
   <div class="mode-bar">
     <div class="mode-label">DECK MODE</div>
     <div class="mode-btns">
-      <button class="mode-btn ac" id="modeVt" onclick="switchMode('virtual')">VIRTUAL</button>
-      <button class="mode-btn" id="modeHW" onclick="switchMode('hw')">HARDWARE</button>
+      <button class="mode-btn" id="modeVt" onclick="switchMode('virtual')">VIRTUAL</button>
+      <button class="mode-btn ac" id="modeHW" onclick="switchMode('hw')">HARDWARE</button>
     </div>
-    <span class="mode-hint" id="modeHint">파일 드래그로 덱 추가</span>
+    <span class="mode-hint" id="modeHint">CDJ 연결 시 자동 감지됩니다</span>
   </div>
   <div class="deck-area">
     <div id="hwSection" style="display:none">
@@ -299,7 +299,7 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 const E=typeof window.bridge!=='undefined';
 let run=false,t0=0,up=0,pk=0,curTab='link';
 let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
-let faders=[255,255,255,255],onAirCh=[0,0,0,0],pdjlPort=null;
+let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
 // 설정 — 인터페이스 포함
 let cfg={nm:'BRIDGE29',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
   tcFps:'25',phasorMode:'scroll',wfColor:'rgb',wfCenter:'center',
@@ -311,7 +311,7 @@ let cfg={nm:'BRIDGE29',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'au
 
 const MAX_DECKS=8;
 const DECKS={};
-let glMode='virtual'; // 'virtual' | 'hw'
+let glMode='hw'; // 'virtual' | 'hw'
 
 function createDeck(slot,type='virtual'){
   return{slot,type,ld:false,pl:false,cu:false,au:null,tn:'',ar:'',bpm:0,dur:0,pos:0,cp:0,cuw:false,
@@ -925,11 +925,14 @@ function switchMode(mode){
         delete DECKS[+s];
       }
     });
+    // Enable HW mode on bridge for CDJ slots 0-3
+    if(E&&run)for(let i=0;i<4;i++)window.bridge.setHWMode(i,true);
     document.getElementById('modeVt').classList.remove('ac');
     document.getElementById('modeHW').classList.add('ac');
     document.getElementById('modeHint').textContent='CDJ 연결 시 자동 감지됩니다';
   }else{
-    // Clear HW decks
+    // Clear HW decks & disable HW mode
+    if(E&&run)for(let i=0;i<4;i++)window.bridge.setHWMode(i,false);
     Object.keys(DECKS).forEach(s=>{
       const d=DECKS[+s];
       if(d.type==='hw')delete DECKS[+s];
@@ -965,8 +968,8 @@ function ensureHWDeck(playerNum){
   if(glMode!=='hw')return; // virtual 모드에선 HW 덱 생성 안 함
   const slot=playerNum-1;
   if(slot<0||slot>3)return;
-  if(!DECKS[slot]){DECKS[slot]=createDeck(slot,'hw');renderDecks();}
-  else if(DECKS[slot].type!=='hw'){DECKS[slot]=createDeck(slot,'hw');renderDecks();}
+  if(!DECKS[slot]){DECKS[slot]=createDeck(slot,'hw');if(E&&run)window.bridge.setHWMode(slot,true);renderDecks();}
+  else if(DECKS[slot].type!=='hw'){DECKS[slot]=createDeck(slot,'hw');if(E&&run)window.bridge.setHWMode(slot,true);renderDecks();}
 }
 
 // ════ Deck rendering ═════════════════════════════════
@@ -1025,7 +1028,7 @@ function renderDecks(){
 }
 
 function deckHTML(slot){
-  const d=DECKS[slot],pct=Math.round((faders[slot]||255)/255*100);
+  const d=DECKS[slot],pct=Math.round((faders[slot]??0)/255*100);
   const hasDJM=pdjlDevices.some(d=>d.type==='DJM');
   const isHW=d.type==='hw';
   const label=isHW?`<span class="did-n">${slot+1}</span>PLAYER`:`<span class="did-n">${slot+1}</span>PLAYER`;
@@ -1038,8 +1041,9 @@ function deckHTML(slot){
           ${!isHW?`<div class="dht" style="margin-left:auto"><button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button></div>`:''}
         </div>
       </div>
-      ${hasDJM?`<div class="dfrow"><span style="font:400 9px var(--mn);color:var(--tx3)">DJM${slot<4?' CH'+(slot+1):''}</span><div class="dfbar"><div class="dfbarf" id="dfd${slot}" style="width:${pct}%"></div></div><span class="dfpct" id="dfv${slot}">${pct}%</span></div>`:''}
-      <div class="ddz"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">${isHW?'CDJ에서 트랙 로드':'음원 드래그'}</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG</div></div>
+      ${isHW
+        ?`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:80px;opacity:.5"><div style="font:400 13px var(--sn);color:var(--tx3)">CDJ 트랙 대기 중...</div><div style="font:400 9px var(--mn);color:var(--tx4);margin-top:4px">${d.model?'⬡ '+d.model:'CDJ에서 트랙을 로드하세요'}</div></div>`
+        :`${hasDJM?`<div class="dfrow"><span style="font:400 9px var(--mn);color:var(--tx3)">DJM${slot<4?' CH'+(slot+1):''}</span><div class="dfbar"><div class="dfbarf" id="dfd${slot}" style="width:${pct}%"></div></div><span class="dfpct" id="dfv${slot}">${pct}%</span></div>`:''}<div class="ddz"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">음원 드래그</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG</div></div>`}
     </div>`;
   }
   const artSrc=d.artUrl||'';
@@ -1074,7 +1078,7 @@ function deckHTML(slot){
         </div>
       </div>
     </div>
-    ${hasDJM?`<div class="dfrow">
+    ${!isHW&&hasDJM?`<div class="dfrow">
       <span style="font:400 9px var(--mn);color:var(--tx3)">DJM${slot<4?' CH'+(slot+1):''}</span>
       <div class="dfbar"><div class="dfbarf" id="dfd${slot}" style="width:${pct}%"></div></div>
       <span class="dfpct" id="dfv${slot}">${pct}%</span>
@@ -1495,7 +1499,7 @@ function tick(){
   Object.values(DECKS).forEach(d=>{
     const slot=d.slot;
     const el=document.getElementById('dk'+slot);if(!el)return;
-    const pct=slot<4?Math.round((faders[slot]||255)/255*100):100;
+    const pct=slot<4?Math.round((faders[slot]??0)/255*100):100;
 
     // update virtual deck playback position — ALWAYS (not gated by run)
     if(d.type!=='hw'&&d.au&&d.ld){
@@ -1801,6 +1805,8 @@ async function doStart(){
     for(const [slot,d] of Object.entries(DECKS)){
       if(d.type==='virtual') window.bridge.registerVirtualDeck(Number(slot),'CDJ-3000');
     }
+    // Enable HW mode on bridge if in HW mode
+    if(glMode==='hw')for(let i=0;i<4;i++) window.bridge.setHWMode(i,true);
   }
   run=true;t0=Date.now();pk=0;
   const hd=document.getElementById('hDot'),hs=document.getElementById('hSt'),mb=document.getElementById('mainBtn');
@@ -1833,7 +1839,10 @@ if(E){
     const{layerIndex,status}=d;
     ensureHWDeck(status.playerNum);
     const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
-    dk.pl=status.state===2;dk.cu=status.state===3;dk.pos=status.timecodeMs;
+    // STATE: PLAYING=2, LOOPING=3, CUEDOWN=5, CUEING=6
+    dk.pl=status.state===2||status.state===3; // playing or looping
+    dk.cu=status.state===5||status.state===6;  // cue states
+    if(status.timecodeMs!=null)dk.pos=status.timecodeMs;
     if(status.bpmEffective)dk.bpm=Math.round(status.bpmEffective*10)/10;
     else if(status.bpm)dk.bpm=Math.round(status.bpm*10)/10;
     if(status.bpmTrack)dk.baseBpm=Math.round(status.bpmTrack*10)/10;
@@ -1841,14 +1850,18 @@ if(E){
     if(status.trackName)dk.tn=status.trackName;
     if(status.artistName)dk.ar=status.artistName;
     if(status.name)dk.model=status.name;
+    if(status.p1Name)dk.stateName=status.p1Name;
+    const wasLoaded=dk.ld;
     dk.ld=status.hasTrack||dk.ld;
+    if(!wasLoaded&&dk.ld)renderDecks(); // re-render when track first loads
     if(status.beatInBar)dk.beatInBar=status.beatInBar;
     dk.onAir=!!status.isOnAir;
     dk.master=!!status.isMaster;
     dk.sync=!!status.isSync;
     if(status.pitch!==undefined)dk.pitch=Math.round(status.pitch*100)/100;
-    // Request album art on track change (HW mode)
-    if(status.trackId && status.trackId!==dk._lastTrackId && status.ip && status.slot){
+    // Album art request disabled for now (dbserver protocol needs full implementation)
+    // TODO: implement proper dbserver handshake (setup + query)
+    if(false && status.trackId && status.trackId!==dk._lastTrackId && status.ip && status.slot){
       dk._lastTrackId=status.trackId;
       window.bridge.requestArtwork({ip:status.ip,slot:status.slot,artworkId:status.trackId,playerNum:status.playerNum});
     }
