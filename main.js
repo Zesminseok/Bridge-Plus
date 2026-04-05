@@ -72,6 +72,8 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onAlbumArt=(pn,b64)=>win?.webContents.send('bridge:albumart',{playerNum:pn,art:b64});
     bridge.onTrackMetadata=(pn,meta)=>win?.webContents.send('bridge:trackmeta',{playerNum:pn,...meta});
     await bridge.start();push();
+    // After 8s, re-request metadata for already-loaded tracks
+    setTimeout(()=>bridge?.refreshAllMetadata(), 8000);
     return{ok:true,pdjlPort:bridge.getPDJLPort(),broadcastAddr:bridge.broadcastAddr};
   }catch(e){return{ok:false,err:e.message};}
 });

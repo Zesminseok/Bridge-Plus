@@ -1228,16 +1228,26 @@ class BridgeCore {
   /**
    * Request track metadata + artwork from a CDJ via dbserver protocol.
    */
-  requestMetadata(ip, slot, trackId, playerNum){
+  requestMetadata(ip, slot, trackId, playerNum, force=false){
     if(!ip || !trackId) return;
     const cacheKey = `${ip}_${slot}_${trackId}`;
-    if(this._metaReqCache?.[cacheKey]) return; // already requested
+    if(!force && this._metaReqCache?.[cacheKey]) return; // already requested
     if(!this._metaReqCache) this._metaReqCache = {};
     this._metaReqCache[cacheKey] = true;
     this._dbserverMetadata(ip, slot, trackId, playerNum).catch(e=>{
       console.warn(`[DBSRV] metadata request failed: ${e.message}`);
       delete this._metaReqCache[cacheKey];
     });
+  }
+  // Re-request metadata for all currently loaded tracks (called after startup delay)
+  refreshAllMetadata(){
+    for(const [key,dev] of Object.entries(this.devices)){
+      if(dev.type==='CDJ' && dev.state?.trackId>0 && dev.state?.hasTrack && dev.ip){
+        const s=dev.state;
+        console.log(`[DBSRV] refresh P${s.playerNum} trackId=${s.trackId}`);
+        this.requestMetadata(dev.ip, s.slot||3, s.trackId, s.playerNum, true);
+      }
+    }
   }
 
   requestArtwork(ip, slot, artworkId, playerNum){
@@ -1465,19 +1475,23 @@ class BridgeCore {
 
       // Parse menu items
       const items = this._dbParseItems(fullResp);
+      console.log(`[DBSRV] P${playerNum} render resp: ${fullResp.length}B, items=${items.length}`);
+      if(items.length===0) console.log(`[DBSRV] P${playerNum} resp hex(first 80): ${fullResp.slice(0,80).toString('hex')}`);
       const meta = {};
       for(const item of items){
-        if(item.msgType!==0x4101 || item.args.length<8)continue;
-        const itemType = item.args[6]?.val || 0;
-        const label1 = item.args[3]?.val || '';
-        switch(itemType){
-          case 0x0004: meta.title=label1; meta.artworkId=item.args[8]?.val||0; break;
-          case 0x0007: meta.artist=label1; break;
-          case 0x0002: meta.album=label1; break;
-          case 0x000b: meta.duration=item.args[1]?.val||0; break;
-          case 0x000d: meta.bpm=(item.args[1]?.val||0)/100; break;
-          case 0x000f: meta.key=label1; break;
-          case 0x0006: meta.genre=label1; break;
+        if(item.msgType===0x4101){
+          // MENU_ITEM: args[3]=label1(str), args[6]=itemType(num), args[8]=artworkId
+          const itemType = item.args[6]?.val || 0;
+          const label1 = item.args[3]?.val || '';
+          switch(itemType){
+            case 0x0004: meta.title=label1; meta.artworkId=item.args[8]?.val||0; break;
+            case 0x0007: meta.artist=label1; break;
+            case 0x0002: meta.album=label1; break;
+            case 0x000b: meta.duration=item.args[1]?.val||0; break;
+            case 0x000d: meta.bpm=(item.args[1]?.val||0)/100; break;
+            case 0x000f: meta.key=label1; break;
+            case 0x0006: meta.genre=label1; break;
+          }
         }
       }
       console.log(`[DBSRV] P${playerNum} metadata:`, JSON.stringify(meta));
