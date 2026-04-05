@@ -400,9 +400,10 @@ function parsePDJL(msg){
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
       pitch,
       trackId: msg.readUInt32BE(0x2C),
+      trackDeviceId: msg[0x28],  // source player that owns the media
+      slot:     msg[0x29],       // 0=None, 1=CD, 2=SD, 3=USB, 4=Collection
+      trackType: msg[0x2A],      // 0=None, 1=RB, 2=Unanalyzed, 5=AudioCD
       hasTrack: msg[0x29]>0,
-      slot:     msg[0x28],
-      trackType: msg[0x2A],  // 0=None, 1=RB, 2=Unanalyzed, 5=AudioCD
       beatNum, beatInBar, barsRemain, trackBeats,
       firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
       isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x01),
@@ -1086,19 +1087,24 @@ class BridgeCore {
 
         if(trackChanged){
           this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false };
-          try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} trackType=${p.trackType} ip=${rinfo?.address}`);}catch(_){}
-          // Auto-request metadata from CDJ via dbserver (delay to let keep-alive propagate)
-          if(p.trackId>0 && p.hasTrack && rinfo?.address){
+          try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} trackType=${p.trackType} trackDeviceId=${p.trackDeviceId} ip=${rinfo?.address}`);}catch(_){}
+          // Auto-request metadata — must query the SOURCE device's dbserver (Link Export)
+          if(p.trackId>0 && p.hasTrack){
             this._tcAcc[li].metaRequested = true;
-            const _ip=rinfo.address, _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum, _tt=p.trackType||1;
+            // Find source device IP: trackDeviceId tells us which player owns the media
+            const srcDev = this.devices['cdj_'+p.trackDeviceId];
+            const _ip = srcDev?.ip || rinfo?.address;
+            const _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum, _tt=p.trackType||1;
+            try{console.log(`[TC] P${p.playerNum} meta request → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
             setTimeout(()=>this.requestMetadata(_ip, _slot, _tid, _pn, false, _tt), this._dbReady?100:3000);
             this._dbReady = true;
           }
-        } else if(acc && !acc.metaRequested && p.trackId>0 && p.hasTrack && rinfo?.address){
-          // Retry metadata request if hasTrack became true after initial track change
+        } else if(acc && !acc.metaRequested && p.trackId>0 && p.hasTrack){
           acc.metaRequested = true;
-          try{console.log(`[TC] P${p.playerNum} metadata retry: trackId=${p.trackId} slot=${p.slot} trackType=${p.trackType}`);}catch(_){}
-          this.requestMetadata(rinfo.address, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
+          const srcDev = this.devices['cdj_'+p.trackDeviceId];
+          const _ip = srcDev?.ip || rinfo?.address;
+          try{console.log(`[TC] P${p.playerNum} metadata retry → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
+          this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
         if(acc && p.beatNum > 0 && p.bpm > 0){
           const deltaBn = p.beatNum - acc.prevBn;
@@ -1251,10 +1257,12 @@ class BridgeCore {
   // Re-request metadata for all currently loaded tracks (called after startup delay)
   refreshAllMetadata(){
     for(const [key,dev] of Object.entries(this.devices)){
-      if(dev.type==='CDJ' && dev.state?.trackId>0 && dev.state?.hasTrack && dev.ip){
+      if(dev.type==='CDJ' && dev.state?.trackId>0 && dev.state?.hasTrack){
         const s=dev.state;
-        console.log(`[DBSRV] refresh P${s.playerNum} trackId=${s.trackId} trackType=${s.trackType}`);
-        this.requestMetadata(dev.ip, s.slot||3, s.trackId, s.playerNum, true, s.trackType||1);
+        const srcDev = this.devices['cdj_'+s.trackDeviceId];
+        const ip = srcDev?.ip || dev.ip;
+        console.log(`[DBSRV] refresh P${s.playerNum} trackId=${s.trackId} trackType=${s.trackType} → device ${s.trackDeviceId} ip=${ip}`);
+        this.requestMetadata(ip, s.slot||3, s.trackId, s.playerNum, true, s.trackType||1);
       }
     }
   }
