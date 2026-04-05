@@ -36,6 +36,17 @@ const TC = {
 
 // TCNet LayerStatus values (node-tcnet spec)
 const STATE = { IDLE:0, PLAYING:3, LOOPING:4, PAUSED:5, STOPPED:6, CUEDOWN:7, PLATTERDOWN:8, FFWD:9, FFRV:10, HOLD:11 };
+// TCNet layer state (for Arena): 0=Idle, 1=Playing, 2=Paused, 3=Stopped, 4=FF, 5=RW
+function toTCNetState(s){
+  switch(s){
+    case STATE.PLAYING: case STATE.LOOPING: return 1; // Playing
+    case STATE.PAUSED: case STATE.CUEDOWN: case STATE.PLATTERDOWN: return 2; // Paused
+    case STATE.STOPPED: return 3;
+    case STATE.FFWD: return 4;
+    case STATE.FFRV: return 5;
+    default: return 0; // Idle
+  }
+}
 
 const P1_TO_STATE = {
   0x00: STATE.IDLE,       0x02: STATE.STOPPED,  0x03: STATE.PLAYING,
@@ -76,15 +87,39 @@ function buildHdr(type){
   return b;
 }
 
+// macOS: map device name (en0) → hardware port name (Wi-Fi) via networksetup
+let _hwPortMap = null;
+function _getHWPortMap(){
+  if(_hwPortMap) return _hwPortMap;
+  _hwPortMap = {};
+  if(process.platform !== 'darwin') return _hwPortMap;
+  try{
+    const out = require('child_process').execSync('networksetup -listallhardwareports 2>/dev/null',{encoding:'utf8',timeout:3000});
+    const blocks = out.split('Hardware Port:').slice(1);
+    for(const block of blocks){
+      const lines = block.trim().split('\n');
+      const port = lines[0].trim();
+      const devMatch = lines.find(l=>l.startsWith('Device:'));
+      if(devMatch){
+        const dev = devMatch.replace('Device:','').trim();
+        _hwPortMap[dev] = port;
+      }
+    }
+  }catch(_){}
+  return _hwPortMap;
+}
+
 function getAllInterfaces(){
   const result = [];
-  result.push({name:'lo0 (localhost)',address:'127.0.0.1',netmask:'255.0.0.0',broadcast:'127.255.255.255',mac:'00:00:00:00:00:00',internal:true,isLoopback:true});
+  const hwMap = _getHWPortMap();
+  result.push({name:'lo0 (localhost)',address:'127.0.0.1',netmask:'255.0.0.0',broadcast:'127.255.255.255',mac:'00:00:00:00:00:00',internal:true,isLoopback:true,hwPort:'Loopback'});
   for(const [name,addrs] of Object.entries(os.networkInterfaces()))
     for(const a of addrs)
       if(a.family==='IPv4'){
         const ip=a.address.split('.').map(Number), mask=a.netmask.split('.').map(Number);
         const bc=ip.map((o,i)=>o|(~mask[i]&255)).join('.');
-        result.push({name,address:a.address,netmask:a.netmask,broadcast:bc,mac:a.mac,internal:a.internal,isLoopback:a.internal});
+        const hwPort = hwMap[name] || name;
+        result.push({name,address:a.address,netmask:a.netmask,broadcast:bc,mac:a.mac,internal:a.internal,isLoopback:a.internal,hwPort});
       }
   return result;
 }
@@ -156,10 +191,10 @@ function mkStatus(port, devices, layers, faders, hwMode){
     d[10+n] = (hasLayer || isHW) ? (n+1) : 0;
   }
 
-  // layerStatus[0-7] at body[18-25]
+  // layerStatus[0-7] at body[18-25] — TCNet state values (1=Playing)
   for(let n=0;n<8;n++){
     const layerData = layers && layers[n];
-    d[18+n] = layerData ? (layerData.state || 0) : 0;
+    d[18+n] = layerData ? toTCNetState(layerData.state) : 0;
   }
 
   // trackID[0-7] at body[26-57] (LE u32 × 8)
@@ -210,7 +245,7 @@ function mkTime(layers, uptimeMs){
     if(ld){
       let ms = ld.timecodeMs || 0;
       // Interpolate: if playing, add elapsed time since last beat update (pitch-corrected)
-      if(ld.state === 3 && ld._updateTime && ld.bpm > 0){
+      if((ld.state === STATE.PLAYING || ld.state === STATE.LOOPING) && ld._updateTime && ld.bpm > 0){
         const pitch = ld._pitch || 0;
         ms += (now - ld._updateTime) * (1 + pitch / 100);
       }
@@ -230,10 +265,10 @@ function mkTime(layers, uptimeMs){
     if(ld) d[64+n] = ld.beatPhase || 0;
   }
 
-  // layerState[0-7] at body[72-79]
+  // layerState[0-7] at body[72-79] — TCNet state values (1=Playing)
   for(let n=0;n<8;n++){
     const ld = layers && layers[n];
-    if(ld) d[72+n] = ld.state || 0;
+    if(ld) d[72+n] = toTCNetState(ld.state);
   }
 
   // generalSMPTEMode at body[81]
@@ -244,7 +279,8 @@ function mkTime(layers, uptimeMs){
     const ld = layers && layers[n];
     if(ld){
       let ms = ld.timecodeMs || 0;
-      if(ld.state === 3 && ld._updateTime && ld.bpm > 0) ms += (now - ld._updateTime);
+      const isPlaying = ld.state === STATE.PLAYING || ld.state === STATE.LOOPING;
+      if(isPlaying && ld._updateTime && ld.bpm > 0) ms += (now - ld._updateTime);
       const totalSec = Math.floor(ms / 1000);
       const h = Math.floor(totalSec / 3600);
       const m = Math.floor((totalSec % 3600) / 60);
@@ -252,7 +288,7 @@ function mkTime(layers, uptimeMs){
       const frames = Math.floor((ms % 1000) / 33.33);  // ~30fps
       const off = 82 + n*6;
       d[off+0] = 0;      // mode
-      d[off+1] = (ld.state === 3) ? 1 : 0;  // state: 1=running if PLAYING
+      d[off+1] = isPlaying ? 1 : 0;  // state: 1=running if PLAYING
       d[off+2] = h;
       d[off+3] = m;
       d[off+4] = s;
@@ -308,14 +344,15 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
   d[1] = layerIdx;        // 1-based layer index
 
   if(layerData){
-    d[3] = layerData.state || 0;
+    d[3] = toTCNetState(layerData.state);  // TCNet state (1=Playing)
     d[5] = 0x01;  // syncMaster = Master
     d[7] = layerData.beatPhase || 0;
     d.writeUInt32LE(layerData.totalLength || 0, 8);   // trackLength ms
     let curMs = layerData.timecodeMs || 0;
-    if(layerData.state === 3 && layerData._updateTime && layerData.bpm > 0) curMs += (Date.now() - layerData._updateTime);
+    const isPlaying = layerData.state === STATE.PLAYING || layerData.state === STATE.LOOPING;
+    if(isPlaying && layerData._updateTime && layerData.bpm > 0) curMs += (Date.now() - layerData._updateTime);
     d.writeUInt32LE(u32(curMs), 12);    // currentPosition ms (interpolated)
-    d.writeUInt32LE(layerData.state===3 ? 0x8000 : 0, 16);  // speed (0x8000=100%, 0=stopped)
+    d.writeUInt32LE(isPlaying ? 0x8000 : 0, 16);  // speed (0x8000=100%, 0=stopped)
     d.writeUInt32LE(0, 33);                             // beatNumber
     const bpm = layerData.bpm || 0;
     d.writeUInt32LE(Math.round(bpm * 100), 88);        // bpm ×100

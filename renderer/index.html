@@ -1433,7 +1433,7 @@ function loadFile(slot,f){
         window.bridge.updateLayer(slot,{
           state:0,timecodeMs:0,bpm:d.bpm||128,
           trackId:d.trackId||0,totalLength:Math.round(d.dur)||0,
-          trackName:d.tn||'',artistName:d.ar||'',beatPhase:0,
+          trackName:d.tn||'',artistName:d.ar||'',deviceName:'CDJ-3000',beatPhase:0,
         });
       }
     });
@@ -1869,6 +1869,7 @@ function tick(){
         totalLength:Math.round(d.dur)||0,
         trackName:d.tn||'',
         artistName:d.ar||'',
+        deviceName:'CDJ-3000',
         beatPhase,
       });
     }
@@ -1938,7 +1939,11 @@ function renderSettings(){
     const sel=cfg[field]||'';
     const loopSel=sel==='127.0.0.1'?'selected':'';
     const loopOpt=`<option value="127.0.0.1" ${loopSel}>lo0 (localhost 127.0.0.1) — Arena 같은 맥</option>`;
-    const netOpts=ifaces.filter(i=>!i.internal).map(i=>`<option value="${i.address}" ${sel===i.address?'selected':''}>${i.name} — ${i.address}${i.address.startsWith('169.254')?'  (링크로컬 CDJ)':'  (LAN)'}</option>`).join('');
+    const netOpts=ifaces.filter(i=>!i.internal).map(i=>{
+      const label=i.hwPort||i.name;
+      const suffix=i.address.startsWith('169.254')?'  (링크로컬 CDJ)':'';
+      return`<option value="${i.address}" ${sel===i.address?'selected':''}>${i.name} — ${i.address} (${label})${suffix}</option>`;
+    }).join('');
     return `<option value="">자동 감지</option>${loopOpt}${netOpts}`;
   };
 
