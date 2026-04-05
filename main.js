@@ -110,18 +110,20 @@ ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTime
 ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
 
 app.whenReady().then(createWindow);
+let _cleaned=false;
 function cleanup(){
+  if(_cleaned)return;_cleaned=true;
   saveBounds();
-  try{bridge?.stop();}catch(_){}
   clearInterval(iv);
+  try{bridge?.stop();}catch(_){}
   try{_artSocket.close();}catch(_){}
   bridge=null;
 }
 app.on('window-all-closed',()=>{cleanup();app.quit();});
 app.on('will-quit',()=>{
   cleanup();
-  // Force exit after 1s — don't let dangling sockets keep process alive
-  setTimeout(()=>process.exit(0),1000).unref();
+  // Force exit after 500ms — don't let dangling sockets keep process alive
+  setTimeout(()=>process.exit(0),500).unref();
 });
 app.on('before-quit',()=>{cleanup();});
 app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow();});

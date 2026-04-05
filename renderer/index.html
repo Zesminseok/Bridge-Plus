@@ -1996,9 +1996,9 @@ if(E){
       return;
     }
     dk._noTrackCount=0;
-    // STATE: PLAYING=2, LOOPING=3, CUEDOWN=5, CUEING=6
-    dk.pl=status.state===2||status.state===3; // playing or looping
-    dk.cu=status.state===5||status.state===6;  // cue states
+    // STATE: IDLE=0, STOPPED=2, PLAYING=3, LOOPING=4, PAUSED=5, CUEDOWN=7
+    dk.pl=status.state===3||status.state===4; // PLAYING or LOOPING
+    dk.cu=status.state===7||status.state===8;  // CUEDOWN or PLATTERDOWN
     if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
     if(status.bpmEffective)dk.bpm=Math.round(status.bpmEffective*10)/10;
     else if(status.bpm)dk.bpm=Math.round(status.bpm*10)/10;
@@ -2017,14 +2017,8 @@ if(E){
     dk.master=!!status.isMaster;
     dk.sync=!!status.isSync;
     if(status.pitch!==undefined)dk.pitch=Math.round(status.pitch*100)/100;
-    if(status.mediaColor!==undefined&&status.mediaColor!==dk._mediaColor){
+    if(status.mediaColor!==undefined&&status.mediaColor>0&&status.mediaColor<=8){
       dk._mediaColor=status.mediaColor;
-      const MCOLORS={0:'',1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
-      const c=MCOLORS[status.mediaColor]||'';
-      const el=document.getElementById('dk'+layerIndex);
-      if(el){el.style.borderColor=c||'';el.style.borderWidth=c?'2px':'';}
-      const did=document.getElementById('did'+layerIndex);
-      if(did)did.style.color=c||'';
     }
     // Album art request disabled for now (dbserver protocol needs full implementation)
     // TODO: implement proper dbserver handshake (setup + query)

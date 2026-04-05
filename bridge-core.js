@@ -52,7 +52,7 @@ const P1_NAME = {
 const PDJL = {
   MAGIC: Buffer.from([0x51,0x73,0x70,0x74,0x31,0x57,0x6D,0x4A,0x4F,0x4C]),
   CDJ:0x0A, DJM:0x39, DJM2:0x29, ANN:0x06,
-  CDJ_MEDIA:0x28,  // CDJ media slot info (port 50002, 96B) — has USB color
+  CDJ_BEAT:0x28,   // CDJ beat packet (port 50002, 96B) — beat timing only
   CDJ_WF:0x56,     // CDJ waveform preview (port 50002, ~1420B)
   DJM_ONAIR:0x03,  // DJM Channels On-Air (port 50001, 45B)
   DJM_METER:0x58,  // DJM VU Metering (port 50001, 524B)
@@ -409,6 +409,8 @@ function parsePDJL(msg){
       beatNum, beatInBar, barsRemain, trackBeats,
       firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
       isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x01),
+      // USB media color from CDJ status packet at 0xA8 (DJ Link Ecosystem Analysis)
+      mediaColor: msg.length>0xA8 ? msg[0xA8] : 0,
     };
   }
   if((type===PDJL.DJM || type===PDJL.DJM2) && msg.length>=0x70){
@@ -471,28 +473,8 @@ function parsePDJL(msg){
         onAir:[msg[0x25]?1:0, msg[0x27]?1:0, msg[0x29]?1:0, msg[0x2B]?1:0]};
     }
   }
-  // CDJ media slot info (type 0x28, ~96B) — contains USB color
-  if(type===PDJL.CDJ_MEDIA && msg.length>=0x2C){
-    const pNum = msg[0x21];
-    // Full hex dump for analysis (first 5 packets per player)
-    if(!parsePDJL._mediaCnt) parsePDJL._mediaCnt={};
-    const mc=parsePDJL._mediaCnt;
-    if(!mc[pNum])mc[pNum]=0;
-    if(mc[pNum]<5){
-      mc[pNum]++;
-      try{
-        const hex=msg.slice(0x20,Math.min(msg.length,0x60)).toString('hex');
-        console.log(`[MEDIA] type=0x28 len=${msg.length} P${pNum} #${mc[pNum]} hex@0x20: ${hex}`);
-      }catch(_){}
-    }
-    const slot = msg.length>0x2B ? msg[0x2B] : 0;
-    // Color: byte at 0x5C in 96B packet. Only accept first valid value per player
-    // (subsequent packets may have different transient values)
-    const rawColor = msg.length>0x5C ? msg[0x5C] : 0;
-    // Filter: valid rekordbox USB color range is 0-8
-    const color = (rawColor>=0 && rawColor<=8) ? rawColor : 0;
-    return{kind:'cdj_media', playerNum:pNum, name, slot, color};
-  }
+  // Type 0x28 = Beat packet (96B) — beat timing data, no media color
+  // Previously misidentified as "CDJ media" — ignored now
   // CDJ-3000 waveform preview (type 0x56, variable size)
   // Sub-types at byte 0x33: 0x02=mono preview, 0x03=beat grid, 0x25=color waveform
   if(type===PDJL.CDJ_WF && msg.length>0x34){
@@ -1192,24 +1174,7 @@ class BridgeCore {
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
     }
-    if(p.kind==='cdj_media'){
-      const key = `cdj${p.playerNum}`;
-      if(this.devices[key]){
-        // Only update color if it's a valid USB color (1-8) and latch it
-        // The 0x28 packet's color field can fluctuate; latch first non-zero value
-        if(p.color>0 && !this.devices[key]._colorLocked){
-          this.devices[key].mediaColor = p.color;
-          this.devices[key]._colorLocked = true;
-          console.log(`[MEDIA] P${p.playerNum} USB color locked: ${p.color}`);
-          // Notify UI once
-          if(this.devices[key].state){
-            this.devices[key].state.mediaColor = p.color;
-            this.onCDJStatus?.(p.playerNum-1, this.devices[key].state);
-          }
-        }
-        this.devices[key].lastSeen = Date.now();
-      }
-    }
+    // mediaColor now comes from CDJ status (type 0x0A) at offset 0xA8 — no separate handler needed
     if(p.kind==='cdj_wf'){
       this.onWaveformPreview?.(p.playerNum, {seg:p.seg, pts:p.pts, wfType:p.wfType});
     }
