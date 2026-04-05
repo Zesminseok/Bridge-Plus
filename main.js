@@ -1,4 +1,7 @@
 'use strict';
+// Prevent EPIPE crashes when stdout pipe is broken
+process.stdout?.on('error',()=>{});
+process.stderr?.on('error',()=>{});
 const{app,BrowserWindow,ipcMain}=require('electron');
 const path=require('path'),os=require('os'),fs=require('fs');
 const dgram=require('dgram');

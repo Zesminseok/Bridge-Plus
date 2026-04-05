@@ -762,7 +762,7 @@ class BridgeCore {
       const reqType = body.length>=2 ? body[1] : 0;
       const li = layerReq - 1;  // convert to 0-indexed
       const layerData = (li >= 0 && li < this.layers.length) ? this.layers[li] : null;
-      console.log(`[${label}] MetaReq from ${name}: layer=${layerReq}(idx=${li}) type=${reqType} hasData=${!!layerData}`);
+      // MetaReq logs suppressed (too frequent)
       const metaPkt = mkDataMeta(layerReq, layerData);
       this._uc(metaPkt, rinfo.port, rinfo.address);
       const faderVal = this.faders ? (this.faders[li] || 0) : 0;
@@ -832,7 +832,10 @@ class BridgeCore {
         const name = msg.slice(8,16).toString('ascii').replace(/\0/g,'').trim();
         if(name.toUpperCase().startsWith('BRIDGE')) return;
 
-        console.log(`[lPort] ${name} type=0x${type.toString(16)} from ${rinfo.address}:${rinfo.port}`);
+        // Only log first occurrence of each type from each source
+        const lk=name+type;
+        if(!this._lPortDbg)this._lPortDbg={};
+        if(!this._lPortDbg[lk]){this._lPortDbg[lk]=true;try{console.log(`[lPort] ${name} type=0x${type.toString(16)} from ${rinfo.address}:${rinfo.port}`);}catch(_){}}
 
         if(type===TC.OPTIN){
           const body = msg.slice(TC.H);
@@ -857,7 +860,7 @@ class BridgeCore {
           const reqType = body[1]||0;
           const li = layerReq - 1;  // 0-indexed
           const layerData = (li >= 0 && li < this.layers.length) ? this.layers[li] : null;
-          console.log(`[lPort] MetaReq from ${name}: layer=${layerReq}(idx=${li}) type=${reqType} hasData=${!!layerData}`);
+          // MetaReq logs suppressed (too frequent)
           const metaPkt = mkDataMeta(layerReq, layerData);
           this._uc(metaPkt, rinfo.port, rinfo.address);
           const faderVal = this.faders ? (this.faders[li] || 0) : 0;
@@ -958,7 +961,7 @@ class BridgeCore {
       pkt[0x21]=0x01;                   // proto ver?
       pkt[0x22]=0x00;                   // pad
       pkt[0x23]=0x36;                   // length marker
-      pkt[0x24]=0x01;                   // device type: 0x01 = software/bridge
+      pkt[0x24]=0xBD;                   // device type: 0xBD = bridge/controller (same as TCS-SHOWKONTROL)
       pkt[0x25]=0x00;                   // player number: 0 for non-player
       // MAC address at 0x26-0x2B
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
@@ -976,12 +979,12 @@ class BridgeCore {
 
   _onPDJL(msg, rinfo){
     const p = parsePDJL(msg);
-    // Debug: log all PDJL packets with their source
-    if(!this._pdjlDbg){this._pdjlDbg={};console.log('[PDJL] listening on',this.pdjlBindAddr||'0.0.0.0');}
+    // Debug: log first occurrence of each PDJL packet type per source
+    if(!this._pdjlDbg){this._pdjlDbg={};try{console.log('[PDJL] listening on',this.pdjlBindAddr||'0.0.0.0');}catch(_){}}
     const dbgK=rinfo.address+':'+msg[10];
     if(!this._pdjlDbg[dbgK]){
       this._pdjlDbg[dbgK]=true;
-      console.log(`[PDJL] packet type=0x${msg[10]?.toString(16)} from ${rinfo.address}:${rinfo.port} len=${msg.length} parsed=${p?.kind||'null'}`);
+      try{console.log(`[PDJL] packet type=0x${msg[10]?.toString(16)} from ${rinfo.address}:${rinfo.port} len=${msg.length} parsed=${p?.kind||'null'}`);}catch(_){}
     }
     if(!p) return;
     if(p.kind==='cdj'){
