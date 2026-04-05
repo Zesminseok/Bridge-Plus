@@ -206,7 +206,7 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 .dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 auto;min-width:0;position:relative;text-overflow:ellipsis}
 .dktn-t.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
 @keyframes marquee-scroll{0%,10%{transform:translateX(0)}45%,55%{transform:translateX(var(--scroll-dist,-200px))}90%,100%{transform:translateX(0)}}
-.dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:2;min-width:0}
+.dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;max-width:120px;min-width:0}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dk[data-st="play"] .dktn-time,.dk[data-st="hwplay"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
 .dktn-info{padding:0 0 3px;gap:8px;justify-content:flex-start}
@@ -1600,21 +1600,21 @@ function tick(){
     }
 
     // Smooth interpolated position for HW decks
-    // d.pos = last known position (from CDJ beat packet), d._posTime = when it was received
-    // We interpolate forward from there using wall-clock elapsed time
+    // d.pos = last known position (from CDJ packet or Precise Position), d._posTime = when received
     let displayPos=d.pos||0;
     if(d.type==='hw'&&d.pl&&d._posTime){
-      // Interpolate: pos advances at 1ms per 1ms of real time (native track rate)
       const elapsed=Date.now()-d._posTime;
       const target=d.pos+elapsed;
       if(d._stateChanged){d._smoothPos=d.pos;d._stateChanged=false;}
       else if(d._smoothPos==null){d._smoothPos=target;}
       else{
         const diff=target-d._smoothPos;
-        if(Math.abs(diff)>2000){d._smoothPos=target;} // large jump: snap
-        else{d._smoothPos+=diff*0.5;} // faster convergence
+        if(Math.abs(diff)>2000){d._smoothPos=target;}
+        else{d._smoothPos+=diff*0.5;}
       }
       displayPos=d._smoothPos;
+      // Clamp to track duration — don't run past the end
+      if(d.dur>0&&displayPos>d.dur) displayPos=d.dur;
     }else if(d.type==='hw'){
       d._smoothPos=null;
     }
@@ -2050,6 +2050,14 @@ if(E){
   window.bridge.onTcnetNode?.(n=>{tcNodes[n.name+'@'+n.ip]={...n,lastSeen:Date.now()};if(curTab==='tcnet')renderTcnet();});
   window.bridge.onCDJStatus?.(d=>{
     const{layerIndex,status}=d;
+    // CDJ-3000 Precise Position — direct ms update, highest priority
+    if(status._precisePos){
+      const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
+      if(status.timecodeMs!=null){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
+      if(status.trackLengthSec>0&&(!dk.dur||dk.dur<=0)) dk.dur=status.trackLengthSec*1000;
+      if(status.bpmEffective>0) dk.bpm=Math.round(status.bpmEffective*100)/100;
+      return;
+    }
     ensureHWDeck(status.playerNum);
     const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
     // Track change detection — reset stale data when track changes

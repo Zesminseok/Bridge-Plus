@@ -394,15 +394,16 @@ function parsePDJL(msg){
     }
     const p1   = msg[0x7B];
     const state= P1_TO_STATE[p1] ?? STATE.IDLE;
-    // BPM: uint16BE at 0x92–0x93 = current (effective) BPM × 100
+    // BPM: uint16BE at 0x92–0x93 = TRACK BPM (original, no pitch) × 100
     // Ref: https://djl-analysis.deepsymmetry.org/djl-analysis/vcdj.html
     const bpmRaw16 = msg.length>0x93 ? msg.readUInt16BE(0x92) : 0;
-    const bpmEff = (bpmRaw16>0 && bpmRaw16!==0xFFFF) ? bpmRaw16/100 : 0;
+    const trackBpm = (bpmRaw16>0 && bpmRaw16!==0xFFFF) ? bpmRaw16/100 : 0;
     // Pitch: signed offset from 0x100000 at 0x8C–0x8F
     const pitchRaw = msg.length>0x8F ? msg.readUInt32BE(0x8C) : 0x100000;
     const pitch = (pitchRaw-0x100000)/0x100000*100;
-    // Base BPM = effective / (1 + pitch/100)
-    const baseBpm = bpmEff>0&&Math.abs(pitch)>0.01 ? bpmEff/(1+pitch/100) : bpmEff;
+    // Effective BPM = trackBpm × (1 + pitch/100)
+    const bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+pitch/100)*100)/100 : 0;
+    const baseBpm = trackBpm;
     const beatNum   = msg.length>0xA3 ? msg.readUInt32BE(0xA0) : 0;
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
     const barsRemain = msg.length>0xA5 ? msg.readUInt16BE(0xA4) : 0;
@@ -420,7 +421,7 @@ function parsePDJL(msg){
     if(!parsePDJL._syncDbg)parsePDJL._syncDbg={};
     if(!parsePDJL._syncDbg[pNum]||parsePDJL._syncDbg[pNum]<3){
       parsePDJL._syncDbg[pNum]=(parsePDJL._syncDbg[pNum]||0)+1;
-      console.log(`[CDJ] P${pNum} flags@89=0x${flags.toString(16)} sync=${isSync} master=${isMaster} onAir=${isOnAir} bpmRaw16=0x${bpmRaw16.toString(16)} bpmEff=${bpmEff} pitch=${pitch.toFixed(3)} baseBpm=${baseBpm.toFixed(2)} p3=0x${p3.toString(16)} vinyl=${isVinylMode}`);
+      console.log(`[CDJ] P${pNum} flags@89=0x${flags.toString(16)} sync=${isSync} master=${isMaster} onAir=${isOnAir} trackBpm=${trackBpm} bpmEff=${bpmEff} pitch=${pitch.toFixed(3)} p3=0x${p3.toString(16)} vinyl=${isVinylMode}`);
     }
     return{
       kind:'cdj', playerNum:pNum, name, p1, state,
@@ -536,6 +537,25 @@ function parsePDJL(msg){
       }
     }
     return{kind:'announce',name,playerNum:msg.length>0x24?msg[0x24]:0};
+  }
+  // CDJ-3000 Precise Position (type 0x0b, port 50001, ~60B)
+  // subtype 0x02 at byte 0x20: contains direct ms playback position
+  if(type===0x0b && msg.length>=0x3C){
+    const sub = msg[0x20];
+    if(sub===0x02){
+      const pNum = msg[0x21];
+      const trackLenSec = msg.readUInt32BE(0x24);
+      const playbackMs = msg.readUInt32BE(0x28);
+      const pitchRaw2 = msg.readInt32BE(0x2C);
+      const bpmRaw10 = msg.readUInt32BE(0x38);
+      return{
+        kind:'precise_pos', playerNum:pNum, name,
+        trackLengthSec: trackLenSec,
+        playbackMs,
+        pitch: pitchRaw2/100,
+        bpmEffective: bpmRaw10/10,
+      };
+    }
   }
   return null;
 }
@@ -1177,8 +1197,12 @@ class BridgeCore {
           try{console.log(`[TC] P${p.playerNum} metadata retry → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
-        if(acc && p.beatNum > 0 && p.bpm > 0){
-          // Prefer beat grid lookup (Rekordbox-accurate ms positions)
+        // CDJ-3000: use Precise Position if available (direct ms, most accurate)
+        const pp = this._precisePos?.[p.playerNum];
+        if(pp && (Date.now()-pp.time)<500){
+          timecodeMs = pp.playbackMs;
+        } else if(acc && p.beatNum > 0 && p.bpm > 0){
+          // Beat grid lookup (Rekordbox-accurate ms positions)
           const bg = this._beatGrids[p.playerNum];
           const beatIdx = p.beatNum - 1; // 0-based index
           if(bg && beatIdx >= 0 && beatIdx < bg.length){
@@ -1249,6 +1273,35 @@ class BridgeCore {
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
+    }
+    // CDJ-3000 Precise Position (type 0x0b on port 50001, ~30ms interval)
+    // Contains direct ms playback position — most accurate source
+    if(p.kind==='precise_pos'){
+      const li=p.playerNum-1;
+      if(li>=0&&li<8){
+        // Store precise position for CDJ status handler to use
+        if(!this._precisePos) this._precisePos={};
+        this._precisePos[p.playerNum]={
+          playbackMs:p.playbackMs,
+          trackLengthSec:p.trackLengthSec,
+          bpmEffective:p.bpmEffective,
+          time:Date.now(),
+        };
+        // Debug first occurrence
+        if(!this._ppDbg)this._ppDbg={};
+        if(!this._ppDbg[p.playerNum]){
+          this._ppDbg[p.playerNum]=true;
+          console.log(`[PDJL] P${p.playerNum} Precise Position: ${p.playbackMs}ms, dur=${p.trackLengthSec}s, bpm=${p.bpmEffective}`);
+        }
+        // Send directly to renderer as CDJ status update
+        this.onCDJStatus?.(li, {
+          playerNum:p.playerNum,
+          timecodeMs:p.playbackMs,
+          trackLengthSec:p.trackLengthSec,
+          bpmEffective:p.bpmEffective,
+          _precisePos:true,
+        });
+      }
     }
     // Media Slot Response (type 0x06, long variant) — USB color
     if(p.kind==='media_slot'&&p.playerNum>0&&p.mediaColor>0){
