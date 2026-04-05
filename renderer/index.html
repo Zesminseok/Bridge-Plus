@@ -1135,7 +1135,7 @@ function deckHTML(slot){
           <span class="dtc" style="color:var(--tx4)">--:--:--:--</span>
         </div>
         <div class="dktn"><span class="dktn-t" style="color:var(--tx4)">—</span></div>
-        <div class="dktn dktn-info"><span class="dbk-hd" style="color:var(--tx4)">— BPM</span><span class="dktn-time">--:--.-- / --:--.--</span></div>
+        <div class="dktn dktn-info"><span class="dbk-hd" style="color:var(--tx4)">— BPM</span><span class="dktn-time">--:--.--- / --:--.---</span></div>
         <div class="dtbody">
           <div class="dkctrl">
             <div class="dkart"><span class="noart-icon">♪</span></div>
@@ -1169,7 +1169,7 @@ function deckHTML(slot){
         </div>
       </div>
       <div class="dktn"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span><span class="dktn-a" id="dta${slot}">${d.ar?` · ${d.ar}`:''}</span><div class="dksm" id="dksm${slot}"><span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}">SYNC</span><span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}">MASTER</span></div></div>
-      <div class="dktn dktn-info"><span class="dbk-hd" id="dbk${slot}">—</span><span class="dktn-time" id="dtime${slot}">0:00.00 / --:--.--</span></div>
+      <div class="dktn dktn-info"><span class="dbk-hd" id="dbk${slot}">—</span><span class="dktn-time" id="dtime${slot}">0:00.00 / --:--.---</span></div>
       <div class="dtbody">
         <div class="dkctrl">
           <div class="dkart" id="dart${slot}" data-a="eject" data-i="${slot}">${artSrc?`<img src="${artSrc}" alt="">`:'<span class="noart-icon">♪</span>'}</div>
@@ -1406,8 +1406,18 @@ function loadFile(slot,f){
         if(wf){drawOverview(slot,0);drawZoomWaveform(slot,0);}
       });
       analyzeBPM(audioBlob).then(bpm=>{
-        if(bpm>0){d.bpm=bpm;console.log(`[BPM] slot=${slot} bpm=${bpm}`);}
-        else{d.bpm=128;}
+        if(bpm>0){d.bpm=bpm;d.baseBpm=bpm;}
+        else{d.bpm=128;d.baseBpm=128;}
+        // Generate beat grid from BPM (uniform tempo)
+        if(d.dur>0&&d.bpm>0){
+          const beatMs=60000/d.bpm;
+          const beats=[];
+          for(let t=0;t<d.dur;t+=beatMs){
+            beats.push({beatInBar:((beats.length%4)+1), bpm:d.bpm, timeMs:Math.round(t)});
+          }
+          d._beatGrid=beats;
+          console.log(`[BPM] slot=${slot} bpm=${bpm} beatGrid=${beats.length} beats`);
+        }
         renderDecks();
       });
       if(E&&run){
@@ -1470,6 +1480,12 @@ function doCueDown(slot){
   } else {
     d.cp=d.au.currentTime; // current position becomes new cue point
     d.cuw=false;
+    // Add to cuePoints list if not already there (virtual deck memory cue)
+    if(!d.cuePoints)d.cuePoints=[];
+    const cpMs=Math.round(d.cp*1000);
+    if(!d.cuePoints.find(c=>Math.abs(c.timeMs-cpMs)<50)){
+      d.cuePoints.push({name:'',timeMs:cpMs,hotCueNum:0,colorId:0,type:'memory'});
+    }
     d.au.currentTime=d.cp;
     d.au.play().catch(()=>{});
     d.cu=true;d.pl=false;
@@ -1654,7 +1670,7 @@ function tick(){
     const tc=document.getElementById('dtc'+slot);
     if(tc)tc.textContent=fTC(displayPos);
     const timeEl=document.getElementById('dtime'+slot);
-    if(timeEl)timeEl.textContent=fTmMs(displayPos)+' / '+(d.dur>0?fTmMs(d.dur):'--:--.--');
+    if(timeEl)timeEl.textContent=fTmMs(displayPos)+' / '+(d.dur>0?fTmMs(d.dur):'--:--.---');
     const bkEl=document.getElementById('dbk'+slot);
     if(bkEl){
       let bkTxt='';
@@ -2279,10 +2295,10 @@ if(E){
 function fTC(ms){if(!ms&&ms!==0)return'--:--:--:--';const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000),f=Math.floor((ms%1000)/33.33);return z(h)+':'+z(m)+':'+z(s)+':'+z(f);}
 function fTm(ms){if(!ms)return'0:00';return Math.floor(ms/60000)+':'+z(Math.floor((ms%60000)/1000));}
 // mm:ss.mm format (centiseconds)
-function fTmMs(ms){if(!ms&&ms!==0)return'--:--.---';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return m+':'+z(s)+'.'+z3(ml);}
+function fTmMs(ms){if(!ms&&ms!==0)return'--:--.----';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return m+':'+z(s)+'.'+z3(ml);}
 function z3(n){return n<10?'00'+n:n<100?'0'+n:''+n;}
 // Cue point time: mm:ss.cs (centiseconds, 2 digits)
-function fTcue(ms){if(!ms&&ms!==0)return'--:--.--';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),cs=Math.floor((ms%1000)/10);return z(m)+':'+z(s)+'.'+String(cs).padStart(2,'0');}
+function fTcue(ms){if(!ms&&ms!==0)return'--:--.---';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return z(m)+':'+z(s)+'.'+z3(ml);}
 // Bar.Beat counter like Rekordbox ("8.2")
 function fBars(posMs,bpm){if(!bpm||!posMs)return'0.0';const bMs=60000/bpm,bar=Math.floor(posMs/(bMs*4))+1,beat=Math.floor((posMs%(bMs*4))/bMs)+1;return bar+'.'+beat;}
 function z(n){return String(Math.max(0,Math.round(n))).padStart(2,'0');}
