@@ -1,0 +1,20 @@
+'use strict';
+const{contextBridge,ipcRenderer}=require('electron');
+contextBridge.exposeInMainWorld('bridge',{
+  start:(o)=>ipcRenderer.invoke('bridge:start',o),
+  stop:()=>ipcRenderer.invoke('bridge:stop'),
+  getInterfaces:()=>ipcRenderer.invoke('bridge:getInterfaces'),
+  getDevices:()=>ipcRenderer.invoke('bridge:getDevices'),
+  updateLayer:(i,d)=>ipcRenderer.invoke('bridge:updateLayer',{i,data:d}),
+  removeLayer:(i)=>ipcRenderer.invoke('bridge:removeLayer',{i}),
+  registerVirtualDeck:(slot,model)=>ipcRenderer.invoke('bridge:registerVirtualDeck',{slot,model}),
+  unregisterVirtualDeck:(slot)=>ipcRenderer.invoke('bridge:unregisterVirtualDeck',{slot}),
+  setHWMode:(i,e)=>ipcRenderer.invoke('bridge:setHWMode',{i,en:e}),
+  onStatus:(cb)=>ipcRenderer.on('bridge:status',(_,d)=>cb(d)),
+  onTcnetNode:(cb)=>ipcRenderer.on('tcnet:node',(_,d)=>cb(d)),
+  onCDJStatus:(cb)=>ipcRenderer.on('bridge:cdj',(_,d)=>cb(d)),
+  onDJMStatus:(cb)=>ipcRenderer.on('bridge:djm',(_,d)=>cb(d)),
+  onDevices:(cb)=>ipcRenderer.on('pdjl:devices',(_,d)=>cb(d)),
+  onDJMMeter:(cb)=>ipcRenderer.on('bridge:djmmeter',(_,d)=>cb(d)),
+  sendArtnet:(d)=>ipcRenderer.invoke('bridge:artTimeCode',d),
+});

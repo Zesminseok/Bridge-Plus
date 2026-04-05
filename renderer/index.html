@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><title>Bridge Clone</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0c10;--bg2:rgba(255,255,255,.03);--bg3:rgba(255,255,255,.05);--bg4:rgba(255,255,255,.08);
+  --bdr:rgba(255,255,255,.08);--bdr2:rgba(255,255,255,.15);
+  --tx:#e2e8f0;--tx2:#94a3b8;--tx3:#475569;--tx4:#2d3748;
+  --grn:#34d399;--blu:#60a5fa;--ylw:#fbbf24;--red:#f87171;--pur:#a78bfa;--org:#fb923c;
+  --mn:'DM Mono',monospace;--sn:'DM Sans',-apple-system,sans-serif
+}
+body{background:var(--bg);color:var(--tx);font-family:var(--sn);-webkit-app-region:drag;user-select:none;overflow:hidden}
+button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
+.hdr{height:46px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bdr);background:rgba(0,0,0,.35);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:8px}
+.li{width:24px;height:24px;border-radius:5px;background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font:700 10px var(--mn);color:var(--grn)}
+.tabs{display:flex;padding:0 18px;border-bottom:1px solid var(--bdr);background:rgba(0,0,0,.2);flex-shrink:0}
+.tab{padding:8px 14px;font:600 11px var(--sn);letter-spacing:.07em;cursor:pointer;border:none;background:0;color:var(--tx3);position:relative;transition:color .15s}
+.tab:hover{color:var(--tx2)}.tab.on{color:var(--tx)}
+.tab.on::after{content:'';position:absolute;bottom:0;left:14px;right:14px;height:2px;background:var(--grn);border-radius:2px 2px 0 0}
+.pg{padding:14px 18px 70px;overflow-y:auto;height:calc(100vh - 84px);scroll-behavior:smooth;-webkit-overflow-scrolling:touch;-webkit-app-region:no-drag}
+.pg::-webkit-scrollbar{width:5px}.pg::-webkit-scrollbar-track{background:transparent}.pg::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}.pg::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
+.hide{display:none!important}
+.sbar{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
+.sc{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:7px 11px}
+.scl{font:500 10px var(--sn);color:var(--tx3);letter-spacing:.06em;margin-bottom:2px}
+.bd{padding:2px 6px;border-radius:3px;font:600 11px var(--mn);display:inline-block}
+.bg{background:rgba(52,211,153,.12);color:var(--grn)}.br{background:rgba(248,113,113,.1);color:var(--red)}
+.bb{background:rgba(96,165,250,.1);color:var(--blu)}.by{background:rgba(251,191,36,.1);color:var(--ylw)}
+.bm{background:var(--bg4);color:var(--tx2)}.bp{background:rgba(167,139,250,.1);color:var(--pur)}
+.al{padding:9px 13px;border-radius:6px;margin-bottom:10px;display:flex;align-items:center;gap:9px}
+.als{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.15)}
+.alw{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15)}
+.aler{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.15)}
+.fstrip{display:flex;gap:5px;padding:6px 10px;background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;margin-bottom:8px;align-items:flex-end}
+.fch{flex:1;text-align:center}
+.fchl{font:600 9px var(--sn);color:var(--tx3);letter-spacing:.05em;margin-bottom:3px}
+.fbar{height:32px;background:rgba(255,255,255,.04);border-radius:3px;overflow:hidden;display:flex;align-items:flex-end}
+.fbarf{width:100%;border-radius:3px;transition:height .08s}
+.fval{font:600 10px var(--mn);color:var(--tx2);margin-top:2px;font-variant-numeric:tabular-nums}
+.fsep{width:1px;background:var(--bdr);height:50px;align-self:center;margin:0 2px}
+.sl{font:500 11px var(--sn);color:var(--tx3);letter-spacing:.06em;margin:0 0 7px}.sl.mt{margin-top:14px}
+.deck-area{display:flex;flex-direction:column;gap:8px}
+.deck-row{display:grid;gap:8px;grid-template-columns:repeat(2,1fr)}
+.deck-row.compact{gap:5px;grid-template-columns:repeat(3,1fr)}
+.deck-row.compact .dk{font-size:0.95em}
+.deck-row.compact .dtop{padding:6px 10px 0}
+.deck-row.compact .din{margin-bottom:3px}
+.deck-row.compact .dtr{padding:3px 10px}
+.deck-row.compact .dwov{height:12px;margin-bottom:1px}
+.deck-row.compact .dwz{height:48px;margin-bottom:4px}
+.deck-row.compact .ddz{padding:16px 10px;min-height:100px}
+.dk{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;transition:border-color .2s;min-width:0}
+.dk[data-st="play"]{border-color:rgba(52,211,153,.4)}.dk[data-st="cue"]{border-color:rgba(251,191,36,.45)}.dk[data-st="hw"]{border-color:rgba(167,139,250,.4)}.dk.dov{border-color:rgba(96,165,250,.5)!important}
+.dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--grn),transparent)}
+.dk[data-st="play"] .dshim{opacity:1;animation:shimmer 2s ease-in-out infinite}
+.dk[data-st="cue"] .dshim{opacity:.6;background:linear-gradient(90deg,transparent,var(--ylw),transparent)}
+.dtop{padding:10px 13px 0}
+.dhd{display:flex;align-items:center;margin-bottom:5px;gap:4px}
+.did{font:400 10px var(--sn);letter-spacing:.05em;transition:color .15s;white-space:nowrap;display:flex;align-items:baseline;gap:2px}
+.did-n{font:700 18px var(--mn);letter-spacing:-.02em;line-height:1}
+.dbadge{font:600 9px var(--mn);padding:2px 5px;border-radius:3px;letter-spacing:.05em}
+.dtc{font:600 14px var(--mn);color:var(--tx4);letter-spacing:-.01em;font-variant-numeric:tabular-nums;transition:color .15s;flex:1;text-align:right;white-space:nowrap}
+.dk[data-st="play"] .dtc,.dk[data-st="cue"] .dtc{color:var(--tx)}
+/* Overview: slim full-track waveform bar */
+.dwov{height:18px;margin:0 0 2px;background:rgba(0,0,0,.45);border-radius:2px;overflow:hidden;cursor:pointer;position:relative}
+.dwov canvas{width:100%;height:100%;display:block}
+/* waveform analysis progress bar (shown while buildRGBWaveform runs) */
+.dwov-prog{position:absolute;bottom:0;left:0;height:2px;width:0;background:rgba(96,165,250,.7);border-radius:1px;pointer-events:none;transition:width .1s linear}
+/* Zoom: scrolling RGB waveform + beat grid */
+.dwz{height:80px;margin:0 0 4px;background:rgba(0,0,0,.4);border-radius:3px;overflow:hidden;cursor:pointer;display:flex;position:relative}
+.dwz canvas{flex:1;height:100%;display:block;min-width:0}
+/* Expanded full-width deck — only widens, no height change */
+.dk.dk-wide{grid-column:1/-1}
+/* Left control column: album art on top, CUE+PLAY row below */
+.dtbody{display:flex;gap:6px;padding:0}
+.dkctrl{display:flex;flex-direction:column;align-items:center;gap:4px;width:70px;flex-shrink:0}
+.dkctrl-btns{display:flex;gap:4px;width:100%;justify-content:center}
+.dkwaves{flex:1;min-width:0}
+.dkbtn{width:33px;height:33px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:transparent;transition:all .14s;letter-spacing:.03em;flex-shrink:0}
+.dkbtn:disabled{opacity:.3;cursor:not-allowed}
+.dkbtn.dkcue{border-color:rgba(251,191,36,.45);color:var(--ylw)}
+.dkbtn.dkcue:hover:not(:disabled){background:rgba(251,191,36,.1)}
+.dkbtn.dkcue.ac{background:rgba(251,191,36,.18);border-color:var(--ylw);box-shadow:0 0 8px rgba(251,191,36,.35)}
+.dkbtn.dkplay{border-color:rgba(52,211,153,.4);color:var(--grn)}
+.dkbtn.dkplay:hover:not(:disabled){background:rgba(52,211,153,.1)}
+.dkbtn.dkplay.ac{background:rgba(52,211,153,.15);border-color:var(--grn)}
+.deck-row.compact .dkbtn{width:24px;height:24px}
+.deck-row.compact .dkctrl{width:56px;gap:3px}
+.deck-row.compact .dwov{height:14px;margin-bottom:1px}
+.deck-row.compact .dwz{height:52px;margin-bottom:3px}
+.dvm{width:5px;flex-shrink:0;background:rgba(0,0,0,.5);border-radius:0 2px 2px 0;position:relative;overflow:hidden}
+.dvmf{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:2px 2px 0 0;transition:height .04s}
+/* Beat phasor: 4-segment bar below zoom waveform */
+.dphs{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;height:7px;margin:0 0 4px}
+.dphs-seg{border-radius:1px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
+.dphs-seg.on{background:rgba(255,255,255,.18)}
+.dphs-fill{position:absolute;top:0;left:0;height:100%;border-radius:1px;background:rgba(52,211,153,.7);width:0}
+.dphs-seg.on .dphs-fill{background:rgba(52,211,153,.95)}
+.deck-row.compact .dphs{height:5px;margin-bottom:3px}
+/* Zoom overlay buttons on waveform — left side to avoid VU meter */
+.dzoom-btns{position:absolute;top:3px;left:4px;display:flex;flex-direction:column;gap:2px;z-index:2;pointer-events:none}
+.dzb{pointer-events:auto;padding:0;width:18px;height:14px;border-radius:2px;font:600 10px var(--mn);cursor:pointer;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.55);color:rgba(255,255,255,.65);transition:all .1s;display:flex;align-items:center;justify-content:center;line-height:1}
+.dzb:hover{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)}
+/* Eject button — separate, full-width */
+.dje{padding:5px 13px;border-top:1px solid var(--bg3)}
+.djebtn{width:100%;padding:5px 0;border-radius:5px;font:600 9px var(--mn);cursor:pointer;border:1px solid rgba(248,113,113,.2);background:0;color:rgba(248,113,113,.6);transition:all .12s;letter-spacing:.06em}
+.djebtn:hover:not(:disabled){background:rgba(248,113,113,.08);color:rgba(248,113,113,.9);border-color:rgba(248,113,113,.4)}.djebtn:active{transform:scale(.98)}
+/* Header transport buttons */
+.dht{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.dhtb{padding:3px 6px;border-radius:4px;font:600 9px var(--mn);cursor:pointer;border:1px solid var(--bdr2);background:0;color:var(--tx2);transition:all .12s;letter-spacing:.04em;white-space:nowrap}
+.dhtb:hover:not(:disabled){background:var(--bg4);color:var(--tx)}.dhtb:active:not(:disabled){transform:scale(.97)}.dhtb:disabled{opacity:.3;cursor:not-allowed}
+.dhtb.cc{color:var(--ylw);border-color:rgba(251,191,36,.3)}.dhtb.cc:hover:not(:disabled){background:rgba(251,191,36,.08)}.dhtb.cc.ac{background:rgba(251,191,36,.2);border-color:var(--ylw)}
+.dhtb.cp{color:var(--grn);border-color:rgba(52,211,153,.3)}.dhtb.cp:hover:not(:disabled){background:rgba(52,211,153,.08)}.dhtb.cp.ac{background:rgba(52,211,153,.15);border-color:var(--grn)}
+.dhtb.cdl{color:var(--red);border-color:rgba(239,68,68,.25)}.dhtb.cdl:hover{background:rgba(239,68,68,.08)}
+.din{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:7px}
+.dil{font:400 9px var(--sn);color:var(--tx3);letter-spacing:.04em}
+.div{font:600 11px var(--mn);color:var(--tx4);transition:color .15s;font-variant-numeric:tabular-nums}
+.dk[data-st="play"] .div,.dk[data-st="cue"] .div{color:var(--tx)}
+.dfrow{display:flex;align-items:center;gap:7px;padding:4px 13px;border-top:1px solid var(--bg3)}
+.dfbar{flex:1;height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
+.dfbarf{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--pur),var(--blu));transition:width .08s}
+.dfpct{font:600 9px var(--mn);color:var(--tx3);min-width:28px;text-align:right;font-variant-numeric:tabular-nums}
+.dtr{padding:5px 13px;border-top:1px solid var(--bg3);display:flex;align-items:center;gap:8px}
+.dart{width:44px;height:44px;border-radius:5px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.04);border:1px solid var(--bdr)}
+.dartp{display:flex;align-items:center;justify-content:center}
+.dartp::after{content:'♪';color:var(--tx4);font-size:16px}
+.dartej{cursor:pointer;position:relative;transition:opacity .15s}
+.dartej:hover{opacity:.7}
+.dartej:hover::before{content:'⏏';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;background:rgba(0,0,0,.45);border-radius:4px}
+.dtri{min-width:0;flex:1}
+.dtn{font:500 11px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dta{font:400 10px var(--sn);color:var(--tx3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Output Layer 카드 */
+.out-layers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.olc{background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;transition:border-color .2s}
+.olc-play{border-color:rgba(52,211,153,.35)}
+.olh{display:flex;align-items:center;gap:8px}
+.olb{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font:700 11px var(--mn);color:#000;flex-shrink:0}
+.oltc{font:600 13px var(--mn);color:var(--tx3);letter-spacing:-.01em;font-variant-numeric:tabular-nums;flex:1;text-align:right}
+.olc-play .oltc{color:var(--tx)}
+.olsr{display:flex;align-items:center;gap:6px}
+.olss{flex:1;min-width:0;font-size:10px}
+.olout{display:flex;gap:3px}
+.olof{display:flex;align-items:center;gap:5px}
+.olofin{width:52px;background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:4px;padding:2px 5px;color:var(--tx);font:400 10px var(--mn);outline:none;text-align:right}
+/* TC 버튼 */
+.tcbtn{padding:2px 8px;border-radius:3px;font:600 8px var(--mn);cursor:pointer;border:1px solid var(--bdr2);background:0;color:var(--tx3);transition:all .1s;letter-spacing:.05em}
+.tcbtn:hover{color:var(--tx2);background:var(--bg4)}
+.tcbtn.ac-ltc{color:var(--ylw);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12)}
+.tcbtn.ac-mtc{color:var(--blu);border-color:rgba(96,165,250,.4);background:rgba(96,165,250,.12)}
+.tcbtn.ac-art{color:var(--org);border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.12)}
+.dhw{padding:4px 13px;border-top:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between}
+.dhwl{font:400 10px var(--mn);color:var(--tx3)}
+.dhwb{padding:2px 7px;border-radius:3px;font:600 8px var(--mn);cursor:pointer;border:1px solid rgba(167,139,250,.25);background:0;color:var(--pur);transition:all .12s}
+.dhwb:hover{background:rgba(167,139,250,.1)}.dhwb.ac{background:rgba(167,139,250,.2);border-color:var(--pur)}
+.ddz{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 13px;gap:6px;min-height:140px;color:var(--tx3)}
+.ddzi{width:28px;height:28px;border:1.5px dashed var(--tx3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.dk.dov .ddzi{border-color:var(--blu);color:var(--blu)}
+.add-deck-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:14px;border:1.5px dashed var(--bdr2);border-radius:9px;cursor:pointer;color:var(--tx3);font:500 11px var(--sn);background:0;transition:all .15s;width:100%}
+.add-deck-btn:hover{border-color:var(--grn);color:var(--grn);background:rgba(52,211,153,.05)}
+.sgr{background:var(--bg2);border:1px solid var(--bdr);border-radius:7px;padding:2px 13px;margin-bottom:10px}
+.srw{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bg3)}.srw:last-child{border-bottom:none}
+.srl{font:400 11px var(--sn);color:var(--tx2)}.srv{font:400 11px var(--mn);color:var(--tx)}
+select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;cursor:pointer;max-width:220px}
+.tbl{border:1px solid var(--bdr);border-radius:7px;overflow:hidden;margin-bottom:10px}
+.tblh{display:grid;padding:6px 12px;background:var(--bg3);border-bottom:1px solid var(--bdr)}
+.tblr{display:grid;padding:7px 12px;border-bottom:1px solid var(--bg3)}.tblr:last-child{border-bottom:none}
+.pgr{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
+.pgc{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:8px 10px;text-align:center}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;vertical-align:middle}
+.dpu{animation:pulse 2s ease-in-out infinite}
+.bbar{position:fixed;bottom:0;left:0;right:0;height:38px;padding:0 18px;display:flex;justify-content:space-between;align-items:center;background:rgba(10,12,16,.97);border-top:1px solid var(--bdr);backdrop-filter:blur(12px);-webkit-app-region:no-drag}
+.btn{padding:5px 14px;border-radius:5px;font:500 11px var(--sn);cursor:pointer;border:none;transition:all .12s}.btn:active{transform:scale(.97)}
+.btng{background:var(--grn);color:#0a0c10}.btng:hover{background:#4ade80}
+.btnr{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.2)}.btnr:hover{background:rgba(248,113,113,.25)}
+/* Album art — inside dkctrl column, full width */
+.dkart{width:70px;height:70px;border-radius:6px;flex-shrink:0;overflow:hidden;background:rgba(255,255,255,.04);border:1px solid var(--bdr);cursor:pointer;position:relative;transition:filter .15s}
+.dkart:hover{filter:brightness(.6)}
+.dkart::after{content:'⏏';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;background:rgba(0,0,0,0);border-radius:5px;transition:opacity .15s,background .15s;pointer-events:none;opacity:0}
+.dkart:hover::after{background:rgba(0,0,0,.5);opacity:1}
+.dkart img{width:100%;height:100%;object-fit:cover;display:block}
+.noart-icon{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--tx4);font-size:18px}
+.deck-row.compact .dkart{width:54px;height:54px}
+/* Stereo VU — two narrow bars side-by-side */
+.dvm-st{display:flex;gap:1px;width:7px;flex-shrink:0;height:100%}
+.dvm-st .dvm{flex:1;width:3px;border-radius:0}
+.dktn{padding:0 0 3px;display:flex;align-items:baseline;gap:0;min-width:0;overflow:hidden}
+.dktn-t{font:500 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0}
+.dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:2;min-width:0}
+.dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.dk[data-st="play"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
+.dbk-hd{font:600 12px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;margin-left:auto;padding-left:6px;white-space:nowrap;flex-shrink:0}
+.dk[data-st="play"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
+.mode-bar{display:flex;align-items:center;gap:10px;padding:6px 18px;background:rgba(0,0,0,.25);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.mode-label{font:600 10px var(--mn);color:var(--tx4);letter-spacing:.08em}
+.mode-btns{display:flex;gap:2px;background:rgba(0,0,0,.3);border-radius:5px;padding:2px;border:1px solid var(--bdr)}
+.mode-btn{padding:3px 10px;border-radius:4px;font:600 10px var(--mn);cursor:pointer;border:none;background:0;color:var(--tx3);transition:all .15s;letter-spacing:.06em}
+.mode-btn:hover{color:var(--tx2)}.mode-btn.ac{background:rgba(255,255,255,.1);color:var(--tx)}
+.mode-hint{font:400 10px var(--sn);color:var(--tx4);margin-left:auto}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shimmer{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
+</style></head><body>
+
+<div class="hdr">
+  <div class="logo"><div class="li">B</div>
+    <div><div style="font:700 11px var(--sn)">Bridge Clone</div><div style="font:400 9px var(--mn);color:var(--tx3)">v0.12.0</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="dot" id="hDot" style="background:var(--tx4)"></span>
+    <span style="font:400 10px var(--mn);color:var(--tx3)" id="hSt">READY</span>
+    <button class="btn btng" id="mainBtn">START</button>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab on" data-t="link">LINK</button>
+  <button class="tab" data-t="pdjl">PRO DJ LINK</button>
+  <button class="tab" data-t="tcnet">TCNet</button>
+  <button class="tab" data-t="settings">SETTINGS</button>
+</div>
+
+<!-- LINK -->
+<div class="pg" id="pgLink">
+  <div class="sbar">
+    <div class="sc"><div class="scl">TCNet</div><span class="bd br" id="stBadge">OFFLINE</span></div>
+    <div class="sc"><div class="scl">ARENA 노드</div><span class="bd bb" id="stArena">0</span></div>
+    <div class="sc"><div class="scl">활성 덱</div><span class="bd bm" id="stDecks">0</span></div>
+    <div class="sc"><div class="scl">UPTIME</div><span class="bd bm" id="stUp">—</span></div>
+  </div>
+  <div class="al alw" id="stAlert">
+    <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
+    <span style="font:400 11px var(--sn);color:var(--ylw)">START를 눌러 TCNet을 시작하세요</span>
+  </div>
+  <div id="faderSection" style="display:none">
+    <div class="sl" style="font-size:9px">DJM 채널 페이더 → Arena Opacity</div>
+    <div class="fstrip">
+      <div class="fch"><div class="fchl">CH 1</div><div class="fbar"><div class="fbarf" id="fb0" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv0">100%</div></div>
+      <div class="fch"><div class="fchl">CH 2</div><div class="fbar"><div class="fbarf" id="fb1" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv1">100%</div></div>
+      <div class="fch"><div class="fchl">CH 3</div><div class="fbar"><div class="fbarf" id="fb2" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv2">100%</div></div>
+      <div class="fch"><div class="fchl">CH 4</div><div class="fbar"><div class="fbarf" id="fb3" style="height:100%;background:linear-gradient(180deg,var(--pur),var(--blu))"></div></div><div class="fval" id="fv3">100%</div></div>
+      <div class="fsep"></div>
+      <div class="fch"><div class="fchl">MASTER</div><div class="fbar"><div class="fbarf" id="fbM" style="height:100%;background:var(--grn)"></div></div><div class="fval" id="fvM">—</div></div>
+    </div>
+  </div>
+  <div class="sl">OUTPUT LAYERS</div>
+  <div class="out-layers" id="outLayers"></div>
+  <div class="mode-bar">
+    <div class="mode-label">DECK MODE</div>
+    <div class="mode-btns">
+      <button class="mode-btn ac" id="modeVt" onclick="switchMode('virtual')">VIRTUAL</button>
+      <button class="mode-btn" id="modeHW" onclick="switchMode('hw')">HARDWARE</button>
+    </div>
+    <span class="mode-hint" id="modeHint">파일 드래그로 덱 추가</span>
+  </div>
+  <div class="deck-area">
+    <div id="hwSection" style="display:none">
+      <div class="sl">INPUT LAYERS — CDJ / HW</div>
+      <div class="deck-row" id="hwRow"></div>
+    </div>
+    <div id="vtSection">
+      <div class="sl" id="vtLabel">INPUT LAYERS — VIRTUAL</div>
+      <div class="deck-row" id="vtRow"></div>
+      <button class="add-deck-btn" id="addDeckBtn" style="margin-top:8px">
+        <span style="font-size:18px;line-height:1">＋</span>
+        <span>Virtual 덱 추가 <span style="color:var(--tx3);font-size:9px">(최대 8개)</span></span>
+      </button>
+    </div>
+    <div id="djmSection" style="display:none">
+      <div class="sl mt">MIXER</div>
+      <div id="djmPanel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PRO DJ LINK -->
+<div class="pg hide" id="pgPdjl">
+  <div id="pdjlStatus"></div>
+  <div class="sl">기기 목록</div>
+  <div id="pdjlDevList"></div>
+</div>
+
+<!-- TCNet -->
+<div class="pg hide" id="pgTcnet"></div>
+
+<!-- Settings -->
+<div class="pg hide" id="pgSettings"></div>
+
+<div class="bbar">
+  <div style="display:flex;gap:11px" id="bDots"></div>
+  <div style="font:400 9px var(--mn);color:var(--tx4)" id="bPk">TCNet TX: 0</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+const E=typeof window.bridge!=='undefined';
+let run=false,t0=0,up=0,pk=0,curTab='link';
+let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
+let faders=[255,255,255,255],pdjlPort=null;
+// 설정 — 인터페이스 포함
+let cfg={nm:'BRIDGE29',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
+  tcFps:'25',phasorMode:'scroll',wfColor:'rgb',wfCenter:'center',
+  tcLtcA:'',   // Layer A LTC 오디오 장치
+  tcLtcB:'',   // Layer B LTC 오디오 장치
+  tcLtcM:'',   // Layer M LTC 오디오 장치
+  tcMidiOutId:'',
+  tcArtnetIp:'255.255.255.255',tcArtnetPort:'6454'};
+
+const MAX_DECKS=8;
+const DECKS={};
+let glMode='virtual'; // 'virtual' | 'hw'
+
+function createDeck(slot,type='virtual'){
+  return{slot,type,ld:false,pl:false,cu:false,au:null,tn:'',ar:'',bpm:0,dur:0,pos:0,cp:0,cuw:false,
+    wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,
+    key:'',vu:0,vuSrc:null,vuAn:null,vuBuf:null,artUrl:null,hwVu:0,beatInBar:1,
+    zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null};
+}
+
+async function getAudioDevs(){try{audioDevs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput');}catch(e){audioDevs=[];}}
+getAudioDevs();
+// Music key → Camelot wheel notation
+const _CAMELOT={
+  // Major (B column)
+  'C':'8B','G':'9B','D':'10B','A':'11B','E':'12B','B':'1B','Cb':'1B',
+  'F#':'2B','Gb':'2B','C#':'3B','Db':'3B','G#':'4B','Ab':'4B',
+  'D#':'5B','Eb':'5B','A#':'6B','Bb':'6B','F':'7B','E#':'7B',
+  // Minor (A column)
+  'Am':'8A','Em':'9A','Bm':'10A',
+  'F#m':'11A','Gbm':'11A',
+  'C#m':'12A','Dbm':'12A',
+  'G#m':'1A','Abm':'1A',
+  'D#m':'2A','Ebm':'2A',
+  'A#m':'3A','Bbm':'3A',
+  'Fm':'4A','E#m':'4A',
+  'Cm':'5A','Gm':'6A','Dm':'7A',
+};
+function _toCamelot(k){
+  if(!k)return '';
+  const t=k.trim();
+  // 이미 카멜롯 형식 (1A~12A, 1B~12B)
+  if(/^([1-9]|1[0-2])[AB]$/i.test(t))return t.toUpperCase();
+  // 표준 → 카멜롯 변환: "minor" → "m", 음이름 정규화
+  const norm=t.replace(/\s*(minor|maj)\s*/i,(m,p)=>p.toLowerCase()==='minor'?'m':'')
+              .replace(/\s+/g,'');
+  return _CAMELOT[norm]||_CAMELOT[norm.replace('♭','b').replace('♯','#')]||k;
+}
+
+
+
+// ════ SMPTE Timecode Engine — Output Layer routing ══════════════════
+// Input Layer (decks 1-8) → Output Layer (A/B/M) → LTC / MTC / Art-Net
+
+const TC_FPS_TYPE = {'24':0,'25':1,'29.97':2,'30':3};
+
+// Output Layer 상태
+const OUT = {
+  A: {src:null, ltc:false, mtc:false, art:false, offset:0, _qf:0},
+  B: {src:null, ltc:false, mtc:false, art:false, offset:0, _qf:0},
+  M: {src:null, ltc:false, mtc:false, art:false, offset:0, _qf:0},
+};
+// M의 src는 'A'|'B'|slot(number)|null
+
+// ── LTC (AudioWorklet) — independent instance per output layer ──────
+const _ltc = {
+  A:{ctx:null,node:null,out:null,ready:false,ch:0},
+  B:{ctx:null,node:null,out:null,ready:false,ch:0},
+  M:{ctx:null,node:null,out:null,ready:false,ch:0},
+};
+
+async function _ltcInit(layer){
+  const L=_ltc[layer];
+  if(L.ready)return true;
+  const devId=cfg[`tcLtc${layer}`]||'';
+  try{
+    L.ctx=new AudioContext({sampleRate:48000});
+    await L.ctx.audioWorklet.addModule('./ltc-processor.js');
+    // single channel per layer — each layer routes to its own audio device
+    L.node=new AudioWorkletNode(L.ctx,'ltc-processor',{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[1]});
+    const dest=L.ctx.createMediaStreamDestination();
+    L.node.connect(dest);
+    L.out=new Audio();L.out.srcObject=dest.stream;
+    if(devId){try{await L.out.setSinkId(devId);}catch(_){}}
+    await L.out.play();
+    L.ready=true;
+    console.log(`[LTC-${layer}] ready device="${devId||'default'}"`);
+    return true;
+  }catch(e){console.error(`[LTC-${layer}] init failed:`,e);return false;}
+}
+
+async function _ltcSetDevice(layer, devId){
+  const L=_ltc[layer];
+  cfg[`tcLtc${layer}`]=devId;
+  if(L.out&&devId){try{await L.out.setSinkId(devId);}catch(_){}}
+}
+
+function _ltcSend(layer, ms, playing){
+  const L=_ltc[layer];
+  if(!L.ready||!L.node)return;
+  const fps=parseFloat(cfg.tcFps)||25, ri=Math.round(fps);
+  const totalF=Math.floor(ms/1000*fps);
+  const ff=totalF%ri, ss=Math.floor(totalF/ri)%60, mm=Math.floor(totalF/ri/60)%60, hh=Math.floor(totalF/ri/3600)%24;
+  L.node.port.postMessage({cmd:'setPos',ch:0,fps,hh,mm,ss,ff,running:playing});
+}
+
+function _ltcStop(layer){
+  const L=_ltc[layer];
+  if(!L.node)return;
+  L.node.port.postMessage({cmd:'setPos',ch:0,running:false});
+  console.log(`[LTC-${layer}] stopped`);
+}
+
+// ── MTC (MIDI Timecode) ─────────────────────────────
+let _midiAccess=null, _mtcOut=null;
+async function _mtcInit(){
+  if(_midiAccess)return true;
+  try{
+    _midiAccess=await navigator.requestMIDIAccess({sysex:false});
+    _mtcSelectOutput(cfg.tcMidiOutId);
+    return true;
+  }catch(e){console.warn('[MTC] MIDI access failed:',e);return false;}
+}
+function _mtcSelectOutput(id){
+  _mtcOut=null;if(!_midiAccess)return;
+  if(id)_mtcOut=_midiAccess.outputs.get(id);
+  if(!_mtcOut)for(const o of _midiAccess.outputs.values()){_mtcOut=o;break;}
+}
+function _mtcSend(layer, ms, playing){
+  if(!_mtcOut||!playing)return;
+  const fps=parseFloat(cfg.tcFps)||25, ri=Math.round(fps);
+  const totalF=Math.floor(ms/1000*fps);
+  const ff=totalF%ri, ss=Math.floor(totalF/ri)%60, mm=Math.floor(totalF/ri/60)%60, hh=Math.floor(totalF/ri/3600)%24;
+  const type=TC_FPS_TYPE[cfg.tcFps]??1;
+  const qf=OUT[layer]._qf;
+  let d;
+  switch(qf%8){
+    case 0:d=0x00|(ff&0x0F);break; case 1:d=0x10|((ff>>4)&1);break;
+    case 2:d=0x20|(ss&0x0F);break; case 3:d=0x30|((ss>>4)&3);break;
+    case 4:d=0x40|(mm&0x0F);break; case 5:d=0x50|((mm>>4)&3);break;
+    case 6:d=0x60|(hh&0x0F);break; case 7:d=0x70|((hh>>4)&1)|(type<<1);break;
+  }
+  try{_mtcOut.send([0xF1,d]);}catch(_){}
+  OUT[layer]._qf=(qf+1)&0xFF;
+}
+
+// ── Artnet Timecode ──────────────────────────────────
+function _artSend(ms, playing){
+  if(!E)return;
+  const fps=parseFloat(cfg.tcFps)||25, ri=Math.round(fps);
+  const totalF=Math.floor(ms/1000*fps);
+  const ff=totalF%ri, ss=Math.floor(totalF/ri)%60, mm=Math.floor(totalF/ri/60)%60, hh=Math.floor(totalF/ri/3600)%24;
+  const type=TC_FPS_TYPE[cfg.tcFps]??1;
+  window.bridge.sendArtnet?.({ip:cfg.tcArtnetIp||'255.255.255.255',port:parseInt(cfg.tcArtnetPort)||6454,ff,ss,mm,hh,type});
+}
+
+// ── Get source deck position / playing state for an output layer ────
+function _outSrcMs(key){
+  const o=OUT[key];
+  if(o.src==null)return null;
+  if(key==='M'&&(o.src==='A'||o.src==='B'))return _outSrcMs(o.src);
+  const d=DECKS[o.src];
+  if(!d||!d.ld)return null;
+  return Math.round(d.pos)+o.offset;
+}
+function _outPlaying(key){
+  const o=OUT[key];
+  if(o.src==null)return false;
+  if(key==='M'&&(o.src==='A'||o.src==='B'))return _outPlaying(o.src);
+  const d=DECKS[o.src];
+  return !!(d&&d.pl);
+}
+
+// ── Timecode tick — called every ~33ms from tick() ──────────────────
+async function tcTick(){
+  for(const [key,o] of Object.entries(OUT)){
+    const ms=_outSrcMs(key);
+    const playing=_outPlaying(key);
+    if(o.ltc){
+      if(!_ltc[key].ready)await _ltcInit(key);
+      if(ms!=null)_ltcSend(key,ms,playing);
+      else _ltcStop(key);
+    }
+    if(o.mtc){
+      if(!_midiAccess)await _mtcInit();
+      if(ms!=null)_mtcSend(key,ms,playing);
+    }
+    // Art-Net: send whenever source has a position (not just when playing)
+    if(o.art&&ms!=null)_artSend(ms,playing);
+  }
+}
+
+// ── Enable / disable an output layer mode ────────────────────────────
+function _outSetMode(key,mode,val){
+  OUT[key][mode]=val;
+  if(!val){
+    if(mode==='ltc')_ltcStop(key);
+  } else {
+    if(mode==='ltc'&&!_ltc[key].ready)_ltcInit(key);
+    if(mode==='mtc'&&!_midiAccess)_mtcInit();
+  }
+  renderOutLayers();
+}
+
+// ── Output Layer UI rendering ────────────────────────────────────────
+function renderOutLayers(){
+  const el=document.getElementById('outLayers');if(!el)return;
+  const slots=Object.keys(DECKS).map(Number).sort();
+  const mkSrcOpts=(key)=>{
+    const cur=OUT[key].src;
+    const isM=key==='M';
+    let opts=`<option value="" ${cur==null?'selected':''}>—</option>`;
+    if(isM){
+      opts+=`<option value="A" ${cur==='A'?'selected':''}>Layer A</option>`;
+      opts+=`<option value="B" ${cur==='B'?'selected':''}>Layer B</option>`;
+    }
+    slots.forEach(s=>{
+      const d=DECKS[s];const lbl=d.type==='hw'?`CDJ ${s+1}`:`Virtual ${s+1}`;
+      opts+=`<option value="${s}" ${cur===s?'selected':''}>${lbl}</option>`;
+    });
+    return opts;
+  };
+  const mkOutCard=(key,color)=>{
+    const o=OUT[key];
+    const ms=_outSrcMs(key);
+    const tc=ms!=null?fTC(ms):'--:--:--:--';
+    const playing=_outPlaying(key);
+    return`<div class="olc ${playing?'olc-play':''}">
+      <div class="olh"><span class="olb" style="background:${color}">${key}</span><span class="oltc" id="oltc${key}">${tc}</span></div>
+      <div class="olsr">
+        <span style="font:400 9px var(--mn);color:var(--tx3)">SOURCE</span>
+        <select class="ss olss" data-ol="${key}" style="flex:1;min-width:0">${mkSrcOpts(key)}</select>
+      </div>
+      <div class="olout">
+        <button class="tcbtn${o.ltc?' ac-ltc':''}" data-ol="${key}" data-mode="ltc">LTC</button>
+        <button class="tcbtn${o.mtc?' ac-mtc':''}" data-ol="${key}" data-mode="mtc">MTC</button>
+        <button class="tcbtn${o.art?' ac-art':''}" data-ol="${key}" data-mode="art">ART</button>
+      </div>
+      <div class="olof">
+        <span style="font:400 9px var(--mn);color:var(--tx3)">OFFSET</span>
+        <input type="number" class="olofin" value="${o.offset}" data-ol="${key}" step="10" placeholder="0">
+        <span style="font:400 9px var(--mn);color:var(--tx3)">ms</span>
+      </div>
+    </div>`;
+  };
+  el.innerHTML=mkOutCard('A','var(--grn)')+mkOutCard('B','var(--blu)')+mkOutCard('M','var(--pur)');
+  // event binding
+  el.querySelectorAll('.olss').forEach(sel=>{
+    sel.onchange=e=>{
+      const key=e.target.dataset.ol;
+      const v=e.target.value;
+      OUT[key].src=v===''?null:/^\d+$/.test(v)?parseInt(v):v;
+      renderOutLayers();
+    };
+  });
+  el.querySelectorAll('[data-mode]').forEach(btn=>{
+    btn.onclick=e=>{
+      const key=btn.dataset.ol, mode=btn.dataset.mode;
+      _outSetMode(key,mode,!OUT[key][mode]);
+    };
+  });
+  el.querySelectorAll('.olofin').forEach(inp=>{
+    inp.onchange=e=>{OUT[e.target.dataset.ol].offset=parseInt(e.target.value)||0;};
+  });
+}
+// 타임코드 표시 업데이트 (tick에서)
+function _updateOutTcDisplay(){
+  ['A','B','M'].forEach(k=>{
+    const el=document.getElementById('oltc'+k);if(!el)return;
+    const ms=_outSrcMs(k);
+    el.textContent=ms!=null?fTC(ms):'--:--:--:--';
+    const card=el.closest('.olc');
+    if(card)card.classList.toggle('olc-play',_outPlaying(k));
+  });
+}
+
+// Shared AudioContext for VU metering
+let _auCtx=null;
+function _getAuCtx(){if(!_auCtx||_auCtx.state==='closed')_auCtx=new(window.AudioContext||window.webkitAudioContext)();if(_auCtx.state==='suspended')_auCtx.resume();return _auCtx;}
+async function setOut(au,id){if(!au||!id)return;try{if(au.setSinkId)await au.setSinkId(id);}catch(e){}}
+
+// ════ Waveform ════════════════════════════════════════
+
+// 80-bit IEEE 754 extended → JS number (AIFF sampleRate parsing)
+function _read80BitFloat(v,off){
+  const exp=(v.getUint16(off,false)&0x7FFF)-16383-63;
+  const hi=v.getUint32(off+2,false),lo=v.getUint32(off+6,false);
+  return(hi*4294967296+lo)*Math.pow(2,exp);
+}
+
+// AIFF/AIFC(PCM) → WAV Blob — Chromium does not support AIFF natively
+function _aiffToWav(ab){
+  const v=new DataView(ab);
+  if(v.getUint32(0,false)!==0x464F524D)throw new Error('Not FORM');
+  const ft=String.fromCharCode(v.getUint8(8),v.getUint8(9),v.getUint8(10),v.getUint8(11));
+  if(ft!=='AIFF'&&ft!=='AIFC')throw new Error('Not AIFF');
+  let ch=0,nf=0,ss=0,sr=0,ssndOff=-1,ssndDataOff=0,comp='NONE';
+  let pos=12;
+  while(pos+8<=ab.byteLength){
+    const id=String.fromCharCode(v.getUint8(pos),v.getUint8(pos+1),v.getUint8(pos+2),v.getUint8(pos+3));
+    const sz=v.getUint32(pos+4,false);
+    if(id==='COMM'){ch=v.getInt16(pos+8,false);nf=v.getUint32(pos+10,false);ss=v.getInt16(pos+14,false);sr=Math.round(_read80BitFloat(v,pos+16));if(ft==='AIFC'&&sz>=22)comp=String.fromCharCode(v.getUint8(pos+26),v.getUint8(pos+27),v.getUint8(pos+28),v.getUint8(pos+29));}
+    else if(id==='SSND'){ssndOff=pos+8;ssndDataOff=v.getUint32(pos+8,false);}
+    pos+=8+sz+(sz&1);if(sz===0)break;
+  }
+  if(ssndOff<0||ch===0)throw new Error('Missing COMM/SSND');
+  if(comp!=='NONE'&&comp!=='sowt')throw new Error('Compressed AIFC not supported: '+comp);
+  const bps=Math.ceil(ss/8),le=(comp==='sowt');
+  const dataStart=ssndOff+8+ssndDataOff,numBytes=nf*ch*bps;
+  const wav=new ArrayBuffer(44+numBytes),w=new DataView(wav);
+  w.setUint32(0,0x52494646,false);w.setUint32(4,36+numBytes,true);w.setUint32(8,0x57415645,false);
+  w.setUint32(12,0x666D7420,false);w.setUint32(16,16,true);w.setUint16(20,1,true);
+  w.setUint16(22,ch,true);w.setUint32(24,sr,true);w.setUint32(28,sr*ch*bps,true);w.setUint16(32,ch*bps,true);w.setUint16(34,ss,true);
+  w.setUint32(36,0x64617461,false);w.setUint32(40,numBytes,true);
+  const src=new Uint8Array(ab,dataStart,Math.min(numBytes,ab.byteLength-dataStart)),dst=new Uint8Array(wav,44);
+  if(le||ss<=8){dst.set(src);}
+  else if(ss===16){for(let i=0;i+1<src.length;i+=2){dst[i]=src[i+1];dst[i+1]=src[i];}}
+  else if(ss===24){for(let i=0;i+2<src.length;i+=3){dst[i]=src[i+2];dst[i+1]=src[i+1];dst[i+2]=src[i];}}
+  else if(ss===32){for(let i=0;i+3<src.length;i+=4){dst[i]=src[i+3];dst[i+1]=src[i+2];dst[i+2]=src[i+1];dst[i+3]=src[i];}}
+  return new Blob([wav],{type:'audio/wav'});
+}
+
+// Scan AIFF chunks for an ID3 tag (may appear after large SSND chunk)
+async function _findAIFFId3(file){
+  const hdr=new DataView(await file.slice(0,12).arrayBuffer());
+  if(hdr.getUint32(0,false)!==0x464F524D)return -1;
+  const ft=String.fromCharCode(hdr.getUint8(8),hdr.getUint8(9),hdr.getUint8(10),hdr.getUint8(11));
+  if(ft!=='AIFF'&&ft!=='AIFC')return -1;
+  let pos=12;
+  while(pos+8<=file.size){
+    const h=new DataView(await file.slice(pos,pos+8).arrayBuffer());
+    const id=String.fromCharCode(h.getUint8(0),h.getUint8(1),h.getUint8(2),h.getUint8(3));
+    const sz=h.getUint32(4,false);
+    if(!id.trim()||sz>file.size)break;
+    if(id==='ID3 '||id==='id3 ')return pos+8;
+    pos+=8+sz+(sz&1);if(sz===0)break;
+  }
+  return -1;
+}
+
+// onChunk(doneCount, partialWf) called every 400 pts for progressive display
+async function buildRGBWaveform(blob, onChunk){
+  try{
+    const _ac=new(window.AudioContext||window.webkitAudioContext)();
+    const ab=await blob.arrayBuffer();
+    const buf=await _ac.decodeAudioData(ab);
+    _ac.close();
+    const ch=buf.getChannelData(0),sr=buf.sampleRate;
+    // CDJ uses ~150 entries/sec; cap at 15000 for performance
+    const pts=Math.min(15000,Math.max(6000,Math.floor(buf.duration*150)));
+    const step=Math.max(1,Math.floor(ch.length/pts));
+    // Band splits: 200Hz (bass/mid), 3000Hz (mid/treble) — confirmed Serato~200/1500, Pioneer~200/3000
+    const aL=Math.min(1,2*Math.PI*200/sr),aM=Math.min(1,2*Math.PI*3000/sr);
+    // Pink-noise bandwidth correction: geometric-center freq per band
+    // bass: 20-200Hz (√20*200≈63Hz), mid: 200-3000Hz (√200*3000≈775Hz), hi: 3000-20000Hz (√3000*20000≈7746Hz)
+    // Correct = √(refF/centerF), ref=bass; treble gets less raw energy so boosted heavily
+    const gBass=5.5,gMid=6,gHi=22; // empirical + bandwidth-normalized
+    const wf=new Array(pts);
+    const CHUNK=Math.max(200,Math.floor(pts/30)); // ~30 progress updates total
+    // carry IIR filter state across all columns for continuity
+    let lp1=0,lp2=0;
+    for(let i=0;i<pts;i++){
+      const s0=i*step;let el=0,em=0,eh=0,pk=0,mn=0,mx=0;
+      for(let j=0;j<step;j++){
+        const s=ch[s0+j]||0;
+        lp1+=aL*(s-lp1);lp2+=aM*(s-lp2);
+        const bass=lp1,mid2=lp2-lp1,tre=s-lp2;
+        el+=bass*bass;em+=mid2*mid2;eh+=tre*tre;
+        const a=Math.abs(s);if(a>pk)pk=a;
+        if(s<mn)mn=s;if(s>mx)mx=s;
+      }
+      const inv=1/step;
+      wf[i]={h:pk,mn,mx,r:Math.min(1,Math.sqrt(el*inv)*gBass),g:Math.min(1,Math.sqrt(em*inv)*gMid),b:Math.min(1,Math.sqrt(eh*inv)*gHi)};
+      if(onChunk&&(i+1)%CHUNK===0){
+        onChunk(i+1,wf);
+        await new Promise(r=>setTimeout(r,0)); // yield to UI
+      }
+    }
+    return wf;
+  }catch(e){console.warn('[rgbWf]',e);return null;}
+}
+
+// Waveform color: 3 presets — 'blue', 'rgb', '3band'
+// Source: Rekordbox ANLZ PWV4/PWV5/PWV6 + Deep-Symmetry/dysentery #9/#33
+function _wfBlend(r,g,b2,dimF){
+  const mode=cfg.wfColor||'rgb';
+  if(mode==='blue'){
+    // Rekordbox BLUE: #0055B0 (deep) → #AADDFF (bright), hue shifts blue→cyan-white with treble
+    const e=Math.min(1,Math.sqrt(r*r+g*g+b2*b2));
+    const w=b2/(r+g+b2||1); // whiteness = treble share (0-1)
+    const br=Math.pow(e,0.55);
+    const R=Math.round((br*0  +w*170)*dimF);
+    const G=Math.round((br*85 +w*135)*dimF);
+    const B=Math.round((br*176+w*79 )*dimF);
+    return[Math.min(255,R),Math.min(255,G),Math.min(255,B)];
+  }
+  if(mode==='3band'){
+    // 3BAND stacked: bass=#0055E1(blue), mid=#FFA600(amber), treble=#FFFFFF(white)
+    // Return per-band data for stacked rendering in draw functions
+    // For non-stacked contexts, blend with dominance
+    const tot=r+g+b2||0.001;
+    const rn=r/tot,gn=g/tot,bn=b2/tot;
+    // Bass=#0055E1, Mid=#FFA600, Treble=#FFFFFF — weighted blend
+    const R=Math.min(255,Math.round((rn*0x00+gn*0xFF+bn*0xFF)*dimF));
+    const G=Math.min(255,Math.round((rn*0x55+gn*0xA6+bn*0xFF)*dimF));
+    const B=Math.min(255,Math.round((rn*0xE1+gn*0x00+bn*0xFF)*dimF));
+    return[R,G,B];
+  }
+  // RGB (default): Rekordbox RGB — pure additive #FF0000/#00FF00/#0000FF
+  // Dominant-band contrast separates colors vividly
+  const mx=Math.max(r,g,b2)||0.001;
+  const C=2.2;
+  const R=Math.min(255,Math.pow(r/mx,C)*r*255);
+  const G=Math.min(255,Math.pow(g/mx,C)*g*255);
+  const B=Math.min(255,Math.pow(b2/mx,C)*b2*255);
+  return[Math.round(R*dimF),Math.round(G*dimF),Math.round(B*dimF)];
+}
+// 3BAND stacked rendering helper: returns [{color,h},...] from bottom to top
+function _wf3BandStack(r,g,b2,totalH,dimF){
+  const bH=Math.round(r*totalH),mH=Math.round(g*totalH),tH=Math.round(b2*totalH);
+  return[
+    {R:Math.round(0x00*dimF),G:Math.round(0x55*dimF),B:Math.round(0xE1*dimF),h:bH},   // bass=blue
+    {R:Math.round(0xFF*dimF),G:Math.round(0xA6*dimF),B:Math.round(0x00*dimF),h:mH},   // mid=amber
+    {R:Math.round(0xFF*dimF),G:Math.round(0xFF*dimF),B:Math.round(0xFF*dimF),h:tH},   // treble=white
+  ];
+}
+
+function drawOverview(slot,prog){
+  const d=DECKS[slot];if(!d||!d.rgbWf||!d.wovCtx)return;
+  const cv=document.getElementById('wov'+slot);if(!cv||!cv.width)return;
+  const W=cv.width,H=cv.height,ctx=d.wovCtx;
+  const pos=Math.max(0,Math.min(1,prog||0));
+  const pts=d.rgbWf.length,mid=H/2;
+  const img=ctx.createImageData(W,H);const px4=img.data;
+  for(let px=0;px<W;px++){
+    const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
+    let r=0,g=0,b=0;const cnt=Math.max(1,i1-i0+1);
+    for(let i=i0;i<=i1;i++){const p=d.rgbWf[i];r+=p.r;g+=p.g;b+=p.b;}
+    r/=cnt;g/=cnt;b/=cnt;
+    const past=px/W<pos;
+    const dimF=past?1.0:.55;
+    const alpha=past?230:140;
+    const energy=Math.min(1,Math.sqrt(r*r+g*g+b*b)/Math.sqrt(3));
+    const h=Math.max(1,Math.round(Math.pow(energy,0.5)*mid*.92));
+    const y0=Math.max(0,mid-h),y1=Math.min(H-1,mid+h);
+    if((cfg.wfColor||'rgb')==='3band'){
+      const bands=_wf3BandStack(r,g,b,y1-y0,dimF);
+      let cy=y1;
+      for(const band of bands){
+        const by0=Math.max(y0,cy-band.h);
+        for(let y=by0;y<cy;y++){const idx=(y*W+px)*4;px4[idx]=band.R;px4[idx+1]=band.G;px4[idx+2]=band.B;px4[idx+3]=alpha;}
+        cy=by0;
+      }
+    }else{
+      const [R,G,B]=_wfBlend(r,g,b,dimF);
+      const halfH=Math.max(1,(y1-y0)*0.5);
+      for(let y=y0;y<=y1;y++){
+        const edgeDist=Math.min(y-y0,y1-y)/halfH;
+        const aF=Math.max(0.1,1-edgeDist*0.78);
+        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=Math.round(alpha*aF);
+      }
+    }
+  }
+  ctx.putImageData(img,0,0);
+  if(d.cp>0&&d.dur>0){
+    const cx=Math.round(d.cp*1000/d.dur*W);
+    ctx.fillStyle='rgba(251,191,36,.9)';ctx.fillRect(cx-.5,0,1,H);
+    ctx.beginPath();ctx.moveTo(cx-3,0);ctx.lineTo(cx+3,0);ctx.lineTo(cx,4);ctx.closePath();
+    ctx.fillStyle='rgba(251,191,36,1)';ctx.fill();
+  }
+  ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(Math.round(pos*W)-.5,0,1,H);
+}
+
+// Continuous oscilloscope zoom waveform — one blended color per column
+// Shape: actual waveform min/max (organic flowing look like image #3)
+// Color: additive blend of bass(red/pink)+mid(green)+treble(purple)
+function drawZoomWaveform(slot,prog){
+  const d=DECKS[slot];if(!d||!d.rgbWf||!d.wzCtx)return;
+  const cv=document.getElementById('wzc'+slot);if(!cv||!cv.width)return;
+  const W=cv.width,H=cv.height,ctx=d.wzCtx;
+  const pos=Math.max(0,Math.min(1,prog||0));
+  const dur=d.dur,posMs=pos*dur;
+  const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
+  const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
+  const pts=d.rgbWf.length,mid=H/2;
+  const img=ctx.createImageData(W,H);const px4=img.data;
+  for(let px=0;px<W;px++){
+    const pxMs=posMs+(px-cX)*msPerPx;
+    if(pxMs<0||pxMs>dur)continue;
+    const i0=Math.max(0,Math.floor((pxMs-msPerPx*.5)/dur*pts));
+    const i1=Math.min(pts-1,Math.ceil((pxMs+msPerPx*.5)/dur*pts));
+    let r=0,g=0,b2=0,mn=0,mx=0;const cnt=Math.max(1,i1-i0+1);
+    for(let i=i0;i<=i1;i++){const p=d.rgbWf[i];r+=p.r;g+=p.g;b2+=p.b;if(p.mn<mn)mn=p.mn;if(p.mx>mx)mx=p.mx;}
+    r/=cnt;g/=cnt;b2/=cnt;
+    const past=pxMs<posMs;
+    const dimF=past?.45:1.0;
+    const alpha=past?170:255;
+    const energy=Math.min(1,Math.sqrt(r*r+g*g+b2*b2)/Math.sqrt(3));
+    const h=Math.max(2,Math.round(Math.pow(energy,0.55)*mid*0.93));
+    const asymShift=Math.round((mx+mn)*0.5*h*0.45);
+    const y0=Math.max(0,Math.min(H-1,mid-h+asymShift));
+    const y1=Math.max(0,Math.min(H-1,mid+h+asymShift));
+    if((cfg.wfColor||'rgb')==='3band'){
+      // 3BAND: vertically stacked bass(blue)/mid(amber)/treble(white)
+      const bands=_wf3BandStack(r,g,b2,y1-y0,dimF);
+      let cy=y1; // draw from bottom up (bass→mid→treble)
+      for(const band of bands){
+        const by0=Math.max(y0,cy-band.h);
+        for(let y=by0;y<cy;y++){const idx=(y*W+px)*4;px4[idx]=band.R;px4[idx+1]=band.G;px4[idx+2]=band.B;px4[idx+3]=alpha;}
+        cy=by0;
+      }
+    }else{
+      const [R,G,B]=_wfBlend(r,g,b2,dimF);
+      // Gradient fill: bright edges → dim centre
+      const halfH=Math.max(1,(y1-y0)*0.5);
+      for(let y=y0;y<=y1;y++){
+        const edgeDist=Math.min(y-y0,y1-y)/halfH;
+        const aF=Math.max(0.12,1-edgeDist*0.82);
+        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=Math.round(alpha*aF);
+      }
+      if(y1>y0){
+        const eR=Math.min(255,R+70),eG=Math.min(255,G+70),eB=Math.min(255,B+70);
+        {const idx=(y0*W+px)*4;px4[idx]=eR;px4[idx+1]=eG;px4[idx+2]=eB;px4[idx+3]=alpha;}
+        {const idx=(y1*W+px)*4;px4[idx]=eR;px4[idx+1]=eG;px4[idx+2]=eB;px4[idx+3]=alpha;}
+      }
+    }
+  }
+  ctx.putImageData(img,0,0);
+  // Beat grid overlaid — full height ticks
+  if(d.bpm>0&&dur>0){
+    const beatMs=60000/d.bpm;
+    const firstBeat=Math.ceil((posMs-cX*msPerPx)/beatMs),lastBeat=Math.floor((posMs+(W-cX)*msPerPx)/beatMs);
+    ctx.font='bold 9px "DM Mono",monospace';
+    for(let b=firstBeat;b<=lastBeat;b++){
+      const bpx=Math.round((b*beatMs-posMs)/msPerPx+cX);
+      if(bpx<1||bpx>=W-1)continue;
+      const barNum=((b%4)+4)%4+1;
+      if(barNum===1){
+        ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);
+        ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);
+      }else{
+        ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);
+        ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(barNum,bpx+2,H-2);
+      }
+    }
+  }
+  // Cue point: yellow marker
+  if(d.cp>0&&dur>0){
+    const cpPx=Math.round((d.cp*1000-posMs)/msPerPx+cX);
+    if(cpPx>0&&cpPx<W){
+      ctx.fillStyle='rgba(251,191,36,.9)';ctx.fillRect(cpPx-.5,0,1,H);
+      ctx.beginPath();ctx.moveTo(cpPx-6,0);ctx.lineTo(cpPx+6,0);ctx.lineTo(cpPx,8);ctx.closePath();
+      ctx.fillStyle='rgba(251,191,36,1)';ctx.fill();
+    }
+  }
+  // Center playhead
+  ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
+  const grd=ctx.createLinearGradient(cX-8,0,cX+8,0);
+  grd.addColorStop(0,'rgba(255,255,255,0)');grd.addColorStop(.5,'rgba(255,255,255,.08)');grd.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=grd;ctx.fillRect(cX-8,0,16,H);
+  // BAR.BEAT counter — centered on playhead line, top
+  if(d.bpm>0&&dur>0){
+    ctx.font='bold 11px "DM Mono",monospace';
+    const bars=fBars(posMs,d.bpm);
+    const bw=ctx.measureText(bars).width;
+    const bx=cX-bw/2;
+    ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(bx-4,1,bw+8,15);
+    ctx.fillStyle='#90d4ff';ctx.fillText(bars,bx,13);
+  }
+  // KEY — top-right corner
+  if(d.key){
+    ctx.font='bold 13px "DM Mono",monospace';
+    const kw=ctx.measureText(d.key).width;
+    ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(W-kw-10,1,kw+9,17);
+    ctx.fillStyle='#a8ff60';ctx.fillText(d.key,W-kw-5,14);
+  }
+  // BPM/pitch box — bottom-right
+  if(d.bpm>0){
+    const baseBpm=d.baseBpm||d.bpm;
+    const effBpm=d.bpm;
+    const pitchPct=baseBpm>0?((effBpm-baseBpm)/baseBpm*100):0;
+    const pitchStr=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
+    const bpmLabel=Math.round(baseBpm)+(baseBpm!==effBpm?'/'+effBpm.toFixed(1):'')+' '+pitchStr;
+    ctx.font='bold 12px "DM Mono",monospace';
+    const bw2=ctx.measureText(bpmLabel).width;
+    ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(W-bw2-10,H-18,bw2+9,17);
+    ctx.fillStyle='#e8e8ff';ctx.fillText(bpmLabel,W-bw2-5,H-4);
+  }
+}
+
+// ════ Deck management ════════════════════════════════
+function getUsedSlots(){return Object.keys(DECKS).map(Number).sort((a,b)=>a-b);}
+// Virtual mode: slots 0-7 free (HW slots 0-3 reserved if hwMode)
+// HW mode: virtual decks cannot be added; slots are CDJ playerNum-1
+function nextFreeSlot(){
+  const hwReserved=glMode==='hw'?new Set([0,1,2,3]):new Set();
+  const u=new Set(getUsedSlots());
+  for(let i=0;i<MAX_DECKS;i++)if(!u.has(i)&&!hwReserved.has(i))return i;
+  return -1;
+}
+
+function switchMode(mode){
+  if(glMode===mode)return;
+  glMode=mode;
+  if(mode==='hw'){
+    // Stop & remove all virtual decks
+    Object.keys(DECKS).forEach(s=>{
+      const d=DECKS[+s];
+      if(d.type!=='hw'){
+        if(d.au){d.au.pause();try{URL.revokeObjectURL(d.au.src);}catch(_){} d.au=null;}
+        if(E&&run){window.bridge.removeLayer(+s);window.bridge.unregisterVirtualDeck(+s);}
+        delete DECKS[+s];
+      }
+    });
+    document.getElementById('modeVt').classList.remove('ac');
+    document.getElementById('modeHW').classList.add('ac');
+    document.getElementById('modeHint').textContent='CDJ 연결 시 자동 감지됩니다';
+  }else{
+    // Clear HW decks
+    Object.keys(DECKS).forEach(s=>{
+      const d=DECKS[+s];
+      if(d.type==='hw')delete DECKS[+s];
+    });
+    document.getElementById('modeHW').classList.remove('ac');
+    document.getElementById('modeVt').classList.add('ac');
+    document.getElementById('modeHint').textContent='파일 드래그로 덱 추가';
+  }
+  renderDecks();
+}
+
+function addVirtualDeck(){
+  if(glMode==='hw'){alert('HW 모드에서는 버츄얼 덱을 추가할 수 없습니다.');return;}
+  const slot=nextFreeSlot();
+  if(slot<0){alert('최대 8개');return;}
+  DECKS[slot]=createDeck(slot,'virtual');
+  if(E&&run) window.bridge.registerVirtualDeck(slot,'CDJ-3000');
+  renderDecks();
+}
+
+function removeVirtualDeck(slot){
+  const d=DECKS[slot];
+  if(d?.au){d.au.pause();URL.revokeObjectURL(d.au.src);}
+  delete DECKS[slot];
+  if(E&&run){
+    window.bridge.removeLayer(slot);
+    window.bridge.unregisterVirtualDeck(slot);
+  }
+  renderDecks();
+}
+
+function ensureHWDeck(playerNum){
+  if(glMode!=='hw')return; // virtual 모드에선 HW 덱 생성 안 함
+  const slot=playerNum-1;
+  if(slot<0||slot>3)return;
+  if(!DECKS[slot]){DECKS[slot]=createDeck(slot,'hw');renderDecks();}
+  else if(DECKS[slot].type!=='hw'){DECKS[slot]=createDeck(slot,'hw');renderDecks();}
+}
+
+// ════ Deck rendering ═════════════════════════════════
+function renderDecks(){
+  const slots=getUsedSlots();
+  const hwS=slots.filter(s=>DECKS[s].type==='hw');
+  const vtS=slots.filter(s=>DECKS[s].type==='virtual');
+  const totalDecks=slots.length;
+  const isCompact=totalDecks>=5; // compact layout when 5 or more decks
+
+  const hwSec=document.getElementById('hwSection');
+  const hwRow=document.getElementById('hwRow');
+  // HW 모드: hw 섹션만 표시, virtual 섹션 숨김
+  // Virtual 모드: virtual 섹션만 표시, hw 섹션 숨김
+  const isHWMode=glMode==='hw';
+  if(isHWMode&&hwS.length){
+    hwSec.style.display='';
+    hwRow.className='deck-row'+(isCompact?' compact':'');
+    hwRow.innerHTML=hwS.map(s=>deckHTML(s)).join('');hwS.forEach(bindDeck);
+  }else{hwSec.style.display='none';hwRow.innerHTML='';}
+
+  const vtSec=document.getElementById('vtSection');
+  const vtRow=document.getElementById('vtRow');
+  if(!isHWMode){
+    vtSec.style.display='';
+    vtRow.className='deck-row'+(isCompact?' compact':'');
+    vtRow.innerHTML=vtS.map(s=>deckHTML(s)).join('');
+    vtS.forEach(bindDeck);
+  }else{
+    vtSec.style.display='none';
+    vtRow.innerHTML='';
+  }
+  // Restore expanded state after DOM rebuild
+  if(_expandedSlot!=null){
+    const exEl=document.getElementById('dk'+_expandedSlot);
+    if(exEl)exEl.classList.add('dk-wide');
+  }
+
+  document.getElementById('addDeckBtn').style.display=(!isHWMode&&slots.length<MAX_DECKS)?'':'none';
+  document.getElementById('vtLabel').textContent=vtS.length?'VIRTUAL DECKS':'VIRTUAL DECKS — 덱 추가 버튼을 눌러 추가하세요';
+
+  const djmDevs=pdjlDevices.filter(d=>d.type==='DJM');
+  // fader strip only shown when a DJM is connected via Pro DJ Link
+  document.getElementById('faderSection').style.display=djmDevs.length?'':'none';
+  const djmSec=document.getElementById('djmSection');
+  if(djmDevs.length){
+    djmSec.style.display='';
+    document.getElementById('djmPanel').innerHTML=`<div class="sgr">${djmDevs.map(d=>`<div class="srw"><span class="srl">${d.name}</span><span class="srv" style="color:var(--grn)">${d.ip}</span></div>`).join('')}</div>`;
+  }else djmSec.style.display='none';
+
+  // HW device list hidden in pure virtual mode
+  const hwSecLabel=document.getElementById('hwSection');
+  if(hwS.length===0&&hwSecLabel)hwSecLabel.style.display='none';
+  renderOutLayers();
+  updateHeader();
+}
+
+function deckHTML(slot){
+  const d=DECKS[slot],pct=Math.round((faders[slot]||255)/255*100);
+  const hasDJM=pdjlDevices.some(d=>d.type==='DJM');
+  const isHW=d.type==='hw';
+  const label=isHW?`<span class="did-n">${slot+1}</span>PLAYER`:`<span class="did-n">${slot+1}</span>PLAYER`;
+  if(!d.ld){
+    return`<div class="dk" id="dk${slot}" data-st="empty">
+      <div class="dtop">
+        <div class="dhd">
+          <span class="did" style="color:var(--tx3)">${label}</span>
+          <span class="dbadge bm">${isHW?'HW':'EMPTY'}</span>
+          ${!isHW?`<div class="dht" style="margin-left:auto"><button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button></div>`:''}
+        </div>
+      </div>
+      ${hasDJM?`<div class="dfrow"><span style="font:400 9px var(--mn);color:var(--tx3)">DJM${slot<4?' CH'+(slot+1):''}</span><div class="dfbar"><div class="dfbarf" id="dfd${slot}" style="width:${pct}%"></div></div><span class="dfpct" id="dfv${slot}">${pct}%</span></div>`:''}
+      <div class="ddz"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">${isHW?'CDJ에서 트랙 로드':'음원 드래그'}</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG</div></div>
+    </div>`;
+  }
+  const artSrc=d.artUrl||'';
+  return`<div class="dk" id="dk${slot}" data-st="stop">
+    <div class="dshim"></div>
+    <div class="dtop">
+      <div class="dhd">
+        <span class="did" id="did${slot}">${label}</span>
+        <span class="dbadge bm" id="dbg${slot}">STOP</span>
+        <span class="dtc" id="dtc${slot}">00:00:00:00</span>
+        <div class="dht">
+          <button class="dhtb" data-a="expand" data-i="${slot}" title="expand/collapse" style="font-size:10px;padding:3px 5px">⤢</button>
+          ${!isHW?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
+        </div>
+      </div>
+      <div class="dktn"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span><span class="dktn-a" id="dta${slot}">${d.ar?` · ${d.ar}`:''}</span><span class="dbk-hd" id="dbk${slot}">—</span><span class="dktn-time" id="dtime${slot}" style="padding-left:8px">0:00.00 / --:--.--</span></div>
+      <div class="dtbody">
+        <div class="dkctrl">
+          <div class="dkart" id="dart${slot}" data-a="eject" data-i="${slot}">${artSrc?`<img src="${artSrc}" alt="">`:'<span class="noart-icon">♪</span>'}</div>
+          <div class="dkctrl-btns">
+            <button class="dkbtn dkcue" data-a="cue" data-i="${slot}" ${isHW?'disabled':''}>CUE</button>
+            <button class="dkbtn dkplay" data-a="play" data-i="${slot}" ${isHW?'disabled':''}>${d.pl?'⏸':'▶'}</button>
+          </div>
+        </div>
+        <div class="dkwaves">
+          <div class="dwov" id="dwov${slot}"><canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div></div>
+          <div class="dwz" id="dwz${slot}"><canvas id="wzc${slot}"></canvas><div class="dvm-st"><div class="dvm"><div class="dvmf" id="dvuL${slot}"></div></div><div class="dvm"><div class="dvmf" id="dvuR${slot}"></div></div></div><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div>
+          <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
+        </div>
+      </div>
+    </div>
+    ${hasDJM?`<div class="dfrow">
+      <span style="font:400 9px var(--mn);color:var(--tx3)">DJM${slot<4?' CH'+(slot+1):''}</span>
+      <div class="dfbar"><div class="dfbarf" id="dfd${slot}" style="width:${pct}%"></div></div>
+      <span class="dfpct" id="dfv${slot}">${pct}%</span>
+    </div>`:''}
+    <div class="dhw" id="dhw${slot}"><span class="dhwl" id="dhwl${slot}">${isHW?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL'}</span></div>
+  </div>`;
+}
+
+function bindDeck(slot){
+  const el=document.getElementById('dk'+slot);if(!el)return;
+  const d=DECKS[slot];
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('dov');});
+  el.addEventListener('dragleave',()=>el.classList.remove('dov'));
+  el.addEventListener('drop',e=>{
+    e.preventDefault();el.classList.remove('dov');
+    const f=e.dataTransfer.files[0];
+    if(f&&(f.type.startsWith('audio/')||/\.(mp3|wav|flac|aac|ogg|m4a|aiff)$/i.test(f.name)))loadFile(slot,f);
+  });
+  // Overview canvas: click → seek
+  document.getElementById('dwov'+slot)?.addEventListener('click',e=>{
+    const r=e.target.closest('.dwov');if(!r)return;
+    const rc=r.getBoundingClientRect();doSeek(slot,Math.max(0,Math.min(1,(e.clientX-rc.left)/rc.width)));
+  });
+  // Zoom canvas: drag to scrub (scratch feel) — cue point NOT changed
+  const wzDiv=document.getElementById('dwz'+slot);
+  if(wzDiv){
+    let _drag=null;
+    wzDiv.addEventListener('pointerdown',e=>{
+      if(e.target.closest('.dzb'))return; // allow zoom buttons to handle their own events
+      e.preventDefault();
+      const d2=DECKS[slot];if(!d2||!d2.ld)return;
+      DECKS[slot].scratch=true;
+      _drag={startX:e.clientX,startPos:d2.pos};
+      wzDiv.setPointerCapture(e.pointerId);
+    });
+    wzDiv.addEventListener('pointermove',e=>{
+      if(!_drag)return;
+      const d2=DECKS[slot];if(!d2||d2.type==='hw')return;
+      const rc=wzDiv.getBoundingClientRect(),msPerPx=(DECKS[slot]?.zoomMs||8000)/rc.width;
+      // Negate: drag right → earlier in track (waveform content follows finger)
+      const newMs=Math.max(0,Math.min(d2.dur,_drag.startPos-(e.clientX-_drag.startX)*msPerPx));
+      d2.pos=newMs;if(d2.au)d2.au.currentTime=newMs/1000;
+    });
+    wzDiv.addEventListener('pointerup',()=>{_drag=null;DECKS[slot].scratch=false;});
+    wzDiv.addEventListener('pointercancel',()=>{_drag=null;DECKS[slot].scratch=false;});
+  }
+  // CUE button — pointerdown/up for hold-to-cue behaviour
+  const cb=el.querySelector('[data-a="cue"]');
+  if(cb&&d.type!=='hw'){
+    cb.addEventListener('pointerdown',ev=>{ev.preventDefault();doCueDown(slot);});
+    cb.addEventListener('pointerup',ev=>{ev.preventDefault();doCueUp(slot);});
+    cb.addEventListener('pointerleave',()=>{if(DECKS[slot]?.cu&&!DECKS[slot]?.pl)doCueUp(slot);});
+  }
+  // init overview canvas
+  const wov=document.getElementById('wov'+slot);
+  if(wov){d.wovCtx=wov.getContext('2d');setTimeout(()=>{const p=wov.parentElement;wov.width=p?.offsetWidth||280;wov.height=p?.offsetHeight||18;},0);}
+  // init zoom canvas
+  const wzc=document.getElementById('wzc'+slot);
+  if(wzc){d.wzCtx=wzc.getContext('2d');setTimeout(()=>{const p=wzc.parentElement;wzc.width=p?.offsetWidth||280;wzc.height=p?.offsetHeight||80;},0);}
+}
+
+// ID3v2 tag parser — TIT2 (title), TPE1/TPE2 (artist), APIC (album art)
+function _id3DecodeText(fdata){
+  const enc=fdata[0];let txt='';
+  if(enc===0){for(let i=1;i<fdata.length;i++){if(fdata[i]===0)break;txt+=String.fromCharCode(fdata[i]);}}
+  else if(enc===1){let s=1,le=true;if(fdata.length>2&&fdata[1]===0xFF&&fdata[2]===0xFE){le=true;s=3;}else if(fdata.length>2&&fdata[1]===0xFE&&fdata[2]===0xFF){le=false;s=3;}for(let i=s;i+1<fdata.length;i+=2){const c=le?(fdata[i]|fdata[i+1]<<8):(fdata[i]<<8|fdata[i+1]);if(c===0)break;txt+=String.fromCharCode(c);}}
+  else if(enc===2){for(let i=1;i+1<fdata.length;i+=2){const c=(fdata[i]<<8|fdata[i+1]);if(c===0)break;txt+=String.fromCharCode(c);}}
+  else if(enc===3){txt=new TextDecoder('utf-8').decode(fdata.slice(1));const ni=txt.indexOf('\0');if(ni>=0)txt=txt.slice(0,ni);}
+  return txt.trim();
+}
+
+async function readID3Tags(file){
+  const tags={title:'',artist:'',art:null,key:''};
+  try{
+    const buf=await file.slice(0,Math.min(file.size,524288)).arrayBuffer();
+    const view=new DataView(buf);
+    let id3Start=0;
+    // AIFF: ID3v2 lives inside an 'ID3 ' chunk (may be at end of file)
+    if(view.getUint32(0,false)===0x464F524D){ // "FORM"
+      const formType=String.fromCharCode(view.getUint8(8),view.getUint8(9),view.getUint8(10),view.getUint8(11));
+      if(formType==='AIFF'||formType==='AIFC'){
+        // scan all chunks — ID3 tag may appear after the large SSND chunk
+        const id3Off=await _findAIFFId3(file);
+        if(id3Off<0)return tags;
+        const id3Buf=await file.slice(id3Off,id3Off+524288).arrayBuffer();
+        const id3V=new DataView(id3Buf);
+        if(id3V.getUint8(0)!==0x49||id3V.getUint8(1)!==0x44||id3V.getUint8(2)!==0x33)return tags;
+        const id3ver=id3V.getUint8(3);
+        const id3sz=(id3V.getUint8(6)&0x7F)<<21|(id3V.getUint8(7)&0x7F)<<14|(id3V.getUint8(8)&0x7F)<<7|(id3V.getUint8(9)&0x7F);
+        let ip=10;const ie=Math.min(10+id3sz,id3Buf.byteLength);
+        while(ip+10<ie){
+          const fid=String.fromCharCode(id3V.getUint8(ip),id3V.getUint8(ip+1),id3V.getUint8(ip+2),id3V.getUint8(ip+3));
+          if(fid[0]==='\0')break;
+          let fsz=id3ver===4?(id3V.getUint8(ip+4)&0x7F)<<21|(id3V.getUint8(ip+5)&0x7F)<<14|(id3V.getUint8(ip+6)&0x7F)<<7|(id3V.getUint8(ip+7)&0x7F):id3V.getUint32(ip+4,false);
+          if(fsz<=0||ip+10+fsz>ie)break;
+          const fdata=new Uint8Array(id3Buf,ip+10,fsz);
+          if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TKEY'){const txt=_id3DecodeText(fdata);if(fid==='TIT2'&&txt)tags.title=txt;if(fid==='TPE1'&&txt)tags.artist=txt;if(fid==='TPE2'&&txt&&!tags.artist)tags.artist=txt;if(fid==='TKEY'&&txt)tags.key=txt;}
+          if(fid==='APIC'&&!tags.art){try{const enc=fdata[0];let o=1;let mime='';while(o<fdata.length&&fdata[o]!==0){mime+=String.fromCharCode(fdata[o]);o++;}o++;o++;if(enc===0||enc===3){while(o<fdata.length&&fdata[o]!==0)o++;o++;}else{while(o+1<fdata.length){if(fdata[o]===0&&fdata[o+1]===0){o+=2;break;}o+=2;}}if(o<fdata.length){const imgData=fdata.slice(o);if(!mime||mime==='image/')mime=imgData[0]===0x89?'image/png':'image/jpeg';const blob=new Blob([imgData],{type:mime});tags.art=URL.createObjectURL(blob);}}catch(_){}}
+          ip+=10+fsz;
+        }
+        return tags;
+      }
+    }
+    // ID3v2 header check: "ID3"
+    if(view.getUint8(id3Start)!==0x49||view.getUint8(id3Start+1)!==0x44||view.getUint8(id3Start+2)!==0x33) return tags;
+    const ver=view.getUint8(id3Start+3);
+    const sz=(view.getUint8(id3Start+6)&0x7F)<<21|(view.getUint8(id3Start+7)&0x7F)<<14|(view.getUint8(id3Start+8)&0x7F)<<7|(view.getUint8(id3Start+9)&0x7F);
+    let pos=id3Start+10;
+    const end=Math.min(id3Start+10+sz,buf.byteLength);
+    while(pos+10<end){
+      const fid=String.fromCharCode(view.getUint8(pos),view.getUint8(pos+1),view.getUint8(pos+2),view.getUint8(pos+3));
+      if(fid[0]==='\0') break;
+      let fsz;
+      if(ver===4) fsz=(view.getUint8(pos+4)&0x7F)<<21|(view.getUint8(pos+5)&0x7F)<<14|(view.getUint8(pos+6)&0x7F)<<7|(view.getUint8(pos+7)&0x7F);
+      else fsz=view.getUint32(pos+4);
+      if(fsz<=0||pos+10+fsz>end) break;
+      const fdata=new Uint8Array(buf,pos+10,fsz);
+      if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TKEY'){
+        const txt=_id3DecodeText(fdata);
+        if(fid==='TIT2'&&txt) tags.title=txt;
+        if(fid==='TPE1'&&txt) tags.artist=txt;
+        if(fid==='TPE2'&&txt&&!tags.artist) tags.artist=txt;
+        if(fid==='TKEY'&&txt) tags.key=txt;
+      }
+      // APIC: album art (front cover preferred)
+      if(fid==='APIC'&&!tags.art){
+        try{
+          const enc=fdata[0];let o=1;
+          let mime='';while(o<fdata.length&&fdata[o]!==0){mime+=String.fromCharCode(fdata[o]);o++;}o++; // null-terminate
+          const picType=fdata[o];o++;
+          // skip description string
+          if(enc===0||enc===3){while(o<fdata.length&&fdata[o]!==0)o++;o++;}
+          else{while(o+1<fdata.length){if(fdata[o]===0&&fdata[o+1]===0){o+=2;break;}o+=2;}}
+          if(o<fdata.length){
+            const imgData=fdata.slice(o);
+            if(!mime||mime==='image/') mime=imgData[0]===0x89?'image/png':'image/jpeg';
+            const blob=new Blob([imgData],{type:mime});
+            tags.art=URL.createObjectURL(blob);
+          }
+        }catch(_){}
+      }
+      pos+=10+fsz;
+    }
+  }catch(e){console.warn('ID3 parse error:',e);}
+  return tags;
+}
+
+// BPM analysis — onset-strength autocorrelation, normalized to 80-180 BPM
+async function analyzeBPM(blob){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:11025});
+    const ab=await blob.arrayBuffer();
+    const buf=await ctx.decodeAudioData(ab);
+    ctx.close();
+    const ch=buf.getChannelData(0),sr=buf.sampleRate;
+    const hopMs=10,hopSz=Math.round(sr*hopMs/1000); // 10ms frames
+    const maxFrames=Math.min(Math.floor(ch.length/hopSz),3000); // max 30s
+    // RMS energy
+    const energy=new Float32Array(maxFrames);
+    for(let i=0;i<maxFrames;i++){let e=0;const b=i*hopSz;for(let j=0;j<hopSz;j++)e+=ch[b+j]*ch[b+j];energy[i]=Math.sqrt(e/hopSz);}
+    // Onset strength: half-wave rectified flux
+    const flux=new Float32Array(maxFrames);
+    for(let i=1;i<maxFrames;i++)flux[i]=Math.max(0,energy[i]-energy[i-1]);
+    // autocorrelation over 250ms–2000ms lags = 30–240 BPM range
+    const minLag=Math.round(250/hopMs),maxLag=Math.round(2000/hopMs);
+    const nCorr=Math.min(maxFrames,1200); // analyse first 12s
+    let bestCorr=-1,bestLag=minLag;
+    for(let lag=minLag;lag<=Math.min(maxLag,maxFrames-1);lag++){
+      let corr=0;
+      for(let i=0;i<nCorr&&i+lag<maxFrames;i++)corr+=flux[i]*flux[i+lag];
+      if(corr>bestCorr){bestCorr=corr;bestLag=lag;}
+    }
+    const bpm=60000/(bestLag*hopMs);
+    let r=bpm;while(r>180)r/=2;while(r<80)r*=2;
+    return Math.round(r*10)/10;
+  }catch(e){console.warn('[BPM]',e);return 0;}
+}
+
+function loadFile(slot,f){
+  const d=DECKS[slot];if(!d)return;
+  if(d.type==='hw'){console.warn('[loadFile] HW 모드 덱에 파일 로드 차단');return;}
+  if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
+  if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
+  d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;
+  // filename parsing used as fallback only — ID3 tags take priority
+  const n=f.name.replace(/\.[^.]+$/,'');
+  if(n.includes(' - ')){const p=n.split(' - ');d.ar=p[0].trim();d.tn=p.slice(1).join(' - ').trim();}
+  else{d.tn=n;d.ar='';}
+  // trackId: 파일명 해시로 고유 ID 생성
+  d.trackId=(f.name+f.size).split('').reduce((h,c)=>((h<<5)-h+c.charCodeAt(0))|0,0)>>>0;
+  // async ID3 tag read (MP3, AIFF, WAV)
+  if(/\.(mp3|aiff?|wav)$/i.test(f.name)){
+    readID3Tags(f).then(tags=>{
+      if(tags.title) d.tn=tags.title;
+      if(tags.artist) d.ar=tags.artist;
+      if(tags.art) d.artUrl=tags.art;
+      if(tags.key) d.key=_toCamelot(tags.key);
+      console.log(`[ID3] slot=${slot} title="${d.tn}" artist="${d.ar}" key="${d.key}" art=${!!tags.art}`);
+      renderDecks();
+    });
+  }
+  // audio init — AIFF files are converted to WAV first (Chromium has no AIFF decoder)
+  const _initAudio=(audioBlob)=>{
+    if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
+    d.au=new Audio();d.au.src=URL.createObjectURL(audioBlob);d.au.preload='auto';
+    if(cfg.aoId)setOut(d.au,cfg.aoId);
+    d.au.addEventListener('loadedmetadata',()=>{
+      d.dur=d.au.duration*1000;d.bpm=0;
+      renderDecks();
+      setTimeout(()=>{
+        const wov=document.getElementById('wov'+slot);if(wov){d.wovCtx=wov.getContext('2d');const p=wov.parentElement;wov.width=p?.offsetWidth||280;wov.height=p?.offsetHeight||16;}
+        const wzc=document.getElementById('wzc'+slot);if(wzc){d.wzCtx=wzc.getContext('2d');const p=wzc.parentElement;wzc.width=p?.offsetWidth||280;wzc.height=p?.offsetHeight||72;}
+      },0);
+      buildRGBWaveform(audioBlob,(done,partial)=>{
+        d.rgbWf=partial.slice(0,done);
+        d.rgbWfPts=d.rgbWfPts||done*30; // estimate total on first chunk
+        const prog2=document.getElementById('dwov-prog'+slot);
+        if(prog2)prog2.style.width=(done/(d.rgbWfPts||8000)*100).toFixed(1)+'%';
+      }).then(wf=>{
+        d.rgbWf=wf;
+        const prog2=document.getElementById('dwov-prog'+slot);
+        if(prog2)prog2.style.width='0'; // hide when done
+        if(wf){drawOverview(slot,0);drawZoomWaveform(slot,0);}
+      });
+      analyzeBPM(audioBlob).then(bpm=>{
+        if(bpm>0){d.bpm=bpm;console.log(`[BPM] slot=${slot} bpm=${bpm}`);}
+        else{d.bpm=128;}
+        renderDecks();
+      });
+      if(E&&run){
+        window.bridge.updateLayer(slot,{
+          state:0,timecodeMs:0,bpm:d.bpm||128,
+          trackId:d.trackId||0,totalLength:Math.round(d.dur)||0,
+          trackName:d.tn||'',artistName:d.ar||'',beatPhase:0,
+        });
+      }
+    });
+    d.au.addEventListener('ended',()=>{d.pl=false;d.pos=0;d.au.currentTime=0;});
+    // VU meter: stereo L/R via ChannelSplitter → two AnalyserNodes
+    try{
+      if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
+      const ac=_getAuCtx();
+      const src=ac.createMediaElementSource(d.au);
+      const split=ac.createChannelSplitter(2);
+      const anL=ac.createAnalyser();anL.fftSize=256;anL.smoothingTimeConstant=0.65;
+      const anR=ac.createAnalyser();anR.fftSize=256;anR.smoothingTimeConstant=0.65;
+      src.connect(split);
+      split.connect(anL,0);split.connect(anR,1);
+      // merge back to destination for audio output
+      const merge=ac.createChannelMerger(2);
+      anL.connect(merge,0,0);anR.connect(merge,0,1);
+      merge.connect(ac.destination);
+      d.vuSrc=src;d.vuAn=anL;d.vuBuf=new Uint8Array(anL.fftSize);
+      d.vuAnL=anL;d.vuAnR=anR;d.vuBufL=new Uint8Array(anL.fftSize);d.vuBufR=new Uint8Array(anR.fftSize);
+    }catch(e){console.warn('[VU]',e);}
+  };
+  if(/\.aiff?$/i.test(f.name)){
+    f.arrayBuffer().then(ab=>{
+      try{_initAudio(_aiffToWav(ab));console.log('[AIFF] converted to WAV');}
+      catch(e){console.error('[AIFF→WAV] failed, using original:',e);_initAudio(f);}
+    });
+  }else{_initAudio(f);}
+}
+
+// ════ Deck actions ═══════════════════════════════════
+
+function doPlay(slot){
+  const d=DECKS[slot];if(!d?.ld||!d.au||d.type==='hw')return;
+  if(d.pl){
+    d.au.pause();d.pl=false; // pause: cue point unchanged
+  } else {
+    d.au.play().catch(()=>{});d.pl=true;d.cu=false;
+  }
+}
+
+/**
+ * CDJ-style CUE behaviour:
+ *
+ * While playing: pause (cue point unchanged), enter CUE state.
+ * While stopped/paused (down): set cue point to current position, pre-cue play.
+ * CUE up: return to cue point and stop.
+ */
+function doCueDown(slot){
+  const d=DECKS[slot];if(!d?.ld||!d.au||d.type==='hw')return;
+  if(d.pl){
+    d.au.pause();d.pl=false;d.cu=true;d.cuw=false;
+  } else {
+    d.cp=d.au.currentTime; // current position becomes new cue point
+    d.cuw=false;
+    d.au.currentTime=d.cp;
+    d.au.play().catch(()=>{});
+    d.cu=true;d.pl=false;
+  }
+}
+
+function doCueUp(slot){
+  const d=DECKS[slot];if(!d?.ld||!d.au||d.type==='hw')return;
+  d.au.pause();
+  d.au.currentTime=d.cp||0;
+  d.pl=false;d.cu=true;
+}
+
+let _expandedSlot=null;
+function doExpandDeck(slot){
+  const el=document.getElementById('dk'+slot);if(!el)return;
+  const wasExpanded=_expandedSlot===slot;
+  // collapse previously expanded deck
+  if(_expandedSlot!=null){
+    const prev=document.getElementById('dk'+_expandedSlot);
+    if(prev)prev.classList.remove('dk-wide');
+  }
+  _expandedSlot=wasExpanded?null:slot;
+  if(!wasExpanded){
+    el.classList.add('dk-wide');
+    // resize canvases for expanded width
+    setTimeout(()=>{
+      const wov=document.getElementById('wov'+slot);
+      if(wov){const p=wov.parentElement;wov.width=p.offsetWidth||600;wov.height=p.offsetHeight||28;}
+      const wzc=document.getElementById('wzc'+slot);
+      if(wzc){const p=wzc.parentElement;wzc.width=p.offsetWidth||600;wzc.height=p.offsetHeight||180;}
+    },0);
+  }else{
+    // restore normal canvas sizes
+    setTimeout(()=>{
+      const wov=document.getElementById('wov'+slot);
+      if(wov){const p=wov.parentElement;wov.width=p.offsetWidth||280;wov.height=p.offsetHeight||18;}
+      const wzc=document.getElementById('wzc'+slot);
+      if(wzc){const p=wzc.parentElement;wzc.width=p.offsetWidth||280;wzc.height=p.offsetHeight||80;}
+    },0);
+  }
+}
+
+function doEject(slot){
+  const d=DECKS[slot];if(!d)return;
+  if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
+  if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
+  if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
+  Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,artUrl:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
+  if(E&&run)window.bridge.removeLayer(slot);
+  renderDecks();
+}
+
+function doSeek(slot,r){
+  const d=DECKS[slot];if(!d?.au||!d.dur||d.type==='hw')return;
+  const t=(r*d.dur)/1000;d.au.currentTime=t;
+  if(!d.pl)d.cp=t; // update cue point when seeking while stopped
+}
+
+async function doToggleHW(slot){
+  const d=DECKS[slot];if(!d)return;
+  const goingHW=d.type!=='hw';
+
+  if(goingHW){
+    // Virtual → HW: stop playback, remove layer, then enable HW mode
+    if(d.au)d.au.pause();
+    d.pl=false;d.cu=false;
+    if(E&&run)await window.bridge.updateLayer(slot,{state:0,timecodeMs:0,bpm:0,trackId:0,totalLength:0,beatPhase:0});
+    await new Promise(r=>setTimeout(r,66));
+    if(E&&run)await window.bridge.removeLayer(slot);
+    await new Promise(r=>setTimeout(r,66));
+    d.type='hw';
+    d.ld=false;d.tn='';d.ar='';d.dur=0;d.pos=0;d.bpm=0;d.cp=0;d.wf=null;
+    if(d.au){URL.revokeObjectURL(d.au.src);d.au=null;}
+    if(E)window.bridge.setHWMode(slot,true);
+
+  }else{
+    // HW → Virtual 전환
+    // 1) CDJ 신호 수신 중단
+    if(E)window.bridge.setHWMode(slot,false);
+    await new Promise(r=>setTimeout(r,66));
+
+    // 2) 레이어 초기화
+    if(E&&run)await window.bridge.removeLayer(slot);
+    await new Promise(r=>setTimeout(r,66));
+
+    // 3) Virtual 모드 (빈 상태)
+    d.type='virtual';
+    d.pl=false;d.cu=false;d.ld=false;
+    d.tn='';d.ar='';d.dur=0;d.pos=0;d.bpm=0;d.cp=0;d.wf=null;
+  }
+
+  renderDecks();
+}
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const act=b.dataset.a,slot=parseInt(b.dataset.i);
+  if(act==='play')doPlay(slot);
+  else if(act==='eject')doEject(slot);
+  else if(act==='hw')doToggleHW(slot);
+  else if(act==='remove')removeVirtualDeck(slot);
+  else if(act==='expand')doExpandDeck(slot);
+  else if(act==='zoom-in'){const d2=DECKS[slot];if(d2)d2.zoomMs=Math.max(2000,(d2.zoomMs||8000)/2);}
+  else if(act==='zoom-out'){const d2=DECKS[slot];if(d2)d2.zoomMs=Math.min(32000,(d2.zoomMs||8000)*2);}
+  else if(act==='zoom-rst'){const d2=DECKS[slot];if(d2)d2.zoomMs=8000;}
+});
+document.getElementById('addDeckBtn').addEventListener('click',addVirtualDeck);
+
+// ════ 33ms tick loop ═════════════════════════════════
+let _wfF=0;
+function tick(){
+  _wfF++;
+  tcTick();
+  _updateOutTcDisplay();
+
+  if(run){up=Math.floor((Date.now()-t0)/1000);pk++;}
+
+  // Faders (only when running with bridge)
+  if(run){
+    faders.forEach((v,i)=>{
+      const pct=Math.round(v/255*100);
+      const fb=document.getElementById('fb'+i);if(fb)fb.style.height=pct+'%';
+      const fv=document.getElementById('fv'+i);if(fv)fv.textContent=pct+'%';
+    });
+  }
+
+  Object.values(DECKS).forEach(d=>{
+    const slot=d.slot;
+    const el=document.getElementById('dk'+slot);if(!el)return;
+    const pct=slot<4?Math.round((faders[slot]||255)/255*100):100;
+
+    // update virtual deck playback position — ALWAYS (not gated by run)
+    if(d.type!=='hw'&&d.au&&d.ld){
+      d.pos=d.au.currentTime*1000;
+    }
+
+    const prog=d.dur>0?(d.pos/d.dur):0;
+
+    // UI updates — ALWAYS
+    el.setAttribute('data-st',d.type==='hw'?'hw':d.pl?'play':d.cu?'cue':'stop');
+    const tc=document.getElementById('dtc'+slot);
+    if(tc)tc.textContent=fTC(d.pos);
+    const timeEl=document.getElementById('dtime'+slot);
+    if(timeEl)timeEl.textContent=fTmMs(d.pos)+' / '+(d.dur>0?fTmMs(d.dur):'--:--.--');
+    const bkEl=document.getElementById('dbk'+slot);
+    if(bkEl){const bpmStr=d.bpm?(d.type==='hw'?d.bpm.toFixed(1):Math.round(d.bpm).toString()):'—';bkEl.textContent=bpmStr+' BPM';}
+    const dtnEl=document.getElementById('dtn'+slot);if(dtnEl)dtnEl.textContent=d.tn||'—';
+    const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar?' · '+d.ar:'';
+    const dhwlEl=document.getElementById('dhwl'+slot);
+    if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
+
+    // VU meter — ALWAYS for virtual, only run-gated for HW
+    if(d.type==='hw'){
+      if(run){d.vu=d.hwVu>0?d.hwVu:Math.max(0,(d.vu||0)-0.02);d.hwVu=Math.max(0,(d.hwVu||0)-0.04);d.vuL=d.vu;d.vuR=d.vu;}
+    } else {
+      const _getRms=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let s=0;for(let i=0;i<buf.length;i++){const v=(buf[i]-128)/128;s+=v*v;}return Math.sqrt(s/buf.length);};
+      const active=d.pl||d.cu;
+      if(d.vuAnL&&d.vuBufL){const v=_getRms(d.vuAnL,d.vuBufL);d.vuL=active?v:Math.max(0,(d.vuL||0)-0.015);}
+      if(d.vuAnR&&d.vuBufR){const v=_getRms(d.vuAnR,d.vuBufR);d.vuR=active?v:Math.max(0,(d.vuR||0)-0.015);}
+      d.vu=Math.max(d.vuL||0,d.vuR||0);
+    }
+    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const h=Math.min(100,v*350);el2.style.height=h+'%';el2.style.background=h>70?'var(--red)':h>40?'var(--ylw)':'var(--grn)';};
+    _vuBar('dvuL'+slot,d.vuL||0);_vuBar('dvuR'+slot,d.vuR||0);
+
+    const bg=document.getElementById('dbg'+slot);
+    if(bg){
+      const _st=d.type==='hw'?'HW':d.scratch?'SCRATCH':d.pl?'PLAY':d.cu?'CUE':'STOP';
+      bg.textContent=_st;
+      bg.className='dbadge '+(d.type==='hw'?'bp':d.scratch?'bp':d.pl?'bg':d.cu?'by':'bm');
+    }
+    const did=document.getElementById('did'+slot);
+    if(did)did.style.color=d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)';
+    const pb=el.querySelector('[data-a="play"]');
+    if(pb&&d.type!=='hw')pb.textContent=d.pl?'⏸':'▶';
+    const cub=el.querySelector('[data-a="cue"]');
+    if(cub)cub.classList.toggle('ac',d.cu&&!d.pl);
+
+    // DJM fader (only when running)
+    if(run){
+      const dfd=document.getElementById('dfd'+slot);if(dfd)dfd.style.width=pct+'%';
+      const dfv=document.getElementById('dfv'+slot);if(dfv)dfv.textContent=pct+'%';
+    }
+
+    // Waveform — ALWAYS
+    if(d.rgbWf){
+      const wov=document.getElementById('wov'+slot);
+      if(wov&&wov.width>0)drawOverview(slot,prog);
+      const wzc=document.getElementById('wzc'+slot);
+      if(wzc&&wzc.width>0)drawZoomWaveform(slot,prog);
+    }
+
+    // Beat phasor — ALWAYS
+    if(d.ld&&d.bpm>0){
+      const beatMs=60000/d.bpm;
+      const barMs=beatMs*4;
+      const posInBar=d.pos%barMs;
+      const beatInBar=Math.floor(posInBar/beatMs)+1;
+      const phaseInBeat=(posInBar%beatMs)/beatMs;
+      const blink=cfg.phasorMode==='blink';
+      for(let b=1;b<=4;b++){
+        const seg=document.getElementById('dphs'+slot+'_'+b);
+        const fill=document.getElementById('dphsf'+slot+'_'+b);
+        if(!seg||!fill)continue;
+        const active=b===beatInBar;
+        if(blink){
+          seg.classList.toggle('on',active);
+          fill.style.width=active?'100%':'0%';
+        }else{
+          seg.classList.toggle('on',active);
+          fill.style.width=active?(phaseInBeat*100).toFixed(1)+'%':'0%';
+        }
+      }
+    }
+
+    // TCNet transmission — GATED by run AND E
+    if(!E||!run)return;
+    if(d.type==='hw'){
+      // HW mode: updateLayer is called by _onPDJL, skip here
+    } else if(d.ld){
+      const beatPhase=Math.floor((d.pos/(60000/(d.bpm||128)))%4)*64;
+      window.bridge.updateLayer(slot,{
+        state:d.pl?3:d.cu?7:0,
+        timecodeMs:Math.round(d.pos),
+        bpm:d.bpm||0,
+        trackId:d.trackId||0,
+        totalLength:Math.round(d.dur)||0,
+        trackName:d.tn||'',
+        artistName:d.ar||'',
+        beatPhase,
+      });
+    }
+  });
+
+  updateHeader();
+  const slots=Object.keys(DECKS).map(Number).sort();
+  document.getElementById('bDots').innerHTML=slots.map(s=>{
+    const d=DECKS[s],c=d.type==='hw'?'var(--pur)':d.pl?'var(--grn)':d.cu?'var(--ylw)':d.ld?'rgba(52,211,153,.4)':'var(--tx4)';
+    return`<div style="display:flex;align-items:center;gap:4px"><span class="dot${d.pl?' dpu':''}" style="background:${c}"></span><span style="font:400 9px var(--mn);color:var(--tx3)">${s+1}</span></div>`;
+  }).join('');
+  if(run)document.getElementById('bPk').textContent='TX: '+pk.toLocaleString();
+}
+setInterval(tick,33);
+
+function updateHeader(){
+  const arenas=Object.values(tcNodes).filter(n=>Date.now()-n.lastSeen<10000).length;
+  const active=Object.values(DECKS).filter(d=>d.ld).length;
+  document.getElementById('stBadge').className='bd '+(run?'bg':'br');
+  document.getElementById('stBadge').textContent=run?'ONLINE':'OFFLINE';
+  document.getElementById('stArena').textContent=arenas;
+  document.getElementById('stDecks').textContent=active;
+  document.getElementById('stUp').textContent=run?Math.floor(up/60)+'m '+(up%60)+'s':'—';
+  document.getElementById('stAlert').classList.toggle('hide',run);
+}
+
+// ════ Tab rendering ══════════════════════════════════
+function renderPDJL(){
+  const now=Date.now(),devs=pdjlDevices.filter(d=>now-d.lastSeen<10000);
+  const hwDevs=devs.filter(d=>!d.virtual);
+  const col=pdjlPort?'var(--grn)':'var(--red)';
+  document.getElementById('pdjlStatus').innerHTML=`<div class="al ${pdjlPort?'als':'aler'}"><span class="dot ${pdjlPort?'dpu':''}" style="width:5px;height:5px;flex-shrink:0;background:${col}"></span><div style="font:500 11px var(--sn);color:${col}">Pro DJ Link — ${pdjlPort?'UDP '+pdjlPort+' 수신 중':'바인드 실패'}</div></div>`;
+  // hide device list when no HW devices are present
+  const devListEl=document.getElementById('pdjlDevList');
+  const devLabelEl=devListEl.previousElementSibling; // "기기 목록" label
+  if(hwDevs.length){
+    if(devLabelEl)devLabelEl.style.display='';
+    devListEl.style.display='';
+    devListEl.innerHTML=`<div class="tbl"><div class="tblh" style="grid-template-columns:1fr 2fr 2fr auto">${['TYPE','NAME','IP',''].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>${hwDevs.map(d=>`<div class="tblr" style="grid-template-columns:1fr 2fr 2fr auto"><div><span class="bd ${d.type==='CDJ'?'bb':d.type==='DJM'?'bp':'bm'}">${d.type}</span></div><div style="font:400 11px var(--mn);color:var(--tx)">${d.name||'—'}</div><div style="font:400 10px var(--mn);color:var(--tx3)">${d.ip}</div><div><span class="dot dpu" style="background:var(--grn)"></span></div></div>`).join('')}</div>`;
+  }else{
+    if(devLabelEl)devLabelEl.style.display='none';
+    devListEl.style.display='none';
+    devListEl.innerHTML='';
+  }
+}
+
+function renderTcnet(){
+  const nodes=Object.values(tcNodes).filter(n=>Date.now()-n.lastSeen<10000);
+  document.getElementById('pgTcnet').innerHTML=`
+    ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span><div><div style="font:500 11px var(--sn);color:var(--grn)">TCNet — BRIDGE29</div><div style="font:400 9px var(--mn);color:var(--tx3)">Data: 브로드캐스트 + Arena 유니캐스트 동시</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">오프라인</span></div>`}
+    <div class="sl">노드</div>
+    <div class="tbl">
+      <div class="tblh" style="grid-template-columns:2fr 1fr 2fr 1fr">${['NODE','TYPE','VENDOR/DEVICE','IP:lPort'].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>
+      <div class="tblr" style="grid-template-columns:2fr 1fr 2fr 1fr"><div style="font:400 11px var(--mn);color:var(--tx)">BRIDGE29</div><div><span class="bd bg">SERVER</span></div><div style="font:400 10px var(--mn);color:var(--tx3)">PIONEER DJ / PRODJLINK BRIDGE</div><div style="font:400 9px var(--mn);color:var(--tx3)">active</div></div>
+      ${nodes.map(n=>`<div class="tblr" style="grid-template-columns:2fr 1fr 2fr 1fr"><div style="font:400 11px var(--mn);color:var(--tx)">${n.name}</div><div><span class="bd ${n.type===2?'bg':'bb'}">${n.type===2?'SRV':'CLI'}</span></div><div style="font:400 10px var(--mn);color:var(--tx3)">${n.vendor||'—'}/${n.device||'—'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">${n.ip}:${n.lPort}</div></div>`).join('')}
+      ${nodes.length===0?'<div style="padding:9px 12px;color:var(--tx3);font:400 11px var(--sn)">Arena 미감지 — Arena에서 TCNet 활성화하세요</div>':''}
+    </div>
+    <div class="sl mt">통계</div>
+    <div class="pgr">${[{l:'TIME 0xFE',v:pk,c:'var(--grn)'},{l:'DATA 0xC8',v:pk,c:'var(--pur)'},{l:'OPTIN 0x02',v:up,c:'var(--blu)'},{l:'STATUS 0x05',v:Math.floor(up/2),c:'var(--ylw)'}].map(p=>`<div class="pgc"><div style="font:500 9px var(--sn);color:var(--tx3);margin-bottom:3px">${p.l}</div><div style="font:600 14px var(--mn);color:${p.c};font-variant-numeric:tabular-nums">${p.v.toLocaleString()}</div></div>`).join('')}</div>`;
+}
+
+function renderSettings(){
+  const el=document.getElementById('pgSettings');
+  const devOpts=audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg.aoId===d.deviceId?'selected':''}>${d.label||'Output '+d.deviceId.slice(0,8)}</option>`).join('');
+  // network interface options
+  const ifaceOpts=(ifaces,field)=>{
+    const sel=cfg[field]||'';
+    const loopSel=sel==='127.0.0.1'?'selected':'';
+    const loopOpt=`<option value="127.0.0.1" ${loopSel}>lo0 (localhost 127.0.0.1) — Arena 같은 맥</option>`;
+    const netOpts=ifaces.filter(i=>!i.internal).map(i=>`<option value="${i.address}" ${sel===i.address?'selected':''}>${i.name} — ${i.address}${i.address.startsWith('169.254')?'  (링크로컬 CDJ)':'  (LAN)'}</option>`).join('');
+    return `<option value="">자동 감지</option>${loopOpt}${netOpts}`;
+  };
+
+  el.innerHTML=`
+    <div class="sl">웨이브폼 설정</div>
+    <div class="sgr">
+      <div class="srw"><span class="srl">웨이브폼 색상</span><select class="ss" id="wfColorSel"><option value="blue" ${cfg.wfColor==='blue'?'selected':''}>BLUE (모노톤)</option><option value="rgb" ${cfg.wfColor==='rgb'?'selected':''}>RGB (저=R 중=G 고=B)</option><option value="3band" ${cfg.wfColor==='3band'?'selected':''}>3BAND (저=청 중=녹 고=백)</option></select></div>
+      <div class="srw"><span class="srl">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
+      <div class="srw"><span class="srl">비트 페이저 모드</span><select class="ss" id="phasorModeSel"><option value="scroll" ${cfg.phasorMode==='scroll'?'selected':''}>Scroll (채우기)</option><option value="blink" ${cfg.phasorMode==='blink'?'selected':''}>Blink (깜빡임)</option></select></div>
+    </div>
+    <div class="sl">TCNet 설정</div>
+    <div class="sgr">
+      <div class="srw"><span class="srl">Node Name</span><input type="text" value="${cfg.nm}" data-cfg="nm" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:100px;text-align:right"></div>
+      <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
+      <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    </div>
+    <div class="sl">Pro DJ Link 설정</div>
+    <div class="sgr">
+      <div class="srw"><span class="srl">Pro DJ Link 인터페이스</span><select class="ss" data-cfg="pdjlIface">${ifaceOpts(allIfaces,'pdjlIface')}</select></div>
+      <div class="srw"><span class="srl">CDJ 네트워크</span><span class="srv" style="color:var(--tx3)">169.254.x.x (링크로컬)</span></div>
+    </div>
+    <div class="sl">오디오 출력</div>
+    <div class="sgr"><div class="srw"><span class="srl">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div></div>
+    <div class="al alw" style="margin-top:8px">
+      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
+      <div style="font:400 10px var(--sn);color:var(--ylw)">
+        <b>두 NIC 환경:</b> TCNet 인터페이스 = 공유기 LAN (192.168.x.x), Pro DJ Link 인터페이스 = CDJ 이더넷 (169.254.x.x).<br>
+        설정 변경 후 STOP → START 필요.
+      </div>
+    </div>
+    <div class="sl mt">SMPTE 타임코드 출력</div>
+    <div class="sgr">
+      <div class="srw"><span class="srl">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">LTC — Layer A 장치</span><select class="ss" data-cfg="tcLtcA" style="max-width:200px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg.tcLtcA===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">LTC — Layer B 장치</span><select class="ss" data-cfg="tcLtcB" style="max-width:200px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg.tcLtcB===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">LTC — Layer M 장치</span><select class="ss" data-cfg="tcLtcM" style="max-width:200px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg.tcLtcM===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">MTC MIDI 출력</span><select class="ss" id="midiOutSel" style="max-width:200px"><option value="">—</option></select></div>
+      <div class="srw"><span class="srl">Artnet 대상 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
+      <div class="srw"><span class="srl">Artnet Port</span><input type="text" value="${cfg.tcArtnetPort}" data-cfg="tcArtnetPort" placeholder="6454" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:70px;text-align:right"></div>
+    </div>
+    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
+      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
+      <div style="font:400 10px var(--sn);color:var(--ylw)">LTC는 음원과 다른 장치로 출력해야 합니다. 덱 카드의 [TC] 버튼으로 모드를 선택하세요.</div>
+    </div>
+    <div class="sl">정보</div>
+    <div class="sgr">
+      <div class="srw"><span class="srl">Version</span><span class="srv">0.12.0</span></div>
+      <div class="srw"><span class="srl">Protocol</span><span class="srv">TCNet v3.5</span></div>
+      <div class="srw"><span class="srl">Data 전송</span><span class="srv" style="color:var(--org)">브로드캐스트 + 유니캐스트</span></div>
+    </div>`;
+
+  el.querySelectorAll('[data-cfg]').forEach(inp=>{
+    inp.addEventListener('change',e=>{
+      const k=inp.dataset.cfg;
+      if(k==='ao'){cfg.aoId=e.target.value;Object.values(DECKS).forEach(d=>{if(d.au)setOut(d.au,cfg.aoId);});}
+      else if(k==='tcao'){
+        cfg.tcLtcAoId=e.target.value;
+        if(_ltcOut&&e.target.value){try{_ltcOut.setSinkId(e.target.value);}catch(_){}}
+      }
+      else if(k==='tcFps'){cfg.tcFps=e.target.value;}
+      else if(k==='tcLtcA'||k==='tcLtcB'||k==='tcLtcM'){
+        const layer=k.slice(-1); // 'A','B','M'
+        _ltcSetDevice(layer,e.target.value);
+      }
+      else if(k==='tcArtnetIp'||k==='tcArtnetPort'){cfg[k]=e.target.value;}
+      else cfg[k]=e.target.value;
+    });
+  });
+  // Waveform settings
+  const wfColorSel=el.querySelector('#wfColorSel');
+  if(wfColorSel){wfColorSel.value=cfg.wfColor||'rgb';wfColorSel.onchange=e=>{cfg.wfColor=e.target.value;};}
+  const wfCenterSel=el.querySelector('#wfCenterSel');
+  if(wfCenterSel){wfCenterSel.value=cfg.wfCenter||'center';wfCenterSel.onchange=e=>{cfg.wfCenter=e.target.value;};}
+  const phasorSel=el.querySelector('#phasorModeSel');
+  if(phasorSel){phasorSel.value=cfg.phasorMode||'scroll';phasorSel.onchange=e=>{cfg.phasorMode=e.target.value;};}
+  // MIDI output device list
+  const midiSel=el.querySelector('#midiOutSel');
+  if(midiSel&&_midiAccess){
+    midiSel.innerHTML='<option value="">—</option>';
+    for(const [id,o] of _midiAccess.outputs){
+      const opt=document.createElement('option');
+      opt.value=id;opt.textContent=o.name;
+      if(cfg.tcMidiOutId===id)opt.selected=true;
+      midiSel.appendChild(opt);
+    }
+    midiSel.onchange=e=>{cfg.tcMidiOutId=e.target.value;_mtcSelectOutput(e.target.value);};
+  } else if(midiSel){
+    _mtcInit().then(()=>{if(_midiAccess)renderSettings();});
+  }
+  // sync selected values
+  el.querySelector('[data-cfg="tcnetIface"]').value=cfg.tcnetIface||'';
+  el.querySelector('[data-cfg="pdjlIface"]').value=cfg.pdjlIface||'';
+  el.querySelector('[data-cfg="tcnetMode"]').value=cfg.tcnetMode||'auto';
+}
+
+// ════ Tab switching ════════════════════════════════════
+document.getElementById('tabs').onclick=e=>{
+  const t=e.target.closest('.tab');if(!t)return;
+  curTab=t.dataset.t;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===curTab));
+  const m={link:'pgLink',pdjl:'pgPdjl',tcnet:'pgTcnet',settings:'pgSettings'};
+  Object.values(m).forEach(id=>document.getElementById(id)?.classList.add('hide'));
+  document.getElementById(m[curTab])?.classList.remove('hide');
+  if(curTab==='pdjl')renderPDJL();
+  if(curTab==='tcnet')renderTcnet();
+  if(curTab==='settings'){loadInterfaces();renderSettings();}
+};
+
+async function loadInterfaces(){
+  if(E){allIfaces=await window.bridge.getInterfaces();}
+}
+
+// ════ START / STOP ═══════════════════════════════════
+document.getElementById('mainBtn').onclick=()=>run?doStop():doStart();
+async function doStart(){
+  if(E){
+    const r=await window.bridge.start({
+      broadcast:'auto',
+      tcnetIface:cfg.tcnetIface||null,
+      pdjlIface:cfg.pdjlIface||null,
+      tcnetMode:cfg.tcnetMode||'auto',
+    });
+    if(!r.ok){alert('시작 실패: '+r.err);return;}
+    pdjlPort=r.pdjlPort||null;
+    // re-register all existing virtual decks after start
+    for(const [slot,d] of Object.entries(DECKS)){
+      if(d.type==='virtual') window.bridge.registerVirtualDeck(Number(slot),'CDJ-3000');
+    }
+  }
+  run=true;t0=Date.now();pk=0;
+  const hd=document.getElementById('hDot'),hs=document.getElementById('hSt'),mb=document.getElementById('mainBtn');
+  hd.style.background='var(--grn)';hd.classList.add('dpu');
+  hs.textContent='ONLINE';hs.style.color='var(--grn)';
+  mb.textContent='STOP';mb.className='btn btnr';
+}
+async function doStop(){
+  if(E)await window.bridge.stop();
+  run=false;pdjlPort=null;
+  Object.values(DECKS).forEach(d=>{if(d.au)d.au.pause();d.pl=false;});
+  const hd=document.getElementById('hDot'),hs=document.getElementById('hSt'),mb=document.getElementById('mainBtn');
+  hd.style.background='var(--tx4)';hd.classList.remove('dpu');
+  hs.textContent='OFFLINE';hs.style.color='var(--tx3)';
+  mb.textContent='START';mb.className='btn btng';
+}
+
+// ════ Electron IPC events ════════════════════════════
+if(E){
+  window.bridge.onStatus?.(d=>{
+    up=d.uptime;pk=d.pkts||pk;
+    if(d.hwMode)d.hwMode.forEach((hw,i)=>{if(DECKS[i])DECKS[i].type=hw?'hw':'virtual';});
+    if(d.faders)faders=d.faders;
+    if(d.pdjlPort!=null)pdjlPort=d.pdjlPort;
+    if(d.devices){pdjlDevices=d.devices;if(curTab==='pdjl')renderPDJL();}
+  });
+  window.bridge.onTcnetNode?.(n=>{tcNodes[n.name+'@'+n.ip]={...n,lastSeen:Date.now()};if(curTab==='tcnet')renderTcnet();});
+  window.bridge.onCDJStatus?.(d=>{
+    const{layerIndex,status}=d;
+    ensureHWDeck(status.playerNum);
+    const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
+    dk.pl=status.state===2;dk.cu=status.state===3;dk.pos=status.timecodeMs;
+    if(status.bpmEffective)dk.bpm=Math.round(status.bpmEffective*10)/10;
+    else if(status.bpm)dk.bpm=Math.round(status.bpm*10)/10;
+    if(status.bpmTrack)dk.baseBpm=Math.round(status.bpmTrack*10)/10;
+    if(status.key)dk.key=_toCamelot(status.key);
+    if(status.trackName)dk.tn=status.trackName;
+    if(status.artistName)dk.ar=status.artistName;
+    if(status.name)dk.model=status.name;
+    dk.ld=status.hasTrack||dk.ld;
+    if(status.beatInBar)dk.beatInBar=status.beatInBar;
+  });
+  window.bridge.onDJMStatus?.(d=>{faders=d.faders;});
+  window.bridge.onDJMMeter?.(ch=>{
+    // ch[0..3] = DJM channel 1-4 post-fader level (0-255)
+    ch.forEach((v,i)=>{if(DECKS[i])DECKS[i].hwVu=v/255;});
+  });
+  window.bridge.onDevices?.(devs=>{
+    pdjlDevices=devs;
+    // only real PDJL CDJs switch to HW mode — not virtual decks
+    devs.filter(d=>d.type==='CDJ'&&!d.virtual).forEach(d=>ensureHWDeck(d.playerNum));
+    if(devs.some(d=>d.type==='DJM'))renderDecks();
+    if(curTab==='pdjl')renderPDJL();
+  });
+  loadInterfaces();
+}
+
+function fTC(ms){if(!ms&&ms!==0)return'--:--:--:--';const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000),f=Math.floor((ms%1000)/33.33);return z(h)+':'+z(m)+':'+z(s)+':'+z(f);}
+function fTm(ms){if(!ms)return'0:00';return Math.floor(ms/60000)+':'+z(Math.floor((ms%60000)/1000));}
+// mm:ss.mm format (centiseconds)
+function fTmMs(ms){if(!ms&&ms!==0)return'--:--.--';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),cs=Math.floor((ms%1000)/10);return m+':'+z(s)+'.'+z(cs);}
+// Cue point time: mm:ss.cs (centiseconds, 2 digits)
+function fTcue(ms){if(!ms&&ms!==0)return'--:--.--';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),cs=Math.floor((ms%1000)/10);return z(m)+':'+z(s)+'.'+String(cs).padStart(2,'0');}
+// Bar.Beat counter like Rekordbox ("8.2")
+function fBars(posMs,bpm){if(!bpm||!posMs)return'0.0';const bMs=60000/bpm,bar=Math.floor(posMs/(bMs*4))+1,beat=Math.floor((posMs%(bMs*4))/bMs)+1;return bar+'.'+beat;}
+function z(n){return String(Math.max(0,Math.round(n))).padStart(2,'0');}
+
+// initial state: no decks — created on CDJ connect or manual add
+renderDecks();
+</script></body></html>

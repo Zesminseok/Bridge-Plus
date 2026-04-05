@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+*.pcapng
+*.mp3
+*.tgz
+package/
+.claude/
+.serena/
