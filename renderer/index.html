@@ -772,7 +772,10 @@ function _wf3BandStack(r,g,b2,totalH,dimF){
 }
 
 function drawOverview(slot,prog){
-  const d=DECKS[slot];if(!d||!d.rgbWf||!d.wovCtx)return;
+  const d=DECKS[slot];if(!d||!d.wovCtx)return;
+  // Use preview waveform for overview, fallback to detail
+  if(!d.rgbWf&&d.rgbWfDetail) d.rgbWf=d.rgbWfDetail;
+  if(!d.rgbWf)return;
   const cv=document.getElementById('wov'+slot);if(!cv||!cv.width)return;
   const W=cv.width,H=cv.height,ctx=d.wovCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
@@ -805,6 +808,18 @@ function drawOverview(slot,prog){
     }
   }
   ctx.putImageData(img,0,0);
+  // Draw cue points (memory=white triangle, hot=colored triangle with letter)
+  const _cueColors={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
+  if(d.cuePoints&&d.dur>0){
+    for(const cue of d.cuePoints){
+      const cx=Math.round(cue.timeMs/d.dur*W);
+      if(cx<0||cx>=W)continue;
+      const col=cue.type==='hot'?(_cueColors[cue.colorId]||'#00e676'):'rgba(255,255,255,.8)';
+      ctx.fillStyle=col;ctx.fillRect(cx-.5,0,1,H);
+      ctx.beginPath();ctx.moveTo(cx-3,0);ctx.lineTo(cx+3,0);ctx.lineTo(cx,4);ctx.closePath();
+      ctx.fill();
+    }
+  }
   if(d.cp>0&&d.dur>0){
     const cx=Math.round(d.cp*1000/d.dur*W);
     ctx.fillStyle='rgba(251,191,36,.9)';ctx.fillRect(cx-.5,0,1,H);
@@ -881,7 +896,24 @@ function drawZoomWaveform(slot,prog){
       }
     }
   }
-  // Cue point: yellow marker
+  // Cue points from dbserver (memory + hot cues)
+  const _cueColorsZ={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
+  if(d.cuePoints&&dur>0){
+    ctx.font='bold 8px "DM Mono",monospace';
+    for(const cue of d.cuePoints){
+      const cpx=Math.round((cue.timeMs-posMs)/msPerPx+cX);
+      if(cpx<0||cpx>=W)continue;
+      const col=cue.type==='hot'?(_cueColorsZ[cue.colorId]||'#00e676'):'rgba(255,255,255,.7)';
+      ctx.fillStyle=col;ctx.fillRect(cpx-.5,0,1,H);
+      ctx.beginPath();ctx.moveTo(cpx-4,H);ctx.lineTo(cpx+4,H);ctx.lineTo(cpx,H-6);ctx.closePath();
+      ctx.fill();
+      if(cue.type==='hot'&&cue.hotCueNum>0){
+        const label=String.fromCharCode(64+cue.hotCueNum); // 1→A, 2→B...
+        ctx.fillStyle=col;ctx.fillText(label,cpx+2,H-2);
+      }
+    }
+  }
+  // Active cue point: yellow marker
   if(d.cp>0&&dur>0){
     const cpPx=Math.round((d.cp*1000-posMs)/msPerPx+cX);
     if(cpPx>0&&cpPx<W){
@@ -1970,7 +2002,7 @@ if(E){
     const oldTid=dk._trackId||0;
     if(newTid>0 && oldTid>0 && newTid!==oldTid){
       console.log(`[UI] P${status.playerNum} track change: ${oldTid} → ${newTid}`);
-      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;
+      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;
       dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;
       dk._trackId=newTid;
       // Don't renderDecks() here — metadata will arrive shortly and trigger update
@@ -1981,7 +2013,7 @@ if(E){
       if(dk._noTrackCount>=3 && dk.ld){
         console.log(`[UI] P${status.playerNum} track ejected`);
         dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
-        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.baseBpm=0;dk.key='';dk._trackId=0;
+        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;dk.baseBpm=0;dk.key='';dk._trackId=0;
         renderDecks();
       }
       return;
@@ -2065,6 +2097,13 @@ if(E){
         if(noart){el.innerHTML=`<img src="${d.art}" alt="">`;}
       }
     }
+  });
+  // HW cue points from dbserver (memory cues + hot cues)
+  window.bridge.onCuePoints?.(d=>{
+    const li=d.playerNum-1;
+    const dk=DECKS[li];if(!dk)return;
+    dk.cuePoints=d.cues;
+    console.log(`[UI] P${d.playerNum} cues: ${d.cues.length} (${d.cues.map(c=>c.type==='hot'?'H'+c.hotCueNum:'M').join(',')})`);
   });
   // HW detail waveform from dbserver (150pts/sec — for zoom display)
   window.bridge.onWaveformDetail?.(d=>{

@@ -116,6 +116,7 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onDeviceList=devs=>win?.webContents.send('pdjl:devices',Object.values(devs));
     bridge.onWaveformPreview=(pn,wf)=>win?.webContents.send('bridge:wfpreview',{playerNum:pn,...wf});
     bridge.onWaveformDetail=(pn,wf)=>win?.webContents.send('bridge:wfdetail',{playerNum:pn,...wf});
+    bridge.onCuePoints=(pn,cues)=>win?.webContents.send('bridge:cuepoints',{playerNum:pn,cues});
     bridge.onAlbumArt=(pn,b64)=>win?.webContents.send('bridge:albumart',{playerNum:pn,art:b64});
     bridge.onTrackMetadata=(pn,meta)=>win?.webContents.send('bridge:trackmeta',{playerNum:pn,...meta});
     await bridge.start();push();
@@ -143,24 +144,26 @@ function doQuit(){
   // 1. Save window bounds while window is still valid
   saveBounds();
   clearInterval(iv);
-  // 2. Hide main window immediately (no ghost window)
-  try{if(win&&!win.isDestroyed()){win.hide();}}catch(_){}
-  // 3. Show shutdown splash
+  // 2. Show shutdown splash BEFORE hiding main window (so position is correct)
   showSplash('종료 중...','TCNet · ProDJ Link 연결 해제');
-  // 4. Stop bridge (sends OptOut, delays socket close 100ms internally)
-  try{bridge?.stop();}catch(e){console.warn('[APP] bridge.stop error:',e.message);}
-  bridge=null;
-  try{_artSocket.close();}catch(_){}
-  _cleaned=true;
-  // 5. Wait 400ms for OptOut UDP to flush (bridge.stop has 100ms internal + extra margin)
+  // 3. Hide main window after splash is positioned
+  try{if(win&&!win.isDestroyed()){win.hide();}}catch(_){}
+  // 4. Stop bridge after small delay (let splash render first)
   setTimeout(()=>{
-    console.log('[APP] cleanup done — destroying windows');
-    try{if(splash&&!splash.isDestroyed())splash.destroy();}catch(_){}
-    splash=null;
-    try{if(win&&!win.isDestroyed())win.destroy();}catch(_){}
-    win=null;
-    app.quit();
-  },400);
+    try{bridge?.stop();}catch(e){console.warn('[APP] bridge.stop error:',e.message);}
+    bridge=null;
+    try{_artSocket.close();}catch(_){}
+    _cleaned=true;
+    // 5. Wait 300ms for OptOut UDP to flush, then quit
+    setTimeout(()=>{
+      console.log('[APP] cleanup done — quitting');
+      try{if(splash&&!splash.isDestroyed())splash.destroy();}catch(_){}
+      splash=null;
+      try{if(win&&!win.isDestroyed())win.destroy();}catch(_){}
+      win=null;
+      app.quit();
+    },300);
+  },100);
   // Force exit after 2s as safety net
   setTimeout(()=>{console.log('[APP] force exit');process.exit(0);},2000).unref();
 }

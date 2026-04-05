@@ -564,6 +564,7 @@ class BridgeCore {
     this.onDeviceList     = null;
     this.onWaveformPreview = null;  // (playerNum, {seg, pts, wfType}) => {}
     this.onWaveformDetail  = null;  // (playerNum, {pts, wfType:'detail'}) => {}
+    this.onCuePoints       = null;  // (playerNum, [{name, type, time, colorId}]) => {}
     this.onAlbumArt       = null;   // (playerNum, jpegBuffer) => {}
     this._artCache = {};  // trackId -> {playerNum, jpegBase64}
     this._dbConns  = {};  // ip -> net.Socket
@@ -723,7 +724,7 @@ class BridgeCore {
     this._dbConns={};
     // remove all callbacks to prevent post-stop activity
     this.onNodeDiscovered=null; this.onCDJStatus=null; this.onDJMStatus=null;
-    this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null; this.onWaveformDetail=null;
+    this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null; this.onWaveformDetail=null; this.onCuePoints=null;
     this.onAlbumArt=null; this.onTrackMetadata=null;
     console.log('[BridgeCore] stop: all sockets and connections closed');
   }
@@ -1162,9 +1163,10 @@ class BridgeCore {
         if(acc && p.beatNum > 0 && p.bpm > 0){
           // Use BASE BPM (not pitch-adjusted) for waveform position mapping
           // Waveform data is in native track time, so position must match
+          // beatNum is 1-based: beat 1 = first beat → position 0
           const baseBpm = p.bpmTrack || p.bpm;
           const msPerBeat = 60000 / baseBpm;
-          const absoluteMs = p.beatNum * msPerBeat;
+          const absoluteMs = (p.beatNum - 1) * msPerBeat;
           const deltaBn = p.beatNum - acc.prevBn;
           if(deltaBn > 0 && acc.dbgCount < 20){
             acc.dbgCount++;
@@ -1605,6 +1607,8 @@ class BridgeCore {
         .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform preview failed:`,e.message));
       this._dbserverWaveformDetail(ip, slot, trackId, playerNum, tt)
         .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message));
+      this._dbserverCuePoints(ip, slot, trackId, playerNum, tt)
+        .catch(e=>console.warn(`[DBSRV] P${playerNum} cue points failed:`,e.message));
     }catch(e){
       throw e;
     }finally{
@@ -1685,6 +1689,53 @@ class BridgeCore {
       }
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message);
+    }finally{try{sock?.destroy();}catch(_){}}
+  }
+
+  async _dbserverCuePoints(ip, slot, trackId, playerNum, trackType){
+    const spoofPlayer = 5;
+    let sock;
+    try{
+      sock = await this._dbConnect(ip, spoofPlayer);
+      // Use ANLZ tag request (0x2c04) with "PCO2" tag (0x32544347) for nxs2 cue points
+      // Fallback: hot cue request via 0x2104 doesn't always work
+      // Method: request rekordbox cue list via menu request type 0x2104
+      const rmst = this._dbRMST(spoofPlayer, 0x01, slot, trackType||1);
+      const req = this._dbBuildMsg(1, 0x2104, [
+        rmst, this._dbArg4(0), this._dbArg4(trackId), this._dbArg4(0)
+      ]);
+      sock.write(req);
+      const menuAvail = await this._dbReadResponse(sock);
+      // Render the menu
+      const renderReq = this._dbBuildMsg(2, 0x3000, [
+        rmst, this._dbArg4(0), this._dbArg4(64),
+        this._dbArg4(0), this._dbArg4(64), this._dbArg4(0)
+      ]);
+      sock.write(renderReq);
+      const fullResp = await this._dbReadFullResponse(sock);
+      const items = this._dbParseItems(fullResp);
+      const cues = [];
+      for(const item of items){
+        if(item.msgType===0x4101){
+          const itemType = item.args[6]?.val || 0;
+          // 0x000e = CUE_POINT item
+          if(itemType===0x000e){
+            const name = item.args[3]?.val || '';
+            const timeMs = item.args[1]?.val || 0;     // cue time in ms
+            const hotCueNum = item.args[4]?.val || 0;   // 0=memory cue, A-H=hot cue
+            const colorId = item.args[5]?.val || 0;
+            cues.push({name, timeMs, hotCueNum, colorId, type: hotCueNum>0?'hot':'memory'});
+          }
+        }
+      }
+      if(cues.length>0){
+        this.onCuePoints?.(playerNum, cues);
+        console.log(`[DBSRV] P${playerNum} cue points: ${cues.length} (${cues.filter(c=>c.type==='hot').length} hot, ${cues.filter(c=>c.type==='memory').length} memory)`);
+      } else {
+        console.log(`[DBSRV] P${playerNum} cue points: none found (${items.length} items)`);
+      }
+    }catch(e){
+      console.warn(`[DBSRV] P${playerNum} cue points failed:`,e.message);
     }finally{try{sock?.destroy();}catch(_){}}
   }
 
