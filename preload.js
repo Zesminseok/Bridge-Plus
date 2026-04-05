@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('bridge',{
   onDevices:(cb)=>ipcRenderer.on('pdjl:devices',(_,d)=>cb(d)),
   onDJMMeter:(cb)=>ipcRenderer.on('bridge:djmmeter',(_,d)=>cb(d)),
   onWaveformPreview:(cb)=>ipcRenderer.on('bridge:wfpreview',(_,d)=>cb(d)),
+  onWaveformDetail:(cb)=>ipcRenderer.on('bridge:wfdetail',(_,d)=>cb(d)),
   onAlbumArt:(cb)=>ipcRenderer.on('bridge:albumart',(_,d)=>cb(d)),
   onTrackMeta:(cb)=>ipcRenderer.on('bridge:trackmeta',(_,d)=>cb(d)),
   requestArtwork:(d)=>ipcRenderer.invoke('bridge:requestArtwork',d),

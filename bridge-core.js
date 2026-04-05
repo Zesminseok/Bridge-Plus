@@ -563,6 +563,7 @@ class BridgeCore {
     this.onDJMMeter       = null;
     this.onDeviceList     = null;
     this.onWaveformPreview = null;  // (playerNum, {seg, pts, wfType}) => {}
+    this.onWaveformDetail  = null;  // (playerNum, {pts, wfType:'detail'}) => {}
     this.onAlbumArt       = null;   // (playerNum, jpegBuffer) => {}
     this._artCache = {};  // trackId -> {playerNum, jpegBase64}
     this._dbConns  = {};  // ip -> net.Socket
@@ -722,7 +723,7 @@ class BridgeCore {
     this._dbConns={};
     // remove all callbacks to prevent post-stop activity
     this.onNodeDiscovered=null; this.onCDJStatus=null; this.onDJMStatus=null;
-    this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null;
+    this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null; this.onWaveformDetail=null;
     this.onAlbumArt=null; this.onTrackMetadata=null;
     console.log('[BridgeCore] stop: all sockets and connections closed');
   }
@@ -1159,9 +1160,10 @@ class BridgeCore {
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
         if(acc && p.beatNum > 0 && p.bpm > 0){
-          // Absolute timecode: beatNum × beat duration (ms per beat at current BPM)
-          // This gives the correct position from track start, no drift
-          const msPerBeat = 60000 / p.bpm;
+          // Use BASE BPM (not pitch-adjusted) for waveform position mapping
+          // Waveform data is in native track time, so position must match
+          const baseBpm = p.bpmTrack || p.bpm;
+          const msPerBeat = 60000 / baseBpm;
           const absoluteMs = p.beatNum * msPerBeat;
           const deltaBn = p.beatNum - acc.prevBn;
           if(deltaBn > 0 && acc.dbgCount < 20){
@@ -1600,7 +1602,9 @@ class BridgeCore {
           .catch(e=>console.warn(`[DBSRV] P${playerNum} artwork failed:`,e.message));
       }
       this._dbserverWaveform(ip, slot, trackId, playerNum, tt)
-        .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform failed:`,e.message));
+        .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform preview failed:`,e.message));
+      this._dbserverWaveformDetail(ip, slot, trackId, playerNum, tt)
+        .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message));
     }catch(e){
       throw e;
     }finally{
@@ -1641,6 +1645,46 @@ class BridgeCore {
       } else {
         console.log(`[DBSRV] P${playerNum} waveform: no data in ${wfResp.length}B resp`);
       }
+    }finally{try{sock?.destroy();}catch(_){}}
+  }
+
+  async _dbserverWaveformDetail(ip, slot, trackId, playerNum, trackType){
+    const spoofPlayer = 5;
+    let sock;
+    try{
+      sock = await this._dbConnect(ip, spoofPlayer);
+      // 0x2904 = WAVE_DETAIL_REQ — 150 segments/sec, full resolution
+      const wfRmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
+      const wfReq = this._dbBuildMsg(1, 0x2904, [
+        wfRmst, this._dbArg4(trackId), this._dbArg4(0)
+      ]);
+      sock.write(wfReq);
+      const wfResp = await this._dbReadFullResponse(sock);
+      // Find largest Binary field (tag 0x14)
+      let wfData=null;
+      for(let i=0;i<wfResp.length-5;i++){
+        if(wfResp[i]===0x14){
+          const len=wfResp.readUInt32BE(i+1);
+          if(len>400&&len<500000&&i+5+len<=wfResp.length){
+            wfData=wfResp.slice(i+5,i+5+len);
+            break;
+          }
+        }
+      }
+      if(wfData&&wfData.length>19){
+        // Skip 19-byte header junk (LEADING_DBSERVER_JUNK_BYTES)
+        const data = wfData.slice(19);
+        const pts=[];
+        for(let i=0;i<data.length;i++){
+          pts.push({height:data[i]&0x1F, color:(data[i]>>5)&0x07});
+        }
+        this.onWaveformDetail?.(playerNum, {pts, wfType:'detail'});
+        console.log(`[DBSRV] P${playerNum} waveform detail: ${pts.length} pts (${Math.round(pts.length/150)}s)`);
+      } else {
+        console.log(`[DBSRV] P${playerNum} waveform detail: no data in ${wfResp?.length||0}B`);
+      }
+    }catch(e){
+      console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message);
     }finally{try{sock?.destroy();}catch(_){}}
   }
 

@@ -115,6 +115,7 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onDJMMeter=ch=>win?.webContents.send('bridge:djmmeter',ch);
     bridge.onDeviceList=devs=>win?.webContents.send('pdjl:devices',Object.values(devs));
     bridge.onWaveformPreview=(pn,wf)=>win?.webContents.send('bridge:wfpreview',{playerNum:pn,...wf});
+    bridge.onWaveformDetail=(pn,wf)=>win?.webContents.send('bridge:wfdetail',{playerNum:pn,...wf});
     bridge.onAlbumArt=(pn,b64)=>win?.webContents.send('bridge:albumart',{playerNum:pn,art:b64});
     bridge.onTrackMetadata=(pn,meta)=>win?.webContents.send('bridge:trackmeta',{playerNum:pn,...meta});
     await bridge.start();push();

@@ -799,11 +799,8 @@ function drawOverview(slot,prog){
       }
     }else{
       const [R,G,B]=_wfBlend(r,g,b,dimF);
-      const halfH=Math.max(1,(y1-y0)*0.5);
       for(let y=y0;y<=y1;y++){
-        const edgeDist=Math.min(y-y0,y1-y)/halfH;
-        const aF=Math.max(0.1,1-edgeDist*0.78);
-        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=Math.round(alpha*aF);
+        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=alpha;
       }
     }
   }
@@ -821,14 +818,17 @@ function drawOverview(slot,prog){
 // Shape: actual waveform min/max (organic flowing look like image #3)
 // Color: additive blend of bass(red/pink)+mid(green)+treble(purple)
 function drawZoomWaveform(slot,prog){
-  const d=DECKS[slot];if(!d||!d.rgbWf||!d.wzCtx)return;
+  const d=DECKS[slot];
+  // Use detail waveform if available, fallback to preview
+  const wfData=d?.rgbWfDetail||d?.rgbWf;
+  if(!d||!wfData||!d.wzCtx)return;
   const cv=document.getElementById('wzc'+slot);if(!cv||!cv.width)return;
   const W=cv.width,H=cv.height,ctx=d.wzCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
   const dur=d.dur,posMs=pos*dur;
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
-  const pts=d.rgbWf.length,mid=H/2;
+  const pts=wfData.length,mid=H/2;
   const img=ctx.createImageData(W,H);const px4=img.data;
   for(let px=0;px<W;px++){
     const pxMs=posMs+(px-cX)*msPerPx;
@@ -836,7 +836,7 @@ function drawZoomWaveform(slot,prog){
     const i0=Math.max(0,Math.floor((pxMs-msPerPx*.5)/dur*pts));
     const i1=Math.min(pts-1,Math.ceil((pxMs+msPerPx*.5)/dur*pts));
     let r=0,g=0,b2=0,mn=0,mx=0;const cnt=Math.max(1,i1-i0+1);
-    for(let i=i0;i<=i1;i++){const p=d.rgbWf[i];r+=p.r;g+=p.g;b2+=p.b;if(p.mn<mn)mn=p.mn;if(p.mx>mx)mx=p.mx;}
+    for(let i=i0;i<=i1;i++){const p=wfData[i];r+=p.r;g+=p.g;b2+=p.b;if(p.mn<mn)mn=p.mn;if(p.mx>mx)mx=p.mx;}
     r/=cnt;g/=cnt;b2/=cnt;
     const past=pxMs<posMs;
     const dimF=past?.45:1.0;
@@ -857,17 +857,8 @@ function drawZoomWaveform(slot,prog){
       }
     }else{
       const [R,G,B]=_wfBlend(r,g,b2,dimF);
-      // Gradient fill: bright edges → dim centre
-      const halfH=Math.max(1,(y1-y0)*0.5);
       for(let y=y0;y<=y1;y++){
-        const edgeDist=Math.min(y-y0,y1-y)/halfH;
-        const aF=Math.max(0.12,1-edgeDist*0.82);
-        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=Math.round(alpha*aF);
-      }
-      if(y1>y0){
-        const eR=Math.min(255,R+70),eG=Math.min(255,G+70),eB=Math.min(255,B+70);
-        {const idx=(y0*W+px)*4;px4[idx]=eR;px4[idx+1]=eG;px4[idx+2]=eB;px4[idx+3]=alpha;}
-        {const idx=(y1*W+px)*4;px4[idx]=eR;px4[idx+1]=eG;px4[idx+2]=eB;px4[idx+3]=alpha;}
+        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=alpha;
       }
     }
   }
@@ -1057,7 +1048,7 @@ function deckHTML(slot){
         </div>
       </div>
       ${isHW
-        ?`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:80px;opacity:.5"><div style="font:400 13px var(--sn);color:var(--tx3)">CDJ 트랙 대기 중...</div><div style="font:400 9px var(--mn);color:var(--tx4);margin-top:4px">${d.model?'⬡ '+d.model:'CDJ에서 트랙을 로드하세요'}</div></div>`
+        ?`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:80px;opacity:.5"><div style="font:400 13px var(--sn);color:var(--tx3)">${d.model?'로드 안됨':'CDJ 트랙 대기 중...'}</div><div style="font:400 9px var(--mn);color:var(--tx4);margin-top:4px">${d.model?'⬡ '+d.model+' — Empty Track':'CDJ에서 트랙을 로드하세요'}</div></div>`
         :`${hasDJM?`<div class="dfrow"><span style="font:400 9px var(--mn);color:var(--tx3)">DJM${slot<4?' CH'+(slot+1):''}</span><div class="dfbar"><div class="dfbarf" id="dfd${slot}" style="width:${pct}%"></div></div><span class="dfpct" id="dfv${slot}">${pct}%</span></div>`:''}<div class="ddz"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">음원 드래그</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG</div></div>`}
     </div>`;
   }
@@ -1979,7 +1970,7 @@ if(E){
     const oldTid=dk._trackId||0;
     if(newTid>0 && oldTid>0 && newTid!==oldTid){
       console.log(`[UI] P${status.playerNum} track change: ${oldTid} → ${newTid}`);
-      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;
+      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;
       dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;
       dk._trackId=newTid;
       // Don't renderDecks() here — metadata will arrive shortly and trigger update
@@ -1990,7 +1981,7 @@ if(E){
       if(dk._noTrackCount>=3 && dk.ld){
         console.log(`[UI] P${status.playerNum} track ejected`);
         dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
-        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.baseBpm=0;dk.key='';dk._trackId=0;
+        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.baseBpm=0;dk.key='';dk._trackId=0;
         renderDecks();
       }
       return;
@@ -2073,6 +2064,23 @@ if(E){
         const noart=el.querySelector('.noart-icon');
         if(noart){el.innerHTML=`<img src="${d.art}" alt="">`;}
       }
+    }
+  });
+  // HW detail waveform from dbserver (150pts/sec — for zoom display)
+  window.bridge.onWaveformDetail?.(d=>{
+    const li=d.playerNum-1;
+    const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
+    if(d.pts&&d.pts.length>0){
+      const cmap=[[.15,.15,.15],[.9,.1,.1],[.9,.5,.1],[.9,.8,.1],[.1,.8,.1],[.1,.8,.8],[.2,.3,.9],[.7,.2,.9]];
+      dk.rgbWfDetail=d.pts.map(p=>{
+        const [r,g,b]=cmap[p.color&7]||cmap[0];
+        const h=p.height/31;
+        return{r:r*h,g:g*h,b:b*h,mn:-h,mx:h};
+      });
+      // Duration from detail waveform: pts / 150 segments per second * 1000ms
+      const detailDur=Math.round(d.pts.length/150*1000);
+      if(!dk.dur||dk.dur<=0||Math.abs(dk.dur-detailDur)>5000) dk.dur=detailDur;
+      console.log(`[UI] P${d.playerNum} detail waveform: ${d.pts.length}pts (${Math.round(detailDur/1000)}s)`);
     }
   });
   // Track metadata from dbserver (title, artist, album, key, etc.)
