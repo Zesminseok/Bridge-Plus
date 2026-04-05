@@ -1523,24 +1523,24 @@ class BridgeCore {
         this.onTrackMetadata?.(playerNum, meta);
       }
 
-      // Teardown metadata connection, then request artwork/waveform on separate connections
+      // Teardown metadata connection
       try{
         const teardown = this._dbBuildMsg(0xfffffffe, 0x0100, []);
         sock.write(teardown);
       }catch(_){}
+
+      // Request artwork + waveform on separate connections (non-blocking)
+      if(meta.artworkId){
+        this._dbserverArtwork(ip, slot, meta.artworkId, playerNum, `art_${ip}_${slot}_${meta.artworkId}`)
+          .catch(e=>console.warn(`[DBSRV] P${playerNum} artwork failed:`,e.message));
+      }
+      this._dbserverWaveform(ip, slot, trackId, playerNum, tt)
+        .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform failed:`,e.message));
     }catch(e){
       throw e;
     }finally{
       try{sock?.destroy();}catch(_){}
     }
-
-    // Request artwork + waveform on separate connections (non-blocking)
-    if(meta.artworkId){
-      this._dbserverArtwork(ip, slot, meta.artworkId, playerNum, `art_${ip}_${slot}_${meta.artworkId}`)
-        .catch(e=>console.warn(`[DBSRV] P${playerNum} artwork failed:`,e.message));
-    }
-    this._dbserverWaveform(ip, slot, trackId, playerNum, tt)
-      .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform failed:`,e.message));
   }
 
   async _dbserverWaveform(ip, slot, trackId, playerNum, trackType){
