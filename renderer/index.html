@@ -783,14 +783,13 @@ function drawOverview(slot,prog){
   const img=ctx.createImageData(W,H);const px4=img.data;
   for(let px=0;px<W;px++){
     const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
-    let r=0,g=0,b=0;const cnt=Math.max(1,i1-i0+1);
-    for(let i=i0;i<=i1;i++){const p=d.rgbWf[i];r+=p.r;g+=p.g;b+=p.b;}
+    let r=0,g=0,b=0,mxMax=0;const cnt=Math.max(1,i1-i0+1);
+    for(let i=i0;i<=i1;i++){const p=d.rgbWf[i];r+=p.r;g+=p.g;b+=p.b;if(p.mx>mxMax)mxMax=p.mx;}
     r/=cnt;g/=cnt;b/=cnt;
     const past=px/W<pos;
     const dimF=past?1.0:.55;
     const alpha=past?230:140;
-    const energy=Math.min(1,Math.sqrt(r*r+g*g+b*b)/Math.sqrt(3));
-    const h=Math.max(1,Math.round(Math.pow(energy,0.5)*mid*.92));
+    const h=Math.max(1,Math.round(mxMax*mid*.92));
     const y0=Math.max(0,mid-h),y1=Math.min(H-1,mid+h);
     if((cfg.wfColor||'rgb')==='3band'){
       const bands=_wf3BandStack(r,g,b,y1-y0,dimF);
@@ -856,9 +855,8 @@ function drawZoomWaveform(slot,prog){
     const past=pxMs<posMs;
     const dimF=past?.45:1.0;
     const alpha=past?170:255;
-    const energy=Math.min(1,Math.sqrt(r*r+g*g+b2*b2)/Math.sqrt(3));
-    const h=Math.max(2,Math.round(Math.pow(energy,0.55)*mid*0.93));
-    const asymShift=Math.round((mx+mn)*0.5*h*0.45);
+    const h=Math.max(2,Math.round(mx*mid*0.93));
+    const asymShift=Math.round((mx+mn)*0.5*mid*0.3);
     const y0=Math.max(0,Math.min(H-1,mid-h+asymShift));
     const y1=Math.max(0,Math.min(H-1,mid+h+asymShift));
     if((cfg.wfColor||'rgb')==='3band'){
@@ -878,15 +876,21 @@ function drawZoomWaveform(slot,prog){
     }
   }
   ctx.putImageData(img,0,0);
-  // Beat grid overlaid — full height ticks
+  // Beat grid overlaid — aligned to CDJ's beatInBar
   if(d.bpm>0&&dur>0){
     const beatMs=60000/d.bpm;
+    // Align grid phase using CDJ's beatInBar (1-4)
+    // Current beat index at posMs
+    const curBeatIdx=Math.round(posMs/beatMs);
+    // CDJ says we're on beatInBar (1=downbeat). Offset so barNum matches.
+    const bib=d.beatInBar||1;
+    const phaseOff=((curBeatIdx-(bib-1))%4+4)%4; // how many beats to shift
     const firstBeat=Math.ceil((posMs-cX*msPerPx)/beatMs),lastBeat=Math.floor((posMs+(W-cX)*msPerPx)/beatMs);
     ctx.font='bold 9px "DM Mono",monospace';
     for(let b=firstBeat;b<=lastBeat;b++){
       const bpx=Math.round((b*beatMs-posMs)/msPerPx+cX);
       if(bpx<1||bpx>=W-1)continue;
-      const barNum=((b%4)+4)%4+1;
+      const barNum=(((b-phaseOff)%4)+4)%4+1;
       if(barNum===1){
         ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);
         ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);
@@ -2007,6 +2011,9 @@ if(E){
       dk._trackId=newTid;
       // Don't renderDecks() here — metadata will arrive shortly and trigger update
     } else if(newTid>0) dk._trackId=newTid;
+    // Always update model name (even when no track loaded)
+    if(status.name&&!dk.model){dk.model=status.name;renderDecks();}
+    else if(status.name)dk.model=status.name;
     // If track ejected (hasTrack went false for 2+ consecutive status), reset
     if(!status.hasTrack){
       dk._noTrackCount=(dk._noTrackCount||0)+1;
@@ -2065,16 +2072,16 @@ if(E){
         dk.rgbWf=allPts.map(p=>{
           const [r,g,b]=_cdjColorToRGB(p.color);
           const h=p.height/255;
-          return{r:r*h,g:g*h,b:b*h,mn:-h,mx:h};
+          return{r,g,b,mn:-h,mx:h};
         });
       } else {
         // dbserver preview waveform: {height:0-31, color:0-7}
-        // Color map: 0=no-energy, 1=red(bass), 2=orange, 3=yellow, 4=green, 5=cyan, 6=blue, 7=purple(treble)
+        // Color at full brightness, height stored separately in mn/mx for shape
         const cmap=[[.15,.15,.15],[.9,.1,.1],[.9,.5,.1],[.9,.8,.1],[.1,.8,.1],[.1,.8,.8],[.2,.3,.9],[.7,.2,.9]];
         dk.rgbWf=d.pts.map(p=>{
           const [r,g,b]=cmap[p.color&7]||cmap[0];
           const h=p.height/31;
-          return{r:r*h,g:g*h,b:b*h,mn:-h,mx:h};
+          return{r,g,b,mn:-h,mx:h};
         });
       }
       // Don't override duration if we have a real value from metadata
@@ -2114,7 +2121,7 @@ if(E){
       dk.rgbWfDetail=d.pts.map(p=>{
         const [r,g,b]=cmap[p.color&7]||cmap[0];
         const h=p.height/31;
-        return{r:r*h,g:g*h,b:b*h,mn:-h,mx:h};
+        return{r,g,b,mn:-h,mx:h};
       });
       // Duration from detail waveform: pts / 150 segments per second * 1000ms
       const detailDur=Math.round(d.pts.length/150*1000);

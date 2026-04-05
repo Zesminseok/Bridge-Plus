@@ -154,18 +154,17 @@ function doQuit(){
     bridge=null;
     try{_artSocket.close();}catch(_){}
     _cleaned=true;
-    // 5. Wait 300ms for OptOut UDP to flush, then quit
+    // 5. Wait 300ms for OptOut UDP to flush, then force exit
     setTimeout(()=>{
-      console.log('[APP] cleanup done — quitting');
+      console.log('[APP] cleanup done — force exiting');
       try{if(splash&&!splash.isDestroyed())splash.destroy();}catch(_){}
-      splash=null;
       try{if(win&&!win.isDestroyed())win.destroy();}catch(_){}
-      win=null;
-      app.quit();
+      // Force process exit — app.quit() alone doesn't always work
+      process.exit(0);
     },300);
   },100);
-  // Force exit after 2s as safety net
-  setTimeout(()=>{console.log('[APP] force exit');process.exit(0);},2000).unref();
+  // Safety net: force exit after 1.5s no matter what
+  setTimeout(()=>{console.log('[APP] safety net exit');process.exit(0);},1500).unref();
 }
 app.on('window-all-closed',(e)=>{
   // Prevent default quit — we handle it in doQuit
