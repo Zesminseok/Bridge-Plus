@@ -89,15 +89,17 @@ ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTime
 ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
 
 app.whenReady().then(createWindow);
-app.on('window-all-closed',()=>{
-  bridge?.stop();clearInterval(iv);
+function cleanup(){
+  try{bridge?.stop();}catch(_){}
+  clearInterval(iv);
   try{_artSocket.close();}catch(_){}
-  app.quit();
-});
+  bridge=null;
+}
+app.on('window-all-closed',()=>{cleanup();app.quit();});
 app.on('will-quit',()=>{
-  bridge?.stop();clearInterval(iv);
-  try{_artSocket.close();}catch(_){}
-  // Force exit after 2s if sockets keep event loop alive
-  setTimeout(()=>process.exit(0),2000).unref();
+  cleanup();
+  // Force exit after 1s — don't let dangling sockets keep process alive
+  setTimeout(()=>process.exit(0),1000).unref();
 });
+app.on('before-quit',()=>{cleanup();});
 app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow();});

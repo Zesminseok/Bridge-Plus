@@ -191,10 +191,9 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 .dvm-st{display:flex;gap:1px;width:7px;flex-shrink:0;height:100%}
 .dvm-st .dvm{flex:1;width:3px;border-radius:0}
 .dktn{padding:0 0 3px;display:flex;align-items:baseline;gap:0;min-width:0;overflow:hidden}
-.dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex-shrink:1;min-width:0;position:relative;text-overflow:ellipsis}
-.dktn-t.scrolling{overflow:visible;text-overflow:clip}
-.dktn-t.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite;padding-right:60px}
-@keyframes marquee-scroll{0%{transform:translateX(0)}50%{transform:translateX(var(--scroll-dist,-100%))}50.01%{transform:translateX(80px)}100%{transform:translateX(0)}}
+.dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 0;min-width:0;position:relative;text-overflow:ellipsis}
+.dktn-t.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
+@keyframes marquee-scroll{0%,10%{transform:translateX(0)}45%,55%{transform:translateX(var(--scroll-dist,-200px))}90%,100%{transform:translateX(0)}}
 .dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:2;min-width:0}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dk[data-st="play"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
@@ -1555,31 +1554,22 @@ function tick(){
     const dtnEl=document.getElementById('dtn'+slot);
     if(dtnEl){
       const txt=d.tn||'—';
-      // Check if text changed
       const curTxt=dtnEl.querySelector('.mq-inner')?.textContent||dtnEl.textContent;
       if(curTxt!==txt){
         dtnEl.classList.remove('scrolling');
         dtnEl.textContent=txt;
-      }
-      // Marquee scroll for long titles
-      const par=dtnEl.parentElement;
-      if(par&&dtnEl.scrollWidth>par.clientWidth+10){
-        if(!dtnEl.classList.contains('scrolling')){
-          // Wrap text in inner span for animation
+        // Measure after text set: does it overflow?
+        const cw=dtnEl.clientWidth, sw=dtnEl.scrollWidth;
+        if(sw>cw+5){
           const inner=document.createElement('span');
           inner.className='mq-inner';
           inner.textContent=txt;
           dtnEl.textContent='';
           dtnEl.appendChild(inner);
-          const dist=inner.offsetWidth+60;
-          dtnEl.style.setProperty('--scroll-dist','-'+dist+'px');
-          dtnEl.style.setProperty('--scroll-dur',Math.max(6,dist/30)+'s');
+          const overflow=sw-cw;
+          dtnEl.style.setProperty('--scroll-dist','-'+overflow+'px');
+          dtnEl.style.setProperty('--scroll-dur',Math.max(4,overflow/25)+'s');
           dtnEl.classList.add('scrolling');
-        }
-      }else{
-        if(dtnEl.classList.contains('scrolling')){
-          dtnEl.classList.remove('scrolling');
-          dtnEl.textContent=txt;
         }
       }
     }
@@ -1925,6 +1915,8 @@ async function loadInterfaces(){
 
 // ════ START / STOP ═══════════════════════════════════
 document.getElementById('mainBtn').onclick=()=>run?doStop():doStart();
+// Auto-start after 2 seconds
+if(E) setTimeout(()=>{if(!run) doStart();}, 2000);
 async function doStart(){
   if(E){
     const r=await window.bridge.start({

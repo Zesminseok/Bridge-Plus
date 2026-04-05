@@ -402,6 +402,7 @@ function parsePDJL(msg){
       trackId: msg.readUInt32BE(0x2C),
       hasTrack: msg[0x29]>0,
       slot:     msg[0x28],
+      trackType: msg[0x2A],  // 0=None, 1=RB, 2=Unanalyzed, 5=AudioCD
       beatNum, beatInBar, barsRemain, trackBeats,
       firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
       isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x01),
@@ -1085,19 +1086,19 @@ class BridgeCore {
 
         if(trackChanged){
           this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false };
-          try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} ip=${rinfo?.address}`);}catch(_){}
+          try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} trackType=${p.trackType} ip=${rinfo?.address}`);}catch(_){}
           // Auto-request metadata from CDJ via dbserver (delay to let keep-alive propagate)
           if(p.trackId>0 && p.hasTrack && rinfo?.address){
             this._tcAcc[li].metaRequested = true;
-            const _ip=rinfo.address, _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum;
-            setTimeout(()=>this.requestMetadata(_ip, _slot, _tid, _pn), this._dbReady?100:3000);
+            const _ip=rinfo.address, _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum, _tt=p.trackType||1;
+            setTimeout(()=>this.requestMetadata(_ip, _slot, _tid, _pn, false, _tt), this._dbReady?100:3000);
             this._dbReady = true;
           }
         } else if(acc && !acc.metaRequested && p.trackId>0 && p.hasTrack && rinfo?.address){
           // Retry metadata request if hasTrack became true after initial track change
           acc.metaRequested = true;
-          try{console.log(`[TC] P${p.playerNum} metadata retry: trackId=${p.trackId} slot=${p.slot}`);}catch(_){}
-          this.requestMetadata(rinfo.address, p.slot||3, p.trackId, p.playerNum);
+          try{console.log(`[TC] P${p.playerNum} metadata retry: trackId=${p.trackId} slot=${p.slot} trackType=${p.trackType}`);}catch(_){}
+          this.requestMetadata(rinfo.address, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
         if(acc && p.beatNum > 0 && p.bpm > 0){
           const deltaBn = p.beatNum - acc.prevBn;
@@ -1236,13 +1237,13 @@ class BridgeCore {
   /**
    * Request track metadata + artwork from a CDJ via dbserver protocol.
    */
-  requestMetadata(ip, slot, trackId, playerNum, force=false){
+  requestMetadata(ip, slot, trackId, playerNum, force=false, trackType=1){
     if(!ip || !trackId) return;
     const cacheKey = `${ip}_${slot}_${trackId}`;
     if(!force && this._metaReqCache?.[cacheKey]) return; // already requested
     if(!this._metaReqCache) this._metaReqCache = {};
     this._metaReqCache[cacheKey] = true;
-    this._dbserverMetadata(ip, slot, trackId, playerNum).catch(e=>{
+    this._dbserverMetadata(ip, slot, trackId, playerNum, trackType).catch(e=>{
       console.warn(`[DBSRV] metadata request failed: ${e.message}`);
       delete this._metaReqCache[cacheKey];
     });
@@ -1252,8 +1253,8 @@ class BridgeCore {
     for(const [key,dev] of Object.entries(this.devices)){
       if(dev.type==='CDJ' && dev.state?.trackId>0 && dev.state?.hasTrack && dev.ip){
         const s=dev.state;
-        console.log(`[DBSRV] refresh P${s.playerNum} trackId=${s.trackId}`);
-        this.requestMetadata(dev.ip, s.slot||3, s.trackId, s.playerNum, true);
+        console.log(`[DBSRV] refresh P${s.playerNum} trackId=${s.trackId} trackType=${s.trackType}`);
+        this.requestMetadata(dev.ip, s.slot||3, s.trackId, s.playerNum, true, s.trackType||1);
       }
     }
   }
@@ -1458,7 +1459,7 @@ class BridgeCore {
     return items;
   }
 
-  async _dbserverMetadata(ip, slot, trackId, playerNum){
+  async _dbserverMetadata(ip, slot, trackId, playerNum, trackType=1){
     // Spoof as player 5 (unlikely to conflict with real CDJs 1-4)
     const spoofPlayer = 5;
     let sock;
@@ -1466,10 +1467,12 @@ class BridgeCore {
       sock = await this._dbConnect(ip, spoofPlayer);
 
       // Send REKORDBOX_METADATA_REQ (type 0x2002)
+      // trackType: 1=RB (rekordbox analyzed), 2=Unanalyzed, 5=AudioCD
+      const tt = trackType || 1;
       const txId = 1;
-      const rmst = this._dbRMST(spoofPlayer, 0x01, slot, 0x01);
+      const rmst = this._dbRMST(spoofPlayer, 0x01, slot, tt);
       const metaReq = this._dbBuildMsg(txId, 0x2002, [rmst, this._dbArg4(trackId)]);
-      console.log(`[DBSRV] P${playerNum} META_REQ: slot=${slot} trackId=${trackId} rmst=0x${((spoofPlayer<<24)|(0x01<<16)|(slot<<8)|0x01).toString(16)}`);
+      console.log(`[DBSRV] P${playerNum} META_REQ: slot=${slot} trackId=${trackId} trackType=${tt} rmst=0x${((spoofPlayer<<24)|(0x01<<16)|(slot<<8)|tt).toString(16)}`);
       sock.write(metaReq);
       const menuAvail = await this._dbReadResponse(sock);
       console.log(`[DBSRV] P${playerNum} META_RESP: ${menuAvail.length}B hex=${menuAvail.slice(0,40).toString('hex')}`);
