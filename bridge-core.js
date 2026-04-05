@@ -1522,66 +1522,7 @@ class BridgeCore {
         this.onTrackMetadata?.(playerNum, meta);
       }
 
-      // Request artwork if available
-      if(meta.artworkId){
-        try{
-          const artRmst = this._dbRMST(spoofPlayer, 0x08, slot, tt);
-          const artReq = this._dbBuildMsg(txId+2, 0x2003, [artRmst, this._dbArg4(meta.artworkId)]);
-          sock.write(artReq);
-          const artResp = await this._dbReadFullResponse(sock);
-          console.log(`[DBSRV] P${playerNum} artwork resp: ${artResp.length}B artworkId=${meta.artworkId}`);
-          // Find JPEG/PNG in response
-          let imgStart = artResp.indexOf(Buffer.from([0xFF,0xD8])); // JPEG
-          let imgEnd = imgStart>=0 ? artResp.lastIndexOf(Buffer.from([0xFF,0xD9])) : -1;
-          let mime = 'image/jpeg';
-          if(imgStart<0){
-            imgStart = artResp.indexOf(Buffer.from([0x89,0x50,0x4E,0x47])); // PNG
-            if(imgStart>=0){ imgEnd = artResp.length; mime = 'image/png'; }
-          }
-          if(imgStart>=0 && imgEnd>imgStart){
-            const img = artResp.slice(imgStart, mime==='image/jpeg'?imgEnd+2:imgEnd);
-            const b64 = `data:${mime};base64,` + img.toString('base64');
-            this._artCache[`art_${ip}_${slot}_${meta.artworkId}`] = b64;
-            this.onAlbumArt?.(playerNum, b64);
-            console.log(`[DBSRV] P${playerNum} artwork: ${img.length}B ${mime}`);
-          } else {
-            console.log(`[DBSRV] P${playerNum} artwork: no image found in ${artResp.length}B`);
-          }
-        }catch(e){console.warn(`[DBSRV] P${playerNum} artwork error:`,e.message);}
-      }
-
-      // Request waveform preview (type 0x2004)
-      try{
-        const wfRmst = this._dbRMST(spoofPlayer, 0x04, slot, tt);
-        const wfReq = this._dbBuildMsg(txId+3, 0x2004, [
-          wfRmst, this._dbArg4(0), this._dbArg4(trackId), this._dbArg4(0),
-          {tag:0x03, data:this._dbBinary(Buffer.alloc(0))}
-        ]);
-        sock.write(wfReq);
-        const wfResp = await this._dbReadFullResponse(sock);
-        // Parse waveform: Binary field contains raw waveform data
-        // Skip dbserver header, find Binary field (0x14)
-        let wfData=null;
-        for(let i=0;i<wfResp.length-5;i++){
-          if(wfResp[i]===0x14){
-            const len=wfResp.readUInt32BE(i+1);
-            if(len>100&&len<100000&&i+5+len<=wfResp.length){
-              wfData=wfResp.slice(i+5,i+5+len);
-              break;
-            }
-          }
-        }
-        if(wfData&&wfData.length>0){
-          const pts=[];
-          for(let i=0;i<wfData.length;i++){
-            pts.push({height:wfData[i]&0x1F, color:(wfData[i]>>5)&0x07});
-          }
-          this.onWaveformPreview?.(playerNum, {seg:0, pts, wfType:'preview'});
-          console.log(`[DBSRV] P${playerNum} waveform preview: ${pts.length} points`);
-        }
-      }catch(e){console.warn(`[DBSRV] P${playerNum} waveform error:`,e.message);}
-
-      // Teardown
+      // Teardown metadata connection, then request artwork/waveform on separate connections
       try{
         const teardown = this._dbBuildMsg(0xfffffffe, 0x0100, []);
         sock.write(teardown);
@@ -1591,6 +1532,50 @@ class BridgeCore {
     }finally{
       try{sock?.destroy();}catch(_){}
     }
+
+    // Request artwork + waveform on separate connections (non-blocking)
+    if(meta.artworkId){
+      this._dbserverArtwork(ip, slot, meta.artworkId, playerNum, `art_${ip}_${slot}_${meta.artworkId}`)
+        .catch(e=>console.warn(`[DBSRV] P${playerNum} artwork failed:`,e.message));
+    }
+    this._dbserverWaveform(ip, slot, trackId, playerNum, tt)
+      .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform failed:`,e.message));
+  }
+
+  async _dbserverWaveform(ip, slot, trackId, playerNum, trackType){
+    const spoofPlayer = 5;
+    let sock;
+    try{
+      sock = await this._dbConnect(ip, spoofPlayer);
+      const wfRmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
+      const wfReq = this._dbBuildMsg(1, 0x2004, [
+        wfRmst, this._dbArg4(0), this._dbArg4(trackId), this._dbArg4(0),
+        {tag:0x03, data:this._dbBinary(Buffer.alloc(0))}
+      ]);
+      sock.write(wfReq);
+      const wfResp = await this._dbReadFullResponse(sock);
+      // Find largest Binary field — contains waveform data
+      let wfData=null;
+      for(let i=0;i<wfResp.length-5;i++){
+        if(wfResp[i]===0x14){
+          const len=wfResp.readUInt32BE(i+1);
+          if(len>100&&len<100000&&i+5+len<=wfResp.length){
+            wfData=wfResp.slice(i+5,i+5+len);
+            break;
+          }
+        }
+      }
+      if(wfData&&wfData.length>0){
+        const pts=[];
+        for(let i=0;i<wfData.length;i++){
+          pts.push({height:wfData[i]&0x1F, color:(wfData[i]>>5)&0x07});
+        }
+        this.onWaveformPreview?.(playerNum, {seg:0, pts, wfType:'preview'});
+        console.log(`[DBSRV] P${playerNum} waveform preview: ${pts.length} points`);
+      } else {
+        console.log(`[DBSRV] P${playerNum} waveform: no data in ${wfResp.length}B resp`);
+      }
+    }finally{try{sock?.destroy();}catch(_){}}
   }
 
   async _dbserverArtwork(ip, slot, artworkId, playerNum, cacheKey){
@@ -1602,17 +1587,25 @@ class BridgeCore {
       const artReq = this._dbBuildMsg(1, 0x2003, [artRmst, this._dbArg4(artworkId)]);
       sock.write(artReq);
       const artResp = await this._dbReadFullResponse(sock);
-      const jpegStart = artResp.indexOf(Buffer.from([0xFF,0xD8]));
-      const jpegEnd = artResp.lastIndexOf(Buffer.from([0xFF,0xD9]));
-      if(jpegStart>=0 && jpegEnd>jpegStart){
-        const jpeg = artResp.slice(jpegStart, jpegEnd+2);
-        const b64 = 'data:image/jpeg;base64,' + jpeg.toString('base64');
+      console.log(`[DBSRV] P${playerNum} artwork resp: ${artResp.length}B`);
+      // Find JPEG or PNG
+      let imgStart = artResp.indexOf(Buffer.from([0xFF,0xD8]));
+      let imgEnd = imgStart>=0 ? artResp.lastIndexOf(Buffer.from([0xFF,0xD9])) : -1;
+      let mime = 'image/jpeg';
+      if(imgStart<0){
+        imgStart = artResp.indexOf(Buffer.from([0x89,0x50,0x4E,0x47]));
+        if(imgStart>=0){ imgEnd = artResp.length; mime = 'image/png'; }
+      }
+      if(imgStart>=0 && imgEnd>imgStart){
+        const img = artResp.slice(imgStart, mime==='image/jpeg'?imgEnd+2:imgEnd);
+        const b64 = `data:${mime};base64,` + img.toString('base64');
         this._artCache[cacheKey] = b64;
         this.onAlbumArt?.(playerNum, b64);
+        console.log(`[DBSRV] P${playerNum} artwork: ${img.length}B ${mime}`);
+      } else {
+        console.log(`[DBSRV] P${playerNum} artwork: no image in ${artResp.length}B`);
       }
-      try{sock.write(this._dbBuildMsg(0xfffffffe,0x0100,[]));sock.destroy();}catch(_){}
-    }catch(e){throw e;}
-    finally{try{sock?.destroy();}catch(_){}}
+    }finally{try{sock?.destroy();}catch(_){}}
   }
 }
 

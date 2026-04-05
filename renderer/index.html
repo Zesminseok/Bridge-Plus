@@ -365,12 +365,18 @@ const _CAMELOT={
 function _toCamelot(k){
   if(!k)return '';
   const t=k.trim();
-  // 이미 카멜롯 형식 (1A~12A, 1B~12B)
-  if(/^([1-9]|1[0-2])[AB]$/i.test(t))return t.toUpperCase();
-  // 표준 → 카멜롯 변환: "minor" → "m", 음이름 정규화
+  // 이미 카멜롯 형식이면 역변환해서 둘 다 표시
+  if(/^([1-9]|1[0-2])[AB]$/i.test(t)){
+    const cam=t.toUpperCase();
+    // Reverse lookup: find original key from camelot
+    const orig=Object.entries(_CAMELOT).find(([_,v])=>v===cam);
+    return orig ? cam+' / '+orig[0] : cam;
+  }
+  // 표준 → 카멜롯 변환
   const norm=t.replace(/\s*(minor|maj)\s*/i,(m,p)=>p.toLowerCase()==='minor'?'m':'')
               .replace(/\s+/g,'');
-  return _CAMELOT[norm]||_CAMELOT[norm.replace('♭','b').replace('♯','#')]||k;
+  const cam=_CAMELOT[norm]||_CAMELOT[norm.replace('♭','b').replace('♯','#')]||'';
+  return cam ? cam+' / '+t : t;
 }
 
 
