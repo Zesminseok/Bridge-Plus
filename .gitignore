@@ -6,3 +6,15 @@ node_modules/
 package/
 .claude/
 .serena/
+
+# Secrets / credentials
+.env
+.env.*
+*.pem
+*.key
+*.secret
+credentials.json
+secrets.json
+token.json
+*.p12
+*.pfx
