@@ -380,12 +380,17 @@ function parsePDJL(msg){
 
   if(type===PDJL.CDJ && msg.length>=0x90){
     const pNum = msg[0x24]; if(pNum<1||pNum>6) return null;
-    // Debug: dump 0xA0-0xB0 area for first packet per player to find media color
+    // Debug: dump wider range to find media color field
     if(!parsePDJL._cdjDump)parsePDJL._cdjDump={};
     if(!parsePDJL._cdjDump[pNum]){
       parsePDJL._cdjDump[pNum]=true;
-      const end=Math.min(msg.length,0xC8);
-      console.log(`[CDJ] P${pNum} type=0x0A len=${msg.length} hex@0xA0: ${msg.slice(0xA0,end).toString('hex')}`);
+      // Search for value 0x02 (Red) in the packet — USB color should be consistent
+      const hits=[];
+      for(let i=0xC0;i<msg.length;i++){if(msg[i]===0x02)hits.push('0x'+i.toString(16));}
+      console.log(`[CDJ] P${pNum} len=${msg.length} val=2 at: ${hits.join(',')}`);
+      if(msg.length>0x110){
+        console.log(`[CDJ] P${pNum} hex@0xC0: ${msg.slice(0xC0,0x110).toString('hex')}`);
+      }
     }
     const p1   = msg[0x7B];
     const state= P1_TO_STATE[p1] ?? STATE.IDLE;
