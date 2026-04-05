@@ -177,7 +177,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dhwl{font:400 10px var(--mn);color:var(--tx3)}
 .dhwb{padding:2px 7px;border-radius:3px;font:600 8px var(--mn);cursor:pointer;border:1px solid rgba(167,139,250,.25);background:0;color:var(--pur);transition:all .12s}
 .dhwb:hover{background:rgba(167,139,250,.1)}.dhwb.ac{background:rgba(167,139,250,.2);border-color:var(--pur)}
-.ddz{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 13px;gap:6px;min-height:140px;color:var(--tx3)}
+.ddz{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 13px;gap:6px;min-height:140px;color:var(--tx3);cursor:pointer;transition:border-color .15s,background .15s}
+.ddz:hover{background:rgba(90,240,179,.03)}
 .ddzi{width:28px;height:28px;border:1.5px dashed var(--tx3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px}
 .dk.dov .ddzi{border-color:var(--blu);color:var(--blu)}
 .add-deck-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border:1.5px dashed var(--bdr2);border-radius:12px;cursor:pointer;color:var(--tx3);font:600 11px var(--sn);background:0;transition:all .15s;width:100%}
@@ -1131,7 +1132,7 @@ function deckHTML(slot){
     if(!isHW){
       return`<div class="dk" id="dk${slot}" data-st="empty">
         <div class="dtop"><div class="dhd"><span class="did" style="color:var(--tx3)">${label}</span><span class="dbadge bm">EMPTY</span><div class="dht" style="margin-left:auto"><button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button></div></div></div>
-        <div class="ddz"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">음원 드래그</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG</div></div>
+        <div class="ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">드래그 또는 클릭하여 열기</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG · M4A</div></div>
       </div>`;
     }
     // HW unloaded: same structure as loaded deck but with empty waveform placeholders
@@ -1209,6 +1210,14 @@ function bindDeck(slot){
     const f=e.dataTransfer.files[0];
     if(f&&(f.type.startsWith('audio/')||/\.(mp3|wav|flac|aac|ogg|m4a|aiff)$/i.test(f.name)))loadFile(slot,f);
   });
+  // Click to open file picker
+  const ddzEl=el.querySelector('.ddz[data-a="open"]');
+  if(ddzEl){ddzEl.addEventListener('click',()=>{
+    const inp=document.createElement('input');inp.type='file';
+    inp.accept='audio/*,.mp3,.wav,.flac,.aac,.ogg,.m4a,.aiff,.aif';
+    inp.onchange=()=>{const f=inp.files[0];if(f)loadFile(slot,f);};
+    inp.click();
+  });}
   // Overview canvas: click → seek
   document.getElementById('dwov'+slot)?.addEventListener('click',e=>{
     const r=e.target.closest('.dwov');if(!r)return;
