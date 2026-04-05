@@ -394,10 +394,11 @@ function parsePDJL(msg){
     }
     const p1   = msg[0x7B];
     const state= P1_TO_STATE[p1] ?? STATE.IDLE;
-    // BPM: uint32BE at 0x90 — top bit 0x80 = valid, lower 16 bits = BPM×100
-    const bpmRaw = msg.length>0x93 ? msg.readUInt32BE(0x90) : 0;
-    const bpmEff = (bpmRaw&0x80000000)&&bpmRaw!==0x80000000 ? (bpmRaw&0xFFFF)/100 : 0;
-    // Pitch: signed offset from 0x100000 at 0x8C
+    // BPM: uint16BE at 0x92–0x93 = current (effective) BPM × 100
+    // Ref: https://djl-analysis.deepsymmetry.org/djl-analysis/vcdj.html
+    const bpmRaw16 = msg.length>0x93 ? msg.readUInt16BE(0x92) : 0;
+    const bpmEff = (bpmRaw16>0 && bpmRaw16!==0xFFFF) ? bpmRaw16/100 : 0;
+    // Pitch: signed offset from 0x100000 at 0x8C–0x8F
     const pitchRaw = msg.length>0x8F ? msg.readUInt32BE(0x8C) : 0x100000;
     const pitch = (pitchRaw-0x100000)/0x100000*100;
     // Base BPM = effective / (1 + pitch/100)
@@ -406,7 +407,21 @@ function parsePDJL(msg){
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
     const barsRemain = msg.length>0xA5 ? msg.readUInt16BE(0xA4) : 0;
     const trackBeats = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
+    // Flags byte F at 0x89 (Deep Symmetry spec):
+    //   bit 6 = playing, bit 5 = master, bit 4 = sync, bit 3 = on-air
     const flags = msg.length>0x89 ? msg[0x89] : 0;
+    const isSync   = !!(flags & 0x10);  // bit 4
+    const isMaster = !!(flags & 0x20);  // bit 5
+    const isOnAir  = !!(flags & 0x08);  // bit 3
+    // Vinyl/CDJ jog mode at 0x9D (P3)
+    const p3 = msg.length>0x9D ? msg[0x9D] : 0;
+    const isVinylMode = (p3===0x09 || p3===0x0A); // forward/backward vinyl
+    // Debug (first 3 packets per player)
+    if(!parsePDJL._syncDbg)parsePDJL._syncDbg={};
+    if(!parsePDJL._syncDbg[pNum]||parsePDJL._syncDbg[pNum]<3){
+      parsePDJL._syncDbg[pNum]=(parsePDJL._syncDbg[pNum]||0)+1;
+      console.log(`[CDJ] P${pNum} flags@89=0x${flags.toString(16)} sync=${isSync} master=${isMaster} onAir=${isOnAir} bpmRaw16=0x${bpmRaw16.toString(16)} bpmEff=${bpmEff} pitch=${pitch.toFixed(3)} baseBpm=${baseBpm.toFixed(2)} p3=0x${p3.toString(16)} vinyl=${isVinylMode}`);
+    }
     return{
       kind:'cdj', playerNum:pNum, name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
@@ -414,13 +429,13 @@ function parsePDJL(msg){
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
       pitch,
       trackId: msg.readUInt32BE(0x2C),
-      trackDeviceId: msg[0x28],  // source player that owns the media
-      slot:     msg[0x29],       // 0=None, 1=CD, 2=SD, 3=USB, 4=Collection
-      trackType: msg[0x2A],      // 0=None, 1=RB, 2=Unanalyzed, 5=AudioCD
+      trackDeviceId: msg[0x28],
+      slot:     msg[0x29],
+      trackType: msg[0x2A],
       hasTrack: msg[0x29]>0,
       beatNum, beatInBar, barsRemain, trackBeats,
       firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
-      isOnAir:  !!(flags&0x10), isMaster: !!(flags&0x20), isSync: !!(flags&0x01),
+      isOnAir, isMaster, isSync, isVinylMode,
     };
   }
   if((type===PDJL.DJM || type===PDJL.DJM2) && msg.length>=0x70){
@@ -565,8 +580,10 @@ class BridgeCore {
     this.onWaveformPreview = null;  // (playerNum, {seg, pts, wfType}) => {}
     this.onWaveformDetail  = null;  // (playerNum, {pts, wfType:'detail'}) => {}
     this.onCuePoints       = null;  // (playerNum, [{name, type, time, colorId}]) => {}
+    this.onBeatGrid        = null;  // (playerNum, {beats:[{beatInBar,bpm,timeMs}], baseBpm}) => {}
     this.onAlbumArt       = null;   // (playerNum, jpegBuffer) => {}
     this._artCache = {};  // trackId -> {playerNum, jpegBase64}
+    this._beatGrids = {};  // playerNum -> [{beatInBar, bpm, timeMs}]
     this._dbConns  = {};  // ip -> net.Socket
   }
 
@@ -724,7 +741,7 @@ class BridgeCore {
     this._dbConns={};
     // remove all callbacks to prevent post-stop activity
     this.onNodeDiscovered=null; this.onCDJStatus=null; this.onDJMStatus=null;
-    this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null; this.onWaveformDetail=null; this.onCuePoints=null;
+    this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null; this.onWaveformDetail=null; this.onCuePoints=null; this.onBeatGrid=null;
     this.onAlbumArt=null; this.onTrackMetadata=null;
     console.log('[BridgeCore] stop: all sockets and connections closed');
   }
@@ -1161,19 +1178,23 @@ class BridgeCore {
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
         if(acc && p.beatNum > 0 && p.bpm > 0){
-          // Use BASE BPM (not pitch-adjusted) for waveform position mapping
-          // Waveform data is in native track time, so position must match
-          // beatNum is 1-based: beat 1 = first beat → position 0
-          const baseBpm = p.bpmTrack || p.bpm;
-          const msPerBeat = 60000 / baseBpm;
-          const absoluteMs = (p.beatNum - 1) * msPerBeat;
+          // Prefer beat grid lookup (Rekordbox-accurate ms positions)
+          const bg = this._beatGrids[p.playerNum];
+          const beatIdx = p.beatNum - 1; // 0-based index
+          if(bg && beatIdx >= 0 && beatIdx < bg.length){
+            timecodeMs = bg[beatIdx].timeMs;
+          } else {
+            // Fallback: calculate from baseBpm
+            const baseBpm = p.bpmTrack || p.bpm;
+            const msPerBeat = 60000 / baseBpm;
+            timecodeMs = Math.round((p.beatNum - 1) * msPerBeat);
+          }
           const deltaBn = p.beatNum - acc.prevBn;
           if(deltaBn > 0 && acc.dbgCount < 20){
             acc.dbgCount++;
-            try{console.log(`[TC] P${p.playerNum} beat=${p.beatNum} delta=${deltaBn} ms=${Math.round(absoluteMs)} bpm=${p.bpm}`);}catch(_){}
+            try{console.log(`[TC] P${p.playerNum} beat=${p.beatNum} delta=${deltaBn} ms=${timecodeMs} bpm=${p.bpm} ${bg?'(grid)':'(calc)'}`);}catch(_){}
           }
           acc.prevBn = p.beatNum;
-          timecodeMs = Math.round(absoluteMs);
         } else if(acc && p.isPlaying && (p.bpm<=0||p.beatNum<=0)){
           // Short samples / no BPM: use wall-clock elapsed time
           if(!acc._playStart) acc._playStart = Date.now();
@@ -1614,6 +1635,8 @@ class BridgeCore {
         .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message));
       this._dbserverCuePoints(ip, slot, trackId, playerNum, tt)
         .catch(e=>console.warn(`[DBSRV] P${playerNum} cue points failed:`,e.message));
+      this._dbserverBeatGrid(ip, slot, trackId, playerNum, tt)
+        .catch(e=>console.warn(`[DBSRV] P${playerNum} beat grid failed:`,e.message));
     }catch(e){
       throw e;
     }finally{
@@ -1741,6 +1764,63 @@ class BridgeCore {
       }
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} cue points failed:`,e.message);
+    }finally{try{sock?.destroy();}catch(_){}}
+  }
+
+  async _dbserverBeatGrid(ip, slot, trackId, playerNum, trackType){
+    const spoofPlayer = 5;
+    let sock;
+    try{
+      sock = await this._dbConnect(ip, spoofPlayer);
+      // 0x2204 = BEAT_GRID_REQ — returns full beat grid with ms positions
+      const rmst = this._dbRMST(spoofPlayer, 0x01, slot, trackType||1);
+      const req = this._dbBuildMsg(1, 0x2204, [
+        rmst, this._dbArg4(0), this._dbArg4(trackId), this._dbArg4(0)
+      ]);
+      sock.write(req);
+      const resp = await this._dbReadFullResponse(sock);
+      // Find Binary field (tag 0x14) containing beat grid data
+      let bgData=null;
+      for(let i=0;i<resp.length-5;i++){
+        if(resp[i]===0x14){
+          const len=resp.readUInt32BE(i+1);
+          if(len>20&&len<2000000&&i+5+len<=resp.length){
+            bgData=resp.slice(i+5,i+5+len);
+            break;
+          }
+        }
+      }
+      if(bgData&&bgData.length>20){
+        // Beat grid format: 20-byte header + 16-byte entries (LITTLE ENDIAN)
+        // Entry: beat_within_bar(2B LE) + tempo(2B LE, BPM×100) + time_ms(4B LE) + 8B unknown
+        const hdrSize=20;
+        const entrySize=16;
+        const numEntries=Math.floor((bgData.length-hdrSize)/entrySize);
+        const beats=[];
+        let totalBpm=0, bpmCount=0;
+        for(let e=0;e<numEntries;e++){
+          const off=hdrSize+e*entrySize;
+          if(off+entrySize>bgData.length)break;
+          const beatInBar=bgData.readUInt16LE(off);
+          const tempoRaw=bgData.readUInt16LE(off+2);
+          const timeMs=bgData.readUInt32LE(off+4);
+          const bpm=tempoRaw/100;
+          if(bpm>0&&bpm<999){ totalBpm+=bpm; bpmCount++; }
+          beats.push({beatInBar, bpm, timeMs});
+        }
+        const baseBpm=bpmCount>0?Math.round(totalBpm/bpmCount*100)/100:0;
+        if(beats.length>0){
+          this._beatGrids[playerNum] = beats;
+          this.onBeatGrid?.(playerNum, {beats, baseBpm});
+          console.log(`[DBSRV] P${playerNum} beat grid: ${beats.length} beats, baseBpm=${baseBpm}`);
+        } else {
+          console.log(`[DBSRV] P${playerNum} beat grid: no entries in ${bgData.length}B`);
+        }
+      } else {
+        console.log(`[DBSRV] P${playerNum} beat grid: no data in ${resp?.length||0}B resp`);
+      }
+    }catch(e){
+      console.warn(`[DBSRV] P${playerNum} beat grid failed:`,e.message);
     }finally{try{sock?.destroy();}catch(_){}}
   }
 

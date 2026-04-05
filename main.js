@@ -117,6 +117,7 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onWaveformPreview=(pn,wf)=>win?.webContents.send('bridge:wfpreview',{playerNum:pn,...wf});
     bridge.onWaveformDetail=(pn,wf)=>win?.webContents.send('bridge:wfdetail',{playerNum:pn,...wf});
     bridge.onCuePoints=(pn,cues)=>win?.webContents.send('bridge:cuepoints',{playerNum:pn,cues});
+    bridge.onBeatGrid=(pn,bg)=>win?.webContents.send('bridge:beatgrid',{playerNum:pn,...bg});
     bridge.onAlbumArt=(pn,b64)=>win?.webContents.send('bridge:albumart',{playerNum:pn,art:b64});
     bridge.onTrackMetadata=(pn,meta)=>win?.webContents.send('bridge:trackmeta',{playerNum:pn,...meta});
     await bridge.start();push();

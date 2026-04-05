@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('bridge',{
   onWaveformPreview:(cb)=>ipcRenderer.on('bridge:wfpreview',(_,d)=>cb(d)),
   onWaveformDetail:(cb)=>ipcRenderer.on('bridge:wfdetail',(_,d)=>cb(d)),
   onCuePoints:(cb)=>ipcRenderer.on('bridge:cuepoints',(_,d)=>cb(d)),
+  onBeatGrid:(cb)=>ipcRenderer.on('bridge:beatgrid',(_,d)=>cb(d)),
   onAlbumArt:(cb)=>ipcRenderer.on('bridge:albumart',(_,d)=>cb(d)),
   onTrackMeta:(cb)=>ipcRenderer.on('bridge:trackmeta',(_,d)=>cb(d)),
   refreshMeta:()=>ipcRenderer.invoke('bridge:refreshMeta'),

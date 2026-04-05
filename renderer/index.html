@@ -85,13 +85,14 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dkwaves{flex:1;min-width:0}
 .dkbtn{width:33px;height:33px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:transparent;transition:all .14s;letter-spacing:.03em;flex-shrink:0}
 .dkbtn:disabled{opacity:.25;cursor:not-allowed}
+.dk[data-st="hw"] .dkbtn,.dk[data-st="hwplay"] .dkbtn{pointer-events:none}
 /* CUE button states: dim → medium (playing) → bright (cue active) → pressed (extra bright) */
-.dkbtn.dkcue{border-color:rgba(251,191,36,.25);color:rgba(251,191,36,.35)}
-.dkbtn.dkcue.medium{border-color:rgba(251,191,36,.5);color:rgba(251,191,36,.7);background:rgba(251,191,36,.06)}
-.dkbtn.dkcue.ac{border-color:var(--ylw);color:var(--ylw);background:rgba(251,191,36,.2);box-shadow:0 0 10px rgba(251,191,36,.4)}
+.dkbtn.dkcue{border-color:rgba(251,191,36,.6);color:rgba(251,191,36,.7);text-shadow:0 0 4px rgba(251,191,36,.2)}
+.dkbtn.dkcue.medium{border-color:#fbbf24;color:#fbbf24;background:rgba(251,191,36,.15);text-shadow:0 0 6px rgba(251,191,36,.4)}
+.dkbtn.dkcue.ac{border-color:#fbbf24;color:#fbbf24;background:rgba(251,191,36,.3);box-shadow:0 0 14px rgba(251,191,36,.6),inset 0 0 10px rgba(251,191,36,.2);text-shadow:0 0 8px rgba(251,191,36,.6)}
 /* PLAY button states: dim → blink (cue state) → bright (playing) */
-.dkbtn.dkplay{border-color:rgba(52,211,153,.25);color:rgba(52,211,153,.35)}
-.dkbtn.dkplay.ac{border-color:var(--grn);color:var(--grn);background:rgba(52,211,153,.18);box-shadow:0 0 10px rgba(52,211,153,.35)}
+.dkbtn.dkplay{border-color:rgba(52,211,153,.6);color:rgba(52,211,153,.7);text-shadow:0 0 4px rgba(52,211,153,.2)}
+.dkbtn.dkplay.ac{border-color:#34d399;color:#34d399;background:rgba(52,211,153,.3);box-shadow:0 0 14px rgba(52,211,153,.6),inset 0 0 10px rgba(52,211,153,.2);text-shadow:0 0 8px rgba(52,211,153,.6)}
 .dkbtn.dkplay.blink{animation:play-blink 1s ease-in-out infinite}
 @keyframes play-blink{0%,100%{border-color:rgba(52,211,153,.25);color:rgba(52,211,153,.35);background:transparent;box-shadow:none}50%{border-color:var(--grn);color:var(--grn);background:rgba(52,211,153,.15);box-shadow:0 0 8px rgba(52,211,153,.3)}}
 .deck-row.compact .dkbtn{width:24px;height:24px}
@@ -162,10 +163,10 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* SYNC / MASTER LED buttons — fixed position below timecode */
 .dksm{display:flex;gap:3px;align-items:center;margin-left:auto;flex-shrink:0}
 .dksm-btn{padding:2px 7px;border-radius:3px;font:700 8px var(--mn);letter-spacing:.05em;border:1px solid;background:transparent;transition:all .15s;cursor:default;min-width:42px;text-align:center}
-.dksm-sync{border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.2)}
-.dksm-sync.on{border-color:rgba(255,255,255,.6);color:#fff;background:rgba(255,255,255,.1);box-shadow:0 0 6px rgba(255,255,255,.15)}
-.dksm-master{border-color:rgba(255,165,0,.15);color:rgba(255,165,0,.2)}
-.dksm-master.on{border-color:rgba(255,165,0,.7);color:#ff9500;background:rgba(255,165,0,.12);box-shadow:0 0 6px rgba(255,165,0,.2)}
+.dksm-sync{border-color:rgba(255,255,255,.2);color:rgba(255,255,255,.3)}
+.dksm-sync.on{border-color:#fff;color:#fff;background:rgba(255,255,255,.25);box-shadow:0 0 10px rgba(255,255,255,.5);font-weight:700}
+.dksm-master{border-color:rgba(255,165,0,.25);color:rgba(255,165,0,.35)}
+.dksm-master.on{border-color:#ff9500;color:#ff9500;background:rgba(255,165,0,.18);box-shadow:0 0 8px rgba(255,165,0,.3)}
 .dhw{padding:4px 13px;border-top:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between}
 .dhwl{font:400 10px var(--mn);color:var(--tx3)}
 .dhwb{padding:2px 7px;border-radius:3px;font:600 8px var(--mn);cursor:pointer;border:1px solid rgba(167,139,250,.25);background:0;color:var(--pur);transition:all .12s}
@@ -202,7 +203,7 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 .dvm-st{display:flex;gap:1px;width:7px;flex-shrink:0;height:100%}
 .dvm-st .dvm{flex:1;width:3px;border-radius:0}
 .dktn{padding:0 0 3px;display:flex;align-items:baseline;gap:0;min-width:0;overflow:hidden}
-.dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 0;min-width:0;position:relative;text-overflow:ellipsis}
+.dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 auto;min-width:0;position:relative;text-overflow:ellipsis}
 .dktn-t.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
 @keyframes marquee-scroll{0%,10%{transform:translateX(0)}45%,55%{transform:translateX(var(--scroll-dist,-200px))}90%,100%{transform:translateX(0)}}
 .dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:2;min-width:0}
@@ -805,6 +806,7 @@ function drawOverview(slot,prog){
   // Draw cue points (memory=white triangle, hot=colored triangle with letter)
   const _cueColors={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
   if(d.cuePoints&&d.dur>0){
+    ctx.font='bold 7px "DM Mono",monospace';
     for(const cue of d.cuePoints){
       const cx=Math.round(cue.timeMs/d.dur*W);
       if(cx<0||cx>=W)continue;
@@ -812,6 +814,11 @@ function drawOverview(slot,prog){
       ctx.fillStyle=col;ctx.fillRect(cx-.5,0,1,H);
       ctx.beginPath();ctx.moveTo(cx-3,0);ctx.lineTo(cx+3,0);ctx.lineTo(cx,4);ctx.closePath();
       ctx.fill();
+      // Hot cue label (A-H)
+      if(cue.type==='hot'&&cue.hotCueNum>0){
+        const label=String.fromCharCode(64+cue.hotCueNum);
+        ctx.fillStyle=col;ctx.fillText(label,cx+2,10);
+      }
     }
   }
   if(d.cp>0&&d.dur>0){
@@ -835,11 +842,11 @@ function drawZoomWaveform(slot,prog){
   const cv=document.getElementById('wzc'+slot);if(!cv||!cv.width)return;
   const W=cv.width,H=cv.height,ctx=d.wzCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
-  // Use waveform data's own duration for accurate index mapping
-  // Detail waveform: 150 pts/sec; Preview waveform: use deck duration
   const pts=wfData.length,mid=H/2;
-  const wfDur=isDetail?(pts/150*1000):d.dur;
+  // Use actual track duration (dur) for position — beat grid, cue points all use this
+  // Waveform index scaling: pts/dur ratio (detail waveform may differ from track length)
   const dur=d.dur,posMs=pos*dur;
+  const wfDur=isDetail?(pts/150*1000):(dur||1);
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
   const img=ctx.createImageData(W,H);const px4=img.data;
@@ -876,25 +883,46 @@ function drawZoomWaveform(slot,prog){
     }
   }
   ctx.putImageData(img,0,0);
-  // Beat grid overlaid — anchored to cached bar-start position
-  // Use baseBpm (native track time) since posMs is in native track time
+  // Beat grid overlaid — use dbserver beat grid if available, else fallback to calculated
   if(d.bpm>0&&dur>0){
-    const beatMs=60000/(d.baseBpm||d.bpm);
-    const anchor=d._barAnchorMs||0;
     const viewL=posMs-cX*msPerPx, viewR=posMs+(W-cX)*msPerPx;
-    const firstB=Math.ceil((viewL-anchor)/beatMs), lastB=Math.floor((viewR-anchor)/beatMs);
     ctx.font='bold 9px "DM Mono",monospace';
-    for(let b=firstB;b<=lastB;b++){
-      const bMs=anchor+b*beatMs;
-      const bpx=Math.round((bMs-posMs)/msPerPx+cX);
-      if(bpx<1||bpx>=W-1)continue;
-      const barNum=((b%4)+4)%4+1;
-      if(barNum===1){
-        ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);
-        ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);
-      }else{
-        ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);
-        ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(barNum,bpx+2,H-2);
+    if(d._beatGrid&&d._beatGrid.length>0){
+      // Binary search for first visible beat
+      const bg=d._beatGrid;
+      let lo=0, hi=bg.length-1;
+      while(lo<hi){const mid=(lo+hi)>>1;if(bg[mid].timeMs<viewL)lo=mid+1;else hi=mid;}
+      // Draw from first visible beat (with 1 beat margin) to end of view
+      for(let i=Math.max(0,lo-1);i<bg.length;i++){
+        const bt=bg[i];
+        if(bt.timeMs>viewR)break;
+        const bpx=Math.round((bt.timeMs-posMs)/msPerPx+cX);
+        if(bpx<1||bpx>=W-1)continue;
+        if(bt.beatInBar===1){
+          ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);
+        }else{
+          ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);
+          ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(bt.beatInBar,bpx+2,H-2);
+        }
+      }
+    }else{
+      // Fallback: calculated beat grid
+      const beatMs=60000/(d.baseBpm||d.bpm);
+      const anchor=d._barAnchorMs||0;
+      const firstB=Math.ceil((viewL-anchor)/beatMs), lastB=Math.floor((viewR-anchor)/beatMs);
+      for(let b=firstB;b<=lastB;b++){
+        const bMs=anchor+b*beatMs;
+        const bpx=Math.round((bMs-posMs)/msPerPx+cX);
+        if(bpx<1||bpx>=W-1)continue;
+        const barNum=((b%4)+4)%4+1;
+        if(barNum===1){
+          ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);
+        }else{
+          ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);
+          ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(barNum,bpx+2,H-2);
+        }
       }
     }
   }
@@ -912,6 +940,8 @@ function drawZoomWaveform(slot,prog){
       if(cue.type==='hot'&&cue.hotCueNum>0){
         const label=String.fromCharCode(64+cue.hotCueNum); // 1→A, 2→B...
         ctx.fillStyle=col;ctx.fillText(label,cpx+2,H-2);
+      }else if(cue.type==='memory'){
+        ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillText('M',cpx+2,H-2);
       }
     }
   }
@@ -932,7 +962,18 @@ function drawZoomWaveform(slot,prog){
   // BAR.BEAT counter — centered on playhead line, top
   if(d.bpm>0&&dur>0){
     ctx.font='bold 11px "DM Mono",monospace';
-    const bars=fBars(posMs,d.bpm);
+    let bars;
+    if(d._beatGrid&&d._beatGrid.length>0){
+      // Lookup bar.beat from beat grid
+      const bg=d._beatGrid;
+      let lo=0, hi=bg.length-1;
+      while(lo<hi){const mid=(lo+hi+1)>>1;if(bg[mid].timeMs<=posMs)lo=mid;else hi=mid-1;}
+      const barCount=Math.floor(lo/4)+1;
+      const beatInBar=bg[lo].beatInBar||((lo%4)+1);
+      bars=barCount+'.'+beatInBar;
+    }else{
+      bars=fBars(posMs,d.baseBpm||d.bpm);
+    }
     const bw=ctx.measureText(bars).width;
     const bx=cX-bw/2;
     ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(bx-4,1,bw+8,15);
@@ -1126,8 +1167,8 @@ function deckHTML(slot){
         <div class="dkctrl">
           <div class="dkart" id="dart${slot}" data-a="eject" data-i="${slot}">${artSrc?`<img src="${artSrc}" alt="">`:'<span class="noart-icon">♪</span>'}</div>
           <div class="dkctrl-btns">
-            <button class="dkbtn dkcue" data-a="cue" data-i="${slot}" ${isHW?'disabled':''}>CUE</button>
-            <button class="dkbtn dkplay" data-a="play" data-i="${slot}" ${isHW?'disabled':''}>${d.pl?'⏸':'▶'}</button>
+            <button class="dkbtn dkcue" data-a="cue" data-i="${slot}">CUE</button>
+            <button class="dkbtn dkplay" data-a="play" data-i="${slot}">${d.pl?'⏸':'▶'}</button>
           </div>
         </div>
         <div class="dkwaves">
@@ -1559,18 +1600,23 @@ function tick(){
     }
 
     // Smooth interpolated position for HW decks
+    // d.pos = last known position (from CDJ beat packet), d._posTime = when it was received
+    // We interpolate forward from there using wall-clock elapsed time
     let displayPos=d.pos||0;
-    if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
-      const target=d.pos+(Date.now()-d._posTime);
-      if(d._smoothPos==null||d._stateChanged) {d._smoothPos=target;d._stateChanged=false;}
+    if(d.type==='hw'&&d.pl&&d._posTime){
+      // Interpolate: pos advances at 1ms per 1ms of real time (native track rate)
+      const elapsed=Date.now()-d._posTime;
+      const target=d.pos+elapsed;
+      if(d._stateChanged){d._smoothPos=d.pos;d._stateChanged=false;}
+      else if(d._smoothPos==null){d._smoothPos=target;}
       else{
         const diff=target-d._smoothPos;
-        if(Math.abs(diff)>1000){d._smoothPos=target;} // large jump: snap
-        else{d._smoothPos+=diff*0.35;} // smooth convergence
+        if(Math.abs(diff)>2000){d._smoothPos=target;} // large jump: snap
+        else{d._smoothPos+=diff*0.5;} // faster convergence
       }
       displayPos=d._smoothPos;
     }else if(d.type==='hw'){
-      d._smoothPos=null; // reset on stop/pause so next play snaps
+      d._smoothPos=null;
     }
     const prog=d.dur>0?(displayPos/d.dur):0;
 
@@ -1588,7 +1634,7 @@ function tick(){
     const bkEl=document.getElementById('dbk'+slot);
     if(bkEl){
       let bkTxt='';
-      if(d.bpm>0) bkTxt=Math.round(d.baseBpm||d.bpm)+' BPM';
+      if(d.bpm>0){const _b=d.baseBpm||d.bpm;bkTxt=(_b%1===0?_b.toFixed(0):_b.toFixed(1))+' BPM';}
       else bkTxt='— BPM';
       if(d.key) bkTxt+=' '+d.key;
       bkEl.textContent=bkTxt;
@@ -1626,7 +1672,7 @@ function tick(){
     if(wfbEl&&d.bpm>0){
       const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
       const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
-      wfbEl.textContent=Math.round(d.bpm)+' '+ps;
+      wfbEl.textContent=(d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1))+' '+ps;
     }else if(wfbEl)wfbEl.textContent='';
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
@@ -1692,38 +1738,60 @@ function tick(){
       if(wzc&&wzc.width>0)drawZoomWaveform(slot,prog);
     }
 
-    // Beat phasor — ALWAYS (but freeze when stopped)
+    // Beat phasor — use beat grid lookup when available
     if(d.ld&&d.bpm>0){
       const beatMs=60000/(d.baseBpm||d.bpm);
-      let beatInBar, phaseInBeat;
-      if(d.type==='hw'&&d.beatInBar>0&&d._beatTime){
-        if(!d.pl){
-          // Stopped: freeze at current beat position
-          beatInBar=d.beatInBar;
+      let beatInBar=0, phaseInBeat=0, shouldShow=true;
+      if(d._beatGrid&&d._beatGrid.length>0){
+        // Beat grid lookup: binary search for current beat
+        const bg=d._beatGrid;
+        const pos=displayPos;
+        // If past last beat, freeze at last beat
+        if(pos>=bg[bg.length-1].timeMs){
+          beatInBar=bg[bg.length-1].beatInBar;
           phaseInBeat=0;
+          if(d.dur>0&&pos>=d.dur-100) shouldShow=false; // track ended
         }else{
-          // Playing: use CDJ's beatInBar + wall-clock interpolation for smooth phase
+          // Binary search: find last beat <= pos
+          let lo=0, hi=bg.length-1;
+          while(lo<hi){const mid=(lo+hi+1)>>1;if(bg[mid].timeMs<=pos)lo=mid;else hi=mid-1;}
+          const curBeat=bg[lo];
+          const nextBeat=bg[lo+1]||null;
+          beatInBar=curBeat.beatInBar;
+          if(nextBeat){
+            const span=nextBeat.timeMs-curBeat.timeMs;
+            phaseInBeat=span>0?Math.min(0.99,(pos-curBeat.timeMs)/span):0;
+          }else{
+            phaseInBeat=0;
+          }
+        }
+      }else if(d.type==='hw'&&d.beatInBar>0&&d._beatTime){
+        if(!d.pl){
+          beatInBar=d.beatInBar; phaseInBeat=0;
+        }else{
           beatInBar=d.beatInBar;
           const elapsed=Date.now()-d._beatTime;
           phaseInBeat=Math.min(0.99,elapsed/beatMs);
-          // Advance to next beat if elapsed > beatMs
           if(elapsed>beatMs){
             const extra=Math.floor(elapsed/beatMs);
             beatInBar=((beatInBar-1+extra)%4)+1;
             phaseInBeat=Math.min(0.99,(elapsed-extra*beatMs)/beatMs);
           }
         }
+        if(d.dur>0&&displayPos>=d.dur-100) shouldShow=false;
       }else{
         const barMs=beatMs*4;
         const posInBar=displayPos%barMs;
         beatInBar=Math.floor(posInBar/beatMs)+1;
         phaseInBeat=(posInBar%beatMs)/beatMs;
+        if(d.dur>0&&displayPos>=d.dur-100) shouldShow=false;
       }
       const blink=cfg.phasorMode==='blink';
       for(let b=1;b<=4;b++){
         const seg=document.getElementById('dphs'+slot+'_'+b);
         const fill=document.getElementById('dphsf'+slot+'_'+b);
         if(!seg||!fill)continue;
+        if(!shouldShow){seg.classList.remove('on');fill.style.width='0%';continue;}
         const active=b===beatInBar;
         if(blink){
           seg.classList.toggle('on',active);
@@ -1989,7 +2057,7 @@ if(E){
     const oldTid=dk._trackId||0;
     if(newTid>0 && oldTid>0 && newTid!==oldTid){
       console.log(`[UI] P${status.playerNum} track change: ${oldTid} → ${newTid}`);
-      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;
+      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;dk._beatGrid=null;
       dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
       dk._trackId=newTid;
       // Don't renderDecks() here — metadata will arrive shortly and trigger update
@@ -2003,7 +2071,7 @@ if(E){
       if(dk._noTrackCount>=3 && dk.ld){
         console.log(`[UI] P${status.playerNum} track ejected`);
         dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
-        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
+        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;dk._beatGrid=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
         renderDecks();
       }
       return;
@@ -2044,6 +2112,7 @@ if(E){
     dk.onAir=!!status.isOnAir;
     dk.master=!!status.isMaster;
     dk.sync=!!status.isSync;
+    dk.vinylMode=!!status.isVinylMode;
     if(status.pitch!==undefined)dk.pitch=Math.round(status.pitch*100)/100;
     if(status.mediaColor!==undefined&&status.mediaColor>0&&status.mediaColor<=8){
       dk._mediaColor=status.mediaColor;
@@ -2109,6 +2178,14 @@ if(E){
     const dk=DECKS[li];if(!dk)return;
     dk.cuePoints=d.cues;
     console.log(`[UI] P${d.playerNum} cues: ${d.cues.length} (${d.cues.map(c=>c.type==='hot'?'H'+c.hotCueNum:'M').join(',')})`);
+  });
+  // Beat grid from dbserver (0x2204) — accurate beat positions from Rekordbox analysis
+  window.bridge.onBeatGrid?.(d=>{
+    const li=d.playerNum-1;
+    const dk=DECKS[li];if(!dk)return;
+    dk._beatGrid=d.beats; // [{beatInBar, bpm, timeMs}]
+    if(d.baseBpm>0){dk.baseBpm=d.baseBpm;dk._metaBaseBpm=true;}
+    console.log(`[UI] P${d.playerNum} beat grid: ${d.beats.length} beats, baseBpm=${d.baseBpm}`);
   });
   // HW detail waveform from dbserver (150pts/sec — for zoom display)
   window.bridge.onWaveformDetail?.(d=>{
