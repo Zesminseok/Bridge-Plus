@@ -1091,11 +1091,11 @@ class BridgeCore {
         }
         if(acc && p.beatNum > 0 && p.bpm > 0){
           const deltaBn = p.beatNum - acc.prevBn;
-          if(deltaBn !== 0){
+          if(deltaBn > 0){
             const deltaMs = deltaBn * (60000 / p.bpm);
             // Cap: max 2 seconds per update, ignore wild jumps
-            if(Math.abs(deltaMs) < 2000){
-              acc.elapsedMs = Math.max(0, acc.elapsedMs + deltaMs);
+            if(deltaMs < 2000){
+              acc.elapsedMs += deltaMs;
             }
             // Debug: log first 20 beat changes
             if(acc.dbgCount < 20){
@@ -1289,16 +1289,17 @@ class BridgeCore {
       s.on('error', rej);
       s.on('timeout', ()=>{s.destroy();rej(new Error('port discovery timeout'));});
       s.connect(12523, ip, ()=>{
-        // Send "RemoteDBServ\0" with 4-byte length prefix
-        const msg = Buffer.alloc(4+12);
-        msg.writeUInt32BE(12, 0);
-        msg.write('RemoteDBServ', 4, 'ascii');
+        // Send "RemoteDBServer\0" with 4-byte BE length prefix
+        // length=15: "RemoteDBServer" (14) + NUL (1)
+        const msg = Buffer.alloc(4+15);
+        msg.writeUInt32BE(15, 0);
+        msg.write('RemoteDBServer\0', 4, 'ascii');
         s.write(msg);
       });
       s.once('data', d=>{
         s.destroy();
         if(d.length>=2) res(d.readUInt16BE(0));
-        else rej(new Error('bad port response'));
+        else rej(new Error(`bad port response len=${d.length} hex=${d.toString('hex')}`));
       });
     });
     console.log(`[DBSRV] ${ip} dbserver port=${realPort}`);
