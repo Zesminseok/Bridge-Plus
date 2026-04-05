@@ -473,7 +473,7 @@ function parsePDJL(msg){
   }
   // CDJ media slot info (type 0x28, ~96B) — contains USB color
   if(type===PDJL.CDJ_MEDIA && msg.length>=0x2C){
-    const pNum = msg[0x24];
+    const pNum = msg[0x21];
     // Log first occurrence for debug
     if(!parsePDJL._mediaDumped){
       parsePDJL._mediaDumped=true;
@@ -485,9 +485,9 @@ function parsePDJL(msg){
     // Try to find color at various offsets based on prolink-connect analysis
     // For 96B media packet: offset 0x27=deviceId, 0x2B=slot
     const slot = msg.length>0x2B ? msg[0x2B] : 0;
-    // Color might be at different offset in this smaller packet
-    // Try 0x38 (common for 96B packets) or scan for non-zero
-    const color = msg.length>0x38 ? msg[0x38] : 0;
+    // Color at last byte of 96B packet (0x5F) — confirmed Red=2 matches user's setting
+    const color = msg.length>0x5F ? msg[0x5F] : 0;
+    if(!parsePDJL._mediaColorLogged){parsePDJL._mediaColorLogged=true;console.log(`[MEDIA] P${pNum} slot=${slot} color=${color}`);}
     return{kind:'cdj_media', playerNum:pNum, name, slot, color};
   }
   // CDJ-3000 waveform preview (type 0x56, variable size)
