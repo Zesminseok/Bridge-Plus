@@ -862,8 +862,9 @@ function drawZoomWaveform(slot,prog){
   }
   ctx.putImageData(img,0,0);
   // Beat grid overlaid — anchored to cached bar-start position
+  // Use baseBpm (native track time) since posMs is in native track time
   if(d.bpm>0&&dur>0){
-    const beatMs=60000/d.bpm;
+    const beatMs=60000/(d.baseBpm||d.bpm);
     const anchor=d._barAnchorMs||0;
     const viewL=posMs-cX*msPerPx, viewR=posMs+(W-cX)*msPerPx;
     const firstB=Math.ceil((viewL-anchor)/beatMs), lastB=Math.floor((viewR-anchor)/beatMs);
@@ -1545,11 +1546,10 @@ function tick(){
     }
 
     // Interpolate timecode for smooth display (HW mode: pos updates on beat boundaries)
-    // timecodeMs is track position; track advances at pitched rate in real-time
+    // timecodeMs = (beatNum-1) * msPerBeat(baseBpm) → native track time, rate = 1.0
     let displayPos=d.pos||0;
     if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
-      const pitchMul=1+(d.pitch||0)/100;
-      displayPos+=((Date.now()-d._posTime)*pitchMul);
+      displayPos+=(Date.now()-d._posTime);
     }
     const prog=d.dur>0?(displayPos/d.dur):0;
 
@@ -1661,7 +1661,7 @@ function tick(){
 
     // Beat phasor — ALWAYS (but freeze when stopped)
     if(d.ld&&d.bpm>0){
-      const beatMs=60000/d.bpm;
+      const beatMs=60000/(d.baseBpm||d.bpm);
       let beatInBar, phaseInBeat;
       if(d.type==='hw'&&d.beatInBar>0&&d._beatTime){
         if(!d.pl){
@@ -1994,8 +1994,9 @@ if(E){
     if(wasLoaded&&!dk.ld)renderDecks(); // re-render when track unloaded
     if(status.beatInBar&&status.beatInBar!==dk.beatInBar){
       dk.beatInBar=status.beatInBar;dk._beatTime=Date.now();
-      // Cache beat grid anchor: ms position of bar start (beat 1)
-      if(dk.bpm>0){const bMs=60000/dk.bpm;dk._barAnchorMs=(dk.pos||0)-(status.beatInBar-1)*bMs;}
+      // Cache beat grid anchor: ms position of bar start (beat 1), using baseBpm (native track time)
+      const _abpm=dk.baseBpm||dk.bpm;
+      if(_abpm>0){const bMs=60000/_abpm;dk._barAnchorMs=(dk.pos||0)-(status.beatInBar-1)*bMs;}
     }
     dk.onAir=!!status.isOnAir;
     dk.master=!!status.isMaster;
