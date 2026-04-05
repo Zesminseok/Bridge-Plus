@@ -143,9 +143,10 @@ function mkStatus(port, devices, layers, faders){
   d.writeUInt16LE(port||0, 2);     // nodeListenerPort
 
   // layerSource[0-7] at body[10-17]
+  // Value must be 1 (active/internal) for Resolume to detect a player
   for(let n=0;n<8;n++){
     const layerData = layers && layers[n];
-    d[10+n] = layerData ? (n+1) : 0;  // source = CDJ number, 0 = none
+    d[10+n] = (layerData && layerData.state > 0) ? 1 : 0;
   }
 
   // layerStatus[0-7] at body[18-25]
@@ -194,10 +195,18 @@ function mkTime(layers, uptimeMs){
   buildHdr(TC.TIME).copy(b,0);
   const d = b.slice(24);  // body 130B
 
-  // layerCurrentTime[0-7] at body[0-31]
+  // layerCurrentTime[0-7] at body[0-31] — interpolated from wall clock
+  const now = Date.now();
   for(let n=0;n<8;n++){
     const ld = layers && layers[n];
-    if(ld) d.writeUInt32LE(u32(ld.timecodeMs||0), n*4);
+    if(ld){
+      let ms = ld.timecodeMs || 0;
+      // Interpolate: if playing, add elapsed time since last beat update
+      if(ld.state === 3 && ld._updateTime && ld.bpm > 0){
+        ms += (now - ld._updateTime);
+      }
+      d.writeUInt32LE(u32(ms), n*4);
+    }
   }
 
   // layerTotalTime[0-7] at body[32-63]
@@ -225,7 +234,8 @@ function mkTime(layers, uptimeMs){
   for(let n=0;n<8;n++){
     const ld = layers && layers[n];
     if(ld){
-      const ms = ld.timecodeMs || 0;
+      let ms = ld.timecodeMs || 0;
+      if(ld.state === 3 && ld._updateTime && ld.bpm > 0) ms += (now - ld._updateTime);
       const totalSec = Math.floor(ms / 1000);
       const h = Math.floor(totalSec / 3600);
       const m = Math.floor((totalSec % 3600) / 60);
@@ -293,7 +303,9 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
     d[5] = 0x01;  // syncMaster = Master
     d[7] = layerData.beatPhase || 0;
     d.writeUInt32LE(layerData.totalLength || 0, 8);   // trackLength ms
-    d.writeUInt32LE(layerData.timecodeMs || 0, 12);    // currentPosition ms
+    let curMs = layerData.timecodeMs || 0;
+    if(layerData.state === 3 && layerData._updateTime && layerData.bpm > 0) curMs += (Date.now() - layerData._updateTime);
+    d.writeUInt32LE(u32(curMs), 12);    // currentPosition ms (interpolated)
     d.writeUInt32LE(1000, 16);                          // speed (1000 = normal)
     d.writeUInt32LE(0, 33);                             // beatNumber
     const bpm = layerData.bpm || 0;
@@ -761,6 +773,15 @@ class BridgeCore {
 
   _sendStatus(){
     const pkt = mkStatus(this.listenerPort, this.devices, this.layers, this.faders);
+    // Debug: log layers state once per second (first 10 times)
+    if(!this._stDbg)this._stDbg=0;
+    if(this._stDbg<10 && Date.now()-this.startTime>2000){
+      if(!this._stDbgLast || Date.now()-this._stDbgLast>1000){
+        this._stDbgLast=Date.now();this._stDbg++;
+        const ls=this.layers.map((l,i)=>l?`L${i+1}:st=${l.state},bpm=${l.bpm},tc=${l.timecodeMs}`:'null');
+        try{console.log(`[ST] layers: ${ls.join(' | ')} hwMode=[${this.hwMode.slice(0,4)}]`);}catch(_){}
+      }
+    }
     this._send(pkt, TC.P_BC);
     this._sendToArenas(pkt, TC.P_BC);
     this._sendToArenasLPort(pkt);
@@ -1139,6 +1160,7 @@ class BridgeCore {
       trackName:   newTrackName,
       artistName:  newArtistName,
       beatPhase:   data.beatPhase||0,
+      _updateTime: Date.now(),  // for timecode interpolation
     };
   }
 
