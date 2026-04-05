@@ -1554,10 +1554,11 @@ function tick(){
     if(timeEl)timeEl.textContent=fTmMs(displayPos)+' / '+(d.dur>0?fTmMs(d.dur):'--:--.--');
     const bkEl=document.getElementById('dbk'+slot);
     if(bkEl){
-      if(d.bpm>0){
-        const base=d.baseBpm||d.bpm;
-        bkEl.textContent=Math.round(base)+' BPM';
-      } else bkEl.textContent='— BPM';
+      let bkTxt='';
+      if(d.bpm>0) bkTxt=Math.round(d.baseBpm||d.bpm)+' BPM';
+      else bkTxt='— BPM';
+      if(d.key) bkTxt+='  '+d.key;
+      bkEl.textContent=bkTxt;
     }
     const dtnEl=document.getElementById('dtn'+slot);
     if(dtnEl){
