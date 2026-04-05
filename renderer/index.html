@@ -54,9 +54,9 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dwz{height:48px;margin-bottom:4px}
 .deck-row.compact .ddz{padding:16px 10px;min-height:100px}
 .dk{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;transition:border-color .2s;min-width:0}
-.dk[data-st="play"]{border-color:rgba(52,211,153,.4)}.dk[data-st="cue"]{border-color:rgba(251,191,36,.45)}.dk[data-st="hw"]{border-color:rgba(167,139,250,.4)}.dk.dov{border-color:rgba(96,165,250,.5)!important}
+.dk[data-st="play"]{border-color:rgba(52,211,153,.4)}.dk[data-st="cue"]{border-color:rgba(251,191,36,.45)}.dk[data-st="hw"]{border-color:rgba(167,139,250,.25)}.dk[data-st="hwplay"]{border-color:rgba(52,211,153,.4)}.dk.dov{border-color:rgba(96,165,250,.5)!important}
 .dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--grn),transparent)}
-.dk[data-st="play"] .dshim{opacity:1;animation:shimmer 2s ease-in-out infinite}
+.dk[data-st="play"] .dshim,.dk[data-st="hwplay"] .dshim{opacity:1;animation:shimmer 2s ease-in-out infinite}
 .dk[data-st="cue"] .dshim{opacity:.6;background:linear-gradient(90deg,transparent,var(--ylw),transparent)}
 .dtop{padding:10px 13px 0}
 .dhd{display:flex;align-items:center;margin-bottom:5px;gap:4px}
@@ -64,7 +64,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .did-n{font:700 18px var(--mn);letter-spacing:-.02em;line-height:1}
 .dbadge{font:600 9px var(--mn);padding:2px 5px;border-radius:3px;letter-spacing:.05em}
 .dtc{font:600 14px var(--mn);color:var(--tx4);letter-spacing:-.01em;font-variant-numeric:tabular-nums;transition:color .15s;flex:1;text-align:right;white-space:nowrap}
-.dk[data-st="play"] .dtc,.dk[data-st="cue"] .dtc{color:var(--tx)}
+.dk[data-st="play"] .dtc,.dk[data-st="hwplay"] .dtc,.dk[data-st="cue"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
 .dwov{height:18px;margin:0 0 2px;background:rgba(0,0,0,.45);border-radius:2px;overflow:hidden;cursor:pointer;position:relative}
 .dwov canvas{width:100%;height:100%;display:block}
@@ -121,7 +121,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .din{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:7px}
 .dil{font:400 9px var(--sn);color:var(--tx3);letter-spacing:.04em}
 .div{font:600 11px var(--mn);color:var(--tx4);transition:color .15s;font-variant-numeric:tabular-nums}
-.dk[data-st="play"] .div,.dk[data-st="cue"] .div{color:var(--tx)}
+.dk[data-st="play"] .div,.dk[data-st="hwplay"] .div,.dk[data-st="cue"] .div{color:var(--tx)}
 .dfrow{display:flex;align-items:center;gap:7px;padding:4px 13px;border-top:1px solid var(--bg3)}
 .dfbar{flex:1;height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
 .dfbarf{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--pur),var(--blu));transition:width .08s}
@@ -196,9 +196,10 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 @keyframes marquee-scroll{0%,10%{transform:translateX(0)}45%,55%{transform:translateX(var(--scroll-dist,-200px))}90%,100%{transform:translateX(0)}}
 .dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:2;min-width:0}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.dk[data-st="play"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
-.dbk-hd{font:600 12px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;margin-left:auto;padding-left:6px;white-space:nowrap;flex-shrink:0}
-.dk[data-st="play"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
+.dk[data-st="play"] .dktn-time,.dk[data-st="hwplay"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
+.dktn-info{padding:0 0 3px;gap:8px;justify-content:flex-start}
+.dbk-hd{font:600 11px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0}
+.dk[data-st="play"] .dbk-hd,.dk[data-st="hwplay"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
 .devbar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,0,0,.3);border:1px solid var(--bdr);border-radius:6px;margin-bottom:8px;min-height:44px;flex-wrap:wrap}
 .devbar-item{display:flex;align-items:center;gap:5px;padding:4px 8px;background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:5px;transition:border-color .2s}
 .devbar-item.dvi-play{border-color:rgba(52,211,153,.3)}
@@ -912,25 +913,7 @@ function drawZoomWaveform(slot,prog){
     ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(bx-4,1,bw+8,15);
     ctx.fillStyle='#90d4ff';ctx.fillText(bars,bx,13);
   }
-  // KEY — top-right corner
-  if(d.key){
-    ctx.font='bold 13px "DM Mono",monospace';
-    const kw=ctx.measureText(d.key).width;
-    ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(W-kw-10,1,kw+9,17);
-    ctx.fillStyle='#a8ff60';ctx.fillText(d.key,W-kw-5,14);
-  }
-  // BPM/pitch box — bottom-right
-  if(d.bpm>0){
-    const baseBpm=d.baseBpm||d.bpm;
-    const effBpm=d.bpm;
-    const pitchPct=baseBpm>0?((effBpm-baseBpm)/baseBpm*100):0;
-    const pitchStr=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
-    const bpmLabel=Math.round(baseBpm)+(baseBpm!==effBpm?'/'+effBpm.toFixed(1):'')+' '+pitchStr;
-    ctx.font='bold 12px "DM Mono",monospace';
-    const bw2=ctx.measureText(bpmLabel).width;
-    ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(W-bw2-10,H-18,bw2+9,17);
-    ctx.fillStyle='#e8e8ff';ctx.fillText(bpmLabel,W-bw2-5,H-4);
-  }
+  // KEY + BPM/pitch rendered via HTML overlay (wf-key, wf-bpm spans) — not canvas
 }
 
 // ════ Deck management ════════════════════════════════
@@ -1094,7 +1077,8 @@ function deckHTML(slot){
           ${!isHW?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
         </div>
       </div>
-      <div class="dktn"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span><span class="dktn-a" id="dta${slot}">${d.ar?` · ${d.ar}`:''}</span><span class="dbk-hd" id="dbk${slot}">—</span><span class="dktn-time" id="dtime${slot}" style="padding-left:8px">0:00.00 / --:--.--</span></div>
+      <div class="dktn"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span><span class="dktn-a" id="dta${slot}">${d.ar?` · ${d.ar}`:''}</span></div>
+      <div class="dktn dktn-info"><span class="dbk-hd" id="dbk${slot}">—</span><span class="dktn-time" id="dtime${slot}">0:00.00 / --:--.--</span></div>
       <div class="dtbody">
         <div class="dkctrl">
           <div class="dkart" id="dart${slot}" data-a="eject" data-i="${slot}">${artSrc?`<img src="${artSrc}" alt="">`:'<span class="noart-icon">♪</span>'}</div>
@@ -1541,7 +1525,12 @@ function tick(){
     const prog=d.dur>0?(d.pos/d.dur):0;
 
     // UI updates — ALWAYS
-    el.setAttribute('data-st',d.type==='hw'?'hw':d.pl?'play':d.cu?'cue':'stop');
+    el.setAttribute('data-st',d.type==='hw'?(d.pl?'hwplay':'hw'):d.pl?'play':d.cu?'cue':'stop');
+    // USB media color border — persisted via inline style to override data-st CSS
+    if(d._mediaColor>0){
+      const MCOLORS={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
+      el.style.borderColor=MCOLORS[d._mediaColor]||'';el.style.borderWidth='2px';
+    }
     // Interpolate timecode for smooth display (HW mode: pos updates on beat boundaries)
     let displayPos=d.pos||0;
     if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
@@ -1557,7 +1546,7 @@ function tick(){
       let bkTxt='';
       if(d.bpm>0) bkTxt=Math.round(d.baseBpm||d.bpm)+' BPM';
       else bkTxt='— BPM';
-      if(d.key) bkTxt+='  '+d.key;
+      if(d.key) bkTxt+=' '+d.key;
       bkEl.textContent=bkTxt;
     }
     const dtnEl=document.getElementById('dtn'+slot);
@@ -1626,7 +1615,13 @@ function tick(){
     const bMst=document.getElementById('dmst'+slot);
     if(bMst)bMst.classList.toggle('hide',!d.master);
     const did=document.getElementById('did'+slot);
-    if(did)did.style.color=d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)';
+    if(did){
+      // USB media color takes priority over default state color
+      const mc=d._mediaColor;
+      const MCOLORS={0:'',1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
+      const usbC=mc>0?MCOLORS[mc]:'';
+      did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)');
+    }
     const pb=el.querySelector('[data-a="play"]');
     if(pb&&d.type!=='hw')pb.textContent=d.pl?'⏸':'▶';
     const cub=el.querySelector('[data-a="cue"]');
