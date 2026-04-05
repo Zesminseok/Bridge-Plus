@@ -2038,25 +2038,37 @@ if(E){
       window.bridge.requestArtwork({ip:status.ip,slot:status.slot,artworkId:status.trackId,playerNum:status.playerNum});
     }
   });
-  // HW waveform preview from CDJ-3000
+  // HW waveform preview from CDJ / dbserver
   window.bridge.onWaveformPreview?.(d=>{
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
-    if(d.wfType==='color'&&d.pts&&d.pts.length>0){
-      // CDJ-3000 color waveform: accumulate segments
-      if(!dk._hwWfSegs)dk._hwWfSegs={};
-      dk._hwWfSegs[d.seg]=d.pts;
-      // Build full waveform from segments
-      const segs=Object.keys(dk._hwWfSegs).map(Number).sort((a,b)=>a-b);
-      const allPts=[];
-      for(const s of segs) allPts.push(...dk._hwWfSegs[s]);
-      // Convert CDJ color format to our rgbWf format
-      dk.rgbWf=allPts.map(p=>{
-        const [r,g,b]=_cdjColorToRGB(p.color);
-        const h=p.height/255;
-        return{r:r*h,g:g*h,b:b*h,mn:-h,mx:h};
-      });
-      dk.dur=dk.rgbWf.length*30; // approximate: ~30ms per waveform point
+    if(d.pts&&d.pts.length>0){
+      if(d.wfType==='color'){
+        // CDJ-3000 color waveform: accumulate segments
+        if(!dk._hwWfSegs)dk._hwWfSegs={};
+        dk._hwWfSegs[d.seg]=d.pts;
+        const segs=Object.keys(dk._hwWfSegs).map(Number).sort((a,b)=>a-b);
+        const allPts=[];
+        for(const s of segs) allPts.push(...dk._hwWfSegs[s]);
+        dk.rgbWf=allPts.map(p=>{
+          const [r,g,b]=_cdjColorToRGB(p.color);
+          const h=p.height/255;
+          return{r:r*h,g:g*h,b:b*h,mn:-h,mx:h};
+        });
+      } else {
+        // dbserver preview waveform: {height:0-31, color:0-7}
+        // Color map: 0=no-energy, 1=red(bass), 2=orange, 3=yellow, 4=green, 5=cyan, 6=blue, 7=purple(treble)
+        const cmap=[[.15,.15,.15],[.9,.1,.1],[.9,.5,.1],[.9,.8,.1],[.1,.8,.1],[.1,.8,.8],[.2,.3,.9],[.7,.2,.9]];
+        dk.rgbWf=d.pts.map(p=>{
+          const [r,g,b]=cmap[p.color&7]||cmap[0];
+          const h=p.height/31;
+          return{r:r*h,g:g*h,b:b*h,mn:-h,mx:h};
+        });
+      }
+      // Don't override duration if we have a real value from metadata
+      if(!dk.dur||dk.dur<=0) dk.dur=dk.rgbWf.length*30;
+      console.log(`[UI] P${d.playerNum} waveform: ${dk.rgbWf.length}pts (${d.wfType})`);
+      drawOverview(li, dk.dur>0&&dk.pos>0 ? dk.pos/dk.dur : 0);
     }
   });
   // HW album art from CDJ dbserver
