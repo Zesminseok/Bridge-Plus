@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.7.0 — 2025-04-06
+
+### BRIDGE+ Onyx Studio 디자인 시스템 리뉴얼
+
+- **디자인 시스템 전면 교체** — "BRIDGE+ Onyx Studio" (Stitch MCP로 생성)
+  - Creative North Star: "The Tactile Command Center"
+  - 4개 화면 디자인: LINK, PRO DJ LINK, TCNet, SETTINGS
+- **컬러 팔레트** — Tonal layering: Surface (#111318) → Lowest (#0c0e12) → High (#282a2e)
+  - Primary Green: #5af0b3 / #34d399
+  - Secondary Blue: #a4c9ff / #0267b8
+  - Tertiary Gold: #ffd16d / #ecb210
+- **타이포그래피** — Plus Jakarta Sans (UI) + Space Grotesk (라벨) + DM Mono (데이터)
+- **No-Border 디자인** — 1px 보더 대신 Tonal shift로 영역 구분
+- **Ambient Glow** — 활성 요소에 box-shadow 기반 발광 효과
+- **Glassmorphism** — 플로팅 요소에 backdrop-filter + 반투명 배경
+- **CUE/PLAY 버튼** — CDJ-3000 스타일 gradient + glow 업그레이드
+- **브랜딩 변경** — Bridge Clone → BRIDGE+ (Pro DJ Link Bridge Plus)
+- **패키지명 변경** — bridge-clone → pro-dj-link-bridge-plus
+- **Status Bar** — 그리드 → 필 뱃지 스타일로 변경
+- **Output Layer 카드** — 좌측 컬러 보더 + 큰 타임코드 표시
+- **Mode Toggle** — 슬라이더 스타일 토글 버튼
+- **Section 라벨** — Space Grotesk uppercase + letter-spacing
+
 ## v0.6.0 — 2025-04-05
 
 ### CDJ 웨이브폼 프리뷰 + 앨범아트 수신

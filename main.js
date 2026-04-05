@@ -55,7 +55,7 @@ function showSplash(msg,sub){
     resizable:false,skipTaskbar:true,
     webPreferences:{contextIsolation:true,nodeIntegration:false},
   });
-  splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:rgba(10,12,16,.92);border-radius:12px;border:1px solid rgba(255,255,255,.08);flex-direction:column;gap:8px;font-family:-apple-system,sans-serif;-webkit-app-region:drag"><div style="font:600 15px -apple-system,sans-serif;color:#e2e8f0;letter-spacing:.04em">${msg}</div><div style="font:400 11px monospace;color:#64748b">${sub}</div></body></html>`)}`);
+  splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:rgba(17,19,24,.95);border-radius:12px;border:1px solid rgba(60,74,66,.15);flex-direction:column;gap:8px;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;-webkit-app-region:drag"><div style="font:700 15px 'Plus Jakarta Sans',-apple-system,sans-serif;color:#e2e2e8;letter-spacing:-.01em">${msg}</div><div style="font:500 11px 'DM Mono',monospace;color:#85948b">${sub}</div></body></html>`)}`);
   if(win&&!win.isDestroyed()){
     const wb=win.getBounds();
     splash.setPosition(Math.round(wb.x+wb.width/2-160),Math.round(wb.y+wb.height/2-80));
@@ -67,11 +67,11 @@ function createWindow(){
     x:saved?.x, y:saved?.y,
     width:saved?.width||1040, height:saved?.height||840,
     minWidth:900,minHeight:680,show:false,
-    backgroundColor:'#0a0c10',titleBarStyle:'hiddenInset',
+    backgroundColor:'#111318',titleBarStyle:'hiddenInset',
     webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false},
   });
   // Show splash while loading
-  showSplash('Bridge Clone 시작 중...','네트워크 초기화');
+  showSplash('BRIDGE+ 시작 중...','네트워크 초기화');
   win.once('ready-to-show',()=>{
     win.show();
     setTimeout(()=>{if(splash&&!splash.isDestroyed())splash.destroy();splash=null;},500);
