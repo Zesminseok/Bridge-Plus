@@ -701,16 +701,20 @@ class BridgeCore {
     this.running = false;
     // clear all intervals and timeouts
     this._timers.forEach(t=>{clearInterval(t);clearTimeout(t);}); this._timers=[];
-    // close all UDP sockets including PDJL
-    const sockets = [this.txSocket,this.rxSocket,this._loRxSocket,this._ipRxSocket,this.lPortSocket];
-    if(this._pdjlSockets) this._pdjlSockets.forEach(s=>sockets.push(s));
-    else if(this.pdjlSocket) sockets.push(this.pdjlSocket);
-    sockets.forEach(s=>{try{s?.close();}catch(_){}});
-    this.txSocket=null; this.rxSocket=null; this._loRxSocket=null;
-    this._ipRxSocket=null; this.lPortSocket=null; this.pdjlSocket=null;
-    this._pdjlSockets=[];
-    try{this._pdjlAnnSock?.close();}catch(_){}
-    this._pdjlAnnSock=null;
+    // Delay socket close by 100ms to let OptOut UDP packets flush from OS buffer
+    const closeSockets=()=>{
+      const sockets = [this.txSocket,this.rxSocket,this._loRxSocket,this._ipRxSocket,this.lPortSocket];
+      if(this._pdjlSockets) this._pdjlSockets.forEach(s=>sockets.push(s));
+      else if(this.pdjlSocket) sockets.push(this.pdjlSocket);
+      sockets.forEach(s=>{try{s?.close();}catch(_){}});
+      this.txSocket=null; this.rxSocket=null; this._loRxSocket=null;
+      this._ipRxSocket=null; this.lPortSocket=null; this.pdjlSocket=null;
+      this._pdjlSockets=[];
+      try{this._pdjlAnnSock?.close();}catch(_){}
+      this._pdjlAnnSock=null;
+      console.log('[BridgeCore] sockets closed');
+    };
+    setTimeout(closeSockets, 100);
     // close dbserver TCP connections
     for(const [k,s] of Object.entries(this._dbConns)){
       try{s.removeAllListeners();s.destroy();}catch(_){}
