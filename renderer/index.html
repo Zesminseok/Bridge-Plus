@@ -73,6 +73,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* Zoom: scrolling RGB waveform + beat grid */
 .dwz{height:80px;margin:0 0 4px;background:rgba(0,0,0,.4);border-radius:3px;overflow:hidden;cursor:pointer;display:flex;position:relative}
 .dwz canvas{flex:1;height:100%;display:block;min-width:0}
+.wf-key{position:absolute;top:3px;right:8px;font:700 13px var(--mn);color:var(--grn);text-shadow:0 0 4px rgba(0,0,0,.8);pointer-events:none;z-index:2}
+.wf-bpm{position:absolute;bottom:3px;right:8px;font:600 11px var(--mn);color:rgba(255,255,255,.7);text-shadow:0 0 4px rgba(0,0,0,.8);pointer-events:none;z-index:2}
 /* Expanded full-width deck — only widens, no height change */
 .dk.dk-wide{grid-column:1/-1}
 /* Left control column: album art on top, CUE+PLAY row below */
@@ -189,7 +191,9 @@ select.ss{background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-r
 .dvm-st{display:flex;gap:1px;width:7px;flex-shrink:0;height:100%}
 .dvm-st .dvm{flex:1;width:3px;border-radius:0}
 .dktn{padding:0 0 3px;display:flex;align-items:baseline;gap:0;min-width:0;overflow:hidden}
-.dktn-t{font:500 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0}
+.dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex-shrink:1;min-width:0;position:relative}
+.dktn-t.scrolling{animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
+@keyframes marquee-scroll{0%{transform:translateX(0)}100%{transform:translateX(var(--scroll-dist,-100%))}}
 .dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:2;min-width:0}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dk[data-st="play"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
@@ -1093,7 +1097,7 @@ function deckHTML(slot){
         </div>
         <div class="dkwaves">
           <div class="dwov" id="dwov${slot}"><canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div></div>
-          <div class="dwz" id="dwz${slot}"><canvas id="wzc${slot}"></canvas><div class="dvm-st"><div class="dvm"><div class="dvmf" id="dvuL${slot}"></div></div><div class="dvm"><div class="dvmf" id="dvuR${slot}"></div></div></div><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div>
+          <div class="dwz" id="dwz${slot}"><canvas id="wzc${slot}"></canvas><div class="dvm-st"><div class="dvm"><div class="dvmf" id="dvuL${slot}"></div></div><div class="dvm"><div class="dvmf" id="dvuR${slot}"></div></div></div><span class="wf-key" id="wfkey${slot}"></span><span class="wf-bpm" id="wfbpm${slot}"></span><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div>
           <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
         </div>
       </div>
@@ -1541,14 +1545,35 @@ function tick(){
     if(bkEl){
       if(d.bpm>0){
         const base=d.baseBpm||d.bpm;
-        const eff=d.bpm;
-        const pitchPct=base>0?((eff-base)/base*100):0;
-        const pitchStr=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
-        bkEl.textContent=Math.round(base)+(Math.abs(eff-base)>0.05?'/'+eff.toFixed(1):'')+' BPM '+pitchStr;
+        bkEl.textContent=Math.round(base)+' BPM';
       } else bkEl.textContent='— BPM';
     }
-    const dtnEl=document.getElementById('dtn'+slot);if(dtnEl)dtnEl.textContent=d.tn||'—';
+    const dtnEl=document.getElementById('dtn'+slot);
+    if(dtnEl){
+      const txt=d.tn||'—';
+      if(dtnEl.textContent!==txt)dtnEl.textContent=txt;
+      // Marquee scroll for long titles
+      const par=dtnEl.parentElement;
+      if(par&&dtnEl.scrollWidth>par.offsetWidth*0.6){
+        if(!dtnEl.classList.contains('scrolling')){
+          const dist=dtnEl.scrollWidth+40;
+          const dur=Math.max(5,dist/40);
+          dtnEl.style.setProperty('--scroll-dist','-'+dist+'px');
+          dtnEl.style.setProperty('--scroll-dur',dur+'s');
+          dtnEl.classList.add('scrolling');
+        }
+      }else{dtnEl.classList.remove('scrolling');}
+    }
     const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar?' · '+d.ar:'';
+    // Waveform key + BPM overlay
+    const wfkEl=document.getElementById('wfkey'+slot);
+    if(wfkEl)wfkEl.textContent=d.key||'';
+    const wfbEl=document.getElementById('wfbpm'+slot);
+    if(wfbEl&&d.bpm>0){
+      const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
+      const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
+      wfbEl.textContent=Math.round(d.bpm)+' '+ps;
+    }else if(wfbEl)wfbEl.textContent='';
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
 

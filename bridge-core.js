@@ -1023,19 +1023,19 @@ class BridgeCore {
       pkt[0x21]=0x01;                   // proto ver?
       pkt[0x22]=0x00;                   // pad
       pkt[0x23]=0x36;                   // length marker
-      pkt[0x24]=0xBD;                   // device type: 0xBD = bridge/controller (same as TCS-SHOWKONTROL)
-      pkt[0x25]=0x00;                   // player number: 0 for non-player
+      pkt[0x24]=0x05;                   // D = device/player number: 5 (avoids conflict with P1-P4)
+      pkt[0x25]=0x01;                   // Dt = device type: 0x01=CDJ (required for dbserver)
       // MAC address at 0x26-0x2B
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
       // IP at 0x2C-0x2F
       for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
-      // Tail bytes from capture
-      pkt[0x30]=0x08; pkt[0x34]=0x05; pkt[0x35]=0x20;
+      // Tail bytes
+      pkt[0x30]=0x08; pkt[0x34]=0x05; pkt[0x35]=0x64; // 0x35=0x64 for CDJ-3000 compatibility
       try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,pdjlBC);}catch(e){console.warn('[PDJL] ann:',e.message);}
     };
 
     sendAnn();
-    const t=setInterval(sendAnn,2000);
+    const t=setInterval(sendAnn,1500); // 1.5s like real CDJs
     this._timers.push(t);
   }
 
@@ -1078,10 +1078,12 @@ class BridgeCore {
         if(trackChanged){
           this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false };
           try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} ip=${rinfo?.address}`);}catch(_){}
-          // Auto-request metadata from CDJ via dbserver
+          // Auto-request metadata from CDJ via dbserver (delay to let keep-alive propagate)
           if(p.trackId>0 && p.hasTrack && rinfo?.address){
             this._tcAcc[li].metaRequested = true;
-            this.requestMetadata(rinfo.address, p.slot||3, p.trackId, p.playerNum);
+            const _ip=rinfo.address, _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum;
+            setTimeout(()=>this.requestMetadata(_ip, _slot, _tid, _pn), this._dbReady?100:3000);
+            this._dbReady = true;
           }
         } else if(acc && !acc.metaRequested && p.trackId>0 && p.hasTrack && rinfo?.address){
           // Retry metadata request if hasTrack became true after initial track change
@@ -1256,22 +1258,22 @@ class BridgeCore {
   _dbNum4(v){ const b=Buffer.alloc(5); b[0]=0x11; b.writeUInt32BE(v>>>0,1); return b; }
 
   _dbBuildMsg(txId, type, args){
-    // Magic + txId(num4) + type(num2) + argCount(num1) + 12 type-tags(num1 each) + arg values
-    const magic = Buffer.from([0x87,0x23,0x49,0xae]);
-    const txField = this._dbNum4(txId);
-    const typeField = this._dbNum2(type);
-    const countField = this._dbNum1(args.length);
-    // Type tag array: 12 slots, each is _dbNum1
-    const tags = [];
-    for(let i=0;i<12;i++){
-      if(i<args.length) tags.push(this._dbNum1(args[i].tag));
-      else tags.push(this._dbNum1(0));
-    }
-    const parts = [magic, txField, typeField, countField, ...tags];
+    // prolink-connect format: each field wrapped in FieldType prefix
+    // UInt32=0x11(5B), UInt16=0x10(3B), UInt8=0x0F(2B), Binary=0x14(1+4+data)
+    const argList = Buffer.alloc(12); // 12 type-tag slots
+    for(let i=0;i<args.length&&i<12;i++) argList[i] = args[i].tag;
+    const parts = [
+      this._dbNum4(0x872349ae),           // magic as UInt32 field
+      this._dbNum4(txId),                 // txId as UInt32 field
+      this._dbNum2(type),                 // type as UInt16 field
+      this._dbNum1(args.length),          // argCount as UInt8 field
+      this._dbBinary(argList),            // type tags as Binary field
+    ];
     for(const a of args) parts.push(a.data);
     return Buffer.concat(parts);
   }
 
+  _dbBinary(buf){ const hdr=Buffer.alloc(5); hdr[0]=0x14; hdr.writeUInt32BE(buf.length,1); return Buffer.concat([hdr,buf]); }
   _dbArg4(v){ return { tag:0x06, data: this._dbNum4(v) }; }
 
   _dbRMST(reqPlayer, menu, slot, trackType){
@@ -1319,16 +1321,19 @@ class BridgeCore {
     // Wait for greeting echo
     await new Promise((res,rej)=>{
       sock.once('data', d=>{
+        console.log(`[DBSRV] ${ip} greeting response: len=${d.length} hex=${d.toString('hex')}`);
         if(d.length>=5 && d[0]===0x11) res();
-        else rej(new Error('bad greeting'));
+        else rej(new Error(`bad greeting: ${d.toString('hex')}`));
       });
       sock.once('error', rej);
     });
 
     // Step 3: SETUP_REQ (type 0x0000, txId 0xfffffffe)
     const setupMsg = this._dbBuildMsg(0xfffffffe, 0x0000, [this._dbArg4(spoofPlayer)]);
+    console.log(`[DBSRV] ${ip} sending SETUP player=${spoofPlayer} msg=${setupMsg.toString('hex')}`);
     sock.write(setupMsg);
-    await this._dbReadResponse(sock); // wait for MENU_AVAILABLE (0x4000)
+    const setupResp = await this._dbReadResponse(sock);
+    console.log(`[DBSRV] ${ip} SETUP response: len=${setupResp.length} hex=${setupResp.slice(0,40).toString('hex')}`);
 
     return sock;
   }
@@ -1336,13 +1341,11 @@ class BridgeCore {
   _dbReadResponse(sock){
     return new Promise((res,rej)=>{
       const chunks = [];
-      let needed = -1;
       const onData = d => {
         chunks.push(d);
         const buf = Buffer.concat(chunks);
-        // Parse: magic(4) + fields... minimal: look for message type
-        if(buf.length >= 12){
-          // We have enough to parse the header
+        // NumberField format: UInt32(magic)=5 + UInt32(txId)=5 + UInt16(type)=3 + UInt8(argc)=2 + Binary(tags)=17 = 32+ bytes
+        if(buf.length >= 32){
           sock.removeListener('data', onData);
           res(buf);
         }
@@ -1372,64 +1375,65 @@ class BridgeCore {
     });
   }
 
-  // ── Parse metadata items from response ────
+  // ── Read a single field from buffer at offset ────
+  _dbReadField(buf, pos){
+    if(pos>=buf.length)return null;
+    const ft=buf[pos]; pos++;
+    if(ft===0x0f){// UInt8
+      if(pos>=buf.length)return null;
+      return{type:'num',val:buf[pos],size:2};
+    }else if(ft===0x10){// UInt16
+      if(pos+1>=buf.length)return null;
+      return{type:'num',val:buf.readUInt16BE(pos),size:3};
+    }else if(ft===0x11){// UInt32
+      if(pos+3>=buf.length)return null;
+      return{type:'num',val:buf.readUInt32BE(pos),size:5};
+    }else if(ft===0x14){// Binary
+      if(pos+3>=buf.length)return null;
+      const len=buf.readUInt32BE(pos); pos+=4;
+      return{type:'blob',val:buf.slice(pos,pos+len),size:5+len};
+    }else if(ft===0x26){// String UTF-16BE
+      if(pos+3>=buf.length)return null;
+      const len=buf.readUInt32BE(pos); pos+=4;
+      const byteLen=len*2;
+      let str='';
+      for(let j=0;j<byteLen-1&&pos+j+1<buf.length;j+=2){
+        const ch=buf.readUInt16BE(pos+j);if(ch===0)break;
+        str+=String.fromCharCode(ch);
+      }
+      return{type:'str',val:str,size:5+byteLen};
+    }
+    return null;
+  }
+
+  // ── Parse metadata items from response (NumberField format) ────
   _dbParseItems(buf){
     const items = [];
     let pos = 0;
-    while(pos < buf.length - 4){
-      // Scan for magic bytes
-      if(buf[pos]!==0x87||buf[pos+1]!==0x23||buf[pos+2]!==0x49||buf[pos+3]!==0xae){pos++;continue;}
-      const msgStart = pos;
-      pos += 4; // skip magic
-      // Skip txId (num4 = 5 bytes)
-      if(pos+5>buf.length)break; pos+=5;
-      // Read message type (num2 = 3 bytes)
-      if(pos+3>buf.length)break;
-      const msgType = buf.readUInt16BE(pos+1);
-      pos+=3;
-      // Read arg count (num1 = 2 bytes)
-      if(pos+2>buf.length)break;
-      const argc = buf[pos+1];
-      pos+=2;
-      // Read 12 type tags (each num1 = 2 bytes)
-      const tags = [];
-      for(let i=0;i<12;i++){
-        if(pos+2>buf.length)break;
-        tags.push(buf[pos+1]);
-        pos+=2;
-      }
+    while(pos < buf.length - 5){
+      // Scan for magic: 0x11 0x872349ae
+      if(buf[pos]!==0x11||buf.readUInt32BE(pos+1)!==0x872349ae){pos++;continue;}
+      pos+=5; // skip magic field
+      // txId: UInt32 field
+      const txF=this._dbReadField(buf,pos);if(!txF)break;pos+=txF.size;
+      // msgType: UInt16 field
+      const typeF=this._dbReadField(buf,pos);if(!typeF)break;pos+=typeF.size;
+      const msgType=typeF.val;
+      // argCount: UInt8 field
+      const cntF=this._dbReadField(buf,pos);if(!cntF)break;pos+=cntF.size;
+      const argc=cntF.val;
+      // argList: Binary field (12 bytes)
+      const listF=this._dbReadField(buf,pos);if(!listF)break;pos+=listF.size;
+      const tags=listF.val;
       // Read arguments
       const args = [];
       for(let i=0;i<argc&&i<12;i++){
-        if(pos>=buf.length)break;
-        const ft = buf[pos];
-        if(ft===0x0f){args.push({type:'num1',val:buf[pos+1]});pos+=2;}
-        else if(ft===0x10){args.push({type:'num2',val:buf.readUInt16BE(pos+1)});pos+=3;}
-        else if(ft===0x11){args.push({type:'num4',val:buf.readUInt32BE(pos+1)});pos+=5;}
-        else if(ft===0x14){// blob
-          if(pos+5>buf.length)break;
-          const len=buf.readUInt32BE(pos+1); pos+=5;
-          args.push({type:'blob',val:buf.slice(pos,pos+len)});pos+=len;
-        }else if(ft===0x26){// string (UTF-16BE)
-          if(pos+5>buf.length)break;
-          const charCount=buf.readUInt32BE(pos+1); pos+=5;
-          const byteLen=charCount*2;
-          if(pos+byteLen>buf.length){args.push({type:'str',val:''});break;}
-          const strBuf=buf.slice(pos,pos+byteLen);
-          // Convert UTF-16BE to string
-          let str='';
-          for(let j=0;j<strBuf.length-1;j+=2){
-            const ch=strBuf.readUInt16BE(j);
-            if(ch===0)break;
-            str+=String.fromCharCode(ch);
-          }
-          args.push({type:'str',val:str});
-          pos+=byteLen;
-        }else{pos++;continue;} // unknown field, skip
+        const f=this._dbReadField(buf,pos);
+        if(!f)break;
+        args.push(f);
+        pos+=f.size;
       }
-      if(msgType===0x4101){ // MENU_ITEM
-        items.push({msgType,args});
-      } else if(msgType===0x4002){ // ALBUM_ART
+      if(msgType===0x4101||msgType===0x4000||msgType===0x4002){
         items.push({msgType,args});
       }
     }
