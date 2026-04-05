@@ -1,6 +1,6 @@
 {
   "name": "bridge-clone",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Pioneer DJ Bridge Clone — CDJ/DJM Pro DJ Link → TCNet → Resolume Arena",
   "main": "main.js",
   "scripts": {
