@@ -1433,11 +1433,48 @@ class BridgeCore {
   // Serves artwork for virtual decks so Resolume Arena can fetch album art
   // Protocol: responds to port-discovery + greeting + artwork requests
 
-  /** Store artwork JPEG buffer for a virtual deck slot (0-based) */
+  /** Store artwork JPEG buffer for a virtual deck slot (0-based) and push to Resolume */
   setVirtualArt(slot, jpegBuf){
     if(slot<0||slot>7) return;
     this._virtualArt[slot] = jpegBuf;
     console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B`);
+    // Save to temp file and push to Resolume Arena via REST API
+    if(jpegBuf && jpegBuf.length > 0){
+      this._pushArtToResolume(slot, jpegBuf);
+    }
+  }
+
+  /** Push artwork to Resolume Arena via REST API */
+  async _pushArtToResolume(slot, jpegBuf){
+    try{
+      const tmpDir = require('os').tmpdir();
+      const artPath = require('path').join(tmpDir, `bridge_art_deck${slot+1}.jpg`);
+      require('fs').writeFileSync(artPath, jpegBuf);
+      console.log(`[ARENA-ART] saved ${artPath} (${jpegBuf.length}B)`);
+
+      // Find Arena IP from known nodes
+      let arenaIP = '127.0.0.1';
+      for(const n of Object.values(this.nodes)){
+        if(n.vendor && n.vendor.includes('Resolume')) arenaIP = n.ip;
+      }
+
+      // Resolume REST API: load image into layer (slot+1) clip 1
+      const layer = slot + 1;
+      const clip = 1;
+      const http = require('http');
+      const url = `http://${arenaIP}:8080/api/v1/composition/layers/${layer}/clips/${clip}/open`;
+      const body = JSON.stringify({ uri: `file://${artPath}` });
+
+      const req = http.request(url, {method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}}, res=>{
+        let d='';res.on('data',c=>d+=c);
+        res.on('end',()=>console.log(`[ARENA-ART] REST ${res.statusCode}: ${d.slice(0,100)}`));
+      });
+      req.on('error', e=>console.warn(`[ARENA-ART] REST failed: ${e.message}`));
+      req.write(body);
+      req.end();
+    }catch(e){
+      console.warn(`[ARENA-ART] push failed: ${e.message}`);
+    }
   }
 
   _startVirtualDbServer(){
@@ -2110,6 +2147,8 @@ class BridgeCore {
         this._artCache[cacheKey] = b64;
         this.onAlbumArt?.(playerNum, b64);
         console.log(`[DBSRV] P${playerNum} artwork: ${img.length}B ${mime}`);
+        // Also push to Resolume Arena
+        this._pushArtToResolume(playerNum-1, img);
       } else {
         console.log(`[DBSRV] P${playerNum} artwork: no image in ${artResp.length}B`);
       }
