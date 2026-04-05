@@ -680,16 +680,23 @@ class BridgeCore {
       buildHdr(TC.OPTOUT).copy(b,0);
       b.writeUInt16LE(2, TC.H);                    // nodeCount
       b.writeUInt16LE(this.listenerPort||0, TC.H+2); // listenerPort
-      for(let i=0;i<3;i++){
-        this._send(b,TC.P_BC);    // port 60000
+      // Send via normal _send (covers broadcastAddr + 255.255.255.255 + localAddr + 127.0.0.1)
+      for(let i=0;i<3;i++) this._send(b,TC.P_BC);
+      // Also send to ALL network interfaces' broadcast addresses (covers WiFi, LAN, etc.)
+      const allIfaces = getAllInterfaces().filter(i=>!i.internal&&i.broadcast);
+      for(const iface of allIfaces){
+        for(let i=0;i<2;i++){
+          try{this.txSocket.send(b,0,b.length,TC.P_BC,iface.broadcast);}catch(_){}
+        }
       }
-      // Also send directly to each known Arena's listener port
+      // Also send directly to each known Arena's listener port (unicast)
       for(const[,n] of Object.entries(this.nodes||{})){
         if(n.lPort&&n.ip){
           try{this.txSocket.send(b,0,b.length,n.lPort,n.ip);}catch(_){}
+          try{this.txSocket.send(b,0,b.length,TC.P_BC,n.ip);}catch(_){}
         }
       }
-      console.log('[BridgeCore] sent TCNet OptOut (28B) x3');
+      console.log(`[BridgeCore] sent OptOut on ${allIfaces.length} ifaces + ${Object.keys(this.nodes||{}).length} nodes`);
     }catch(e){console.warn('[BridgeCore] OptOut error:',e.message);}
     this.running = false;
     // clear all intervals and timeouts
