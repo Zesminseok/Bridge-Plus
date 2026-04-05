@@ -474,20 +474,23 @@ function parsePDJL(msg){
   // CDJ media slot info (type 0x28, ~96B) — contains USB color
   if(type===PDJL.CDJ_MEDIA && msg.length>=0x2C){
     const pNum = msg[0x21];
-    // Log first occurrence for debug
-    if(!parsePDJL._mediaDumped){
-      parsePDJL._mediaDumped=true;
+    // Full hex dump for analysis (first 5 packets per player)
+    if(!parsePDJL._mediaCnt) parsePDJL._mediaCnt={};
+    const mc=parsePDJL._mediaCnt;
+    if(!mc[pNum])mc[pNum]=0;
+    if(mc[pNum]<5){
+      mc[pNum]++;
       try{
         const hex=msg.slice(0x20,Math.min(msg.length,0x60)).toString('hex');
-        console.log(`[MEDIA] type=0x28 len=${msg.length} player=${pNum} hex@0x20: ${hex}`);
+        console.log(`[MEDIA] type=0x28 len=${msg.length} P${pNum} #${mc[pNum]} hex@0x20: ${hex}`);
       }catch(_){}
     }
-    // Try to find color at various offsets based on prolink-connect analysis
-    // For 96B media packet: offset 0x27=deviceId, 0x2B=slot
     const slot = msg.length>0x2B ? msg[0x2B] : 0;
-    // Color at last byte of 96B packet (0x5F) — confirmed Red=2 matches user's setting
-    const color = msg.length>0x5F ? msg[0x5F] : 0;
-    if(!parsePDJL._mediaColorLogged){parsePDJL._mediaColorLogged=true;console.log(`[MEDIA] P${pNum} slot=${slot} color=${color}`);}
+    // Color: byte at 0x5C in 96B packet. Only accept first valid value per player
+    // (subsequent packets may have different transient values)
+    const rawColor = msg.length>0x5C ? msg[0x5C] : 0;
+    // Filter: valid rekordbox USB color range is 0-8
+    const color = (rawColor>=0 && rawColor<=8) ? rawColor : 0;
     return{kind:'cdj_media', playerNum:pNum, name, slot, color};
   }
   // CDJ-3000 waveform preview (type 0x56, variable size)
@@ -1192,14 +1195,19 @@ class BridgeCore {
     if(p.kind==='cdj_media'){
       const key = `cdj${p.playerNum}`;
       if(this.devices[key]){
-        this.devices[key].mediaColor = p.color;
+        // Only update color if it's a valid USB color (1-8) and latch it
+        // The 0x28 packet's color field can fluctuate; latch first non-zero value
+        if(p.color>0 && !this.devices[key]._colorLocked){
+          this.devices[key].mediaColor = p.color;
+          this.devices[key]._colorLocked = true;
+          console.log(`[MEDIA] P${p.playerNum} USB color locked: ${p.color}`);
+          // Notify UI once
+          if(this.devices[key].state){
+            this.devices[key].state.mediaColor = p.color;
+            this.onCDJStatus?.(p.playerNum-1, this.devices[key].state);
+          }
+        }
         this.devices[key].lastSeen = Date.now();
-      }
-      // Pass mediaColor to CDJ status callback
-      const dk = this.devices[key];
-      if(dk?.state){
-        dk.state.mediaColor = p.color;
-        this.onCDJStatus?.(p.playerNum-1, dk.state);
       }
     }
     if(p.kind==='cdj_wf'){

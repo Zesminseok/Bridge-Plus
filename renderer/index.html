@@ -1522,7 +1522,13 @@ function tick(){
       d.pos=d.au.currentTime*1000;
     }
 
-    const prog=d.dur>0?(d.pos/d.dur):0;
+    // Interpolate timecode for smooth display (HW mode: pos updates on beat boundaries)
+    let displayPos=d.pos||0;
+    if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
+      const pitchMul=1+(d.pitch||0)/100;
+      displayPos+=((Date.now()-d._posTime)*pitchMul);
+    }
+    const prog=d.dur>0?(displayPos/d.dur):0;
 
     // UI updates — ALWAYS
     el.setAttribute('data-st',d.type==='hw'?(d.pl?'hwplay':'hw'):d.pl?'play':d.cu?'cue':'stop');
@@ -1530,12 +1536,6 @@ function tick(){
     if(d._mediaColor>0){
       const MCOLORS={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
       el.style.borderColor=MCOLORS[d._mediaColor]||'';el.style.borderWidth='2px';
-    }
-    // Interpolate timecode for smooth display (HW mode: pos updates on beat boundaries)
-    let displayPos=d.pos||0;
-    if(d.type==='hw'&&d.pl&&d.bpm>0&&d._posTime){
-      const pitchMul=1+(d.pitch||0)/100; // pitch% → speed multiplier
-      displayPos+=((Date.now()-d._posTime)*pitchMul);
     }
     const tc=document.getElementById('dtc'+slot);
     if(tc)tc.textContent=fTC(displayPos);
