@@ -1092,7 +1092,7 @@ class BridgeCore {
           if(p.trackId>0 && p.hasTrack){
             this._tcAcc[li].metaRequested = true;
             // Find source device IP: trackDeviceId tells us which player owns the media
-            const srcDev = this.devices['cdj_'+p.trackDeviceId];
+            const srcDev = this.devices['cdj'+p.trackDeviceId];
             const _ip = srcDev?.ip || rinfo?.address;
             const _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum, _tt=p.trackType||1;
             try{console.log(`[TC] P${p.playerNum} meta request → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
@@ -1101,7 +1101,7 @@ class BridgeCore {
           }
         } else if(acc && !acc.metaRequested && p.trackId>0 && p.hasTrack){
           acc.metaRequested = true;
-          const srcDev = this.devices['cdj_'+p.trackDeviceId];
+          const srcDev = this.devices['cdj'+p.trackDeviceId];
           const _ip = srcDev?.ip || rinfo?.address;
           try{console.log(`[TC] P${p.playerNum} metadata retry → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
@@ -1259,7 +1259,7 @@ class BridgeCore {
     for(const [key,dev] of Object.entries(this.devices)){
       if(dev.type==='CDJ' && dev.state?.trackId>0 && dev.state?.hasTrack){
         const s=dev.state;
-        const srcDev = this.devices['cdj_'+s.trackDeviceId];
+        const srcDev = this.devices['cdj'+s.trackDeviceId];
         const ip = srcDev?.ip || dev.ip;
         console.log(`[DBSRV] refresh P${s.playerNum} trackId=${s.trackId} trackType=${s.trackType} → device ${s.trackDeviceId} ip=${ip}`);
         this.requestMetadata(ip, s.slot||3, s.trackId, s.playerNum, true, s.trackType||1);

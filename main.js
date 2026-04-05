@@ -30,12 +30,21 @@ function sendArtTimeCode(ip,port,hh,mm,ss,ff,type){
 }
 let win,bridge,iv;
 
+// Window bounds persistence
+const cfgPath=path.join(app.getPath('userData'),'window-state.json');
+function loadBounds(){try{return JSON.parse(fs.readFileSync(cfgPath,'utf8'));}catch(_){return null;}}
+function saveBounds(){try{if(win&&!win.isMinimized()&&!win.isMaximized()){const b=win.getBounds();fs.writeFileSync(cfgPath,JSON.stringify(b));}}catch(_){}}
+
 function createWindow(){
+  const saved=loadBounds();
   win=new BrowserWindow({
-    width:1040,height:840,minWidth:900,minHeight:680,
+    x:saved?.x, y:saved?.y,
+    width:saved?.width||1040, height:saved?.height||840,
+    minWidth:900,minHeight:680,
     backgroundColor:'#0a0c10',titleBarStyle:'hiddenInset',
     webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false},
   });
+  win.on('close',()=>saveBounds());
   const p=path.join(__dirname,'renderer','index.html');
   win.loadFile(fs.existsSync(p)?p:path.join(__dirname,'index.html'));
 }
