@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('bridge',{
   onCuePoints:(cb)=>ipcRenderer.on('bridge:cuepoints',(_,d)=>cb(d)),
   onAlbumArt:(cb)=>ipcRenderer.on('bridge:albumart',(_,d)=>cb(d)),
   onTrackMeta:(cb)=>ipcRenderer.on('bridge:trackmeta',(_,d)=>cb(d)),
+  refreshMeta:()=>ipcRenderer.invoke('bridge:refreshMeta'),
   requestArtwork:(d)=>ipcRenderer.invoke('bridge:requestArtwork',d),
   sendArtnet:(d)=>ipcRenderer.invoke('bridge:artTimeCode',d),
   onQuitting:(cb)=>ipcRenderer.on('app:quitting',()=>cb()),

@@ -120,8 +120,10 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onAlbumArt=(pn,b64)=>win?.webContents.send('bridge:albumart',{playerNum:pn,art:b64});
     bridge.onTrackMetadata=(pn,meta)=>win?.webContents.send('bridge:trackmeta',{playerNum:pn,...meta});
     await bridge.start();push();
-    // After 8s, re-request metadata for already-loaded tracks
+    // Re-request metadata for already-loaded tracks — retry at 3s, 8s, 20s
+    setTimeout(()=>bridge?.refreshAllMetadata(), 3000);
     setTimeout(()=>bridge?.refreshAllMetadata(), 8000);
+    setTimeout(()=>bridge?.refreshAllMetadata(), 20000);
     return{ok:true,pdjlPort:bridge.getPDJLPort(),broadcastAddr:bridge.broadcastAddr};
   }catch(e){return{ok:false,err:e.message};}
 });
@@ -131,6 +133,7 @@ ipcMain.handle('bridge:removeLayer',(_,{i})=>{bridge?.removeLayer(i);return{ok:t
 ipcMain.handle('bridge:registerVirtualDeck',(_,{slot,model})=>{bridge?.registerVirtualDeck(slot,model);return{ok:true};});
 ipcMain.handle('bridge:unregisterVirtualDeck',(_,{slot})=>{bridge?.unregisterVirtualDeck(slot);return{ok:true};});
 ipcMain.handle('bridge:setHWMode',(_,{i,en})=>{bridge?.setHWMode(i,en);return{ok:true};});
+ipcMain.handle('bridge:refreshMeta',()=>{bridge?.refreshAllMetadata();return{ok:true};});
 ipcMain.handle('bridge:getInterfaces',()=>getAllInterfaces());
 ipcMain.handle('bridge:getDevices',()=>bridge?.getActiveDevices()||[]);
 ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTimeCode(ip,port,hh,mm,ss,ff,type);return{ok:true};});

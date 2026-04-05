@@ -1174,7 +1174,12 @@ class BridgeCore {
           }
           acc.prevBn = p.beatNum;
           timecodeMs = Math.round(absoluteMs);
+        } else if(acc && p.isPlaying && (p.bpm<=0||p.beatNum<=0)){
+          // Short samples / no BPM: use wall-clock elapsed time
+          if(!acc._playStart) acc._playStart = Date.now();
+          timecodeMs = Date.now() - acc._playStart;
         }
+        if(!p.isPlaying && acc) acc._playStart = 0;
 
         const prev = this.layers[li];
         const stateChanged = !prev || prev.state     !== p.state;
