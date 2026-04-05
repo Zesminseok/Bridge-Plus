@@ -47,14 +47,34 @@ function saveBounds(){
   }catch(e){console.warn('[WIN] saveBounds error:',e.message);}
 }
 
+let splash=null;
+function showSplash(msg,sub){
+  if(splash&&!splash.isDestroyed()){try{splash.destroy();}catch(_){}}
+  splash=new BrowserWindow({
+    width:320,height:160,frame:false,transparent:true,alwaysOnTop:true,
+    resizable:false,skipTaskbar:true,
+    webPreferences:{contextIsolation:true,nodeIntegration:false},
+  });
+  splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:rgba(10,12,16,.92);border-radius:12px;border:1px solid rgba(255,255,255,.08);flex-direction:column;gap:8px;font-family:-apple-system,sans-serif;-webkit-app-region:drag"><div style="font:600 15px -apple-system,sans-serif;color:#e2e8f0;letter-spacing:.04em">${msg}</div><div style="font:400 11px monospace;color:#64748b">${sub}</div></body></html>`)}`);
+  if(win&&!win.isDestroyed()){
+    const wb=win.getBounds();
+    splash.setPosition(Math.round(wb.x+wb.width/2-160),Math.round(wb.y+wb.height/2-80));
+  }
+}
 function createWindow(){
   const saved=loadBounds();
   win=new BrowserWindow({
     x:saved?.x, y:saved?.y,
     width:saved?.width||1040, height:saved?.height||840,
-    minWidth:900,minHeight:680,
+    minWidth:900,minHeight:680,show:false,
     backgroundColor:'#0a0c10',titleBarStyle:'hiddenInset',
     webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false},
+  });
+  // Show splash while loading
+  showSplash('Bridge Clone 시작 중...','네트워크 초기화');
+  win.once('ready-to-show',()=>{
+    win.show();
+    setTimeout(()=>{if(splash&&!splash.isDestroyed())splash.destroy();splash=null;},500);
   });
   // Save bounds on move/resize (debounced) and on close
   let _saveTmr;
@@ -118,26 +138,43 @@ app.whenReady().then(createWindow);
 let _cleaned=false,_quitting=false;
 function doQuit(){
   if(_quitting)return;_quitting=true;
-  // Show "shutting down" in renderer
-  try{win?.webContents.send('app:quitting');}catch(_){}
-  // Wait a frame for UI to render, then cleanup
+  console.log('[APP] doQuit — starting shutdown sequence');
+  // 1. Save window bounds while window is still valid
+  saveBounds();
+  clearInterval(iv);
+  // 2. Hide main window immediately (no ghost window)
+  try{if(win&&!win.isDestroyed()){win.hide();}}catch(_){}
+  // 3. Show shutdown splash
+  showSplash('종료 중...','TCNet · ProDJ Link 연결 해제');
+  // 4. Stop bridge (sends OptOut, delays socket close 100ms internally)
+  try{bridge?.stop();}catch(e){console.warn('[APP] bridge.stop error:',e.message);}
+  bridge=null;
+  try{_artSocket.close();}catch(_){}
+  _cleaned=true;
+  // 5. Wait 400ms for OptOut UDP to flush (bridge.stop has 100ms internal + extra margin)
   setTimeout(()=>{
-    saveBounds();
-    clearInterval(iv);
-    try{bridge?.stop();}catch(_){}
-    bridge=null;
+    console.log('[APP] cleanup done — destroying windows');
+    try{if(splash&&!splash.isDestroyed())splash.destroy();}catch(_){}
+    splash=null;
+    try{if(win&&!win.isDestroyed())win.destroy();}catch(_){}
+    win=null;
+    app.quit();
+  },400);
+  // Force exit after 2s as safety net
+  setTimeout(()=>{console.log('[APP] force exit');process.exit(0);},2000).unref();
+}
+app.on('window-all-closed',(e)=>{
+  // Prevent default quit — we handle it in doQuit
+  if(!_quitting) doQuit();
+});
+app.on('before-quit',(e)=>{if(!_quitting){e.preventDefault();doQuit();}});
+app.on('will-quit',()=>{
+  if(!_cleaned){
+    saveBounds();clearInterval(iv);
+    try{bridge?.stop();}catch(_){}bridge=null;
     try{_artSocket.close();}catch(_){}
     _cleaned=true;
-    // Wait 200ms for OptOut UDP packets to flush, then quit
-    setTimeout(()=>{
-      try{win?.destroy();}catch(_){}
-      app.quit();
-    },200);
-  },50);
-  // Force exit after 1s as safety net
-  setTimeout(()=>process.exit(0),1000).unref();
-}
-app.on('window-all-closed',()=>{doQuit();});
-app.on('before-quit',(e)=>{if(!_quitting){e.preventDefault();doQuit();}});
-app.on('will-quit',()=>{if(!_cleaned){saveBounds();clearInterval(iv);try{bridge?.stop();}catch(_){}bridge=null;try{_artSocket.close();}catch(_){}_cleaned=true;}setTimeout(()=>process.exit(0),300).unref();});
+  }
+  setTimeout(()=>process.exit(0),500).unref();
+});
 app.on('activate',()=>{if(!_quitting&&BrowserWindow.getAllWindows().length===0)createWindow();});
