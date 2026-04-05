@@ -569,7 +569,10 @@ class BridgeCore {
     this._timers = [t1, t2, t3, t4];
     this._startTCNetRx();
 
-    if(!this.isLocalMode) await this._startPDJLRx();
+    if(!this.isLocalMode){
+      await this._startPDJLRx();
+      this._startPDJLAnnounce();
+    }
 
     const nid = TC.NID[1].toString(16)+TC.NID[0].toString(16);
     console.log(`[v13] mode=${this.isLocalMode?'LOCAL(127.0.0.1)':'NETWORK'} bc=${this.broadcastAddr} localIP=${this.localAddr||'none'}`);
@@ -591,6 +594,8 @@ class BridgeCore {
     this.txSocket=null; this.rxSocket=null; this._loRxSocket=null;
     this._ipRxSocket=null; this.lPortSocket=null; this.pdjlSocket=null;
     this._pdjlSockets=[];
+    try{this._pdjlAnnSock?.close();}catch(_){}
+    this._pdjlAnnSock=null;
     // close dbserver connections
     for(const [k,s] of Object.entries(this._dbConns)){try{s.destroy();}catch(_){}}
     this._dbConns={};
@@ -888,8 +893,84 @@ class BridgeCore {
     if(this._pdjlSockets.length===0) console.warn('[PDJL] all ports failed');
   }
 
+  // Pro DJ Link keep-alive announcement on 50000
+  // CDJs only send status to devices they see on the network
+  _startPDJLAnnounce(){
+    // Find the link-local (169.254.x.x) interface for PDJL
+    let pdjlIP=null, pdjlMAC='00:00:00:00:00:00', pdjlBC='169.254.255.255';
+    for(const iface of getAllInterfaces()){
+      if(!iface.internal && iface.address.startsWith('169.254.')){
+        pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC;
+        pdjlBC=iface.broadcast||pdjlBC;
+        break;
+      }
+    }
+    // Also try pdjlBindAddr if specified
+    if(this.pdjlBindAddr && this.pdjlBindAddr.startsWith('169.254.')){
+      pdjlIP=this.pdjlBindAddr;
+    }
+    if(!pdjlIP){
+      // Try all non-internal interfaces
+      for(const iface of getAllInterfaces()){
+        if(!iface.internal && !iface.isLoopback){
+          pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC;
+          pdjlBC=iface.broadcast||pdjlBC;
+        }
+      }
+    }
+    if(!pdjlIP){console.warn('[PDJL] no interface found for keep-alive');return;}
+
+    console.log(`[PDJL] announcing on ${pdjlIP} → ${pdjlBC}:50000 MAC=${pdjlMAC}`);
+
+    // Build keep-alive packet (type 0x06, 54 bytes)
+    const macBytes=pdjlMAC.split(':').map(h=>parseInt(h,16));
+    const ipParts=pdjlIP.split('.').map(Number);
+
+    // Create a dedicated socket for 50000 broadcast (CDJ announcement)
+    this._pdjlAnnSock=dgram.createSocket({type:'udp4',reuseAddr:true});
+    this._pdjlAnnSock.on('error',()=>{});
+    this._pdjlAnnSock.bind(0, pdjlIP, ()=>{
+      try{this._pdjlAnnSock.setBroadcast(true);}catch(_){}
+    });
+
+    const sendAnn=()=>{
+      const pkt=Buffer.alloc(54);
+      PDJL.MAGIC.copy(pkt,0);          // 0x00: magic (10 bytes)
+      pkt[0x0A]=0x06;                   // type = keep-alive
+      pkt[0x0B]=0x00;                   // sub-type byte
+      // Device name: 20 bytes at 0x0C-0x1F (padded with 0)
+      const nameStr='BRIDGE-CLONE';
+      Buffer.from(nameStr,'ascii').copy(pkt,0x0C,0,Math.min(nameStr.length,20));
+      pkt[0x20]=0x01;                   // unknown (always 1 in captures)
+      pkt[0x21]=0x01;                   // proto ver?
+      pkt[0x22]=0x00;                   // pad
+      pkt[0x23]=0x36;                   // length marker
+      pkt[0x24]=0x01;                   // device type: 0x01 = software/bridge
+      pkt[0x25]=0x00;                   // player number: 0 for non-player
+      // MAC address at 0x26-0x2B
+      for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
+      // IP at 0x2C-0x2F
+      for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
+      // Tail bytes from capture
+      pkt[0x30]=0x08; pkt[0x34]=0x05; pkt[0x35]=0x20;
+      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,pdjlBC);}catch(e){console.warn('[PDJL] ann:',e.message);}
+    };
+
+    sendAnn();
+    const t=setInterval(sendAnn,2000);
+    this._timers.push(t);
+  }
+
   _onPDJL(msg, rinfo){
-    const p = parsePDJL(msg); if(!p) return;
+    const p = parsePDJL(msg);
+    // Debug: log all PDJL packets with their source
+    if(!this._pdjlDbg){this._pdjlDbg={};console.log('[PDJL] listening on',this.pdjlBindAddr||'0.0.0.0');}
+    const dbgK=rinfo.address+':'+msg[10];
+    if(!this._pdjlDbg[dbgK]){
+      this._pdjlDbg[dbgK]=true;
+      console.log(`[PDJL] packet type=0x${msg[10]?.toString(16)} from ${rinfo.address}:${rinfo.port} len=${msg.length} parsed=${p?.kind||'null'}`);
+    }
+    if(!p) return;
     if(p.kind==='cdj'){
       const li = p.playerNum-1;
       const key = `cdj${p.playerNum}`;
