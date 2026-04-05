@@ -753,18 +753,18 @@ function _wf3BandStack(r,g,b2,totalH,dimF){
 
 function drawOverview(slot,prog){
   const d=DECKS[slot];if(!d||!d.wovCtx)return;
-  // Use preview waveform for overview, fallback to detail
-  if(!d.rgbWf&&d.rgbWfDetail) d.rgbWf=d.rgbWfDetail;
-  if(!d.rgbWf)return;
+  // Prefer detail waveform (richer color data) for overview, fallback to preview
+  const wfOv=d.rgbWfDetail||d.rgbWf;
+  if(!wfOv)return;
   const cv=document.getElementById('wov'+slot);if(!cv||!cv.width)return;
   const W=cv.width,H=cv.height,ctx=d.wovCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
-  const pts=d.rgbWf.length,mid=H/2;
+  const pts=wfOv.length,mid=H/2;
   const img=ctx.createImageData(W,H);const px4=img.data;
   for(let px=0;px<W;px++){
     const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
     let r=0,g=0,b=0,mxMax=0;const cnt=Math.max(1,i1-i0+1);
-    for(let i=i0;i<=i1;i++){const p=d.rgbWf[i];r+=p.r;g+=p.g;b+=p.b;if(p.mx>mxMax)mxMax=p.mx;}
+    for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;if(p.mx>mxMax)mxMax=p.mx;}
     r/=cnt;g/=cnt;b/=cnt;
     const past=px/W<pos;
     const dimF=past?1.0:.85;
