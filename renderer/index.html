@@ -808,9 +808,9 @@ function buildWaveformCache(slot){
     const p=wfData[x];
     const tot=p.r+p.g+p.b;
     if(tot<0.005)continue;
-    // Height: dominant band peak × gain — individual bands fluctuate more than composite
+    // Height: dominant band peak² — power curve shows real dynamics, no artificial boost
     const dom=Math.max(p.r,p.g,p.b);
-    const h=Math.min(mid,Math.round(dom*1.8*mid));
+    const h=Math.min(mid,Math.round(dom*dom*mid));
     if(h<1)continue;
     // Spectral centroid: weighted average frequency → log-normalized 0..1
     const cent=(p.r*fB+p.g*fM+p.b*fT)/tot;
@@ -853,7 +853,7 @@ function drawOverview(slot,prog){
     const tot=r+g+b;
     if(tot<0.005)continue;
     const dom=Math.max(r,g,b);
-    const h=Math.min(mid,Math.round(dom*1.8*mid));
+    const h=Math.min(mid,Math.round(dom*dom*mid));
     if(h<1)continue;
     const cent=(r*fB+g*fM+b*fT)/tot;
     const cn=Math.max(0,Math.min(1,Math.log(cent/fB)/logR));
