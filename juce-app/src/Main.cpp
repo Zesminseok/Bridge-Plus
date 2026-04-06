@@ -7,7 +7,7 @@ public:
     BridgePlusApp() {}
 
     const juce::String getApplicationName() override    { return "Bridge+"; }
-    const juce::String getApplicationVersion() override { return "0.9.0"; }
+    const juce::String getApplicationVersion() override { return "1.0.0"; }
     bool moreThanOneInstanceAllowed() override          { return false; }
 
     void initialise(const juce::String&) override

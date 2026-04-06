@@ -11,10 +11,22 @@ static juce::String formatTime(float ms)
     return juce::String::formatted("%02d:%02d.%03d", min, sec, milli);
 }
 
-// ── DeckPanel ────────────────────────────────
+static juce::String formatUptime(int secs)
+{
+    int h = secs / 3600;
+    int m = (secs % 3600) / 60;
+    int s = secs % 60;
+    return juce::String::formatted("%02d:%02d:%02d", h, m, s);
+}
+
+// ═══════════════════════════════════════════
+// ── DeckPanel ──────────────────────────────
+// ═══════════════════════════════════════════
+
 DeckPanel::DeckPanel(int num, BridgeEngine& eng)
     : deckNum(num), engine(eng)
 {
+    // Title / Artist labels
     auto setupLabel = [this](juce::Label& label, float fontSize, juce::Colour col)
     {
         addAndMakeVisible(label);
@@ -23,45 +35,43 @@ DeckPanel::DeckPanel(int num, BridgeEngine& eng)
         label.setJustificationType(juce::Justification::centredLeft);
     };
 
-    setupLabel(titleLabel,  16.0f, juce::Colours::white);
-    setupLabel(artistLabel, 13.0f, juce::Colour(0xffaaaaaa));
-    setupLabel(bpmLabel,    22.0f, juce::Colours::cyan);
-    setupLabel(timeLabel,   18.0f, juce::Colour(0xff00ff88));
-    setupLabel(stateLabel,  13.0f, juce::Colours::yellow);
+    setupLabel(titleLabel,  15.0f, Theme::tx);
+    setupLabel(artistLabel, 12.0f, Theme::tx3);
+    setupLabel(bpmLabel,    13.0f, Theme::grn);
+    setupLabel(timeLabel,   13.0f, Theme::tx2);
 
-    titleLabel.setText("Deck " + juce::String(deckNum + 1), juce::dontSendNotification);
+    titleLabel.setText("Empty", juce::dontSendNotification);
 
-    auto setupBtn = [this](juce::TextButton& btn, juce::Colour col)
+    // ── CUE button (yellow) ──
+    addAndMakeVisible(cueBtn);
+    cueBtn.setColour(juce::TextButton::buttonColourId, Theme::bg4);
+    cueBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0x80ffd16d));
+    cueBtn.onClick = [this]
     {
-        addAndMakeVisible(btn);
-        btn.setColour(juce::TextButton::buttonColourId, col);
-        btn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+        if (engine.isHWMode(deckNum)) return;
+        engine.getVirtualDeck(deckNum).cue();
     };
 
-    setupBtn(loadBtn,  juce::Colour(0xff333344));
-    setupBtn(playBtn,  juce::Colour(0xff226622));
-    setupBtn(pauseBtn, juce::Colour(0xff664422));
-    setupBtn(stopBtn,  juce::Colour(0xff662222));
-    setupBtn(cueBtn,   juce::Colour(0xff224466));
-
-    // Volume slider
-    addAndMakeVisible(volumeSlider);
-    volumeSlider.setRange(0.0, 1.0, 0.01);
-    volumeSlider.setValue(1.0);
-    volumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    volumeSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
-    volumeSlider.setColour(juce::Slider::trackColourId, juce::Colour(0xff446688));
-    volumeSlider.setColour(juce::Slider::thumbColourId, juce::Colour(0xff88aacc));
-    volumeSlider.onValueChange = [this]
+    // ── PLAY button (green) ──
+    addAndMakeVisible(playBtn);
+    playBtn.setColour(juce::TextButton::buttonColourId, Theme::bg4);
+    playBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0x805af0b3));
+    playBtn.onClick = [this]
     {
-        engine.getVirtualDeck(deckNum).setVolume((float)volumeSlider.getValue());
+        if (engine.isHWMode(deckNum)) return;
+        engine.getVirtualDeck(deckNum).playPause();
     };
 
+    // ── LOAD button ──
+    addAndMakeVisible(loadBtn);
+    loadBtn.setColour(juce::TextButton::buttonColourId, Theme::bg3);
+    loadBtn.setColour(juce::TextButton::textColourOffId, Theme::tx3);
     loadBtn.onClick = [this]
     {
+        if (engine.isHWMode(deckNum)) return;
         auto chooser = std::make_shared<juce::FileChooser>(
             "Select Audio", juce::File::getSpecialLocation(juce::File::userMusicDirectory),
-            "*.wav;*.mp3;*.aiff;*.flac;*.m4a");
+            "*.wav;*.mp3;*.aiff;*.flac;*.m4a;*.aac;*.ogg");
 
         chooser->launchAsync(
             juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
@@ -79,199 +89,441 @@ DeckPanel::DeckPanel(int num, BridgeEngine& eng)
             });
     };
 
-    playBtn.onClick  = [this] { engine.getVirtualDeck(deckNum).play(); };
-    pauseBtn.onClick = [this] { engine.getVirtualDeck(deckNum).pause(); };
-    stopBtn.onClick  = [this] { engine.getVirtualDeck(deckNum).stop(); };
-    cueBtn.onClick   = [this] { engine.getVirtualDeck(deckNum).cue(); };
+    // ── EJECT button ──
+    addAndMakeVisible(ejectBtn);
+    ejectBtn.setColour(juce::TextButton::buttonColourId, Theme::bg3);
+    ejectBtn.setColour(juce::TextButton::textColourOffId, Theme::red);
+    ejectBtn.onClick = [this]
+    {
+        if (engine.isHWMode(deckNum)) return;
+        engine.getVirtualDeck(deckNum).eject();
+        engine.setVirtualDeckActive(deckNum, false);
+        updateDisplay();
+    };
+
+    // ── HW toggle button ──
+    addAndMakeVisible(hwBtn);
+    hwBtn.setColour(juce::TextButton::buttonColourId, Theme::bg3);
+    hwBtn.setColour(juce::TextButton::textColourOffId, Theme::tx3);
+    hwBtn.onClick = [this]
+    {
+        bool newHW = !engine.isHWMode(deckNum);
+        engine.setHWMode(deckNum, newHW);
+        hwBtn.setButtonText(newHW ? "HW" : "VIR");
+        hwBtn.setColour(juce::TextButton::textColourOffId,
+            newHW ? Theme::pur : Theme::tx3);
+        updateDisplay();
+    };
+
+    // ── Volume slider ──
+    addAndMakeVisible(volumeSlider);
+    volumeSlider.setRange(0.0, 1.0, 0.01);
+    volumeSlider.setValue(1.0);
+    volumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    volumeSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
+    volumeSlider.setColour(juce::Slider::trackColourId, Theme::bg4);
+    volumeSlider.setColour(juce::Slider::thumbColourId, Theme::tx3);
+    volumeSlider.onValueChange = [this]
+    {
+        engine.getVirtualDeck(deckNum).setVolume((float)volumeSlider.getValue());
+    };
 }
 
 void DeckPanel::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
+    bool isHW = engine.isHWMode(deckNum);
 
-    // Background
-    g.setColour(juce::Colour(0xff1a1d24));
-    g.fillRoundedRectangle(bounds, 6.0f);
+    // ── Card background ──
+    g.setColour(Theme::bg2);
+    g.fillRoundedRectangle(bounds, 8.0f);
 
-    // Border — color based on state
-    auto& deck = engine.getVirtualDeck(deckNum);
-    juce::Colour borderCol(0xff2a2d34);
-    if (deck.isLoaded())
+    // ── Border glow based on state ──
+    juce::Colour borderCol = Theme::bdr2;
+    juce::Colour glowCol = juce::Colours::transparentBlack;
+
+    if (isHW)
     {
-        switch (deck.getState())
+        borderCol = Theme::pur.withAlpha(0.5f);
+        if (displayState == PlayState::PLAYING || displayState == PlayState::LOOPING)
+        {
+            borderCol = Theme::grn.withAlpha(0.6f);
+            glowCol = Theme::grn.withAlpha(0.08f);
+        }
+    }
+    else
+    {
+        switch (displayState)
         {
             case PlayState::PLAYING: case PlayState::LOOPING:
-                borderCol = juce::Colour(0xff22aa44); break;
+                borderCol = Theme::grn.withAlpha(0.6f);
+                glowCol = Theme::grn.withAlpha(0.08f);
+                break;
+            case PlayState::CUED: case PlayState::CUEING:
+                borderCol = Theme::ylw.withAlpha(0.5f);
+                glowCol = Theme::ylw.withAlpha(0.05f);
+                break;
             case PlayState::PAUSED:
-                borderCol = juce::Colour(0xffaa8822); break;
-            case PlayState::CUED:
-                borderCol = juce::Colour(0xff2266aa); break;
+                borderCol = Theme::org.withAlpha(0.4f);
+                break;
             default: break;
         }
     }
-    g.setColour(borderCol);
-    g.drawRoundedRectangle(bounds.reduced(0.5f), 6.0f, 1.5f);
 
-    // Deck number badge
-    g.setColour(juce::Colour(0xff00aaff));
-    g.setFont(juce::FontOptions(22.0f, juce::Font::bold));
-    g.drawText(juce::String(deckNum + 1), 8, 8, 26, 26, juce::Justification::centred);
+    // Glow fill
+    if (!glowCol.isTransparent())
+    {
+        g.setColour(glowCol);
+        g.fillRoundedRectangle(bounds, 8.0f);
+    }
+
+    // Border
+    g.setColour(borderCol);
+    g.drawRoundedRectangle(bounds.reduced(0.5f), 8.0f, 1.5f);
+
+    // ── Header bar ──
+    auto headerArea = bounds.removeFromTop(32.0f).reduced(10.0f, 4.0f);
+
+    // Player number
+    g.setColour(Theme::blu);
+    g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
+    g.drawText("PLAYER " + juce::String(deckNum + 1), headerArea, juce::Justification::centredLeft);
+
+    // State badge
+    juce::String badgeText;
+    juce::Colour badgeCol;
+    if (isHW)
+    {
+        badgeText = "HW";
+        badgeCol = Theme::pur;
+        if (displayState == PlayState::PLAYING) { badgeText = "HW PLAY"; badgeCol = Theme::grn; }
+    }
+    else
+    {
+        auto& deck = engine.getVirtualDeck(deckNum);
+        if (!deck.isLoaded())
+        {
+            badgeText = "EMPTY";
+            badgeCol = Theme::tx4;
+        }
+        else
+        {
+            badgeText = playStateToString(displayState);
+            switch (displayState)
+            {
+                case PlayState::PLAYING: case PlayState::LOOPING:
+                    badgeCol = Theme::grn; break;
+                case PlayState::CUED: case PlayState::CUEING:
+                    badgeCol = Theme::ylw; break;
+                case PlayState::PAUSED:
+                    badgeCol = Theme::org; break;
+                case PlayState::STOPPED:
+                    badgeCol = Theme::red; break;
+                default:
+                    badgeCol = Theme::tx4; break;
+            }
+        }
+    }
+
+    // Draw badge
+    auto badgeW = juce::jmax(50.0f, (float)badgeText.length() * 8.0f + 16.0f);
+    auto badgeRect = juce::Rectangle<float>(
+        headerArea.getRight() - badgeW, headerArea.getY(), badgeW, headerArea.getHeight());
+    g.setColour(badgeCol.withAlpha(0.15f));
+    g.fillRoundedRectangle(badgeRect, 4.0f);
+    g.setColour(badgeCol);
+    g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+    g.drawText(badgeText, badgeRect, juce::Justification::centred);
+
+    // ── Separator line ──
+    g.setColour(Theme::bdr);
+    g.drawHorizontalLine(32, 8.0f, getWidth() - 8.0f);
+
+    // ── Beat phasor (4 segments) ──
+    auto area = getLocalBounds().toFloat();
+    float phasorY = area.getBottom() - 98.0f;
+    float phasorH = 6.0f;
+    float segW = (getWidth() - 28.0f) / 4.0f;
+
+    for (int i = 0; i < 4; i++)
+    {
+        auto segRect = juce::Rectangle<float>(
+            10.0f + i * (segW + 2.0f), phasorY, segW, phasorH);
+
+        int curBeat = beatPhase / 64;  // 0-3
+        bool active = (i <= curBeat) && (displayState == PlayState::PLAYING ||
+                                          displayState == PlayState::LOOPING);
+
+        g.setColour(active ? Theme::grn.withAlpha(0.7f) : Theme::bg4);
+        g.fillRoundedRectangle(segRect, 2.0f);
+    }
 }
 
 void DeckPanel::resized()
 {
     auto area = getLocalBounds().reduced(10);
+    area.removeFromTop(36); // Header
 
-    // Title row
-    auto top = area.removeFromTop(24);
-    top.removeFromLeft(30);
-    titleLabel.setBounds(top);
+    // Track name
+    titleLabel.setBounds(area.removeFromTop(20));
+    // Artist
+    artistLabel.setBounds(area.removeFromTop(16));
 
-    // Artist row
-    auto art = area.removeFromTop(20);
-    art.removeFromLeft(30);
-    artistLabel.setBounds(art);
+    area.removeFromTop(4);
 
-    area.removeFromTop(8);
+    // BPM + Time row
+    auto infoRow = area.removeFromTop(18);
+    bpmLabel.setBounds(infoRow.removeFromLeft(100));
+    timeLabel.setBounds(infoRow);
 
-    // BPM + Time + State row
-    auto infoRow = area.removeFromTop(28);
-    bpmLabel.setBounds(infoRow.removeFromLeft(130));
-    timeLabel.setBounds(infoRow.removeFromLeft(160));
-    stateLabel.setBounds(infoRow);
+    area.removeFromTop(4);
 
-    area.removeFromTop(8);
+    // Beat phasor space
+    area.removeFromBottom(8);
 
-    // Buttons row
-    auto btns = area.removeFromTop(32);
-    int bw = (btns.getWidth() - 16) / 5;
-    loadBtn.setBounds(btns.removeFromLeft(bw));   btns.removeFromLeft(4);
-    playBtn.setBounds(btns.removeFromLeft(bw));   btns.removeFromLeft(4);
-    pauseBtn.setBounds(btns.removeFromLeft(bw));  btns.removeFromLeft(4);
-    stopBtn.setBounds(btns.removeFromLeft(bw));   btns.removeFromLeft(4);
-    cueBtn.setBounds(btns);
+    // Bottom controls area
+    auto bottomRow = area.removeFromBottom(28);
+    int bw3 = (bottomRow.getWidth() - 8) / 3;
+    loadBtn.setBounds(bottomRow.removeFromLeft(bw3));
+    bottomRow.removeFromLeft(4);
+    hwBtn.setBounds(bottomRow.removeFromLeft(bw3));
+    bottomRow.removeFromLeft(4);
+    ejectBtn.setBounds(bottomRow);
 
-    area.removeFromTop(6);
-
-    // Volume slider
-    auto volRow = area.removeFromTop(20);
+    // Volume row
+    area.removeFromBottom(4);
+    auto volRow = area.removeFromBottom(20);
     volumeSlider.setBounds(volRow);
+
+    area.removeFromBottom(4);
+
+    // Beat phasor reserved (painted directly)
+    area.removeFromBottom(12);
+
+    // CUE + PLAY buttons
+    auto btnRow = area.removeFromBottom(36);
+    int halfW = (btnRow.getWidth() - 8) / 2;
+    cueBtn.setBounds(btnRow.removeFromLeft(halfW));
+    btnRow.removeFromLeft(8);
+    playBtn.setBounds(btnRow);
 }
 
 void DeckPanel::updateDisplay()
 {
-    auto& deck = engine.getVirtualDeck(deckNum);
+    bool isHW = engine.isHWMode(deckNum);
 
-    if (deck.isLoaded())
+    if (isHW)
     {
-        titleLabel.setText(deck.getTitle(), juce::dontSendNotification);
-        artistLabel.setText(deck.getArtist().isEmpty() ? deck.getDeviceName() : deck.getArtist(),
-                           juce::dontSendNotification);
-        bpmLabel.setText(juce::String(deck.getBpm(), 1) + " BPM", juce::dontSendNotification);
-        timeLabel.setText(formatTime(deck.getPositionMs()) + " / " + formatTime(deck.getDurationMs()),
-                         juce::dontSendNotification);
-
-        auto st = deck.getState();
-        stateLabel.setText(playStateToString(st), juce::dontSendNotification);
-
-        juce::Colour stateCol = juce::Colours::grey;
-        switch (st)
+        // Hardware mode - read from layer state
+        auto* ls = engine.getLayerState(deckNum);
+        if (ls)
         {
-            case PlayState::PLAYING: case PlayState::LOOPING:
-                stateCol = juce::Colours::lime; break;
-            case PlayState::PAUSED:
-                stateCol = juce::Colours::orange; break;
-            case PlayState::CUED:
-                stateCol = juce::Colour(0xff44aaff); break;
-            case PlayState::STOPPED:
-                stateCol = juce::Colours::red; break;
-            default: break;
+            displayState = ls->state;
+            beatPhase = ls->beatPhase;
+            titleLabel.setText(ls->trackName.isEmpty() ? "CDJ-" + juce::String(deckNum + 1) : ls->trackName,
+                              juce::dontSendNotification);
+            artistLabel.setText(ls->artistName.isEmpty() ? ls->deviceName : ls->artistName,
+                               juce::dontSendNotification);
+            bpmLabel.setText(juce::String(ls->bpm, 1) + " BPM", juce::dontSendNotification);
+            timeLabel.setText(formatTime(ls->timecodeMs) + " / " + formatTime(ls->totalLengthMs),
+                             juce::dontSendNotification);
         }
-        stateLabel.setColour(juce::Label::textColourId, stateCol);
+        else
+        {
+            displayState = PlayState::IDLE;
+            titleLabel.setText("CDJ-" + juce::String(deckNum + 1) + " (waiting...)",
+                              juce::dontSendNotification);
+            artistLabel.setText("Hardware Mode", juce::dontSendNotification);
+            bpmLabel.setText("--- BPM", juce::dontSendNotification);
+            timeLabel.setText("--:--.--- / --:--.---", juce::dontSendNotification);
+        }
 
-        // Highlight active button
-        playBtn.setColour(juce::TextButton::buttonColourId,
-            (st == PlayState::PLAYING || st == PlayState::LOOPING) ? juce::Colour(0xff33cc44) : juce::Colour(0xff226622));
-        pauseBtn.setColour(juce::TextButton::buttonColourId,
-            st == PlayState::PAUSED ? juce::Colour(0xffcc8833) : juce::Colour(0xff664422));
-        cueBtn.setColour(juce::TextButton::buttonColourId,
-            st == PlayState::CUED ? juce::Colour(0xff3388cc) : juce::Colour(0xff224466));
+        // Disable virtual controls in HW mode
+        loadBtn.setEnabled(false);
+        ejectBtn.setEnabled(false);
+        playBtn.setEnabled(false);
+        cueBtn.setEnabled(false);
+        volumeSlider.setEnabled(false);
+    }
+    else
+    {
+        // Virtual mode
+        auto& deck = engine.getVirtualDeck(deckNum);
+
+        loadBtn.setEnabled(true);
+        ejectBtn.setEnabled(true);
+        playBtn.setEnabled(true);
+        cueBtn.setEnabled(true);
+        volumeSlider.setEnabled(true);
+
+        if (deck.isLoaded())
+        {
+            displayState = deck.getState();
+            beatPhase = deck.getBeatPhase();
+            titleLabel.setText(deck.getTitle(), juce::dontSendNotification);
+            artistLabel.setText(deck.getArtist().isEmpty() ? "Virtual Deck" : deck.getArtist(),
+                               juce::dontSendNotification);
+            bpmLabel.setText(juce::String(deck.getBpm(), 1) + " BPM", juce::dontSendNotification);
+            timeLabel.setText(formatTime(deck.getPositionMs()) + " / " + formatTime(deck.getDurationMs()),
+                             juce::dontSendNotification);
+        }
+        else
+        {
+            displayState = PlayState::IDLE;
+            beatPhase = 0;
+            titleLabel.setText("Empty", juce::dontSendNotification);
+            artistLabel.setText("Load a track", juce::dontSendNotification);
+            bpmLabel.setText("", juce::dontSendNotification);
+            timeLabel.setText("", juce::dontSendNotification);
+        }
     }
 
-    repaint();  // Update border color
+    // ── Update button colors ──
+    // CUE: yellow when active
+    bool cueLit = (displayState == PlayState::CUED || displayState == PlayState::CUEING);
+    cueBtn.setColour(juce::TextButton::buttonColourId,
+        cueLit ? Theme::ylw2.withAlpha(0.3f) : Theme::bg4);
+    cueBtn.setColour(juce::TextButton::textColourOffId,
+        cueLit ? Theme::ylw : juce::Colour(0x80ffd16d));
+
+    // PLAY: green when playing
+    bool playLit = (displayState == PlayState::PLAYING || displayState == PlayState::LOOPING);
+    playBtn.setColour(juce::TextButton::buttonColourId,
+        playLit ? Theme::grn2.withAlpha(0.3f) : Theme::bg4);
+    playBtn.setColour(juce::TextButton::textColourOffId,
+        playLit ? Theme::grn : juce::Colour(0x805af0b3));
+
+    // HW button
+    hwBtn.setButtonText(isHW ? "HW" : "VIR");
+    hwBtn.setColour(juce::TextButton::textColourOffId,
+        isHW ? Theme::pur : Theme::tx3);
+
+    repaint();
 }
 
-// ── MainComponent ────────────────────────────
+// ═══════════════════════════════════════════
+// ── MainComponent ──────────────────────────
+// ═══════════════════════════════════════════
+
 MainComponent::MainComponent()
 {
-    // Version label
-    addAndMakeVisible(versionLabel);
-    versionLabel.setText("Bridge+ v0.9.1 | JUCE/C++", juce::dontSendNotification);
-    versionLabel.setColour(juce::Label::textColourId, juce::Colour(0xff666688));
-    versionLabel.setFont(juce::FontOptions(13.0f));
-    versionLabel.setJustificationType(juce::Justification::centredRight);
-
-    // Status label
-    addAndMakeVisible(statusLabel);
-    statusLabel.setColour(juce::Label::textColourId, juce::Colour(0xff88aacc));
-    statusLabel.setFont(juce::FontOptions(14.0f));
-    statusLabel.setText("Ready", juce::dontSendNotification);
-
-    // Start button
+    // ── Header ──
     addAndMakeVisible(startBtn);
-    startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff3366cc));
-    startBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    startBtn.setColour(juce::TextButton::buttonColourId, Theme::grn2.withAlpha(0.2f));
+    startBtn.setColour(juce::TextButton::textColourOffId, Theme::grn);
     startBtn.onClick = [this]
     {
         if (engine.isRunning())
         {
             engine.stop();
             startBtn.setButtonText("START BRIDGE");
-            startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff3366cc));
-            statusLabel.setText("Stopped", juce::dontSendNotification);
+            startBtn.setColour(juce::TextButton::buttonColourId, Theme::grn2.withAlpha(0.2f));
+            startBtn.setColour(juce::TextButton::textColourOffId, Theme::grn);
         }
         else
         {
             if (engine.start())
             {
                 startBtn.setButtonText("STOP BRIDGE");
-                startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffcc3333));
-                statusLabel.setText("TCNet broadcasting...", juce::dontSendNotification);
+                startBtn.setColour(juce::TextButton::buttonColourId, Theme::red.withAlpha(0.2f));
+                startBtn.setColour(juce::TextButton::textColourOffId, Theme::red);
             }
         }
     };
 
-    // + DECK button
-    addAndMakeVisible(addDeckBtn);
-    addDeckBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2a4420));
-    addDeckBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff88cc88));
-    addDeckBtn.onClick = [this]
-    {
-        if (visibleDecks >= 8) return;
+    addAndMakeVisible(statusDotLabel);
+    statusDotLabel.setFont(juce::FontOptions(10.0f));
+    statusDotLabel.setJustificationType(juce::Justification::centred);
 
-        int idx = visibleDecks;
-        if (!deckPanels[(size_t)idx])
+    addAndMakeVisible(statusTextLabel);
+    statusTextLabel.setFont(juce::FontOptions(13.0f));
+    statusTextLabel.setColour(juce::Label::textColourId, Theme::tx2);
+    statusTextLabel.setText("READY", juce::dontSendNotification);
+
+    addAndMakeVisible(versionLabel);
+    versionLabel.setText("v1.0.0", juce::dontSendNotification);
+    versionLabel.setColour(juce::Label::textColourId, Theme::tx4);
+    versionLabel.setFont(juce::FontOptions(11.0f));
+    versionLabel.setJustificationType(juce::Justification::centredRight);
+
+    // ── Tab Bar ──
+    const char* tabNames[] = { "LINK", "PRO DJ LINK", "TCNet", "SETTINGS" };
+    for (int i = 0; i < 4; i++)
+    {
+        tabBtns[(size_t)i].setButtonText(tabNames[i]);
+        addAndMakeVisible(tabBtns[(size_t)i]);
+        tabBtns[(size_t)i].setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+        tabBtns[(size_t)i].setColour(juce::TextButton::textColourOffId, Theme::tx3);
+        tabBtns[(size_t)i].onClick = [this, i]
         {
-            deckPanels[(size_t)idx] = std::make_unique<DeckPanel>(idx, engine);
-            addAndMakeVisible(deckPanels[(size_t)idx].get());
-        }
-        else
-        {
-            deckPanels[(size_t)idx]->setVisible(true);
-        }
-        visibleDecks++;
-        layoutDecks();
-        if (visibleDecks < 8)
-            addDeckBtn.setButtonText("+ DECK (" + juce::String(visibleDecks) + "/8)");
-        else
-            addDeckBtn.setEnabled(false);
+            activeTab = (Tab)i;
+            for (int j = 0; j < 4; j++)
+                tabBtns[(size_t)j].setColour(juce::TextButton::textColourOffId,
+                    j == i ? Theme::grn : Theme::tx3);
+            repaint();
+        };
+    }
+    tabBtns[0].setColour(juce::TextButton::textColourOffId, Theme::grn);
+
+    // ── Status Badges ──
+    auto setupBadge = [this](juce::Label& badge, const juce::String& text, juce::Colour col)
+    {
+        addAndMakeVisible(badge);
+        badge.setText(text, juce::dontSendNotification);
+        badge.setFont(juce::FontOptions(11.0f));
+        badge.setColour(juce::Label::textColourId, col);
+        badge.setJustificationType(juce::Justification::centredLeft);
     };
 
-    // Audio output — stereo, no input
+    setupBadge(tcnetBadge,  "TCNet: OFFLINE", Theme::red);
+    setupBadge(arenaBadge,  "Arena: 0",       Theme::blu);
+    setupBadge(deckBadge,   "Decks: 0",       Theme::tx3);
+    setupBadge(uptimeBadge, "Uptime: 00:00:00", Theme::tx3);
+
+    // ── Mode Bar ──
+    addAndMakeVisible(virtualBtn);
+    virtualBtn.setColour(juce::TextButton::buttonColourId, Theme::grn2.withAlpha(0.15f));
+    virtualBtn.setColour(juce::TextButton::textColourOffId, Theme::grn);
+    virtualBtn.onClick = [this]
+    {
+        globalHWMode = false;
+        virtualBtn.setColour(juce::TextButton::buttonColourId, Theme::grn2.withAlpha(0.15f));
+        virtualBtn.setColour(juce::TextButton::textColourOffId, Theme::grn);
+        hwModeBtn.setColour(juce::TextButton::buttonColourId, Theme::bg4);
+        hwModeBtn.setColour(juce::TextButton::textColourOffId, Theme::tx3);
+        repaint();
+    };
+
+    addAndMakeVisible(hwModeBtn);
+    hwModeBtn.setColour(juce::TextButton::buttonColourId, Theme::bg4);
+    hwModeBtn.setColour(juce::TextButton::textColourOffId, Theme::tx3);
+    hwModeBtn.onClick = [this]
+    {
+        globalHWMode = true;
+        hwModeBtn.setColour(juce::TextButton::buttonColourId, Theme::pur.withAlpha(0.15f));
+        hwModeBtn.setColour(juce::TextButton::textColourOffId, Theme::pur);
+        virtualBtn.setColour(juce::TextButton::buttonColourId, Theme::bg4);
+        virtualBtn.setColour(juce::TextButton::textColourOffId, Theme::tx3);
+        repaint();
+    };
+
+    addAndMakeVisible(addDeckBtn);
+    addDeckBtn.setColour(juce::TextButton::buttonColourId, Theme::bg3);
+    addDeckBtn.setColour(juce::TextButton::textColourOffId, Theme::grn);
+    addDeckBtn.onClick = [this] { addDeck(); };
+
+    // ── Bottom Bar ──
+    addAndMakeVisible(packetLabel);
+    packetLabel.setFont(juce::FontOptions(11.0f));
+    packetLabel.setColour(juce::Label::textColourId, Theme::tx4);
+    packetLabel.setText("TCNet TX: 0", juce::dontSendNotification);
+    packetLabel.setJustificationType(juce::Justification::centredRight);
+
+    // ── Audio output ──
     setAudioChannels(0, 2);
 
-    setSize(1040, 700);
-    startTimerHz(20);  // UI refresh 20fps
+    setSize(1040, 720);
+    startTimerHz(20);
 }
 
 MainComponent::~MainComponent()
@@ -279,6 +531,28 @@ MainComponent::~MainComponent()
     stopTimer();
     shutdownAudio();
     engine.stop();
+}
+
+void MainComponent::addDeck()
+{
+    if (visibleDecks >= 8) return;
+
+    int idx = visibleDecks;
+    if (!deckPanels[(size_t)idx])
+    {
+        deckPanels[(size_t)idx] = std::make_unique<DeckPanel>(idx, engine);
+        addAndMakeVisible(deckPanels[(size_t)idx].get());
+    }
+    else
+    {
+        deckPanels[(size_t)idx]->setVisible(true);
+    }
+    visibleDecks++;
+    layoutDecks();
+
+    addDeckBtn.setButtonText("+ DECK (" + juce::String(visibleDecks) + "/8)");
+    if (visibleDecks >= 8)
+        addDeckBtn.setEnabled(false);
 }
 
 // ── Audio ────────────────────────────────────
@@ -299,20 +573,19 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& buffer
 
     int numSamples = bufferToFill.numSamples;
 
-    // Temp buffers for each deck
     std::vector<float> tmpL((size_t)numSamples, 0.0f);
     std::vector<float> tmpR((size_t)numSamples, 0.0f);
 
     for (int d = 0; d < 8; d++)
     {
         if (!engine.isVirtualDeckActive(d)) continue;
+        if (engine.isHWMode(d)) continue;
 
         auto& deck = engine.getVirtualDeck(d);
         if (!deck.isLoaded()) continue;
 
         deck.getNextAudioBlock(tmpL.data(), tmpR.data(), numSamples);
 
-        // Mix into output
         for (int i = 0; i < numSamples; i++)
         {
             leftOut[i]  += tmpL[(size_t)i];
@@ -326,36 +599,123 @@ void MainComponent::releaseResources() {}
 // ── Paint ────────────────────────────────────
 void MainComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff111318));
+    g.fillAll(Theme::bg);
 
-    // Top bar
-    g.setColour(juce::Colour(0xff181b22));
-    g.fillRect(0, 0, getWidth(), 50);
-    g.setColour(juce::Colour(0xff2a2d34));
-    g.drawLine(0, 50, (float)getWidth(), 50, 1.0f);
+    int w = getWidth();
 
-    // Empty state
+    // ── Header bar (52px) ──
+    g.setColour(Theme::bgLowest);
+    g.fillRect(0, 0, w, 52);
+
+    // B+ logo badge
+    g.setGradientFill(juce::ColourGradient(
+        Theme::grn, 16.0f, 12.0f,
+        Theme::grn2, 40.0f, 40.0f, false));
+    g.fillRoundedRectangle(10.0f, 12.0f, 28.0f, 28.0f, 6.0f);
+    g.setColour(Theme::bgLowest);
+    g.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+    g.drawText("B+", 10, 12, 28, 28, juce::Justification::centred);
+
+    // Title
+    g.setColour(Theme::tx);
+    g.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+    g.drawText("BRIDGE+", 44, 10, 100, 18, juce::Justification::centredLeft);
+    g.setColour(Theme::tx3);
+    g.setFont(juce::FontOptions(10.0f));
+    g.drawText("PRO DJ LINK", 44, 28, 100, 14, juce::Justification::centredLeft);
+
+    // Status dot
+    juce::Colour dotCol = engine.isRunning() ? Theme::grn : Theme::tx4;
+    g.setColour(dotCol);
+    g.fillEllipse(160.0f, 22.0f, 8.0f, 8.0f);
+
+    // Separator line
+    g.setColour(Theme::bdr2);
+    g.drawHorizontalLine(52, 0, (float)w);
+
+    // ── Tab bar (36px) ──
+    g.setColour(Theme::bg2);
+    g.fillRect(0, 52, w, 36);
+
+    // Active tab underline
+    if ((int)activeTab < 4)
+    {
+        auto& btn = tabBtns[(size_t)activeTab];
+        g.setColour(Theme::grn);
+        g.fillRect(btn.getX(), 86, btn.getWidth(), 2);
+    }
+
+    g.setColour(Theme::bdr);
+    g.drawHorizontalLine(88, 0, (float)w);
+
+    // ── Status bar (28px) ──
+    g.setColour(Theme::bg3);
+    g.fillRect(0, 88, w, 28);
+    g.setColour(Theme::bdr);
+    g.drawHorizontalLine(116, 0, (float)w);
+
+    // ── Mode bar (36px) ──
+    g.setColour(Theme::bg2);
+    g.fillRect(0, 116, w, 36);
+
+    // "DECK MODE" label
+    g.setColour(Theme::tx3);
+    g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+    g.drawText("DECK MODE", 10, 116, 80, 36, juce::Justification::centredLeft);
+
+    g.setColour(Theme::bdr);
+    g.drawHorizontalLine(152, 0, (float)w);
+
+    // ── Empty state ──
     if (visibleDecks == 0)
     {
-        g.setColour(juce::Colour(0xff555566));
-        g.setFont(juce::FontOptions(18.0f));
+        g.setColour(Theme::tx4);
+        g.setFont(juce::FontOptions(16.0f));
         g.drawText("Click \"+ DECK\" to add a virtual deck",
-                   getLocalBounds().withTrimmedTop(50),
+                   getLocalBounds().withTrimmedTop(152).withTrimmedBottom(28),
                    juce::Justification::centred);
     }
+
+    // ── Bottom bar (28px) ──
+    int bh = getHeight();
+    g.setColour(Theme::bgLowest);
+    g.fillRect(0, bh - 28, w, 28);
+    g.setColour(Theme::bdr);
+    g.drawHorizontalLine(bh - 28, 0, (float)w);
 }
 
 void MainComponent::resized()
 {
-    auto area = getLocalBounds();
+    int w = getWidth();
 
-    auto top = area.removeFromTop(50).reduced(10, 8);
-    startBtn.setBounds(top.removeFromLeft(150));
-    top.removeFromLeft(8);
-    addDeckBtn.setBounds(top.removeFromLeft(120));
-    top.removeFromLeft(12);
-    statusLabel.setBounds(top.removeFromLeft(top.getWidth() - 200));
-    versionLabel.setBounds(top);
+    // ── Header ──
+    statusTextLabel.setBounds(172, 16, 100, 20);
+    startBtn.setBounds(w - 150, 12, 130, 28);
+    versionLabel.setBounds(w - 290, 12, 130, 28);
+
+    // ── Tab bar ──
+    int tabX = 10;
+    int tabWidths[] = { 50, 100, 60, 80 };
+    for (int i = 0; i < 4; i++)
+    {
+        tabBtns[(size_t)i].setBounds(tabX, 54, tabWidths[i], 32);
+        tabX += tabWidths[i] + 4;
+    }
+
+    // ── Status bar ──
+    int sx = 12;
+    tcnetBadge.setBounds(sx, 90, 110, 24);  sx += 114;
+    arenaBadge.setBounds(sx, 90, 80, 24);   sx += 84;
+    deckBadge.setBounds(sx, 90, 80, 24);    sx += 84;
+    uptimeBadge.setBounds(sx, 90, 140, 24);
+
+    // ── Mode bar ──
+    virtualBtn.setBounds(92, 120, 80, 28);
+    hwModeBtn.setBounds(176, 120, 90, 28);
+    addDeckBtn.setBounds(w - 130, 120, 120, 28);
+
+    // ── Bottom bar ──
+    packetLabel.setBounds(w - 200, getHeight() - 26, 190, 24);
 
     layoutDecks();
 }
@@ -364,24 +724,28 @@ void MainComponent::layoutDecks()
 {
     if (visibleDecks == 0) return;
 
-    auto area = getLocalBounds().withTrimmedTop(58).reduced(10, 4);
+    // Deck area: below mode bar (152) and above bottom bar (28)
+    auto area = getLocalBounds();
+    area.removeFromTop(156);
+    area.removeFromBottom(28);
+    area = area.reduced(8, 4);
 
     if (visibleDecks == 1)
     {
-        deckPanels[0]->setBounds(area);
+        deckPanels[0]->setBounds(area.withWidth(area.getWidth() / 2));
     }
     else if (visibleDecks == 2)
     {
-        int halfW = (area.getWidth() - 10) / 2;
+        int halfW = (area.getWidth() - 8) / 2;
         deckPanels[0]->setBounds(area.getX(), area.getY(), halfW, area.getHeight());
-        deckPanels[1]->setBounds(area.getX() + halfW + 10, area.getY(), halfW, area.getHeight());
+        deckPanels[1]->setBounds(area.getX() + halfW + 8, area.getY(), halfW, area.getHeight());
     }
     else
     {
         int cols = 2;
         int rows = (visibleDecks + 1) / 2;
-        int cellW = (area.getWidth() - 10) / cols;
-        int cellH = (area.getHeight() - (rows - 1) * 10) / rows;
+        int cellW = (area.getWidth() - 8) / cols;
+        int cellH = (area.getHeight() - (rows - 1) * 8) / rows;
 
         for (int i = 0; i < visibleDecks; i++)
         {
@@ -389,8 +753,8 @@ void MainComponent::layoutDecks()
             int row = i / 2;
             if (deckPanels[(size_t)i])
                 deckPanels[(size_t)i]->setBounds(
-                    area.getX() + col * (cellW + 10),
-                    area.getY() + row * (cellH + 10),
+                    area.getX() + col * (cellW + 8),
+                    area.getY() + row * (cellH + 8),
                     cellW, cellH);
         }
     }
@@ -398,9 +762,35 @@ void MainComponent::layoutDecks()
 
 void MainComponent::timerCallback()
 {
+    // Update status
     if (engine.isRunning())
-        statusLabel.setText(engine.getStatusText(), juce::dontSendNotification);
+    {
+        statusTextLabel.setText("RUNNING", juce::dontSendNotification);
+        statusTextLabel.setColour(juce::Label::textColourId, Theme::grn);
+        tcnetBadge.setText("TCNet: ONLINE", juce::dontSendNotification);
+        tcnetBadge.setColour(juce::Label::textColourId, Theme::blu);
+        arenaBadge.setText("Arena: " + juce::String(engine.getNodeCount()),
+                          juce::dontSendNotification);
+        uptimeBadge.setText("Uptime: " + formatUptime(engine.getUptimeSeconds()),
+                           juce::dontSendNotification);
+        packetLabel.setText("TCNet TX: " + juce::String(engine.getPacketCount()),
+                          juce::dontSendNotification);
+    }
+    else
+    {
+        statusTextLabel.setText("READY", juce::dontSendNotification);
+        statusTextLabel.setColour(juce::Label::textColourId, Theme::tx3);
+        tcnetBadge.setText("TCNet: OFFLINE", juce::dontSendNotification);
+        tcnetBadge.setColour(juce::Label::textColourId, Theme::red);
+    }
 
+    // Active deck count
+    int activeCount = 0;
+    for (int i = 0; i < 8; i++)
+        if (engine.isVirtualDeckActive(i) || engine.isHWMode(i)) activeCount++;
+    deckBadge.setText("Decks: " + juce::String(activeCount), juce::dontSendNotification);
+
+    // Update deck panels
     for (int i = 0; i < visibleDecks; i++)
         if (deckPanels[(size_t)i])
             deckPanels[(size_t)i]->updateDisplay();

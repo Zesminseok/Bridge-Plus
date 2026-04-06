@@ -5,8 +5,8 @@
 #include <atomic>
 
 /**
- * VirtualDeck — simulated CDJ with actual audio playback.
- * Loads audio, plays through system output, provides state for TCNet.
+ * VirtualDeck - simulated CDJ with actual audio playback.
+ * CDJ-3000 style CUE behavior.
  */
 class VirtualDeck
 {
@@ -16,15 +16,17 @@ public:
     // Load and analyze an audio file
     bool loadFile(const juce::File& file);
     bool isLoaded() const { return audioBuffer.getNumSamples() > 0; }
+    void eject();
 
-    // Transport controls
+    // Transport controls (CDJ-3000 style)
+    void playPause();   // Toggle play/pause
     void play();
     void pause();
     void stop();
-    void cue();
+    void cue();         // CDJ cue: playing->set cue+pause, stopped->jump to cue
     void seekTo(float ms);
 
-    // Audio output — called from audio thread
+    // Audio output - called from audio thread
     void getNextAudioBlock(float* left, float* right, int numSamples);
     void setSampleRate(double sr) { deviceSampleRate = sr; }
 
@@ -34,6 +36,7 @@ public:
     float getDurationMs() const    { return durationMs; }
     float getBpm() const           { return bpm; }
     float getPitch() const         { return pitch; }
+    float getCuePointMs() const    { return cuePointMs; }
     int   getTrackId() const       { return trackId; }
     uint8_t getBeatPhase() const;
 

@@ -45,6 +45,30 @@ bool VirtualDeck::loadFile(const juce::File& file)
     return true;
 }
 
+void VirtualDeck::eject()
+{
+    state.store(PlayState::IDLE);
+    playSamplePos.store(0);
+    positionMs.store(0.0f);
+    audioBuffer.setSize(0, 0);
+    title = {};
+    artist = {};
+    durationMs = 0.0f;
+    bpm = 0.0f;
+    cuePointMs = 0.0f;
+    wfData.clear();
+}
+
+void VirtualDeck::playPause()
+{
+    if (!isLoaded()) return;
+    PlayState cur = state.load();
+    if (cur == PlayState::PLAYING || cur == PlayState::LOOPING)
+        state.store(PlayState::PAUSED);
+    else
+        state.store(PlayState::PLAYING);
+}
+
 void VirtualDeck::play()
 {
     if (!isLoaded()) return;
@@ -60,7 +84,6 @@ void VirtualDeck::pause()
 void VirtualDeck::stop()
 {
     state.store(PlayState::STOPPED);
-    // Return to cue point
     int cueSample = (int)(cuePointMs / 1000.0f * fileSampleRate);
     playSamplePos.store(cueSample);
     positionMs.store(cuePointMs);
@@ -69,9 +92,20 @@ void VirtualDeck::stop()
 void VirtualDeck::cue()
 {
     if (!isLoaded()) return;
-    // Set cue at current position and stop
-    cuePointMs = positionMs.load();
-    state.store(PlayState::CUED);
+    PlayState cur = state.load();
+
+    if (cur == PlayState::PLAYING || cur == PlayState::LOOPING)
+    {
+        // While playing: set cue at current position, enter cue state
+        cuePointMs = positionMs.load();
+        state.store(PlayState::CUED);
+    }
+    else
+    {
+        // While stopped/paused/cued/idle: jump to existing cue point
+        seekTo(cuePointMs);
+        state.store(PlayState::CUED);
+    }
 }
 
 void VirtualDeck::seekTo(float ms)
@@ -87,7 +121,6 @@ void VirtualDeck::getNextAudioBlock(float* left, float* right, int numSamples)
     PlayState currentState = state.load();
     if (currentState != PlayState::PLAYING && currentState != PlayState::LOOPING)
     {
-        // Silence
         std::memset(left, 0, (size_t)numSamples * sizeof(float));
         std::memset(right, 0, (size_t)numSamples * sizeof(float));
         return;
@@ -101,7 +134,6 @@ void VirtualDeck::getNextAudioBlock(float* left, float* right, int numSamples)
     const float* srcL = audioBuffer.getReadPointer(0);
     const float* srcR = numChannels > 1 ? audioBuffer.getReadPointer(1) : srcL;
 
-    // Speed ratio for pitch adjustment and sample rate conversion
     double speedRatio = (fileSampleRate / deviceSampleRate) * (1.0 + pitch / 100.0);
 
     for (int i = 0; i < numSamples; i++)
@@ -109,17 +141,28 @@ void VirtualDeck::getNextAudioBlock(float* left, float* right, int numSamples)
         int idx = (int)((double)pos + (double)i * speedRatio);
         if (idx >= totalSamples)
         {
-            idx = idx % totalSamples;  // loop
-            state.store(PlayState::LOOPING);
+            // Track ended - stop instead of loop
+            state.store(PlayState::STOPPED);
+            for (int j = i; j < numSamples; j++)
+            {
+                left[j] = 0.0f;
+                right[j] = 0.0f;
+            }
+            playSamplePos.store(0);
+            positionMs.store(0.0f);
+            return;
         }
         left[i] = srcL[idx] * volume;
         right[i] = srcR[idx] * volume;
     }
 
-    // Advance position
     int advance = (int)((double)numSamples * speedRatio);
     pos += advance;
-    if (pos >= totalSamples) pos = pos % totalSamples;
+    if (pos >= totalSamples)
+    {
+        pos = 0;
+        state.store(PlayState::STOPPED);
+    }
     playSamplePos.store(pos);
     positionMs.store((float)pos / (float)fileSampleRate * 1000.0f);
 }
