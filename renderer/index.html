@@ -899,8 +899,8 @@ function drawOverview(slot,prog){
   ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(Math.round(pos*W)-.5,0,1,H);
 }
 
-// Zoom waveform — uses pre-rendered OffscreenCanvas bitmap cache
-// Scroll via drawImage() for zero-jitter playback (Rekordbox style)
+// Zoom waveform — direct path rendering (wavesurfer.js polygon fill approach)
+// No bitmap cache scaling — renders at screen resolution with Canvas AA
 function drawZoomWaveform(slot,prog){
   const d=DECKS[slot];
   const wfData=d?.rgbWfDetail||d?.rgbWf;
@@ -914,28 +914,48 @@ function drawZoomWaveform(slot,prog){
   const wfDur=isDetail?(pts/150*1000):(dur||1);
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
-  // Build cache if needed (first call or data changed)
-  if(!d._wfCache||d._wfCacheH!==H){buildWaveformCache(slot);}
-  // --- Draw waveform from bitmap cache via drawImage ---
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  ctx.imageSmoothingEnabled=true; // blend adjacent columns for smooth gradient
-  if(d._wfCache){
-    // Map viewport ms range → cache pixel range
-    const pxPerMs=pts/wfDur; // cache pixels per millisecond
-    const viewLMs=posMs-cX*msPerPx;
-    const viewRMs=posMs+(W-cX)*msPerPx;
-    // Source rect in cache coordinates (float → let drawImage handle sub-pixel)
-    const srcX=viewLMs*pxPerMs;
-    const srcW=(viewRMs-viewLMs)*pxPerMs;
-    // Clamp to valid cache range
-    const clampL=Math.max(0,srcX);
-    const clampR=Math.min(pts,srcX+srcW);
-    if(clampR>clampL){
-      const dstX=Math.round((clampL-srcX)/srcW*W);
-      const dstW=Math.round((clampR-clampL)/srcW*W);
-      ctx.drawImage(d._wfCache,Math.floor(clampL),0,Math.ceil(clampR-clampL),H,dstX,0,dstW,H);
+  // --- Direct path rendering: per-pixel interpolation ---
+  const pxPerMs=pts/wfDur;
+  const mid=H/2;
+  const hs=new Float32Array(W); // heights per screen pixel
+  const _gc=[]; // gradient color stops
+  const step=Math.max(1,W>>8); // max ~256 gradient stops
+  for(let px=0;px<W;px++){
+    const ms=posMs+(px-cX)*msPerPx;
+    const di=ms*pxPerMs; // float data index
+    const i0=Math.max(0,Math.min(pts-1,di|0));
+    const i1=Math.min(pts-1,i0+1);
+    const f=di-i0;
+    const p0=wfData[i0],p1=wfData[i1];
+    if(!p0){hs[px]=0;continue;}
+    // Interpolate peak height
+    hs[px]=((p0.h||0)+(((p1?.h||0)-(p0.h||0))*f))*mid*0.95;
+    // Gradient color stops (subsampled)
+    if(px%step===0||px===W-1){
+      const r=p0.r+((p1?.r||0)-p0.r)*f;
+      const g=p0.g+((p1?.g||0)-p0.g)*f;
+      const b=p0.b+((p1?.b||0)-p0.b)*f;
+      const mx=Math.max(r,g,b,0.001);
+      const sc=255/mx;
+      _gc.push({t:px/(W-1),
+        c:`rgb(${Math.min(255,r*sc)|0},${Math.min(255,g*sc)|0},${Math.min(255,b*sc)|0})`});
     }
   }
+  // Filled polygon path (wavesurfer.js technique) — Canvas native anti-aliasing
+  ctx.beginPath();
+  ctx.moveTo(0,mid-hs[0]);
+  for(let px=1;px<W;px++) ctx.lineTo(px,mid-hs[px]);
+  for(let px=W-1;px>=0;px--) ctx.lineTo(px,mid+hs[px]);
+  ctx.closePath();
+  // Clip + gradient fill for per-column frequency coloring
+  ctx.save();
+  ctx.clip();
+  const grad=ctx.createLinearGradient(0,0,W,0);
+  for(const s of _gc) grad.addColorStop(s.t,s.c);
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,W,H);
+  ctx.restore();
   // Beat grid overlaid — use dbserver beat grid if available, else fallback to calculated
   if(d.bpm>0&&dur>0){
     const viewL=posMs-cX*msPerPx, viewR=posMs+(W-cX)*msPerPx;
