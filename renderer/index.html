@@ -867,11 +867,10 @@ function drawZoomWaveform(slot,prog){
   const wfDur=isDetail?(pts/150*1000):(dur||1);
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
-  // Pre-compute waveform data per pixel column
-  const colData=new Array(W);
+  const img=ctx.createImageData(W,H);const px4=img.data;
   for(let px=0;px<W;px++){
     const pxMs=posMs+(px-cX)*msPerPx;
-    if(pxMs<0||pxMs>dur){colData[px]=null;continue;}
+    if(pxMs<0||pxMs>dur)continue;
     const i0=Math.max(0,Math.floor((pxMs-msPerPx*.5)/wfDur*pts));
     const i1=Math.min(pts-1,Math.ceil((pxMs+msPerPx*.5)/wfDur*pts));
     let r=0,g=0,b2=0,mn=0,mx=0;const cnt=Math.max(1,i1-i0+1);
@@ -879,49 +878,27 @@ function drawZoomWaveform(slot,prog){
     r/=cnt;g/=cnt;b2/=cnt;
     const past=pxMs<posMs;
     const dimF=past?.65:1.0;
-    const h=Math.max(1,mx*mid*0.93);
-    const asymShift=(mx+mn)*0.5*mid*0.3;
-    const yTop=Math.max(0,mid-h+asymShift);
-    const yBot=Math.min(H,mid+h+asymShift);
-    colData[px]={r,g,b2,dimF,yTop,yBot,past};
+    const alpha=past?200:255;
+    const h=Math.max(2,Math.round(mx*mid*0.93));
+    const asymShift=Math.round((mx+mn)*0.5*mid*0.3);
+    const y0=Math.max(0,Math.min(H-1,mid-h+asymShift));
+    const y1=Math.max(0,Math.min(H-1,mid+h+asymShift));
+    if((cfg.wfColor||'rgb')==='3band'){
+      const bands=_wf3BandStack(r,g,b2,y1-y0,dimF);
+      let cy=y1;
+      for(const band of bands){
+        const by0=Math.max(y0,cy-band.h);
+        for(let y=by0;y<cy;y++){const idx=(y*W+px)*4;px4[idx]=band.R;px4[idx+1]=band.G;px4[idx+2]=band.B;px4[idx+3]=alpha;}
+        cy=by0;
+      }
+    }else{
+      const [R,G,B]=_wfBlend(r,g,b2,dimF);
+      for(let y=y0;y<=y1;y++){
+        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=alpha;
+      }
+    }
   }
-  // Canvas path rendering — continuous oscilloscope waveform
-  ctx.clearRect(0,0,W,H);
-  // Draw filled waveform body with gradient (dark center, bright edges)
-  // Upper edge path (top of waveform)
-  ctx.beginPath();
-  let started=false;
-  for(let px=0;px<W;px++){
-    const c=colData[px];if(!c){if(started){ctx.lineTo(px,mid);started=false;}continue;}
-    if(!started){ctx.moveTo(px,c.yTop);started=true;}else ctx.lineTo(px,c.yTop);
-  }
-  // Lower edge path (bottom of waveform) — reverse direction
-  for(let px=W-1;px>=0;px--){
-    const c=colData[px];if(!c)continue;
-    ctx.lineTo(px,c.yBot);
-  }
-  ctx.closePath();
-  // Fill with vertical gradient: bright edge → dark center → bright edge
-  const grd=ctx.createLinearGradient(0,0,0,H);
-  grd.addColorStop(0,'rgba(120,180,255,0.85)');
-  grd.addColorStop(0.35,'rgba(40,60,90,0.15)');
-  grd.addColorStop(0.5,'rgba(20,30,50,0.05)');
-  grd.addColorStop(0.65,'rgba(40,60,90,0.15)');
-  grd.addColorStop(1,'rgba(120,180,255,0.85)');
-  ctx.fillStyle=grd;
-  ctx.fill();
-  // Draw colored edge lines — Rekordbox RGB style per-pixel color
-  for(let px=0;px<W;px++){
-    const c=colData[px];if(!c)continue;
-    const [R,G,B]=_wfBlend(c.r,c.g,c.b2,c.dimF);
-    const a=c.past?0.55:0.95;
-    const css=`rgba(${R},${G},${B},${a})`;
-    // Top edge line (2px)
-    ctx.fillStyle=css;
-    ctx.fillRect(px,c.yTop,1,Math.min(2,c.yBot-c.yTop));
-    // Bottom edge line (2px)
-    ctx.fillRect(px,Math.max(c.yTop,c.yBot-2),1,2);
-  }
+  ctx.putImageData(img,0,0);
   // Beat grid overlaid — use dbserver beat grid if available, else fallback to calculated
   if(d.bpm>0&&dur>0){
     const viewL=posMs-cX*msPerPx, viewR=posMs+(W-cX)*msPerPx;
