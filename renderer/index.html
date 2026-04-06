@@ -787,9 +787,10 @@ function _wf3BandStack(r,g,b2,totalH,dimF){
 }
 
 // ═══ Waveform Bitmap Cache (OffscreenCanvas) ═══
-// Spectral Centroid color waveform — smooth envelope path (FFT-style)
-// Height = dom^2.5 power curve (strong dynamic range)
-// Color = HSL from spectral centroid (bass=red, mid=green, treble=blue/purple)
+// RGB waveform — bass=Red, mid=Green, treble=Blue (vivid, always max channel)
+// Height = log compression (lifts quiet, compresses loud)
+// Shape = smooth envelope path with clip
+const _LOG11=Math.log(11);
 function buildWaveformCache(slot){
   const d=DECKS[slot];if(!d)return;
   const wfData=d.rgbWfDetail||d.rgbWf;
@@ -797,47 +798,36 @@ function buildWaveformCache(slot){
   const cv=document.getElementById('wzc'+slot);
   const H=cv?cv.height:100;
   const pts=wfData.length;
-  const cacheKey=pts+'_'+H+'_sc2';
+  const cacheKey=pts+'_'+H+'_rgb3';
   if(d._wfCache&&d._wfCacheKey===cacheKey)return;
   const oc=new OffscreenCanvas(pts,H);
   const ctx=oc.getContext('2d',{alpha:false});
   ctx.fillStyle='#000';ctx.fillRect(0,0,pts,H);
   const mid=H/2;
-  const fB=300,fM=2300,fT=10000,logR=Math.log(fT/fB);
-  // Pass 1: pre-compute heights and colors
+  // Pass 1: heights + colors
   const hs=new Float32Array(pts);
   const cr=new Uint8Array(pts),cg=new Uint8Array(pts),cb=new Uint8Array(pts);
   for(let x=0;x<pts;x++){
     const p=wfData[x];
-    const tot=p.r+p.g+p.b;
-    if(tot<0.005)continue;
-    const dom=Math.max(p.r,p.g,p.b);
-    // RMS for height — actual perceived loudness, not peak spikes
-    // rms² × 4: rms=0.1→4%, 0.2→16%, 0.3→36%, 0.4→64%
+    const mx=Math.max(p.r,p.g,p.b);
+    if(mx<0.005)continue;
+    // Height: log compression — log(1+rms*10)/log(11)
+    // rms=0.05→16%, 0.1→28%, 0.2→46%, 0.3→58%, 0.5→75%
     const rv=p.rms||0;
-    hs[x]=Math.min(mid,rv*rv*4*mid);
-    // Spectral centroid → HSL color
-    const cent=(p.r*fB+p.g*fM+p.b*fT)/tot;
-    const cn=Math.max(0,Math.min(1,Math.log(cent/fB)/logR));
-    const dominance=Math.min(1,(dom/tot-0.333)/0.667);
-    const hue=cn*270;
-    const sat=0.60+dominance*0.35;
-    const lum=0.38+dom*0.22;
-    const a=sat*Math.min(lum,1-lum);
-    const fk=n=>{const k=(n+hue/30)%12;return lum-a*Math.max(-1,Math.min(k-3,9-k,1));};
-    cr[x]=Math.round(fk(0)*255);cg[x]=Math.round(fk(8)*255);cb[x]=Math.round(fk(4)*255);
+    hs[x]=Math.min(mid,Math.log(1+rv*10)/_LOG11*mid);
+    // Color: direct RGB — dominant band always at 255, others proportional
+    const s=255/mx;
+    cr[x]=Math.round(p.r*s); // bass = Red
+    cg[x]=Math.round(p.g*s); // mid = Green
+    cb[x]=Math.round(p.b*s); // treble = Blue
   }
-  // Pass 2: draw smooth envelope path + colored fills
-  // Top envelope path
+  // Pass 2: smooth envelope + colored fills
   ctx.beginPath();
   ctx.moveTo(0,mid-hs[0]);
   for(let x=1;x<pts;x++) ctx.lineTo(x,mid-hs[x]);
-  // Bottom envelope (reverse)
   for(let x=pts-1;x>=0;x--) ctx.lineTo(x,mid+hs[x]);
   ctx.closePath();
-  ctx.save();
-  ctx.clip();
-  // Fill colored 1px strips within clipped envelope
+  ctx.save();ctx.clip();
   for(let x=0;x<pts;x++){
     if(hs[x]<0.5)continue;
     ctx.fillStyle=`rgb(${cr[x]},${cg[x]},${cb[x]})`;
@@ -847,7 +837,7 @@ function buildWaveformCache(slot){
   d._wfCache=oc;
   d._wfCacheH=H;
   d._wfCacheKey=cacheKey;
-  console.log(`[WFC] slot${slot} spectral-centroid envelope: ${pts}×${H}px`);
+  console.log(`[WFC] slot${slot} RGB envelope: ${pts}×${H}px`);
 }
 
 function drawOverview(slot,prog){
@@ -859,10 +849,8 @@ function drawOverview(slot,prog){
   const W=cv.width,H=cv.height,ctx=d.wovCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
   const pts=wfOv.length,mid=H/2;
-  // Spectral centroid overview — smooth envelope path
+  // RGB overview — log compression + smooth envelope
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  const fB=300,fM=2300,fT=10000,logR=Math.log(fT/fB);
-  // Pre-compute per-pixel heights and colors
   const ovH=new Float32Array(W);
   const ovR=new Uint8Array(W),ovG=new Uint8Array(W),ovB=new Uint8Array(W);
   for(let px=0;px<W;px++){
@@ -870,22 +858,13 @@ function drawOverview(slot,prog){
     let r=0,g=0,b=0,rmSum=0;const cnt=Math.max(1,i1-i0+1);
     for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;rmSum+=(p.rms||0);}
     r/=cnt;g/=cnt;b/=cnt;
-    const tot=r+g+b;
-    if(tot<0.005)continue;
-    const dom=Math.max(r,g,b);
+    const mx=Math.max(r,g,b);
+    if(mx<0.005)continue;
     const avgRms=rmSum/cnt;
-    ovH[px]=Math.min(mid,avgRms*avgRms*4*mid);
-    const cent=(r*fB+g*fM+b*fT)/tot;
-    const cn=Math.max(0,Math.min(1,Math.log(cent/fB)/logR));
-    const dominance=Math.min(1,(dom/tot-0.333)/0.667);
-    const hue=cn*270;
-    const sat=0.60+dominance*0.35;
-    const lum=0.38+dom*0.22;
-    const a=sat*Math.min(lum,1-lum);
-    const fk=n=>{const k=(n+hue/30)%12;return lum-a*Math.max(-1,Math.min(k-3,9-k,1));};
-    ovR[px]=Math.round(fk(0)*255);ovG[px]=Math.round(fk(8)*255);ovB[px]=Math.round(fk(4)*255);
+    ovH[px]=Math.min(mid,Math.log(1+avgRms*10)/_LOG11*mid);
+    const s=255/mx;
+    ovR[px]=Math.round(r*s);ovG[px]=Math.round(g*s);ovB[px]=Math.round(b*s);
   }
-  // Draw smooth envelope + colored fills
   ctx.beginPath();
   ctx.moveTo(0,mid-ovH[0]);
   for(let px=1;px<W;px++) ctx.lineTo(px,mid-ovH[px]);
@@ -951,6 +930,8 @@ function drawZoomWaveform(slot,prog){
   if(!d._wfCache||d._wfCacheH!==H){buildWaveformCache(slot);}
   // --- Draw waveform from bitmap cache via drawImage ---
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
   if(d._wfCache){
     // Map viewport ms range → cache pixel range
     const pxPerMs=pts/wfDur; // cache pixels per millisecond
