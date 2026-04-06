@@ -30,9 +30,6 @@ DeckPanel::DeckPanel(int num, BridgeEngine& eng)
     setupLabel(stateLabel,  14.0f, juce::Colours::yellow);
 
     titleLabel.setText("Deck " + juce::String(deckNum + 1), juce::dontSendNotification);
-    bpmLabel.setText("--- BPM", juce::dontSendNotification);
-    timeLabel.setText("00:00.000", juce::dontSendNotification);
-    stateLabel.setText("IDLE", juce::dontSendNotification);
 
     auto setupBtn = [this](juce::TextButton& btn, juce::Colour col)
     {
@@ -84,7 +81,7 @@ void DeckPanel::paint(juce::Graphics& g)
     g.setColour(juce::Colour(0xff2a2d34));
     g.drawRoundedRectangle(bounds.reduced(0.5f), 6.0f, 1.0f);
 
-    // Deck number indicator
+    // Deck number
     g.setColour(juce::Colour(0xff00aaff));
     g.setFont(juce::FontOptions(24.0f, juce::Font::bold));
     g.drawText(juce::String(deckNum + 1), 8, 6, 30, 30, juce::Justification::centred);
@@ -94,7 +91,7 @@ void DeckPanel::resized()
 {
     auto area = getLocalBounds().reduced(8);
     auto top = area.removeFromTop(28);
-    top.removeFromLeft(32);  // deck number space
+    top.removeFromLeft(32);
     titleLabel.setBounds(top);
 
     auto info = area.removeFromTop(22);
@@ -131,7 +128,6 @@ void DeckPanel::updateDisplay()
                          juce::dontSendNotification);
         stateLabel.setText(playStateToString(deck.getState()), juce::dontSendNotification);
 
-        // State-based color
         auto stateCol = juce::Colours::grey;
         switch (deck.getState())
         {
@@ -145,15 +141,6 @@ void DeckPanel::updateDisplay()
         }
         stateLabel.setColour(juce::Label::textColourId, stateCol);
     }
-    else
-    {
-        titleLabel.setText("Deck " + juce::String(deckNum + 1) + " — Empty",
-                          juce::dontSendNotification);
-        artistLabel.setText("", juce::dontSendNotification);
-        bpmLabel.setText("--- BPM", juce::dontSendNotification);
-        timeLabel.setText("00:00.000", juce::dontSendNotification);
-        stateLabel.setText("IDLE", juce::dontSendNotification);
-    }
 }
 
 // ── MainComponent ────────────────────────────
@@ -161,7 +148,7 @@ MainComponent::MainComponent()
 {
     // Version label
     addAndMakeVisible(versionLabel);
-    versionLabel.setText("Bridge+ v0.9.0 — JUCE/C++", juce::dontSendNotification);
+    versionLabel.setText("Bridge+ v0.9.0 | JUCE/C++", juce::dontSendNotification);
     versionLabel.setColour(juce::Label::textColourId, juce::Colour(0xff666688));
     versionLabel.setFont(juce::FontOptions(13.0f));
     versionLabel.setJustificationType(juce::Justification::centredRight);
@@ -176,14 +163,13 @@ MainComponent::MainComponent()
     addAndMakeVisible(startBtn);
     startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff3366cc));
     startBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
-    startBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xffcc3333));
     startBtn.onClick = [this]
     {
         if (engine.isRunning())
         {
             engine.stop();
             startBtn.setButtonText("START BRIDGE");
-            startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff224488));
+            startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff3366cc));
             statusLabel.setText("Stopped", juce::dontSendNotification);
         }
         else
@@ -191,27 +177,38 @@ MainComponent::MainComponent()
             if (engine.start())
             {
                 startBtn.setButtonText("STOP BRIDGE");
-                startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff882222));
+                startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffcc3333));
                 statusLabel.setText("TCNet broadcasting...", juce::dontSendNotification);
-            }
-            else
-            {
-                statusLabel.setText("Failed to start", juce::dontSendNotification);
             }
         }
     };
 
-    // Deck panels
-    for (int i = 0; i < 4; i++)
+    // + DECK button
+    addAndMakeVisible(addDeckBtn);
+    addDeckBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2a4420));
+    addDeckBtn.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff88cc88));
+    addDeckBtn.onClick = [this]
     {
-        deckPanels[(size_t)i] = std::make_unique<DeckPanel>(i, engine);
-        addAndMakeVisible(deckPanels[(size_t)i].get());
-    }
+        if (visibleDecks >= 8) return;
 
-    // setSize MUST be last — it triggers resized() which needs deckPanels
+        // Create deck panel on demand
+        int idx = visibleDecks;
+        if (!deckPanels[(size_t)idx])
+        {
+            deckPanels[(size_t)idx] = std::make_unique<DeckPanel>(idx, engine);
+            addAndMakeVisible(deckPanels[(size_t)idx].get());
+        }
+        else
+        {
+            deckPanels[(size_t)idx]->setVisible(true);
+        }
+        visibleDecks++;
+        layoutDecks();
+        addDeckBtn.setButtonText("+ DECK (" + juce::String(visibleDecks) + "/8)");
+    };
+
     setSize(1040, 700);
-
-    startTimerHz(15);  // UI refresh 15fps
+    startTimerHz(15);
 }
 
 MainComponent::~MainComponent()
@@ -224,12 +221,21 @@ void MainComponent::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colour(0xff111318));
 
-    // Title bar area
+    // Top bar
     g.setColour(juce::Colour(0xff181b22));
     g.fillRect(0, 0, getWidth(), 50);
-
     g.setColour(juce::Colour(0xff2a2d34));
     g.drawLine(0, 50, (float)getWidth(), 50, 1.0f);
+
+    // Empty state message
+    if (visibleDecks == 0)
+    {
+        g.setColour(juce::Colour(0xff555566));
+        g.setFont(juce::FontOptions(18.0f));
+        g.drawText("Click \"+ DECK\" to add a virtual deck",
+                   getLocalBounds().withTrimmedTop(50),
+                   juce::Justification::centred);
+    }
 }
 
 void MainComponent::resized()
@@ -238,31 +244,59 @@ void MainComponent::resized()
 
     // Top bar
     auto top = area.removeFromTop(50).reduced(10, 8);
-    startBtn.setBounds(top.removeFromLeft(160));
+    startBtn.setBounds(top.removeFromLeft(150));
+    top.removeFromLeft(8);
+    addDeckBtn.setBounds(top.removeFromLeft(120));
     top.removeFromLeft(12);
     statusLabel.setBounds(top.removeFromLeft(top.getWidth() - 200));
     versionLabel.setBounds(top);
 
-    area.removeFromTop(8);
+    layoutDecks();
+}
 
-    // Deck panels in 2×2 grid
-    auto deckArea = area.reduced(10, 0);
-    int halfW = (deckArea.getWidth() - 10) / 2;
-    int halfH = (deckArea.getHeight() - 10) / 2;
+void MainComponent::layoutDecks()
+{
+    if (visibleDecks == 0) return;
 
-    deckPanels[0]->setBounds(deckArea.getX(), deckArea.getY(), halfW, halfH);
-    deckPanels[1]->setBounds(deckArea.getX() + halfW + 10, deckArea.getY(), halfW, halfH);
-    deckPanels[2]->setBounds(deckArea.getX(), deckArea.getY() + halfH + 10, halfW, halfH);
-    deckPanels[3]->setBounds(deckArea.getX() + halfW + 10, deckArea.getY() + halfH + 10, halfW, halfH);
+    auto area = getLocalBounds().withTrimmedTop(58).reduced(10, 0);
+
+    if (visibleDecks == 1)
+    {
+        deckPanels[0]->setBounds(area);
+    }
+    else if (visibleDecks == 2)
+    {
+        int halfW = (area.getWidth() - 10) / 2;
+        deckPanels[0]->setBounds(area.getX(), area.getY(), halfW, area.getHeight());
+        deckPanels[1]->setBounds(area.getX() + halfW + 10, area.getY(), halfW, area.getHeight());
+    }
+    else
+    {
+        // 2-column grid
+        int cols = 2;
+        int rows = (visibleDecks + 1) / 2;
+        int cellW = (area.getWidth() - 10) / cols;
+        int cellH = (area.getHeight() - (rows - 1) * 10) / rows;
+
+        for (int i = 0; i < visibleDecks; i++)
+        {
+            int col = i % 2;
+            int row = i / 2;
+            if (deckPanels[(size_t)i])
+                deckPanels[(size_t)i]->setBounds(
+                    area.getX() + col * (cellW + 10),
+                    area.getY() + row * (cellH + 10),
+                    cellW, cellH);
+        }
+    }
 }
 
 void MainComponent::timerCallback()
 {
-    // Update status
     if (engine.isRunning())
         statusLabel.setText(engine.getStatusText(), juce::dontSendNotification);
 
-    // Update deck panels
-    for (auto& panel : deckPanels)
-        panel->updateDisplay();
+    for (int i = 0; i < visibleDecks; i++)
+        if (deckPanels[(size_t)i])
+            deckPanels[(size_t)i]->updateDisplay();
 }

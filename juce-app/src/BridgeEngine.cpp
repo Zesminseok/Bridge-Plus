@@ -225,7 +225,7 @@ juce::String BridgeEngine::getStatusText() const
     for (int i = 0; i < 8; i++)
         if (layers[(size_t)i]) activeLayers++;
 
-    return "Running — " + juce::String(activeLayers) + " layers, "
+    return "Running | " + juce::String(activeLayers) + " layers, "
         + juce::String(packetCount) + " pkts, "
         + juce::String((int)nodes.size()) + " nodes, "
         + "bc=" + broadcastAddr;

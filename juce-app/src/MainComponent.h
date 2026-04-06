@@ -3,7 +3,7 @@
 #include "BridgeEngine.h"
 
 /**
- * DeckPanel — displays a single virtual deck's state and controls
+ * DeckPanel - single virtual deck display and controls
  */
 class DeckPanel : public juce::Component
 {
@@ -28,7 +28,7 @@ private:
 };
 
 /**
- * MainComponent — main UI window
+ * MainComponent - main UI window with dynamic deck panels
  */
 class MainComponent : public juce::Component,
                       private juce::Timer
@@ -42,15 +42,18 @@ public:
 
 private:
     void timerCallback() override;
+    void layoutDecks();
 
     BridgeEngine engine;
 
     // UI
     juce::TextButton startBtn { "START BRIDGE" };
+    juce::TextButton addDeckBtn { "+ DECK" };
     juce::Label statusLabel;
     juce::Label versionLabel;
 
-    std::array<std::unique_ptr<DeckPanel>, 4> deckPanels;
+    std::array<std::unique_ptr<DeckPanel>, 8> deckPanels;
+    int visibleDecks = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
