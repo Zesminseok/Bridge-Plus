@@ -31,7 +31,42 @@ namespace C
 }
 
 /**
- * DeckPanel - CDJ-3000 style deck card
+ * CircleLF - Custom LookAndFeel for circular CDJ-style buttons.
+ * Used for CUE and PLAY buttons exactly like Electron .dkbtn.
+ */
+class CircleLF : public juce::LookAndFeel_V4
+{
+public:
+    void drawButtonBackground(juce::Graphics& g, juce::Button& b,
+                              const juce::Colour&, bool isOver, bool isDown) override
+    {
+        auto bounds = b.getLocalBounds().toFloat().reduced(2.5f);
+        auto bg  = b.findColour(juce::TextButton::buttonColourId);
+        auto col = b.findColour(juce::TextButton::textColourOffId);
+
+        if (isDown) bg = bg.brighter(0.1f);
+        else if (isOver) bg = bg.brighter(0.05f);
+
+        g.setColour(bg);
+        g.fillEllipse(bounds);
+        g.setColour(col.withAlpha(0.85f));
+        g.drawEllipse(bounds, 3.0f);
+    }
+
+    void drawButtonText(juce::Graphics& g, juce::TextButton& b,
+                        bool /*isOver*/, bool /*isDown*/) override
+    {
+        auto col = b.findColour(juce::TextButton::textColourOffId);
+        g.setColour(col);
+        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+        g.drawText(b.getButtonText(), b.getLocalBounds(), juce::Justification::centred);
+    }
+};
+
+/**
+ * DeckPanel - CDJ-3000 style deck card with Electron layout.
+ * Left column: album art placeholder + CUE/PLAY circular buttons.
+ * Right column: overview waveform + zoom waveform + beat phasor.
  * CUE uses mouseDown/mouseUp for hold-to-preview behavior.
  */
 class DeckPanel : public juce::Component
@@ -49,23 +84,31 @@ private:
     int deckNum;
     BridgeEngine& engine;
 
-    juce::Label titleLabel, artistLabel, bpmLabel, timeLabel;
+    juce::Label titleLabel, artistLabel;
 
-    juce::TextButton playBtn  { juce::CharPointer_UTF8("\xe2\x96\xb6") };
+    // Circular CDJ-style buttons
     juce::TextButton cueBtn   { "CUE" };
+    juce::TextButton playBtn  { juce::CharPointer_UTF8("\xe2\x96\xb6") };
+    // Bottom utility buttons (rectangular)
     juce::TextButton loadBtn  { "LOAD" };
     juce::TextButton ejectBtn { "EJECT" };
-    juce::TextButton hwBtn    { "VIR" };
-    juce::Slider volumeSlider;
+
+    CircleLF circleLF;
 
     PlayState displayState = PlayState::IDLE;
     uint8_t beatPhase = 0;
+
+    // Waveform layout bounds (set in resized, used in paint)
+    juce::Rectangle<int> artBounds;
+    juce::Rectangle<int> ovWfBounds;
+    juce::Rectangle<int> zoomWfBounds;
+    juce::Rectangle<int> phasorBounds;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeckPanel)
 };
 
 /**
- * MainComponent - Bridge+ with original Electron design
+ * MainComponent - Bridge+ main window with full Electron feature parity.
  */
 class MainComponent : public juce::AudioAppComponent,
                       private juce::Timer
@@ -83,6 +126,7 @@ public:
 private:
     void timerCallback() override;
     void layoutDecks();
+    void layoutSettings();
     void addDeck();
 
     BridgeEngine engine;
@@ -97,15 +141,20 @@ private:
     Tab activeTab = TAB_LINK;
     std::array<juce::TextButton, 4> tabBtns;
 
-    // Status
+    // Status bar
     juce::Label tcnetBadge, arenaBadge, deckBadge, uptimeBadge;
 
-    // Mode
+    // Link tab controls
     juce::TextButton addDeckBtn { "+ DECK" };
 
     // Decks
     std::array<std::unique_ptr<DeckPanel>, 8> deckPanels;
     int visibleDecks = 0;
+
+    // Settings widgets
+    juce::Label       nodeNameLabel, tcnetIfaceLabel, pdjlIfaceLabel, fpsLabel;
+    juce::TextEditor  nodeNameEditor;
+    juce::ComboBox    tcnetIfaceSelector, pdjlIfaceSelector, fpsSelector;
 
     // Bottom
     juce::Label packetLabel;
