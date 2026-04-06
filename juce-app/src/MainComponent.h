@@ -137,8 +137,12 @@ private:
     Tab activeTab = TAB_LINK;
     std::array<juce::TextButton, 4> tabBtns;
 
-    // Status bar
-    juce::Label tcnetBadge, arenaBadge, deckBadge, uptimeBadge;
+    // Status bar values (drawn as pills in paint())
+    juce::String statusTCNet  = "OFFLINE";
+    juce::String statusArena  = "0";
+    juce::String statusDecks  = "0";
+    juce::String statusUptime = "—";
+    bool tcnetOnline = false;
 
     // Mode bar: global HW/VIR toggle + add deck
     juce::TextButton modeToggleBtn { "VIR MODE" };

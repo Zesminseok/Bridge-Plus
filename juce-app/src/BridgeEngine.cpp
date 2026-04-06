@@ -474,12 +474,17 @@ void BridgeEngine::handlePDJL(const uint8_t* data, int size, const juce::String&
         if (hwMode[(size_t)li])
         {
             LayerState ls;
-            ls.state = cdj.state;
-            ls.bpm = cdj.effectiveBpm;
-            ls.pitch = cdj.pitch;
-            ls.trackId = cdj.trackId;
+            ls.state    = cdj.state;
+            ls.bpm      = cdj.effectiveBpm;
+            ls.trackBpm = cdj.trackBpm;
+            ls.pitch    = cdj.pitch;
+            ls.trackId  = cdj.trackId;
             ls.beatPhase = (uint8_t)(juce::jmax(0, cdj.beatInBar - 1) * 64);
             ls.deviceName = cdj.name;
+            ls.sync     = cdj.sync;
+            ls.master   = cdj.master;
+            ls.onAir    = cdj.onAir;
+            ls.hasTrack = cdj.hasTrack;
 
             // Timecode from beat number
             if (cdj.beatNum > 0 && cdj.trackBpm > 0)

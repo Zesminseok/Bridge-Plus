@@ -38,6 +38,53 @@ bool VirtualDeck::loadFile(const juce::File& file)
         if (tagBpm >= 60.0f && tagBpm <= 200.0f) bpm = tagBpm;
     }
 
+    // Album art: try to extract from ID3v2 APIC tag
+    albumArt = juce::Image();
+    try
+    {
+        juce::MemoryBlock fileData;
+        file.loadFileAsData(fileData);
+        const uint8_t* d = (const uint8_t*)fileData.getData();
+        size_t sz = fileData.getSize();
+
+        // ID3v2 header: "ID3" + version(2) + flags(1) + size(4 syncsafe)
+        if (sz > 10 && d[0]=='I' && d[1]=='D' && d[2]=='3')
+        {
+            size_t id3Size = (size_t)(((d[6]&0x7F)<<21)|((d[7]&0x7F)<<14)|((d[8]&0x7F)<<7)|(d[9]&0x7F));
+            uint8_t ver = d[3];
+            size_t pos = 10;
+            size_t end = juce::jmin(pos + id3Size, sz);
+            while (pos + 10 < end)
+            {
+                char tag[5] = {};
+                std::memcpy(tag, d + pos, 4);
+                uint32_t fSize = ver >= 4
+                    ? (uint32_t)(((d[pos+4]&0x7F)<<21)|((d[pos+5]&0x7F)<<14)|((d[pos+6]&0x7F)<<7)|(d[pos+7]&0x7F))
+                    : (uint32_t)((d[pos+4]<<24)|(d[pos+5]<<16)|(d[pos+6]<<8)|d[pos+7]);
+                pos += 10;
+                if (fSize == 0 || pos + fSize > end) break;
+                if (std::strncmp(tag, "APIC", 4) == 0 && fSize > 4)
+                {
+                    size_t p = pos;
+                    p += 1; // skip encoding byte
+                    while (p < pos + fSize && d[p] != 0) p++; // skip mime type
+                    p += 1; // null terminator
+                    if (p < pos + fSize) p += 1; // picture type byte
+                    while (p < pos + fSize && d[p] != 0) p++; // skip description
+                    p += 1; // null terminator
+                    if (p < pos + fSize)
+                    {
+                        juce::MemoryInputStream imgStream(d + p, pos + fSize - p, false);
+                        albumArt = juce::ImageFileFormat::loadFrom(imgStream);
+                    }
+                    if (albumArt.isValid()) break;
+                }
+                pos += fSize;
+            }
+        }
+    }
+    catch (...) {}
+
     trackId = nextTrackId++;
     cuePointMs = 0.0f;
     playSamplePos.store(0);
@@ -60,6 +107,7 @@ void VirtualDeck::eject()
     title = {}; artist = {};
     durationMs = 0.0f; bpm = 0.0f;
     cuePointMs = 0.0f; wfData.clear();
+    albumArt = juce::Image();
 }
 
 // ── CDJ-3000 Transport ──────────────────────

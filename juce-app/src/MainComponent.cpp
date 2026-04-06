@@ -466,18 +466,40 @@ void DeckPanel::paint(juce::Graphics& g)
         }
     }
 
-    // ── Album art placeholder ──
+    // ── Album art ──
     if (!artBounds.isEmpty())
     {
         auto af = artBounds.toFloat();
         g.setColour(C::bgLo);
         g.fillRoundedRectangle(af, 8.0f);
+
+        bool hasArt = false;
+        if (!isHW)
+        {
+            const auto& art = deck.getAlbumArt();
+            if (art.isValid())
+            {
+                g.saveState();
+                juce::Path clipPath;
+                clipPath.addRoundedRectangle(af, 8.0f);
+                g.reduceClipRegion(clipPath);
+                g.drawImage(art, af.toNearestInt().toFloat(),
+                            juce::RectanglePlacement::centred | juce::RectanglePlacement::fillDestination);
+                g.restoreState();
+                hasArt = true;
+            }
+        }
+
+        if (!hasArt)
+        {
+            // Placeholder: ♪ icon
+            g.setColour(C::tx4);
+            g.setFont(juce::FontOptions(22.0f));
+            g.drawText(juce::CharPointer_UTF8("\xe2\x99\xaa"), artBounds, juce::Justification::centred);
+        }
+
         g.setColour(C::bdr2);
         g.drawRoundedRectangle(af.reduced(0.5f), 8.0f, 1.0f);
-        g.setColour(C::tx4);
-        g.setFont(juce::FontOptions(22.0f));
-        // ♪
-        g.drawText(juce::CharPointer_UTF8("\xe2\x99\xaa"), artBounds, juce::Justification::centred);
     }
 
     // ── Overview waveform ──
@@ -782,19 +804,7 @@ MainComponent::MainComponent()
         };
     }
 
-    // ── Status Badges ──
-    auto setupBadge = [this](juce::Label& badge, const juce::String& text, juce::Colour col)
-    {
-        addAndMakeVisible(badge);
-        badge.setText(text, juce::dontSendNotification);
-        badge.setFont(juce::FontOptions(10.0f));
-        badge.setColour(juce::Label::textColourId, col);
-        badge.setJustificationType(juce::Justification::centredLeft);
-    };
-    setupBadge(tcnetBadge,  "TCNet: OFFLINE",  C::red);
-    setupBadge(arenaBadge,  "Arena: 0",        C::blu);
-    setupBadge(deckBadge,   "Decks: 0",        C::tx3);
-    setupBadge(uptimeBadge, "Uptime: 00:00:00", C::tx3);
+    // Status bar values are drawn as pills in paint()
 
     // ── Output Layer source selectors ──
     const char* layerNames[] = { "A", "B", "M" };
@@ -1014,11 +1024,42 @@ void MainComponent::paint(juce::Graphics& g)
     g.drawHorizontalLine(52, 0, (float)w);
     g.drawHorizontalLine(88, 0, (float)w);
 
-    // ── Status bar (24px, y=88) ──
+    // ── Status bar pills (24px, y=88) ──
     g.setColour(C::bg3);
     g.fillRect(0, 88, w, 24);
     g.setColour(C::bdr);
     g.drawHorizontalLine(112, 0, (float)w);
+
+    // Draw pill badges
+    struct PillDef { juce::String label; juce::String value; juce::Colour valCol; bool highlight; };
+    PillDef pills[] = {
+        { "TCNet",      statusTCNet,  tcnetOnline ? C::blu : C::red,   tcnetOnline },
+        { "ARENA 노드", statusArena,  C::blu,   false },
+        { "활성 덱",    statusDecks,  C::tx2,   false },
+        { "UPTIME",     statusUptime, C::tx2,   false },
+    };
+    float px = 10.0f;
+    for (auto& p : pills)
+    {
+        float pillW = (float)(p.label.length() * 5 + p.value.length() * 7 + 28);
+        auto pillRect = juce::Rectangle<float>(px, 92.0f, pillW, 16.0f);
+        // Background
+        g.setColour(p.highlight
+            ? juce::Colour(0x0a00563b)
+            : C::bg4);
+        g.fillRoundedRectangle(pillRect, 999.0f);
+        // Label text
+        g.setColour(C::tx3);
+        g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+        float lblW = (float)(p.label.length() * 5 + 4);
+        g.drawText(p.label, (int)px + 7, 92, (int)lblW, 16, juce::Justification::centredLeft);
+        // Value text
+        g.setColour(p.valCol);
+        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+        g.drawText(p.value, (int)(px + 7 + lblW + 2), 92, (int)(p.value.length() * 7 + 4), 16,
+                   juce::Justification::centredLeft);
+        px += pillW + 6;
+    }
 
     // ── LINK tab: OUTPUT LAYERS (y=112, h=80) + mode bar (y=192) ──
     if (activeTab == TAB_LINK)
@@ -1329,6 +1370,35 @@ void MainComponent::paint(juce::Graphics& g)
     g.fillRect(0, h - 26, w, 26);
     g.setColour(C::bdr);
     g.drawHorizontalLine(h - 26, 0, (float)w);
+
+    // Deck state dots
+    float dotX = 14.0f;
+    float dotY = (float)(h - 26) + 10.0f;
+    for (int i = 0; i < visibleDecks; i++)
+    {
+        juce::Colour dotCol = C::tx4;
+        if (engine.isHWMode(i))
+        {
+            auto* ls = engine.getLayerState(i);
+            if (ls && (ls->state == PlayState::PLAYING || ls->state == PlayState::LOOPING))
+                dotCol = C::grn;
+            else
+                dotCol = C::pur.withAlpha(0.6f);
+        }
+        else if (engine.isVirtualDeckActive(i))
+        {
+            auto st = engine.getVirtualDeck(i).getState();
+            if (st == PlayState::PLAYING || st == PlayState::LOOPING)
+                dotCol = C::grn;
+            else if (st == PlayState::CUED || st == PlayState::CUEING)
+                dotCol = C::ylw;
+            else if (engine.getVirtualDeck(i).isLoaded())
+                dotCol = C::tx2;
+        }
+        g.setColour(dotCol);
+        g.fillEllipse(dotX, dotY, 6.0f, 6.0f);
+        dotX += 11.0f;
+    }
 }
 
 void MainComponent::resized()
@@ -1349,12 +1419,7 @@ void MainComponent::resized()
         tabX += tabWidths[i] + 4;
     }
 
-    // Status bar
-    int sx = 12;
-    tcnetBadge.setBounds(sx, 90, 100, 20);  sx += 104;
-    arenaBadge.setBounds(sx, 90, 70, 20);   sx += 74;
-    deckBadge.setBounds(sx, 90, 70, 20);    sx += 74;
-    uptimeBadge.setBounds(sx, 90, 130, 20);
+    // Status bar drawn in paint() as pills
 
     // Output layer selectors (LINK tab only)
     {
@@ -1460,24 +1525,25 @@ void MainComponent::timerCallback()
     {
         statusLabel.setText("RUNNING", juce::dontSendNotification);
         statusLabel.setColour(juce::Label::textColourId, C::grn);
-        tcnetBadge.setText("TCNet: ONLINE",  juce::dontSendNotification);
-        tcnetBadge.setColour(juce::Label::textColourId, C::blu);
-        arenaBadge.setText("Arena: " + juce::String(engine.getNodeCount()), juce::dontSendNotification);
-        uptimeBadge.setText("Uptime: " + formatUptime(engine.getUptimeSeconds()), juce::dontSendNotification);
+        tcnetOnline   = true;
+        statusTCNet   = "ONLINE";
+        statusArena   = juce::String(engine.getNodeCount());
+        statusUptime  = formatUptime(engine.getUptimeSeconds());
         packetLabel.setText("TCNet TX: " + juce::String(engine.getPacketCount()), juce::dontSendNotification);
     }
     else
     {
         statusLabel.setText("READY", juce::dontSendNotification);
         statusLabel.setColour(juce::Label::textColourId, C::tx3);
-        tcnetBadge.setText("TCNet: OFFLINE", juce::dontSendNotification);
-        tcnetBadge.setColour(juce::Label::textColourId, C::red);
+        tcnetOnline  = false;
+        statusTCNet  = "OFFLINE";
+        statusUptime = "—";
     }
 
     int activeCount = 0;
     for (int i = 0; i < 8; i++)
         if (engine.isVirtualDeckActive(i) || engine.isHWMode(i)) activeCount++;
-    deckBadge.setText("Decks: " + juce::String(activeCount), juce::dontSendNotification);
+    statusDecks = juce::String(activeCount);
 
     if (activeTab == TAB_LINK)
         for (int i = 0; i < visibleDecks; i++)

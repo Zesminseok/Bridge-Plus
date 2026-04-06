@@ -43,6 +43,7 @@ public:
     juce::String getTitle() const      { return title; }
     juce::String getArtist() const     { return artist; }
     juce::String getDeviceName() const { return deviceName; }
+    const juce::Image& getAlbumArt() const { return albumArt; }
 
     void setPitch(float p)  { pitch = p; }
     void setVolume(float v) { volume = v; }
@@ -74,6 +75,7 @@ private:
     juce::String title;
     juce::String artist;
     juce::String deviceName = "CDJ-3000";
+    juce::Image albumArt;
 
     std::vector<DetailedWaveformPoint> wfData;
     static int nextTrackId;

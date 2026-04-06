@@ -84,6 +84,12 @@ struct LayerState
     juce::String artistName;
     juce::String deviceName;
     int64_t updateTime = 0;   // juce::Time::currentTimeMillis()
+    // CDJ HW flags
+    bool sync   = false;
+    bool master = false;
+    bool onAir  = false;
+    bool hasTrack = false;
+    float trackBpm = 0.0f;   // original (non-pitch-adjusted) BPM
 };
 
 // CDJ status from PDJL
