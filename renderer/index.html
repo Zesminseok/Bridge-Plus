@@ -219,7 +219,7 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dk[data-st="play"] .dktn-time,.dk[data-st="hwplay"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
 .dktn-info{padding:0 0 3px;gap:8px;justify-content:flex-start;flex-wrap:nowrap}
-.dbk-hd{font:600 11px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;max-width:80px}
+.dbk-hd{font:600 11px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis}
 .dk[data-st="play"] .dbk-hd,.dk[data-st="hwplay"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
 .devbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg2);border:none;border-radius:10px;margin-bottom:10px;min-height:44px;flex-wrap:wrap}
 .devbar-item{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg3);border:none;border-radius:8px;transition:box-shadow .2s}
@@ -337,7 +337,7 @@ let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
 // 설정 — 인터페이스 포함
 let cfg={nm:'BRIDGE29',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
-  tcFps:'25',phasorMode:'blink',wfColor:'rgb',wfCenter:'center',
+  tcFps:'25',phasorMode:'blink',wfColor:'3band',wfCenter:'center',
   tcLtcA:'',   // Layer A LTC 오디오 장치
   tcLtcB:'',   // Layer B LTC 오디오 장치
   tcLtcM:'',   // Layer M LTC 오디오 장치
@@ -351,6 +351,7 @@ let glMode='hw'; // 'virtual' | 'hw'
 function createDeck(slot,type='virtual'){
   return{slot,type,ld:false,pl:false,cu:false,au:null,tn:'',ar:'',bpm:0,dur:0,pos:0,cp:0,cuw:false,
     wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,
+    _wfCache:null,_wfCacheH:0,_wfCacheKey:'',
     key:'',vu:0,vuSrc:null,vuAn:null,vuBuf:null,artUrl:null,hwVu:0,beatInBar:1,
     zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null};
 }
@@ -689,31 +690,36 @@ async function buildRGBWaveform(blob, onChunk){
     const buf=await _ac.decodeAudioData(ab);
     _ac.close();
     const ch=buf.getChannelData(0),sr=buf.sampleRate;
-    // CDJ uses ~150 entries/sec; cap at 15000 for performance
-    const pts=Math.min(15000,Math.max(6000,Math.floor(buf.duration*150)));
+    // CDJ uses ~150 entries/sec; cap at 50000 for full resolution (5.5min @ 150/s)
+    const pts=Math.min(50000,Math.max(6000,Math.floor(buf.duration*150)));
     const step=Math.max(1,Math.floor(ch.length/pts));
-    // Band splits: 200Hz (bass/mid), 3000Hz (mid/treble) — confirmed Serato~200/1500, Pioneer~200/3000
-    const aL=Math.min(1,2*Math.PI*200/sr),aM=Math.min(1,2*Math.PI*3000/sr);
-    // Pink-noise bandwidth correction: geometric-center freq per band
-    // bass: 20-200Hz (√20*200≈63Hz), mid: 200-3000Hz (√200*3000≈775Hz), hi: 3000-20000Hz (√3000*20000≈7746Hz)
-    // Correct = √(refF/centerF), ref=bass; treble gets less raw energy so boosted heavily
-    const gBass=3.0,gMid=3.5,gHi=8; // reduced gains — prevent all-band clipping to 1.0
+    // 4th-order Butterworth biquad lowpass filters (-24dB/oct)
+    // Crossover: 600Hz / 4000Hz (Mixxx standard for 3-band waveform)
+    // PEAK values per band (not RMS) — matches Mixxx's AnalyzerWaveform approach
+    function _mkBQ(fc,sr2,Q){
+      const w=2*Math.PI*fc/sr2,sn=Math.sin(w),cs=Math.cos(w),al=sn/(2*Q),a0=1+al;
+      return{b0:((1-cs)/2)/a0,b1:(1-cs)/a0,b2:((1-cs)/2)/a0,a1:(-2*cs)/a0,a2:(1-al)/a0,w1:0,w2:0};
+    }
+    function _bq(f,x){const y=f.b0*x+f.w1;f.w1=f.b1*x-f.a1*y+f.w2;f.w2=f.b2*x-f.a2*y;return y;}
+    const _Q1=0.5412,_Q2=1.3066;
+    const _lpB1=_mkBQ(600,sr,_Q1),_lpB2=_mkBQ(600,sr,_Q2);
+    const _lpM1=_mkBQ(4000,sr,_Q1),_lpM2=_mkBQ(4000,sr,_Q2);
     const wf=new Array(pts);
-    const CHUNK=Math.max(200,Math.floor(pts/30)); // ~30 progress updates total
-    // carry IIR filter state across all columns for continuity
-    let lp1=0,lp2=0;
+    const CHUNK=Math.max(200,Math.floor(pts/30));
     for(let i=0;i<pts;i++){
-      const s0=i*step;let el=0,em=0,eh=0,pk=0,mn=0,mx=0;
+      const s0=i*step;let pl=0,pm=0,ph=0,pk=0,mn=0,mx=0;
       for(let j=0;j<step;j++){
         const s=ch[s0+j]||0;
-        lp1+=aL*(s-lp1);lp2+=aM*(s-lp2);
-        const bass=lp1,mid2=lp2-lp1,tre=s-lp2;
-        el+=bass*bass;em+=mid2*mid2;eh+=tre*tre;
+        const bassLP=_bq(_lpB2,_bq(_lpB1,s));
+        const midLP=_bq(_lpM2,_bq(_lpM1,s));
+        const bass=bassLP, mid2=midLP-bassLP, tre=s-midLP;
+        // PEAK per band (Mixxx storeIfGreater approach)
+        const ab=Math.abs(bass),am=Math.abs(mid2),at=Math.abs(tre);
+        if(ab>pl)pl=ab; if(am>pm)pm=am; if(at>ph)ph=at;
         const a=Math.abs(s);if(a>pk)pk=a;
         if(s<mn)mn=s;if(s>mx)mx=s;
       }
-      const inv=1/step;
-      wf[i]={h:pk,mn,mx,r:Math.min(1,Math.sqrt(el*inv)*gBass),g:Math.min(1,Math.sqrt(em*inv)*gMid),b:Math.min(1,Math.sqrt(eh*inv)*gHi)};
+      wf[i]={h:pk,mn,mx,r:pl,g:pm,b:ph};
       if(onChunk&&(i+1)%CHUNK===0){
         onChunk(i+1,wf);
         await new Promise(r=>setTimeout(r,0)); // yield to UI
@@ -760,12 +766,12 @@ function _wfBlend(r,g,b2,dimF){
     const B=Math.min(255,Math.round((rn*0xE1+gn*0x00+bn*0xFF)*dimF));
     return[R,G,B];
   }
-  // RGB (default): Rekordbox RGB — r(bass)→Red, g(mid)→Green, b(treble)→Blue
-  // Contrast boost: suppress non-dominant channels for vivid color separation
+  // RGB (default): Rekordbox RGB — dominant band at max, others suppressed
+  // Bass→Red, Mid→Green, Treble→Blue; power curve for vivid color separation
   const mx=Math.max(r,g,b2)||0.001;
-  const R=Math.min(255,Math.round(Math.pow(r/mx,1.8)*r*255*dimF));
-  const G=Math.min(255,Math.round(Math.pow(g/mx,1.8)*g*255*dimF));
-  const B=Math.min(255,Math.round(Math.pow(b2/mx,1.8)*b2*255*dimF));
+  const R=Math.min(255,Math.round(Math.pow(r/mx,1.5)*255*dimF));
+  const G=Math.min(255,Math.round(Math.pow(g/mx,1.5)*255*dimF));
+  const B=Math.min(255,Math.round(Math.pow(b2/mx,1.5)*255*dimF));
   return[R,G,B];
 }
 // 3BAND stacked rendering helper: returns [{color,h},...] from bottom to top
@@ -778,6 +784,55 @@ function _wf3BandStack(r,g,b2,totalH,dimF){
   ];
 }
 
+// ═══ Waveform Bitmap Cache (OffscreenCanvas) ═══
+// Spectral Centroid color waveform — frequency→hue, dominance→saturation
+// Height = dominant band peak (not composite RMS — shows individual band dynamics)
+// Color = HSL from spectral centroid position (bass=red, mid=green, treble=blue/purple)
+function buildWaveformCache(slot){
+  const d=DECKS[slot];if(!d)return;
+  const wfData=d.rgbWfDetail||d.rgbWf;
+  if(!wfData||wfData.length<2)return;
+  const cv=document.getElementById('wzc'+slot);
+  const H=cv?cv.height:100;
+  const pts=wfData.length;
+  const cacheKey=pts+'_'+H+'_sc';
+  if(d._wfCache&&d._wfCacheKey===cacheKey)return;
+  const oc=new OffscreenCanvas(pts,H);
+  const ctx=oc.getContext('2d',{alpha:false});
+  ctx.fillStyle='#000';ctx.fillRect(0,0,pts,H);
+  const mid=H/2;
+  // Band center frequencies for spectral centroid calculation
+  const fB=300,fM=2300,fT=10000;
+  const logR=Math.log(fT/fB);
+  for(let x=0;x<pts;x++){
+    const p=wfData[x];
+    const tot=p.r+p.g+p.b;
+    if(tot<0.005)continue;
+    // Height: dominant band peak × gain — individual bands fluctuate more than composite
+    const dom=Math.max(p.r,p.g,p.b);
+    const h=Math.min(mid,Math.round(dom*1.8*mid));
+    if(h<1)continue;
+    // Spectral centroid: weighted average frequency → log-normalized 0..1
+    const cent=(p.r*fB+p.g*fM+p.b*fT)/tot;
+    const cn=Math.max(0,Math.min(1,Math.log(cent/fB)/logR));
+    // Dominance: how much strongest band stands out (0=equal, 1=single band)
+    const dominance=Math.min(1,(dom/tot-0.333)/0.667);
+    // HSL: hue=centroid, sat=dominance, lum=amplitude
+    const hue=cn*270; // red(0)→green(120)→cyan(180)→blue(240)→purple(270)
+    const sat=0.60+dominance*0.35; // 60-95%
+    const lum=0.38+dom*0.22; // 38-60%
+    const a=sat*Math.min(lum,1-lum);
+    const fk=n=>{const k=(n+hue/30)%12;return lum-a*Math.max(-1,Math.min(k-3,9-k,1));};
+    const R=Math.round(fk(0)*255),G=Math.round(fk(8)*255),B=Math.round(fk(4)*255);
+    ctx.fillStyle=`rgb(${R},${G},${B})`;
+    ctx.fillRect(x,mid-h,1,h*2);
+  }
+  d._wfCache=oc;
+  d._wfCacheH=H;
+  d._wfCacheKey=cacheKey;
+  console.log(`[WFC] slot${slot} spectral-centroid cache: ${pts}×${H}px`);
+}
+
 function drawOverview(slot,prog){
   const d=DECKS[slot];if(!d||!d.wovCtx)return;
   // Prefer detail waveform (richer color data) for overview, fallback to preview
@@ -787,33 +842,31 @@ function drawOverview(slot,prog){
   const W=cv.width,H=cv.height,ctx=d.wovCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
   const pts=wfOv.length,mid=H/2;
-  const img=ctx.createImageData(W,H);const px4=img.data;
+  // Spectral centroid overview — same algorithm as zoom cache
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  const fB=300,fM=2300,fT=10000,logR=Math.log(fT/fB);
   for(let px=0;px<W;px++){
     const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
-    let r=0,g=0,b=0,mxMax=0;const cnt=Math.max(1,i1-i0+1);
-    for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;if(p.mx>mxMax)mxMax=p.mx;}
+    let r=0,g=0,b=0;const cnt=Math.max(1,i1-i0+1);
+    for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;}
     r/=cnt;g/=cnt;b/=cnt;
-    const past=px/W<pos;
-    const dimF=past?.45:1.0;
-    const alpha=past?160:245;
-    const h=Math.max(1,Math.round(mxMax*mid*.92));
-    const y0=Math.max(0,mid-h),y1=Math.min(H-1,mid+h);
-    if((cfg.wfColor||'rgb')==='3band'){
-      const bands=_wf3BandStack(r,g,b,y1-y0,dimF);
-      let cy=y1;
-      for(const band of bands){
-        const by0=Math.max(y0,cy-band.h);
-        for(let y=by0;y<cy;y++){const idx=(y*W+px)*4;px4[idx]=band.R;px4[idx+1]=band.G;px4[idx+2]=band.B;px4[idx+3]=alpha;}
-        cy=by0;
-      }
-    }else{
-      const [R,G,B]=_wfBlend(r,g,b,dimF);
-      for(let y=y0;y<=y1;y++){
-        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=alpha;
-      }
-    }
+    const tot=r+g+b;
+    if(tot<0.005)continue;
+    const dom=Math.max(r,g,b);
+    const h=Math.min(mid,Math.round(dom*1.8*mid));
+    if(h<1)continue;
+    const cent=(r*fB+g*fM+b*fT)/tot;
+    const cn=Math.max(0,Math.min(1,Math.log(cent/fB)/logR));
+    const dominance=Math.min(1,(dom/tot-0.333)/0.667);
+    const hue=cn*270;
+    const sat=0.60+dominance*0.35;
+    const lum=0.38+dom*0.22;
+    const a=sat*Math.min(lum,1-lum);
+    const fk=n=>{const k=(n+hue/30)%12;return lum-a*Math.max(-1,Math.min(k-3,9-k,1));};
+    const R=Math.round(fk(0)*255),G=Math.round(fk(8)*255),B=Math.round(fk(4)*255);
+    ctx.fillStyle=`rgb(${R},${G},${B})`;
+    ctx.fillRect(px,mid-h,1,h*2);
   }
-  ctx.putImageData(img,0,0);
   // Draw cue points on overview (memory=white, hot=colored with letter)
   const _cueColors={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
   if(d.cuePoints&&d.dur>0){
@@ -848,57 +901,42 @@ function drawOverview(slot,prog){
   ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(Math.round(pos*W)-.5,0,1,H);
 }
 
-// Continuous oscilloscope zoom waveform — one blended color per column
-// Shape: actual waveform min/max (organic flowing look like image #3)
-// Color: additive blend of bass(red/pink)+mid(green)+treble(purple)
+// Zoom waveform — uses pre-rendered OffscreenCanvas bitmap cache
+// Scroll via drawImage() for zero-jitter playback (Rekordbox style)
 function drawZoomWaveform(slot,prog){
   const d=DECKS[slot];
-  // Use detail waveform if available, fallback to preview
-  const isDetail=!!d?.rgbWfDetail;
   const wfData=d?.rgbWfDetail||d?.rgbWf;
   if(!d||!wfData||!d.wzCtx)return;
   const cv=document.getElementById('wzc'+slot);if(!cv||!cv.width)return;
   const W=cv.width,H=cv.height,ctx=d.wzCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
-  const pts=wfData.length,mid=H/2;
-  // Use actual track duration (dur) for position — beat grid, cue points all use this
-  // Waveform index scaling: pts/dur ratio (detail waveform may differ from track length)
+  const pts=wfData.length;
+  const isDetail=!!d.rgbWfDetail;
   const dur=d.dur,posMs=pos*dur;
   const wfDur=isDetail?(pts/150*1000):(dur||1);
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
-  const img=ctx.createImageData(W,H);const px4=img.data;
-  for(let px=0;px<W;px++){
-    const pxMs=posMs+(px-cX)*msPerPx;
-    if(pxMs<0||pxMs>dur)continue;
-    const i0=Math.max(0,Math.floor((pxMs-msPerPx*.5)/wfDur*pts));
-    const i1=Math.min(pts-1,Math.ceil((pxMs+msPerPx*.5)/wfDur*pts));
-    let r=0,g=0,b2=0,mn=0,mx=0;const cnt=Math.max(1,i1-i0+1);
-    for(let i=i0;i<=i1;i++){const p=wfData[i];r+=p.r;g+=p.g;b2+=p.b;if(p.mn<mn)mn=p.mn;if(p.mx>mx)mx=p.mx;}
-    r/=cnt;g/=cnt;b2/=cnt;
-    const past=pxMs<posMs;
-    const dimF=past?.65:1.0;
-    const alpha=past?200:255;
-    const h=Math.max(2,Math.round(mx*mid*0.93));
-    const asymShift=Math.round((mx+mn)*0.5*mid*0.3);
-    const y0=Math.max(0,Math.min(H-1,mid-h+asymShift));
-    const y1=Math.max(0,Math.min(H-1,mid+h+asymShift));
-    if((cfg.wfColor||'rgb')==='3band'){
-      const bands=_wf3BandStack(r,g,b2,y1-y0,dimF);
-      let cy=y1;
-      for(const band of bands){
-        const by0=Math.max(y0,cy-band.h);
-        for(let y=by0;y<cy;y++){const idx=(y*W+px)*4;px4[idx]=band.R;px4[idx+1]=band.G;px4[idx+2]=band.B;px4[idx+3]=alpha;}
-        cy=by0;
-      }
-    }else{
-      const [R,G,B]=_wfBlend(r,g,b2,dimF);
-      for(let y=y0;y<=y1;y++){
-        const idx=(y*W+px)*4;px4[idx]=R;px4[idx+1]=G;px4[idx+2]=B;px4[idx+3]=alpha;
-      }
+  // Build cache if needed (first call or data changed)
+  if(!d._wfCache||d._wfCacheH!==H){buildWaveformCache(slot);}
+  // --- Draw waveform from bitmap cache via drawImage ---
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  if(d._wfCache){
+    // Map viewport ms range → cache pixel range
+    const pxPerMs=pts/wfDur; // cache pixels per millisecond
+    const viewLMs=posMs-cX*msPerPx;
+    const viewRMs=posMs+(W-cX)*msPerPx;
+    // Source rect in cache coordinates (float → let drawImage handle sub-pixel)
+    const srcX=viewLMs*pxPerMs;
+    const srcW=(viewRMs-viewLMs)*pxPerMs;
+    // Clamp to valid cache range
+    const clampL=Math.max(0,srcX);
+    const clampR=Math.min(pts,srcX+srcW);
+    if(clampR>clampL){
+      const dstX=Math.round((clampL-srcX)/srcW*W);
+      const dstW=Math.round((clampR-clampL)/srcW*W);
+      ctx.drawImage(d._wfCache,Math.floor(clampL),0,Math.ceil(clampR-clampL),H,dstX,0,dstW,H);
     }
   }
-  ctx.putImageData(img,0,0);
   // Beat grid overlaid — use dbserver beat grid if available, else fallback to calculated
   if(d.bpm>0&&dur>0){
     const viewL=posMs-cX*msPerPx, viewR=posMs+(W-cX)*msPerPx;
@@ -1271,7 +1309,7 @@ function _id3DecodeText(fdata){
 }
 
 async function readID3Tags(file){
-  const tags={title:'',artist:'',art:null,key:''};
+  const tags={title:'',artist:'',art:null,key:'',bpm:0};
   try{
     const buf=await file.slice(0,Math.min(file.size,524288)).arrayBuffer();
     const view=new DataView(buf);
@@ -1295,7 +1333,7 @@ async function readID3Tags(file){
           let fsz=id3ver===4?(id3V.getUint8(ip+4)&0x7F)<<21|(id3V.getUint8(ip+5)&0x7F)<<14|(id3V.getUint8(ip+6)&0x7F)<<7|(id3V.getUint8(ip+7)&0x7F):id3V.getUint32(ip+4,false);
           if(fsz<=0||ip+10+fsz>ie)break;
           const fdata=new Uint8Array(id3Buf,ip+10,fsz);
-          if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TKEY'){const txt=_id3DecodeText(fdata);if(fid==='TIT2'&&txt)tags.title=txt;if(fid==='TPE1'&&txt)tags.artist=txt;if(fid==='TPE2'&&txt&&!tags.artist)tags.artist=txt;if(fid==='TKEY'&&txt)tags.key=txt;}
+          if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TKEY'||fid==='TBPM'){const txt=_id3DecodeText(fdata);if(fid==='TIT2'&&txt)tags.title=txt;if(fid==='TPE1'&&txt)tags.artist=txt;if(fid==='TPE2'&&txt&&!tags.artist)tags.artist=txt;if(fid==='TKEY'&&txt)tags.key=txt;if(fid==='TBPM'&&txt){const b=parseFloat(txt);if(b>0)tags.bpm=b;}}
           if(fid==='APIC'&&!tags.art){try{const enc=fdata[0];let o=1;let mime='';while(o<fdata.length&&fdata[o]!==0){mime+=String.fromCharCode(fdata[o]);o++;}o++;o++;if(enc===0||enc===3){while(o<fdata.length&&fdata[o]!==0)o++;o++;}else{while(o+1<fdata.length){if(fdata[o]===0&&fdata[o+1]===0){o+=2;break;}o+=2;}}if(o<fdata.length){const imgData=fdata.slice(o);if(!mime||mime==='image/')mime=imgData[0]===0x89?'image/png':'image/jpeg';const blob=new Blob([imgData],{type:mime});tags.art=URL.createObjectURL(blob);}}catch(_){}}
           ip+=10+fsz;
         }
@@ -1316,12 +1354,13 @@ async function readID3Tags(file){
       else fsz=view.getUint32(pos+4);
       if(fsz<=0||pos+10+fsz>end) break;
       const fdata=new Uint8Array(buf,pos+10,fsz);
-      if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TKEY'){
+      if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TKEY'||fid==='TBPM'){
         const txt=_id3DecodeText(fdata);
         if(fid==='TIT2'&&txt) tags.title=txt;
         if(fid==='TPE1'&&txt) tags.artist=txt;
         if(fid==='TPE2'&&txt&&!tags.artist) tags.artist=txt;
         if(fid==='TKEY'&&txt) tags.key=txt;
+        if(fid==='TBPM'&&txt){const b=parseFloat(txt);if(b>0)tags.bpm=b;}
       }
       // APIC: album art (front cover preferred)
       if(fid==='APIC'&&!tags.art){
@@ -1350,6 +1389,18 @@ async function readID3Tags(file){
 // BPM analysis — Spectral Flux + Generalized Autocorrelation (Rekordbox-style)
 // Based on: Tzanetakis DWT method + DJ software best practices
 // FFT window=1024, hop=512, spectral flux onset → GAC with √ exponent
+// Detect first audio position above -69dB (amplitude ≈ 0.000355) — CDJ/Rekordbox style
+function detectAudioStart(ch, sr){
+  const threshold=Math.pow(10, -69/20); // -69dB → ~0.000355
+  const winSamples=Math.round(sr*0.005); // 5ms window for RMS
+  for(let i=0;i<ch.length-winSamples;i+=winSamples){
+    let sum=0;
+    for(let j=0;j<winSamples;j++){const s=ch[i+j]||0;sum+=s*s;}
+    if(Math.sqrt(sum/winSamples)>=threshold) return i/sr*1000; // ms
+  }
+  return 0;
+}
+
 async function analyzeBPM(blob){
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:44100});
@@ -1357,93 +1408,110 @@ async function analyzeBPM(blob){
     const buf=await ctx.decodeAudioData(ab);
     ctx.close();
     const ch=buf.getChannelData(0),sr=buf.sampleRate;
-    const fftSz=1024,hopSz=512,halfFFT=fftSz/2;
-    // Analyse up to 30 seconds from the middle of the track (most stable BPM region)
-    const maxSamples=Math.min(ch.length, sr*30);
+
+    // --- Energy-based onset detection (much faster than DFT) ---
+    const hopSz=256, frameSz=1024;
+    // Analyse 45 seconds from the middle for stable BPM
+    const maxSamples=Math.min(ch.length, sr*45);
     const startSample=Math.max(0, Math.floor((ch.length-maxSamples)/2));
-    const nFrames=Math.floor((maxSamples-fftSz)/hopSz);
-    if(nFrames<50) return 0;
+    const nFrames=Math.floor((maxSamples-frameSz)/hopSz);
+    if(nFrames<100) return {bpm:0,startMs:0};
 
-    // Hann window
-    const win=new Float32Array(fftSz);
-    for(let i=0;i<fftSz;i++) win[i]=0.5*(1-Math.cos(2*Math.PI*i/(fftSz-1)));
-
-    // Compute magnitude spectra for each frame
-    const mags=new Array(nFrames);
-    // Manual DFT (real only, limited bins) — optimized for beat detection
+    // Low-pass filter for kick detection (< 200Hz)
+    const aLP=Math.min(1, 2*Math.PI*200/sr);
+    // Compute sub-band energy per frame (kick-focused)
+    const energy=new Float32Array(nFrames);
+    let lp=0;
     for(let f=0;f<nFrames;f++){
       const off=startSample+f*hopSz;
-      const frame=new Float32Array(fftSz);
-      for(let i=0;i<fftSz;i++) frame[i]=(ch[off+i]||0)*win[i];
-      // Magnitude spectrum via DFT — only first 256 bins (~5.5kHz) matter for beat detection
-      const nBins=Math.min(256,halfFFT);
-      const mag=new Float32Array(nBins);
-      for(let k=0;k<nBins;k++){
-        let re=0,im=0;
-        const w=2*Math.PI*k/fftSz;
-        for(let n=0;n<fftSz;n++){re+=frame[n]*Math.cos(w*n);im-=frame[n]*Math.sin(w*n);}
-        mag[k]=Math.sqrt(re*re+im*im);
+      let eLow=0,eFull=0;
+      for(let i=0;i<frameSz;i++){
+        const s=ch[off+i]||0;
+        lp+=aLP*(s-lp);
+        eLow+=lp*lp;
+        eFull+=s*s;
       }
-      mags[f]=mag;
+      // Weighted: 70% kick energy + 30% full energy for better transient detection
+      energy[f]=0.7*eLow/frameSz + 0.3*eFull/frameSz;
     }
 
-    // Spectral flux: sum of positive magnitude differences across bins
-    const nBins=mags[0].length;
-    const flux=new Float32Array(nFrames);
+    // Onset detection: energy derivative (positive flux)
+    const onset=new Float32Array(nFrames);
     for(let f=1;f<nFrames;f++){
-      let sf=0;
-      for(let k=0;k<nBins;k++){
-        const d=mags[f][k]-mags[f-1][k];
-        if(d>0) sf+=d;
-      }
-      flux[f]=sf;
+      const d=energy[f]-energy[f-1];
+      onset[f]=d>0?d:0;
     }
 
-    // Normalize flux
-    let fmx=0;
-    for(let i=0;i<nFrames;i++) if(flux[i]>fmx) fmx=flux[i];
-    if(fmx>0) for(let i=0;i<nFrames;i++) flux[i]/=fmx;
+    // Adaptive threshold: local mean + 1.5*std in 0.5s windows
+    const winFrames=Math.round(500/(hopSz/sr*1000));
+    const peaks=new Float32Array(nFrames);
+    for(let f=0;f<nFrames;f++){
+      const lo=Math.max(0,f-winFrames),hi=Math.min(nFrames,f+winFrames);
+      let sum=0,sum2=0,cnt=0;
+      for(let i=lo;i<hi;i++){sum+=onset[i];sum2+=onset[i]*onset[i];cnt++;}
+      const mean=sum/cnt,std=Math.sqrt(sum2/cnt-mean*mean);
+      peaks[f]=onset[f]>(mean+1.5*std)?onset[f]:0;
+    }
 
-    // Generalized Autocorrelation with √ exponent for sharper peaks
+    // Autocorrelation on onset peaks
     const hopMs=hopSz/sr*1000;
-    const minLag=Math.round(333/hopMs);  // ~180 BPM
-    const maxLag=Math.round(1000/hopMs); // ~60 BPM
-    const nCorr=Math.min(nFrames, Math.round(15000/hopMs)); // 15s window
+    const minLag=Math.round(60000/(200*hopMs)); // 200 BPM
+    const maxLag=Math.round(60000/(60*hopMs));   // 60 BPM
+    const corrLen=Math.min(nFrames, Math.round(20000/hopMs));
     const corr=new Float32Array(maxLag+1);
 
     for(let lag=minLag;lag<=Math.min(maxLag,nFrames-1);lag++){
       let c=0;
-      for(let i=0;i<nCorr&&i+lag<nFrames;i++) c+=Math.sqrt(flux[i]*flux[i+lag]);
+      for(let i=0;i<corrLen&&i+lag<nFrames;i++) c+=peaks[i]*peaks[i+lag];
       corr[lag]=c;
     }
 
-    // Find top 3 peaks for octave analysis
-    const peaks=[];
+    // Find peaks in correlation
+    const cPeaks=[];
     for(let lag=minLag+1;lag<maxLag&&lag<nFrames-1;lag++){
       if(corr[lag]>corr[lag-1]&&corr[lag]>corr[lag+1]&&corr[lag]>0){
-        peaks.push({lag,val:corr[lag]});
+        // Parabolic interpolation for sub-frame precision
+        const a2=corr[lag-1],b2=corr[lag],c2=corr[lag+1];
+        const denom=a2-2*b2+c2;
+        const frac=denom!==0?(a2-c2)/(2*denom):0;
+        cPeaks.push({lag:lag+frac,val:b2});
       }
     }
-    peaks.sort((a,b)=>b.val-a.val);
+    cPeaks.sort((a,b)=>b.val-a.val);
+    if(cPeaks.length===0) return {bpm:0,startMs:0};
 
-    if(peaks.length===0) return 0;
+    // Octave analysis: check multiples
+    let bestLag=cPeaks[0].lag;
+    const bestVal=cPeaks[0].val;
 
-    // Octave analysis: check if half-lag (double BPM) has strong energy
-    let bestLag=peaks[0].lag;
-    const halfLag=Math.round(bestLag/2);
+    // Check half-lag (double BPM) — prefer faster tempo if strong
+    const halfLag=bestLag/2;
     if(halfLag>=minLag){
-      const halfVal=corr[halfLag]||0;
-      // If half-lag correlation is >70% of best, prefer the faster tempo
-      if(halfVal>peaks[0].val*0.7) bestLag=halfLag;
+      // Find correlation near halfLag
+      const hIdx=Math.round(halfLag);
+      const hVal=corr[Math.max(minLag,Math.min(maxLag,hIdx))]||0;
+      if(hVal>bestVal*0.6) bestLag=halfLag;
+    }
+    // Check 2x lag (half BPM) — if much stronger, use it
+    const dblLag=bestLag*2;
+    if(dblLag<=maxLag){
+      const dIdx=Math.round(dblLag);
+      const dVal=corr[Math.max(minLag,Math.min(maxLag,dIdx))]||0;
+      if(dVal>bestVal*1.3) bestLag=dblLag;
     }
 
-    const bpm=60000/(bestLag*hopMs);
-    // Normalize to 60-200 BPM range (DJ standard)
-    let r=bpm;while(r>200)r/=2;while(r<60)r*=2;
-    // Prefer 120-180 range for dance music
-    if(r<90&&r*2<=200) r*=2;
-    return Math.round(r*10)/10;
-  }catch(e){console.warn('[BPM]',e);return 0;}
+    let bpm=60000/(bestLag*hopMs);
+    // Normalize to 70-180 BPM range (DJ standard for electronic/dance)
+    while(bpm>180) bpm/=2;
+    while(bpm<70) bpm*=2;
+    // Round to nearest 0.1
+    bpm=Math.round(bpm*10)/10;
+
+    // Detect audio start at -69dB
+    const startMs=detectAudioStart(ch,sr);
+
+    return {bpm, startMs};
+  }catch(e){console.warn('[BPM]',e);return {bpm:0,startMs:0};}
 }
 
 function loadFile(slot,f){
@@ -1451,7 +1519,7 @@ function loadFile(slot,f){
   if(d.type==='hw'){console.warn('[loadFile] HW 모드 덱에 파일 로드 차단');return;}
   if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
-  d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;
+  d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;d._fileName=f.name;d._pwv7=false;
   // filename parsing used as fallback only — ID3 tags take priority
   const n=f.name.replace(/\.[^.]+$/,'');
   if(n.includes(' - ')){const p=n.split(' - ');d.ar=p[0].trim();d.tn=p.slice(1).join(' - ').trim();}
@@ -1465,7 +1533,8 @@ function loadFile(slot,f){
       if(tags.artist) d.ar=tags.artist;
       if(tags.art) d.artUrl=tags.art;
       if(tags.key) d.key=_toCamelot(tags.key);
-      console.log(`[ID3] slot=${slot} title="${d.tn}" artist="${d.ar}" key="${d.key}" art=${!!tags.art}`);
+      if(tags.bpm>0){d._id3Bpm=tags.bpm;} // store for priority over analysis
+      console.log(`[ID3] slot=${slot} title="${d.tn}" artist="${d.ar}" key="${d.key}" bpm=${tags.bpm||'-'} art=${!!tags.art}`);
       // Send artwork to virtual dbserver for Arena
       if(tags._artRaw && window.bridge?.setVirtualArt){
         const u8=new Uint8Array(tags._artRaw);
@@ -1482,38 +1551,13 @@ function loadFile(slot,f){
     d.au=new Audio();d.au.src=URL.createObjectURL(audioBlob);d.au.preload='auto';
     if(cfg.aoId)setOut(d.au,cfg.aoId);
     d.au.addEventListener('loadedmetadata',()=>{
-      d.dur=d.au.duration*1000;d.bpm=0;
+      d.dur=d.au.duration*1000;d.bpm=0;d.ld=true;
       renderDecks();
+      // Setup canvases immediately
       setTimeout(()=>{
         const wov=document.getElementById('wov'+slot);if(wov){d.wovCtx=wov.getContext('2d');const p=wov.parentElement;wov.width=p?.offsetWidth||280;wov.height=p?.offsetHeight||16;}
         const wzc=document.getElementById('wzc'+slot);if(wzc){d.wzCtx=wzc.getContext('2d');const p=wzc.parentElement;wzc.width=p?.offsetWidth||280;wzc.height=p?.offsetHeight||72;}
       },0);
-      buildRGBWaveform(audioBlob,(done,partial)=>{
-        d.rgbWf=partial.slice(0,done);
-        d.rgbWfPts=d.rgbWfPts||done*30; // estimate total on first chunk
-        const prog2=document.getElementById('dwov-prog'+slot);
-        if(prog2)prog2.style.width=(done/(d.rgbWfPts||8000)*100).toFixed(1)+'%';
-      }).then(wf=>{
-        d.rgbWf=wf;
-        const prog2=document.getElementById('dwov-prog'+slot);
-        if(prog2)prog2.style.width='0'; // hide when done
-        if(wf){drawOverview(slot,0);drawZoomWaveform(slot,0);}
-      });
-      analyzeBPM(audioBlob).then(bpm=>{
-        if(bpm>0){d.bpm=bpm;d.baseBpm=bpm;}
-        else{d.bpm=128;d.baseBpm=128;}
-        // Generate beat grid from BPM (uniform tempo)
-        if(d.dur>0&&d.bpm>0){
-          const beatMs=60000/d.bpm;
-          const beats=[];
-          for(let t=0;t<d.dur;t+=beatMs){
-            beats.push({beatInBar:((beats.length%4)+1), bpm:d.bpm, timeMs:Math.round(t)});
-          }
-          d._beatGrid=beats;
-          console.log(`[BPM] slot=${slot} bpm=${bpm} beatGrid=${beats.length} beats`);
-        }
-        renderDecks();
-      });
       if(E&&run){
         window.bridge.updateLayer(slot,{
           state:0,timecodeMs:0,bpm:d.bpm||128,
@@ -1521,6 +1565,65 @@ function loadFile(slot,f){
           trackName:d.tn||'',artistName:d.ar||'',deviceName:'CDJ-3000',beatPhase:0,
         });
       }
+      // Defer analysis so audio is playable immediately
+      setTimeout(async()=>{
+        // Try Rekordbox ANLZ PWV7 data first (pixel-perfect 3-band)
+        let usedPWV7=false;
+        if(window.bridge?.findRekordboxWaveform){
+          try{
+            const pwv7=await window.bridge.findRekordboxWaveform(d._fileName||f.name);
+            if(pwv7&&pwv7.length>100){
+              // Convert PWV7 raw bytes to our format
+              // PWV7: {low,mid,hi} each 0-255
+              // Store as normalized values for buildWaveformCache
+              d.rgbWf=pwv7.map(p=>({
+                h:Math.max(p.low,p.mid,p.hi)/255,mn:0,mx:0,
+                r:p.low/255, g:p.mid/255, b:p.hi/255
+              }));
+              d._pwv7=true; // flag: using PWV7 data (different weight scheme)
+              d._wfCache=null;
+              buildWaveformCache(slot);drawOverview(slot,0);drawZoomWaveform(slot,0);
+              usedPWV7=true;
+              console.log(`[WF] slot${slot} using Rekordbox PWV7: ${pwv7.length} entries`);
+            }
+          }catch(e){console.warn('[PWV7]',e);}
+        }
+        if(!usedPWV7){
+          d._pwv7=false;
+          buildRGBWaveform(audioBlob,(done,partial)=>{
+            d.rgbWf=partial.slice(0,done);
+            d.rgbWfPts=d.rgbWfPts||done*30;
+            const prog2=document.getElementById('dwov-prog'+slot);
+            if(prog2)prog2.style.width=(done/(d.rgbWfPts||8000)*100).toFixed(1)+'%';
+          }).then(wf=>{
+            d.rgbWf=wf;
+            d._wfCache=null;
+            const prog2=document.getElementById('dwov-prog'+slot);
+            if(prog2)prog2.style.width='0';
+            if(wf){buildWaveformCache(slot);drawOverview(slot,0);drawZoomWaveform(slot,0);}
+          });
+        }
+        analyzeBPM(audioBlob).then(result=>{
+          const analyzedBpm=result.bpm||0, startMs=result.startMs||0;
+          // ID3 TBPM tag takes priority over analysis
+          const finalBpm=d._id3Bpm||analyzedBpm;
+          if(finalBpm>0){d.bpm=finalBpm;d.baseBpm=finalBpm;}
+          else{d.bpm=128;d.baseBpm=128;}
+          // Generate beat grid anchored at -69dB audio start point
+          if(d.dur>0&&d.bpm>0){
+            const beatMs=60000/d.bpm;
+            const anchor=startMs; // first audio above -69dB
+            const beats=[];
+            for(let t=anchor;t<d.dur;t+=beatMs){
+              beats.push({beatInBar:((beats.length%4)+1), bpm:d.bpm, timeMs:Math.round(t)});
+            }
+            d._beatGrid=beats;
+            d._barAnchorMs=anchor;
+            console.log(`[BPM] slot=${slot} id3Bpm=${d._id3Bpm||'-'} analyzed=${analyzedBpm} final=${d.bpm} startMs=${startMs.toFixed(1)} beats=${beats.length}`);
+          }
+          renderDecks();
+        });
+      },100); // 100ms delay — let audio element finish loading
     });
     d.au.addEventListener('ended',()=>{
       if(d.scratch)return; // ignore during scrub/drag
@@ -1631,7 +1734,7 @@ function doEject(slot){
   if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
   if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
-  Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,artUrl:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
+  Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
   if(E&&run)window.bridge.removeLayer(slot);
   renderDecks();
 }
@@ -2035,7 +2138,6 @@ function renderSettings(){
   el.innerHTML=`
     <div class="sl">웨이브폼 설정</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">웨이브폼 색상</span><select class="ss" id="wfColorSel"><option value="blue" ${cfg.wfColor==='blue'?'selected':''}>BLUE (모노톤)</option><option value="rgb" ${cfg.wfColor==='rgb'?'selected':''}>RGB (저=R 중=G 고=B)</option><option value="3band" ${cfg.wfColor==='3band'?'selected':''}>3BAND (저=청 중=녹 고=백)</option></select></div>
       <div class="srw"><span class="srl">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
       <div class="srw"><span class="srl">비트 페이저 모드</span><select class="ss" id="phasorModeSel"><option value="blink" ${cfg.phasorMode==='blink'?'selected':''}>Static (기본)</option><option value="scroll" ${cfg.phasorMode==='scroll'?'selected':''}>Scroll (채우기)</option></select></div>
     </div>
@@ -2099,8 +2201,6 @@ function renderSettings(){
     });
   });
   // Waveform settings
-  const wfColorSel=el.querySelector('#wfColorSel');
-  if(wfColorSel){wfColorSel.value=cfg.wfColor||'rgb';wfColorSel.onchange=e=>{cfg.wfColor=e.target.value;};}
   const wfCenterSel=el.querySelector('#wfCenterSel');
   if(wfCenterSel){wfCenterSel.value=cfg.wfCenter||'center';wfCenterSel.onchange=e=>{cfg.wfCenter=e.target.value;};}
   const phasorSel=el.querySelector('#phasorModeSel');
@@ -2208,7 +2308,7 @@ if(E){
     const oldTid=dk._trackId||0;
     if(newTid>0 && oldTid>0 && newTid!==oldTid){
       console.log(`[UI] P${status.playerNum} track change: ${oldTid} → ${newTid}`);
-      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;dk._beatGrid=null;
+      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;
       dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
       dk._trackId=newTid;
       // Don't renderDecks() here — metadata will arrive shortly and trigger update
@@ -2222,7 +2322,7 @@ if(E){
       if(dk._noTrackCount>=3 && dk.ld){
         console.log(`[UI] P${status.playerNum} track ejected`);
         dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
-        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk.cuePoints=null;dk._beatGrid=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
+        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
         renderDecks();
       }
       return;
@@ -2304,6 +2404,8 @@ if(E){
       }
       // Don't override duration if we have a real value from metadata
       if(!dk.dur||dk.dur<=0) dk.dur=dk.rgbWf.length*30;
+      dk._wfCache=null; // invalidate cache
+      buildWaveformCache(li);
       console.log(`[UI] P${d.playerNum} waveform: ${dk.rgbWf.length}pts (${d.wfType})`);
       drawOverview(li, dk.dur>0&&dk.pos>0 ? dk.pos/dk.dur : 0);
     }
@@ -2352,6 +2454,8 @@ if(E){
       // Duration from detail waveform: pts / 150 segments per second * 1000ms
       const detailDur=Math.round(d.pts.length/150*1000);
       if(!dk.dur||dk.dur<=0||Math.abs(dk.dur-detailDur)>5000) dk.dur=detailDur;
+      dk._wfCache=null; // invalidate cache — detail waveform replaces preview
+      buildWaveformCache(li);
       console.log(`[UI] P${d.playerNum} detail waveform: ${d.pts.length}pts (${Math.round(detailDur/1000)}s)`);
     }
   });
