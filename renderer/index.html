@@ -787,8 +787,8 @@ function _wf3BandStack(r,g,b2,totalH,dimF){
 }
 
 // ═══ Waveform Bitmap Cache (OffscreenCanvas) ═══
-// Rekordbox PWV5 style: thin 1px vertical lines, per-column RGB from frequency bands
-// Height = raw peak (no compression), Color = bass→R, mid→G, treble→B
+// Rekordbox-style: ImageData pixel control — vertical gradient per column
+// Center=bright, edges=fade, adjacent columns blend via imageSmoothingEnabled
 function buildWaveformCache(slot){
   const d=DECKS[slot];if(!d)return;
   const wfData=d.rgbWfDetail||d.rgbWf;
@@ -796,33 +796,42 @@ function buildWaveformCache(slot){
   const cv=document.getElementById('wzc'+slot);
   const H=cv?cv.height:100;
   const pts=wfData.length;
-  const cacheKey=pts+'_'+H+'_pwv1';
+  const cacheKey=pts+'_'+H+'_grad1';
   if(d._wfCache&&d._wfCacheKey===cacheKey)return;
   const oc=new OffscreenCanvas(pts,H);
   const ctx=oc.getContext('2d',{alpha:false});
-  ctx.fillStyle='#000';ctx.fillRect(0,0,pts,H);
-  const mid=H/2;
-  // Direct 1px vertical lines — no envelope, no smoothing, no compression
+  const imgData=ctx.createImageData(pts,H);
+  const buf=imgData.data;
+  const mid=H>>1;
   for(let x=0;x<pts;x++){
     const p=wfData[x];
     if(p.h<0.01)continue;
-    // Height: raw peak amplitude — preserves real waveform dynamics
-    const h=Math.round(p.h*mid*0.95);
-    if(h<1)continue;
-    // Color: frequency band RGB (Rekordbox style)
-    // Dominant band at 255, others proportional → vivid per-column color
+    const h=Math.max(1,Math.round(p.h*mid*0.95));
+    // Frequency RGB — dominant band at 255
     const mx=Math.max(p.r,p.g,p.b,0.001);
-    const s=255/mx;
-    const R=Math.min(255,Math.round(p.r*s));
-    const G=Math.min(255,Math.round(p.g*s));
-    const B=Math.min(255,Math.round(p.b*s));
-    ctx.fillStyle=`rgb(${R},${G},${B})`;
-    ctx.fillRect(x,mid-h,1,h*2);
+    const sc=255/mx;
+    const R=Math.min(255,p.r*sc)|0;
+    const G=Math.min(255,p.g*sc)|0;
+    const B=Math.min(255,p.b*sc)|0;
+    // Vertical gradient: center=100% bright → edge=25% bright
+    const invH=1/h;
+    for(let dy=-h;dy<=h;dy++){
+      const y=mid+dy;
+      if(y<0||y>=H)continue;
+      const dist=Math.abs(dy)*invH; // 0=center, 1=edge
+      const br=1.0-dist*0.75; // 100%→25%
+      const off=(y*pts+x)<<2;
+      buf[off]  =R*br|0;
+      buf[off+1]=G*br|0;
+      buf[off+2]=B*br|0;
+      buf[off+3]=255;
+    }
   }
+  ctx.putImageData(imgData,0,0);
   d._wfCache=oc;
   d._wfCacheH=H;
   d._wfCacheKey=cacheKey;
-  console.log(`[WFC] slot${slot} PWV5-style cache: ${pts}×${H}px`);
+  console.log(`[WFC] slot${slot} gradient cache: ${pts}×${H}px`);
 }
 
 function drawOverview(slot,prog){
@@ -834,23 +843,28 @@ function drawOverview(slot,prog){
   const W=cv.width,H=cv.height,ctx=d.wovCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
   const pts=wfOv.length,mid=H/2;
-  // PWV5-style overview — thin lines, frequency RGB
-  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  // Gradient overview — ImageData pixel control
+  const ovImg=ctx.createImageData(W,H);
+  const ovBuf=ovImg.data;
   for(let px=0;px<W;px++){
     const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
     let r=0,g=0,b=0,pk=0;const cnt=Math.max(1,i1-i0+1);
     for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;if(p.h>pk)pk=p.h;}
     r/=cnt;g/=cnt;b/=cnt;
-    const h=Math.round(pk*mid*0.95);
+    const h=Math.max(1,Math.round(pk*mid*0.95));
     if(h<1)continue;
     const mx=Math.max(r,g,b,0.001);
-    const s=255/mx;
-    const R=Math.min(255,Math.round(r*s));
-    const G=Math.min(255,Math.round(g*s));
-    const B=Math.min(255,Math.round(b*s));
-    ctx.fillStyle=`rgb(${R},${G},${B})`;
-    ctx.fillRect(px,mid-h,1,h*2);
+    const sc=255/mx;
+    const R=Math.min(255,r*sc)|0,G=Math.min(255,g*sc)|0,B=Math.min(255,b*sc)|0;
+    const invH=1/h;
+    for(let dy=-h;dy<=h;dy++){
+      const y=mid+dy;if(y<0||y>=H)continue;
+      const br=1.0-Math.abs(dy)*invH*0.75;
+      const off=(y*W+px)<<2;
+      ovBuf[off]=R*br|0;ovBuf[off+1]=G*br|0;ovBuf[off+2]=B*br|0;ovBuf[off+3]=255;
+    }
   }
+  ctx.putImageData(ovImg,0,0);
   // Draw cue points on overview (memory=white, hot=colored with letter)
   const _cueColors={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
   if(d.cuePoints&&d.dur>0){
@@ -904,7 +918,7 @@ function drawZoomWaveform(slot,prog){
   if(!d._wfCache||d._wfCacheH!==H){buildWaveformCache(slot);}
   // --- Draw waveform from bitmap cache via drawImage ---
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  ctx.imageSmoothingEnabled=false; // keep 1px lines sharp (Rekordbox style)
+  ctx.imageSmoothingEnabled=true; // blend adjacent columns for smooth gradient
   if(d._wfCache){
     // Map viewport ms range → cache pixel range
     const pxPerMs=pts/wfDur; // cache pixels per millisecond
