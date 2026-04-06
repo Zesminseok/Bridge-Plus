@@ -995,9 +995,9 @@ function drawZoomWaveform(slot,prog){
   }
   // Center playhead
   ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
-  const grd=ctx.createLinearGradient(cX-8,0,cX+8,0);
-  grd.addColorStop(0,'rgba(255,255,255,0)');grd.addColorStop(.5,'rgba(255,255,255,.08)');grd.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=grd;ctx.fillRect(cX-8,0,16,H);
+  const phGrd=ctx.createLinearGradient(cX-8,0,cX+8,0);
+  phGrd.addColorStop(0,'rgba(255,255,255,0)');phGrd.addColorStop(.5,'rgba(255,255,255,.08)');phGrd.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=phGrd;ctx.fillRect(cX-8,0,16,H);
   // BAR.BEAT counter — centered on playhead line, top
   if(d.bpm>0&&dur>0){
     ctx.font='bold 11px "DM Mono",monospace';
