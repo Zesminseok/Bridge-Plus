@@ -510,6 +510,22 @@ void DeckPanel::paint(juce::Graphics& g)
     // ── Zoom waveform ──
     drawZoomWaveform(g, zoomWfBounds, deck.getWaveformData(), posMs, durMs, deck.getBpm());
 
+    // Key badge (top-right of zoom waveform)
+    if (!isHW && !deck.getKey().isEmpty() && !zoomWfBounds.isEmpty())
+    {
+        juce::String keyStr = deck.getKey();
+        float kw = (float)(keyStr.length() * 7 + 14);
+        auto kr = juce::Rectangle<float>(
+            (float)zoomWfBounds.getRight() - kw - 4,
+            (float)zoomWfBounds.getY() + 4,
+            kw, 16.0f);
+        g.setColour(juce::Colour(0xbf0c0e12));
+        g.fillRoundedRectangle(kr, 3.0f);
+        g.setColour(C::grn);
+        g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
+        g.drawText(keyStr, kr, juce::Justification::centred);
+    }
+
     // ── Beat phasor (4 segments, only current beat lit) ──
     if (!phasorBounds.isEmpty())
     {
@@ -1198,12 +1214,20 @@ void MainComponent::paint(juce::Graphics& g)
                 juce::Justification::centredLeft);
         }
 
-        if (visibleDecks == 0 && engine.isRunning())
+        // Section label above decks
+        g.setColour(C::tx3);
+        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+        juce::String sectionLabel = globalHWMode
+            ? "INPUT LAYERS \xe2\x80\x94 CDJ / HW"
+            : "INPUT LAYERS \xe2\x80\x94 VIRTUAL";
+        g.drawText(sectionLabel, 12, 228, 300, 16, juce::Justification::centredLeft);
+
+        if (visibleDecks == 0)
         {
             g.setColour(C::tx4);
-            g.setFont(juce::FontOptions(14.0f));
+            g.setFont(juce::FontOptions(13.0f));
             g.drawText("+ DECK 버튼으로 Virtual 덱을 추가하세요",
-                getLocalBounds().withTrimmedTop(228).withTrimmedBottom(26),
+                getLocalBounds().withTrimmedTop(244).withTrimmedBottom(26),
                 juce::Justification::centred);
         }
     }
@@ -1450,7 +1474,7 @@ void MainComponent::layoutDecks()
     if (visibleDecks == 0) return;
 
     auto area = getLocalBounds();
-    area.removeFromTop(228);  // header(52)+tabs(36)+statusbar(24)+outputlayers(80)+modebar(36)
+    area.removeFromTop(244);  // header(52)+tabs(36)+statusbar(24)+outputlayers(80)+modebar(36)+sectionlabel(16)
     area.removeFromBottom(26);
     area = area.reduced(8, 4);
 

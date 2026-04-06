@@ -42,6 +42,7 @@ public:
 
     juce::String getTitle() const      { return title; }
     juce::String getArtist() const     { return artist; }
+    juce::String getKey() const        { return key; }
     juce::String getDeviceName() const { return deviceName; }
     const juce::Image& getAlbumArt() const { return albumArt; }
 
@@ -74,6 +75,7 @@ private:
 
     juce::String title;
     juce::String artist;
+    juce::String key;
     juce::String deviceName = "CDJ-3000";
     juce::Image albumArt;
 

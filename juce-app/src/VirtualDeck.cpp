@@ -37,6 +37,15 @@ bool VirtualDeck::loadFile(const juce::File& file)
         float tagBpm = reader->metadataValues.getValue("bpm", "0").getFloatValue();
         if (tagBpm >= 60.0f && tagBpm <= 200.0f) bpm = tagBpm;
     }
+    // Try several common key tag names
+    for (auto& keyTag : { "initialkey", "key", "TKEY", "INITIALKEY" })
+    {
+        if (reader->metadataValues.containsKey(keyTag))
+        {
+            key = reader->metadataValues.getValue(keyTag, "").trim();
+            if (key.isNotEmpty()) break;
+        }
+    }
 
     // Album art: try to extract from ID3v2 APIC tag
     albumArt = juce::Image();
@@ -104,7 +113,7 @@ void VirtualDeck::eject()
     playSamplePos.store(0);
     positionMs.store(0.0f);
     audioBuffer.setSize(0, 0);
-    title = {}; artist = {};
+    title = {}; artist = {}; key = {};
     durationMs = 0.0f; bpm = 0.0f;
     cuePointMs = 0.0f; wfData.clear();
     albumArt = juce::Image();
