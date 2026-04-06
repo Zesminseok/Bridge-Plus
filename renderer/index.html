@@ -787,37 +787,8 @@ function _wf3BandStack(r,g,b2,totalH,dimF){
 }
 
 // ═══ Waveform Bitmap Cache (OffscreenCanvas) ═══
-// MiniMeters Waveform style: in_vol → lut_tex (1D color LUT)
-// Volume level determines color (dark→blue→cyan→green→yellow→red→white)
-// Height = dB scale (-50dB~0dB)
-const _DB_MIN=-50,_DB_RANGE=50;
-// LUT: 256-entry color gradient (MiniMeters lut_tex equivalent)
-const _WF_LUT=(function(){
-  const lut=new Uint8Array(256*3);
-  const stops=[
-    {t:0.00,r:8,  g:8,  b:25},    // silence: near black
-    {t:0.12,r:15, g:30, b:120},   // very quiet: dark blue
-    {t:0.25,r:0,  g:120,b:200},   // quiet: cyan-blue
-    {t:0.40,r:0,  g:190,b:160},   // low-mid: teal
-    {t:0.55,r:30, g:210,b:50},    // mid: green
-    {t:0.70,r:200,g:210,b:20},    // loud: yellow
-    {t:0.82,r:240,g:120,b:10},    // very loud: orange
-    {t:0.92,r:240,g:40, b:20},    // peak: red
-    {t:1.00,r:255,g:255,b:255},   // clip: white
-  ];
-  for(let i=0;i<256;i++){
-    const t=i/255;
-    let s0=stops[0],s1=stops[1];
-    for(let j=0;j<stops.length-1;j++){
-      if(t>=stops[j].t&&t<=stops[j+1].t){s0=stops[j];s1=stops[j+1];break;}
-    }
-    const f=(t-s0.t)/(s1.t-s0.t||1);
-    lut[i*3]=Math.round(s0.r+(s1.r-s0.r)*f);
-    lut[i*3+1]=Math.round(s0.g+(s1.g-s0.g)*f);
-    lut[i*3+2]=Math.round(s0.b+(s1.b-s0.b)*f);
-  }
-  return lut;
-})();
+// Rekordbox PWV5 style: thin 1px vertical lines, per-column RGB from frequency bands
+// Height = raw peak (no compression), Color = bass→R, mid→G, treble→B
 function buildWaveformCache(slot){
   const d=DECKS[slot];if(!d)return;
   const wfData=d.rgbWfDetail||d.rgbWf;
@@ -825,43 +796,33 @@ function buildWaveformCache(slot){
   const cv=document.getElementById('wzc'+slot);
   const H=cv?cv.height:100;
   const pts=wfData.length;
-  const cacheKey=pts+'_'+H+'_lut1';
+  const cacheKey=pts+'_'+H+'_pwv1';
   if(d._wfCache&&d._wfCacheKey===cacheKey)return;
   const oc=new OffscreenCanvas(pts,H);
   const ctx=oc.getContext('2d',{alpha:false});
   ctx.fillStyle='#000';ctx.fillRect(0,0,pts,H);
   const mid=H/2;
-  const hs=new Float32Array(pts);
-  const cr=new Uint8Array(pts),cg=new Uint8Array(pts),cb=new Uint8Array(pts);
+  // Direct 1px vertical lines — no envelope, no smoothing, no compression
   for(let x=0;x<pts;x++){
     const p=wfData[x];
-    const rv=p.rms||0;
-    if(rv<0.001)continue;
-    // Height: dB scale
-    const dB=20*Math.log10(rv);
-    const norm=Math.max(0,Math.min(1,(dB-_DB_MIN)/_DB_RANGE));
-    hs[x]=norm*mid;
-    // Color: LUT lookup — volume level → color gradient
-    const li=Math.min(255,Math.round(norm*255))*3;
-    cr[x]=_WF_LUT[li]; cg[x]=_WF_LUT[li+1]; cb[x]=_WF_LUT[li+2];
+    if(p.h<0.01)continue;
+    // Height: raw peak amplitude — preserves real waveform dynamics
+    const h=Math.round(p.h*mid*0.95);
+    if(h<1)continue;
+    // Color: frequency band RGB (Rekordbox style)
+    // Dominant band at 255, others proportional → vivid per-column color
+    const mx=Math.max(p.r,p.g,p.b,0.001);
+    const s=255/mx;
+    const R=Math.min(255,Math.round(p.r*s));
+    const G=Math.min(255,Math.round(p.g*s));
+    const B=Math.min(255,Math.round(p.b*s));
+    ctx.fillStyle=`rgb(${R},${G},${B})`;
+    ctx.fillRect(x,mid-h,1,h*2);
   }
-  // Smooth envelope + colored fills
-  ctx.beginPath();
-  ctx.moveTo(0,mid-hs[0]);
-  for(let x=1;x<pts;x++) ctx.lineTo(x,mid-hs[x]);
-  for(let x=pts-1;x>=0;x--) ctx.lineTo(x,mid+hs[x]);
-  ctx.closePath();
-  ctx.save();ctx.clip();
-  for(let x=0;x<pts;x++){
-    if(hs[x]<0.5)continue;
-    ctx.fillStyle=`rgb(${cr[x]},${cg[x]},${cb[x]})`;
-    ctx.fillRect(x,0,1,H);
-  }
-  ctx.restore();
   d._wfCache=oc;
   d._wfCacheH=H;
   d._wfCacheKey=cacheKey;
-  console.log(`[WFC] slot${slot} LUT waveform: ${pts}×${H}px`);
+  console.log(`[WFC] slot${slot} PWV5-style cache: ${pts}×${H}px`);
 }
 
 function drawOverview(slot,prog){
@@ -873,34 +834,23 @@ function drawOverview(slot,prog){
   const W=cv.width,H=cv.height,ctx=d.wovCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
   const pts=wfOv.length,mid=H/2;
-  // LUT waveform overview — volume → color gradient
+  // PWV5-style overview — thin lines, frequency RGB
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  const ovH=new Float32Array(W);
-  const ovR=new Uint8Array(W),ovG=new Uint8Array(W),ovB=new Uint8Array(W);
   for(let px=0;px<W;px++){
     const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
-    let rmSum=0;const cnt=Math.max(1,i1-i0+1);
-    for(let i=i0;i<=i1;i++) rmSum+=(wfOv[i].rms||0);
-    const avgRms=rmSum/cnt;
-    if(avgRms<0.001)continue;
-    const dB=20*Math.log10(avgRms);
-    const norm=Math.max(0,Math.min(1,(dB-_DB_MIN)/_DB_RANGE));
-    ovH[px]=norm*mid;
-    const li=Math.min(255,Math.round(norm*255))*3;
-    ovR[px]=_WF_LUT[li];ovG[px]=_WF_LUT[li+1];ovB[px]=_WF_LUT[li+2];
+    let r=0,g=0,b=0,pk=0;const cnt=Math.max(1,i1-i0+1);
+    for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;if(p.h>pk)pk=p.h;}
+    r/=cnt;g/=cnt;b/=cnt;
+    const h=Math.round(pk*mid*0.95);
+    if(h<1)continue;
+    const mx=Math.max(r,g,b,0.001);
+    const s=255/mx;
+    const R=Math.min(255,Math.round(r*s));
+    const G=Math.min(255,Math.round(g*s));
+    const B=Math.min(255,Math.round(b*s));
+    ctx.fillStyle=`rgb(${R},${G},${B})`;
+    ctx.fillRect(px,mid-h,1,h*2);
   }
-  ctx.beginPath();
-  ctx.moveTo(0,mid-ovH[0]);
-  for(let px=1;px<W;px++) ctx.lineTo(px,mid-ovH[px]);
-  for(let px=W-1;px>=0;px--) ctx.lineTo(px,mid+ovH[px]);
-  ctx.closePath();
-  ctx.save();ctx.clip();
-  for(let px=0;px<W;px++){
-    if(ovH[px]<0.5)continue;
-    ctx.fillStyle=`rgb(${ovR[px]},${ovG[px]},${ovB[px]})`;
-    ctx.fillRect(px,0,1,H);
-  }
-  ctx.restore();
   // Draw cue points on overview (memory=white, hot=colored with letter)
   const _cueColors={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
   if(d.cuePoints&&d.dur>0){
@@ -954,8 +904,7 @@ function drawZoomWaveform(slot,prog){
   if(!d._wfCache||d._wfCacheH!==H){buildWaveformCache(slot);}
   // --- Draw waveform from bitmap cache via drawImage ---
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  ctx.imageSmoothingEnabled=true;
-  ctx.imageSmoothingQuality='high';
+  ctx.imageSmoothingEnabled=false; // keep 1px lines sharp (Rekordbox style)
   if(d._wfCache){
     // Map viewport ms range → cache pixel range
     const pxPerMs=pts/wfDur; // cache pixels per millisecond
