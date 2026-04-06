@@ -13,23 +13,18 @@ bool VirtualDeck::loadFile(const juce::File& file)
         formatManager.createReaderFor(file));
     if (!reader) return false;
 
-    // Decode full audio
     audioBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
     reader->read(&audioBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
 
     fileSampleRate = reader->sampleRate;
     durationMs = (float)(reader->lengthInSamples / reader->sampleRate * 1000.0);
 
-    // Analyze waveform
     wfData = analyzeAudio(audioBuffer, reader->sampleRate);
-
-    // BPM detection
     bpm = detectBpm(audioBuffer, reader->sampleRate);
 
-    // Track info from metadata (ID3 tags)
+    // ID3 metadata
     title = file.getFileNameWithoutExtension();
     artist = {};
-
     if (reader->metadataValues.containsKey("title"))
     {
         auto t = reader->metadataValues.getValue("title", "");
@@ -37,28 +32,21 @@ bool VirtualDeck::loadFile(const juce::File& file)
     }
     if (reader->metadataValues.containsKey("artist"))
         artist = reader->metadataValues.getValue("artist", "");
-
-    // Check TBPM tag for BPM fallback
     if (reader->metadataValues.containsKey("bpm"))
     {
         float tagBpm = reader->metadataValues.getValue("bpm", "0").getFloatValue();
-        if (tagBpm >= 60.0f && tagBpm <= 200.0f)
-            bpm = tagBpm;
+        if (tagBpm >= 60.0f && tagBpm <= 200.0f) bpm = tagBpm;
     }
 
     trackId = nextTrackId++;
     cuePointMs = 0.0f;
-
-    // Reset playback
     playSamplePos.store(0);
     positionMs.store(0.0f);
     state.store(PlayState::CUED);
 
     DBG("VirtualDeck: loaded " + file.getFileName()
         + " dur=" + juce::String(durationMs / 1000.0f, 1) + "s"
-        + " bpm=" + juce::String(bpm, 1)
-        + " sr=" + juce::String(fileSampleRate)
-        + " ch=" + juce::String(audioBuffer.getNumChannels()));
+        + " bpm=" + juce::String(bpm, 1));
 
     return true;
 }
@@ -69,22 +57,51 @@ void VirtualDeck::eject()
     playSamplePos.store(0);
     positionMs.store(0.0f);
     audioBuffer.setSize(0, 0);
-    title = {};
-    artist = {};
-    durationMs = 0.0f;
-    bpm = 0.0f;
-    cuePointMs = 0.0f;
-    wfData.clear();
+    title = {}; artist = {};
+    durationMs = 0.0f; bpm = 0.0f;
+    cuePointMs = 0.0f; wfData.clear();
 }
+
+// ── CDJ-3000 Transport ──────────────────────
 
 void VirtualDeck::playPause()
 {
     if (!isLoaded()) return;
     PlayState cur = state.load();
+    DBG("playPause: " + playStateToString(cur));
     if (cur == PlayState::PLAYING || cur == PlayState::LOOPING)
         state.store(PlayState::PAUSED);
     else
         state.store(PlayState::PLAYING);
+}
+
+void VirtualDeck::cueDown()
+{
+    if (!isLoaded()) return;
+    PlayState cur = state.load();
+    DBG("cueDown: " + playStateToString(cur));
+
+    if (cur == PlayState::PLAYING || cur == PlayState::LOOPING)
+    {
+        // Playing → pause at current position (cue point unchanged)
+        state.store(PlayState::CUED);
+    }
+    else
+    {
+        // Stopped/Cued/Paused → set cue at current pos, preview play
+        cuePointMs = positionMs.load();
+        seekTo(cuePointMs);
+        state.store(PlayState::CUEING);  // CUEING = preview play from cue
+    }
+}
+
+void VirtualDeck::cueUp()
+{
+    if (!isLoaded()) return;
+    DBG("cueUp: returning to cue " + juce::String(cuePointMs));
+    // Return to cue point and stop
+    seekTo(cuePointMs);
+    state.store(PlayState::CUED);
 }
 
 void VirtualDeck::play()
@@ -95,7 +112,8 @@ void VirtualDeck::play()
 
 void VirtualDeck::pause()
 {
-    if (state.load() == PlayState::PLAYING || state.load() == PlayState::LOOPING)
+    PlayState cur = state.load();
+    if (cur == PlayState::PLAYING || cur == PlayState::LOOPING || cur == PlayState::CUEING)
         state.store(PlayState::PAUSED);
 }
 
@@ -107,25 +125,6 @@ void VirtualDeck::stop()
     positionMs.store(cuePointMs);
 }
 
-void VirtualDeck::cue()
-{
-    if (!isLoaded()) return;
-    PlayState cur = state.load();
-
-    if (cur == PlayState::PLAYING || cur == PlayState::LOOPING)
-    {
-        // While playing: set cue at current position, enter cue state
-        cuePointMs = positionMs.load();
-        state.store(PlayState::CUED);
-    }
-    else
-    {
-        // While stopped/paused/cued/idle: jump to existing cue point
-        seekTo(cuePointMs);
-        state.store(PlayState::CUED);
-    }
-}
-
 void VirtualDeck::seekTo(float ms)
 {
     int sample = (int)(ms / 1000.0f * fileSampleRate);
@@ -134,10 +133,16 @@ void VirtualDeck::seekTo(float ms)
     positionMs.store(ms);
 }
 
+// ── Audio Thread ─────────────────────────────
+
 void VirtualDeck::getNextAudioBlock(float* left, float* right, int numSamples)
 {
     PlayState currentState = state.load();
-    if (currentState != PlayState::PLAYING && currentState != PlayState::LOOPING)
+
+    // Only output audio when PLAYING, LOOPING, or CUEING (cue preview)
+    if (currentState != PlayState::PLAYING &&
+        currentState != PlayState::LOOPING &&
+        currentState != PlayState::CUEING)
     {
         std::memset(left, 0, (size_t)numSamples * sizeof(float));
         std::memset(right, 0, (size_t)numSamples * sizeof(float));
@@ -159,13 +164,9 @@ void VirtualDeck::getNextAudioBlock(float* left, float* right, int numSamples)
         int idx = (int)((double)pos + (double)i * speedRatio);
         if (idx >= totalSamples)
         {
-            // Track ended - stop instead of loop
             state.store(PlayState::STOPPED);
             for (int j = i; j < numSamples; j++)
-            {
-                left[j] = 0.0f;
-                right[j] = 0.0f;
-            }
+                left[j] = right[j] = 0.0f;
             playSamplePos.store(0);
             positionMs.store(0.0f);
             return;
@@ -190,13 +191,13 @@ uint8_t VirtualDeck::getBeatPhase() const
     if (bpm <= 0) return 0;
     float msPerBeat = 60000.0f / bpm;
     float phase = std::fmod(positionMs.load(), msPerBeat * 4.0f) / (msPerBeat * 4.0f);
-    int beatInBar = (int)(phase * 4.0f);
-    return (uint8_t)(beatInBar * 64);
+    return (uint8_t)((int)(phase * 4.0f) * 64);
 }
 
 void VirtualDeck::fillLayerState(LayerState& ls) const
 {
-    ls.state        = state.load();
+    PlayState st = state.load();
+    ls.state        = (st == PlayState::CUEING) ? PlayState::CUED : st;
     ls.timecodeMs   = positionMs.load();
     ls.totalLengthMs = durationMs;
     ls.bpm          = bpm * (1.0f + pitch / 100.0f);
@@ -209,13 +210,14 @@ void VirtualDeck::fillLayerState(LayerState& ls) const
     ls.updateTime   = juce::Time::currentTimeMillis();
 }
 
+// ── Analysis ─────────────────────────────────
+
 float VirtualDeck::detectBpm(const juce::AudioBuffer<float>& buffer, double sampleRate)
 {
     const float* ch = buffer.getReadPointer(0);
     const int N = buffer.getNumSamples();
     const int windowSamples = (int)(sampleRate * 0.01);
     const int numWindows = N / windowSamples;
-
     if (numWindows < 100) return 120.0f;
 
     std::vector<float> energy((size_t)numWindows);
@@ -235,8 +237,7 @@ float VirtualDeck::detectBpm(const juce::AudioBuffer<float>& buffer, double samp
     for (int i = 1; i < numWindows; i++)
         onset[(size_t)i] = juce::jmax(0.0f, energy[(size_t)i] - energy[(size_t)i - 1]);
 
-    float bestCorr = 0;
-    float bestBpm = 120.0f;
+    float bestCorr = 0, bestBpm = 120.0f;
     int minLag = (int)(60.0 / 180.0 / 0.01);
     int maxLag = (int)(60.0 / 70.0 / 0.01);
 
@@ -246,12 +247,7 @@ float VirtualDeck::detectBpm(const juce::AudioBuffer<float>& buffer, double samp
         int count = juce::jmin(numWindows - lag, 500);
         for (int i = 0; i < count; i++)
             corr += onset[(size_t)i] * onset[(size_t)(i + lag)];
-
-        if (corr > bestCorr)
-        {
-            bestCorr = corr;
-            bestBpm = (float)(60.0 / (lag * 0.01));
-        }
+        if (corr > bestCorr) { bestCorr = corr; bestBpm = (float)(60.0 / (lag * 0.01)); }
     }
 
     return std::round(bestBpm * 100.0f) / 100.0f;
@@ -262,9 +258,7 @@ std::vector<DetailedWaveformPoint> VirtualDeck::analyzeAudio(
 {
     const float* ch = buffer.getReadPointer(0);
     const int numSamples = buffer.getNumSamples();
-
-    int pts = juce::jlimit(6000, 50000,
-        (int)(numSamples / sampleRate * 150.0));
+    int pts = juce::jlimit(6000, 50000, (int)(numSamples / sampleRate * 150.0));
     int step = juce::jmax(1, numSamples / pts);
 
     auto mkBQ = [](float fc, float sr, float Q) -> std::array<float, 7>
@@ -276,7 +270,6 @@ std::vector<DetailedWaveformPoint> VirtualDeck::analyzeAudio(
                  ((1.0f - cs) / 2.0f) / a0, (-2.0f * cs) / a0,
                  (1.0f - al) / a0, 0.0f, 0.0f };
     };
-
     auto bq = [](std::array<float, 7>& f, float x) -> float
     {
         float y = f[0] * x + f[5];
@@ -292,37 +285,20 @@ std::vector<DetailedWaveformPoint> VirtualDeck::analyzeAudio(
     auto lpM2 = mkBQ(4000.0f, (float)sampleRate, Q2);
 
     std::vector<DetailedWaveformPoint> wf((size_t)pts);
-
     for (int i = 0; i < pts; i++)
     {
         int s0 = i * step;
         float pl = 0, pm = 0, ph = 0, pk = 0, sumSq = 0;
-
         for (int j = 0; j < step && (s0 + j) < numSamples; j++)
         {
-            float s = ch[s0 + j];
-            sumSq += s * s;
-
+            float s = ch[s0 + j]; sumSq += s * s;
             float bassLP = bq(lpB2, bq(lpB1, s));
             float midLP  = bq(lpM2, bq(lpM1, s));
-            float bass = bassLP;
-            float mid2 = midLP - bassLP;
-            float tre  = s - midLP;
-
-            float ab = std::abs(bass), am = std::abs(mid2), at = std::abs(tre);
-            if (ab > pl) pl = ab;
-            if (am > pm) pm = am;
-            if (at > ph) ph = at;
-            float a = std::abs(s);
-            if (a > pk) pk = a;
+            float ab = std::abs(bassLP), am = std::abs(midLP - bassLP), at = std::abs(s - midLP);
+            if (ab > pl) pl = ab; if (am > pm) pm = am;
+            if (at > ph) ph = at; float a = std::abs(s); if (a > pk) pk = a;
         }
-
-        wf[(size_t)i].peak   = pk;
-        wf[(size_t)i].bass   = pl;
-        wf[(size_t)i].mid    = pm;
-        wf[(size_t)i].treble = ph;
-        wf[(size_t)i].rms    = std::sqrt(sumSq / (float)step);
+        wf[(size_t)i] = { pk, pl, pm, ph, std::sqrt(sumSq / (float)step) };
     }
-
     return wf;
 }
