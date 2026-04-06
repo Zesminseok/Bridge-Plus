@@ -13,87 +13,130 @@ bool VirtualDeck::loadFile(const juce::File& file)
         formatManager.createReaderFor(file));
     if (!reader) return false;
 
-    juce::AudioBuffer<float> buffer((int)reader->numChannels,
-                                     (int)reader->lengthInSamples);
-    reader->read(&buffer, 0, (int)reader->lengthInSamples, 0, true, true);
+    // Decode full audio
+    audioBuffer.setSize((int)reader->numChannels, (int)reader->lengthInSamples);
+    reader->read(&audioBuffer, 0, (int)reader->lengthInSamples, 0, true, true);
 
+    fileSampleRate = reader->sampleRate;
     durationMs = (float)(reader->lengthInSamples / reader->sampleRate * 1000.0);
 
     // Analyze waveform
-    wfData = analyzeAudio(buffer, reader->sampleRate);
+    wfData = analyzeAudio(audioBuffer, reader->sampleRate);
 
-    // Simple BPM detection
-    bpm = detectBpm(buffer, reader->sampleRate);
+    // BPM detection
+    bpm = detectBpm(audioBuffer, reader->sampleRate);
 
     // Track info
     title = file.getFileNameWithoutExtension();
     trackId = nextTrackId++;
-    positionMs = 0.0f;
     cuePointMs = 0.0f;
-    state = PlayState::STOPPED;
+
+    // Reset playback
+    playSamplePos.store(0);
+    positionMs.store(0.0f);
+    state.store(PlayState::CUED);
 
     DBG("VirtualDeck: loaded " + file.getFileName()
         + " dur=" + juce::String(durationMs / 1000.0f, 1) + "s"
         + " bpm=" + juce::String(bpm, 1)
-        + " wfPts=" + juce::String((int)wfData.size()));
+        + " sr=" + juce::String(fileSampleRate)
+        + " ch=" + juce::String(audioBuffer.getNumChannels()));
 
     return true;
 }
 
 void VirtualDeck::play()
 {
-    if (durationMs <= 0) return;
-    state = PlayState::PLAYING;
+    if (!isLoaded()) return;
+    state.store(PlayState::PLAYING);
 }
 
 void VirtualDeck::pause()
 {
-    if (state == PlayState::PLAYING || state == PlayState::LOOPING)
-        state = PlayState::PAUSED;
+    if (state.load() == PlayState::PLAYING || state.load() == PlayState::LOOPING)
+        state.store(PlayState::PAUSED);
 }
 
 void VirtualDeck::stop()
 {
-    state = PlayState::STOPPED;
-    positionMs = cuePointMs;
+    state.store(PlayState::STOPPED);
+    // Return to cue point
+    int cueSample = (int)(cuePointMs / 1000.0f * fileSampleRate);
+    playSamplePos.store(cueSample);
+    positionMs.store(cuePointMs);
 }
 
 void VirtualDeck::cue()
 {
-    cuePointMs = positionMs;
-    state = PlayState::CUED;
+    if (!isLoaded()) return;
+    // Set cue at current position and stop
+    cuePointMs = positionMs.load();
+    state.store(PlayState::CUED);
 }
 
-void VirtualDeck::setPosition(float ms)
+void VirtualDeck::seekTo(float ms)
 {
-    positionMs = juce::jlimit(0.0f, durationMs, ms);
+    int sample = (int)(ms / 1000.0f * fileSampleRate);
+    sample = juce::jlimit(0, audioBuffer.getNumSamples() - 1, sample);
+    playSamplePos.store(sample);
+    positionMs.store(ms);
 }
 
-void VirtualDeck::tick(float deltaMs)
+void VirtualDeck::getNextAudioBlock(float* left, float* right, int numSamples)
 {
-    if (state != PlayState::PLAYING && state != PlayState::LOOPING) return;
-
-    positionMs += deltaMs * (1.0f + pitch / 100.0f);
-    if (positionMs >= durationMs)
+    PlayState currentState = state.load();
+    if (currentState != PlayState::PLAYING && currentState != PlayState::LOOPING)
     {
-        positionMs = 0.0f;  // loop
-        state = PlayState::LOOPING;
+        // Silence
+        std::memset(left, 0, (size_t)numSamples * sizeof(float));
+        std::memset(right, 0, (size_t)numSamples * sizeof(float));
+        return;
     }
+
+    int totalSamples = audioBuffer.getNumSamples();
+    if (totalSamples == 0) return;
+
+    int pos = playSamplePos.load();
+    int numChannels = audioBuffer.getNumChannels();
+    const float* srcL = audioBuffer.getReadPointer(0);
+    const float* srcR = numChannels > 1 ? audioBuffer.getReadPointer(1) : srcL;
+
+    // Speed ratio for pitch adjustment and sample rate conversion
+    double speedRatio = (fileSampleRate / deviceSampleRate) * (1.0 + pitch / 100.0);
+
+    for (int i = 0; i < numSamples; i++)
+    {
+        int idx = (int)((double)pos + (double)i * speedRatio);
+        if (idx >= totalSamples)
+        {
+            idx = idx % totalSamples;  // loop
+            state.store(PlayState::LOOPING);
+        }
+        left[i] = srcL[idx] * volume;
+        right[i] = srcR[idx] * volume;
+    }
+
+    // Advance position
+    int advance = (int)((double)numSamples * speedRatio);
+    pos += advance;
+    if (pos >= totalSamples) pos = pos % totalSamples;
+    playSamplePos.store(pos);
+    positionMs.store((float)pos / (float)fileSampleRate * 1000.0f);
 }
 
 uint8_t VirtualDeck::getBeatPhase() const
 {
     if (bpm <= 0) return 0;
     float msPerBeat = 60000.0f / bpm;
-    float phase = std::fmod(positionMs, msPerBeat * 4.0f) / (msPerBeat * 4.0f);
-    int beatInBar = (int)(phase * 4.0f);  // 0-3
-    return (uint8_t)(beatInBar * 64);      // 0, 64, 128, 192
+    float phase = std::fmod(positionMs.load(), msPerBeat * 4.0f) / (msPerBeat * 4.0f);
+    int beatInBar = (int)(phase * 4.0f);
+    return (uint8_t)(beatInBar * 64);
 }
 
 void VirtualDeck::fillLayerState(LayerState& ls) const
 {
-    ls.state        = state;
-    ls.timecodeMs   = positionMs;
+    ls.state        = state.load();
+    ls.timecodeMs   = positionMs.load();
     ls.totalLengthMs = durationMs;
     ls.bpm          = bpm * (1.0f + pitch / 100.0f);
     ls.pitch        = pitch;
@@ -107,15 +150,13 @@ void VirtualDeck::fillLayerState(LayerState& ls) const
 
 float VirtualDeck::detectBpm(const juce::AudioBuffer<float>& buffer, double sampleRate)
 {
-    // Simple energy-based BPM detection
     const float* ch = buffer.getReadPointer(0);
     const int N = buffer.getNumSamples();
-    const int windowSamples = (int)(sampleRate * 0.01);  // 10ms windows
+    const int windowSamples = (int)(sampleRate * 0.01);
     const int numWindows = N / windowSamples;
 
     if (numWindows < 100) return 120.0f;
 
-    // Compute energy per window
     std::vector<float> energy((size_t)numWindows);
     for (int w = 0; w < numWindows; w++)
     {
@@ -129,16 +170,14 @@ float VirtualDeck::detectBpm(const juce::AudioBuffer<float>& buffer, double samp
         energy[(size_t)w] = sum / (float)windowSamples;
     }
 
-    // Onset detection (energy derivative)
     std::vector<float> onset((size_t)numWindows);
     for (int i = 1; i < numWindows; i++)
         onset[(size_t)i] = juce::jmax(0.0f, energy[(size_t)i] - energy[(size_t)i - 1]);
 
-    // Auto-correlation for tempo
     float bestCorr = 0;
     float bestBpm = 120.0f;
-    int minLag = (int)(60.0 / 180.0 / 0.01);  // 180 BPM in windows
-    int maxLag = (int)(60.0 / 70.0 / 0.01);   // 70 BPM in windows
+    int minLag = (int)(60.0 / 180.0 / 0.01);
+    int maxLag = (int)(60.0 / 70.0 / 0.01);
 
     for (int lag = minLag; lag <= maxLag && lag < numWindows / 2; lag++)
     {
@@ -163,23 +202,18 @@ std::vector<DetailedWaveformPoint> VirtualDeck::analyzeAudio(
     const float* ch = buffer.getReadPointer(0);
     const int numSamples = buffer.getNumSamples();
 
-    // ~150 points/sec (CDJ standard)
     int pts = juce::jlimit(6000, 50000,
         (int)(numSamples / sampleRate * 150.0));
     int step = juce::jmax(1, numSamples / pts);
 
-    // 4th-order Butterworth biquad (600Hz / 4000Hz crossover)
     auto mkBQ = [](float fc, float sr, float Q) -> std::array<float, 7>
     {
         float w = juce::MathConstants<float>::twoPi * fc / sr;
         float sn = std::sin(w), cs = std::cos(w);
         float al = sn / (2.0f * Q), a0 = 1.0f + al;
-        return { ((1.0f - cs) / 2.0f) / a0,
-                 (1.0f - cs) / a0,
-                 ((1.0f - cs) / 2.0f) / a0,
-                 (-2.0f * cs) / a0,
-                 (1.0f - al) / a0,
-                 0.0f, 0.0f };
+        return { ((1.0f - cs) / 2.0f) / a0, (1.0f - cs) / a0,
+                 ((1.0f - cs) / 2.0f) / a0, (-2.0f * cs) / a0,
+                 (1.0f - al) / a0, 0.0f, 0.0f };
     };
 
     auto bq = [](std::array<float, 7>& f, float x) -> float
@@ -218,7 +252,6 @@ std::vector<DetailedWaveformPoint> VirtualDeck::analyzeAudio(
             if (ab > pl) pl = ab;
             if (am > pm) pm = am;
             if (at > ph) ph = at;
-
             float a = std::abs(s);
             if (a > pk) pk = a;
         }

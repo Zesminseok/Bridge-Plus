@@ -18,24 +18,30 @@ private:
     BridgeEngine& engine;
 
     juce::Label titleLabel, artistLabel, bpmLabel, timeLabel, stateLabel;
-    juce::TextButton loadBtn { "LOAD" };
-    juce::TextButton playBtn { "PLAY" };
-    juce::TextButton pauseBtn { "PAUSE" };
-    juce::TextButton stopBtn { "STOP" };
-    juce::TextButton cueBtn { "CUE" };
+    juce::TextButton loadBtn  { "LOAD" };
+    juce::TextButton playBtn  { juce::CharPointer_UTF8("\xe2\x96\xb6") };   // ▶
+    juce::TextButton pauseBtn { "||" };
+    juce::TextButton stopBtn  { juce::CharPointer_UTF8("\xe2\x96\xa0") };   // ■
+    juce::TextButton cueBtn   { "CUE" };
+    juce::Slider volumeSlider;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeckPanel)
 };
 
 /**
- * MainComponent - main UI window with dynamic deck panels
+ * MainComponent - main UI with audio playback
  */
-class MainComponent : public juce::Component,
+class MainComponent : public juce::AudioAppComponent,
                       private juce::Timer
 {
 public:
     MainComponent();
     ~MainComponent() override;
+
+    // AudioAppComponent
+    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
+    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override;
+    void releaseResources() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -45,6 +51,7 @@ private:
     void layoutDecks();
 
     BridgeEngine engine;
+    double currentSampleRate = 44100.0;
 
     // UI
     juce::TextButton startBtn { "START BRIDGE" };

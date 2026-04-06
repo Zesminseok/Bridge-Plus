@@ -238,13 +238,11 @@ void BridgeEngine::timerCallback()
 
     tick++;
 
-    // Update virtual decks → layers
-    const float deltaMs = 1000.0f / 30.0f;  // ~33ms
+    // Update virtual decks → layers (position comes from audio thread)
     for (int i = 0; i < 8; i++)
     {
         if (virtualActive[(size_t)i])
         {
-            virtualDecks[(size_t)i].tick(deltaMs);
             LayerState ls;
             virtualDecks[(size_t)i].fillLayerState(ls);
             updateLayer(i, ls);
