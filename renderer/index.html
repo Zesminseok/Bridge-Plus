@@ -787,10 +787,37 @@ function _wf3BandStack(r,g,b2,totalH,dimF){
 }
 
 // ═══ Waveform Bitmap Cache (OffscreenCanvas) ═══
-// MiniMeters-style rendering: dB scale + slope tilt + intensity brightness
-// Height = dB metering (-50dB~0dB), Color = RGB with 4.5dB/oct slope tilt
-const _DB_MIN=-50,_DB_RANGE=50; // -50dB floor, 0dB ceiling
-const _SB=1.0,_SM=1.8,_ST=3.5;  // slope tilt: +4.5dB/oct approximation
+// MiniMeters Waveform style: in_vol → lut_tex (1D color LUT)
+// Volume level determines color (dark→blue→cyan→green→yellow→red→white)
+// Height = dB scale (-50dB~0dB)
+const _DB_MIN=-50,_DB_RANGE=50;
+// LUT: 256-entry color gradient (MiniMeters lut_tex equivalent)
+const _WF_LUT=(function(){
+  const lut=new Uint8Array(256*3);
+  const stops=[
+    {t:0.00,r:8,  g:8,  b:25},    // silence: near black
+    {t:0.12,r:15, g:30, b:120},   // very quiet: dark blue
+    {t:0.25,r:0,  g:120,b:200},   // quiet: cyan-blue
+    {t:0.40,r:0,  g:190,b:160},   // low-mid: teal
+    {t:0.55,r:30, g:210,b:50},    // mid: green
+    {t:0.70,r:200,g:210,b:20},    // loud: yellow
+    {t:0.82,r:240,g:120,b:10},    // very loud: orange
+    {t:0.92,r:240,g:40, b:20},    // peak: red
+    {t:1.00,r:255,g:255,b:255},   // clip: white
+  ];
+  for(let i=0;i<256;i++){
+    const t=i/255;
+    let s0=stops[0],s1=stops[1];
+    for(let j=0;j<stops.length-1;j++){
+      if(t>=stops[j].t&&t<=stops[j+1].t){s0=stops[j];s1=stops[j+1];break;}
+    }
+    const f=(t-s0.t)/(s1.t-s0.t||1);
+    lut[i*3]=Math.round(s0.r+(s1.r-s0.r)*f);
+    lut[i*3+1]=Math.round(s0.g+(s1.g-s0.g)*f);
+    lut[i*3+2]=Math.round(s0.b+(s1.b-s0.b)*f);
+  }
+  return lut;
+})();
 function buildWaveformCache(slot){
   const d=DECKS[slot];if(!d)return;
   const wfData=d.rgbWfDetail||d.rgbWf;
@@ -798,7 +825,7 @@ function buildWaveformCache(slot){
   const cv=document.getElementById('wzc'+slot);
   const H=cv?cv.height:100;
   const pts=wfData.length;
-  const cacheKey=pts+'_'+H+'_db1';
+  const cacheKey=pts+'_'+H+'_lut1';
   if(d._wfCache&&d._wfCacheKey===cacheKey)return;
   const oc=new OffscreenCanvas(pts,H);
   const ctx=oc.getContext('2d',{alpha:false});
@@ -810,22 +837,15 @@ function buildWaveformCache(slot){
     const p=wfData[x];
     const rv=p.rms||0;
     if(rv<0.001)continue;
-    // Height: dB scale — pro audio metering
-    // rms=0.003→-50dB→0%, 0.01→-40dB→20%, 0.1→-20dB→60%, 0.5→-6dB→88%
+    // Height: dB scale
     const dB=20*Math.log10(rv);
     const norm=Math.max(0,Math.min(1,(dB-_DB_MIN)/_DB_RANGE));
     hs[x]=norm*mid;
-    // Color: band peaks with slope tilt (boost mid/treble for balanced spectrum)
-    const rb=p.r*_SB, rm=p.g*_SM, rt=p.b*_ST;
-    const mx=Math.max(rb,rm,rt,0.001);
-    const s=255/mx;
-    // Intensity: quiet=dim, loud=bright (LUT-style brightness from dB level)
-    const bright=0.35+norm*0.65; // 35%→100%
-    cr[x]=Math.min(255,Math.round(rb*s*bright));
-    cg[x]=Math.min(255,Math.round(rm*s*bright));
-    cb[x]=Math.min(255,Math.round(rt*s*bright));
+    // Color: LUT lookup — volume level → color gradient
+    const li=Math.min(255,Math.round(norm*255))*3;
+    cr[x]=_WF_LUT[li]; cg[x]=_WF_LUT[li+1]; cb[x]=_WF_LUT[li+2];
   }
-  // Smooth envelope path + clipped color fills
+  // Smooth envelope + colored fills
   ctx.beginPath();
   ctx.moveTo(0,mid-hs[0]);
   for(let x=1;x<pts;x++) ctx.lineTo(x,mid-hs[x]);
@@ -841,7 +861,7 @@ function buildWaveformCache(slot){
   d._wfCache=oc;
   d._wfCacheH=H;
   d._wfCacheKey=cacheKey;
-  console.log(`[WFC] slot${slot} dB-metered cache: ${pts}×${H}px`);
+  console.log(`[WFC] slot${slot} LUT waveform: ${pts}×${H}px`);
 }
 
 function drawOverview(slot,prog){
@@ -853,27 +873,21 @@ function drawOverview(slot,prog){
   const W=cv.width,H=cv.height,ctx=d.wovCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
   const pts=wfOv.length,mid=H/2;
-  // dB-metered overview — same algorithm as zoom cache
+  // LUT waveform overview — volume → color gradient
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   const ovH=new Float32Array(W);
   const ovR=new Uint8Array(W),ovG=new Uint8Array(W),ovB=new Uint8Array(W);
   for(let px=0;px<W;px++){
     const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
-    let r=0,g=0,b=0,rmSum=0;const cnt=Math.max(1,i1-i0+1);
-    for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;rmSum+=(p.rms||0);}
-    r/=cnt;g/=cnt;b/=cnt;
+    let rmSum=0;const cnt=Math.max(1,i1-i0+1);
+    for(let i=i0;i<=i1;i++) rmSum+=(wfOv[i].rms||0);
     const avgRms=rmSum/cnt;
     if(avgRms<0.001)continue;
     const dB=20*Math.log10(avgRms);
     const norm=Math.max(0,Math.min(1,(dB-_DB_MIN)/_DB_RANGE));
     ovH[px]=norm*mid;
-    const rb=r*_SB,rm=g*_SM,rt=b*_ST;
-    const mx=Math.max(rb,rm,rt,0.001);
-    const s=255/mx;
-    const bright=0.35+norm*0.65;
-    ovR[px]=Math.min(255,Math.round(rb*s*bright));
-    ovG[px]=Math.min(255,Math.round(rm*s*bright));
-    ovB[px]=Math.min(255,Math.round(rt*s*bright));
+    const li=Math.min(255,Math.round(norm*255))*3;
+    ovR[px]=_WF_LUT[li];ovG[px]=_WF_LUT[li+1];ovB[px]=_WF_LUT[li+2];
   }
   ctx.beginPath();
   ctx.moveTo(0,mid-ovH[0]);
