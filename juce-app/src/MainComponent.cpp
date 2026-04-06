@@ -159,8 +159,6 @@ void DeckPanel::updateDisplay()
 // ── MainComponent ────────────────────────────
 MainComponent::MainComponent()
 {
-    setSize(1040, 700);
-
     // Version label
     addAndMakeVisible(versionLabel);
     versionLabel.setText("Bridge+ v0.9.0 — JUCE/C++", juce::dontSendNotification);
@@ -176,8 +174,9 @@ MainComponent::MainComponent()
 
     // Start button
     addAndMakeVisible(startBtn);
-    startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff224488));
+    startBtn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff3366cc));
     startBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    startBtn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xffcc3333));
     startBtn.onClick = [this]
     {
         if (engine.isRunning())
@@ -208,6 +207,9 @@ MainComponent::MainComponent()
         deckPanels[(size_t)i] = std::make_unique<DeckPanel>(i, engine);
         addAndMakeVisible(deckPanels[(size_t)i].get());
     }
+
+    // setSize MUST be last — it triggers resized() which needs deckPanels
+    setSize(1040, 700);
 
     startTimerHz(15);  // UI refresh 15fps
 }
