@@ -84,7 +84,7 @@ static void drawZoomWaveform(juce::Graphics& g,
     const juce::Rectangle<int>& bounds,
     const std::vector<DetailedWaveformPoint>& wf,
     float posMs, float durMs,
-    float bpm)
+    float bpm, float windowMs = 4000.0f)
 {
     auto bf = bounds.toFloat();
     g.setColour(C::bgLo);
@@ -104,8 +104,7 @@ static void drawZoomWaveform(juce::Graphics& g,
     int pts = (int)wf.size();
     float dur = juce::jmax(1.0f, durMs);
 
-    // Show ~4 seconds window around playhead
-    float windowMs = 4000.0f;
+    // Show windowMs window around playhead
     float startMs = posMs - windowMs * 0.5f;
     float endMs   = startMs + windowMs;
 
@@ -252,6 +251,22 @@ DeckPanel::DeckPanel(int num, BridgeEngine& eng)
         engine.setVirtualDeckActive(deckNum, false);
         updateDisplay();
     };
+
+    // ── Zoom buttons ──
+    auto setupZoomBtn = [this](juce::TextButton& btn, const char* text)
+    {
+        addAndMakeVisible(btn);
+        btn.setButtonText(text);
+        btn.setColour(juce::TextButton::buttonColourId, juce::Colour(0x18ffffff));
+        btn.setColour(juce::TextButton::textColourOffId, C::tx3);
+    };
+    setupZoomBtn(zoomInBtn,  "+");
+    setupZoomBtn(zoomOutBtn, juce::CharPointer_UTF8("\xe2\x88\x92"));
+    setupZoomBtn(zoomRstBtn, "RST");
+
+    zoomInBtn.onClick  = [this] { zoomWindowMs = juce::jmax(500.0f,  zoomWindowMs * 0.5f); repaint(); };
+    zoomOutBtn.onClick = [this] { zoomWindowMs = juce::jmin(16000.0f, zoomWindowMs * 2.0f); repaint(); };
+    zoomRstBtn.onClick = [this] { zoomWindowMs = 4000.0f; repaint(); };
 }
 
 DeckPanel::~DeckPanel()
@@ -507,16 +522,48 @@ void DeckPanel::paint(juce::Graphics& g)
     float durMs = deck.getDurationMs();
     drawOverviewWaveform(g, ovWfBounds, deck.getWaveformData(), posMs, durMs);
 
-    // ── Zoom waveform ──
-    drawZoomWaveform(g, zoomWfBounds, deck.getWaveformData(), posMs, durMs, deck.getBpm());
+    // ── Zoom waveform (leave 9px on right for VU meter) ──
+    auto zoomWfDrawBounds = zoomWfBounds.withTrimmedRight(9);
+    drawZoomWaveform(g, zoomWfDrawBounds, deck.getWaveformData(), posMs, durMs, deck.getBpm(), zoomWindowMs);
 
-    // Key badge (top-right of zoom waveform)
+    // ── Stereo VU meter (right edge of zoom wf area) ──
+    if (!zoomWfBounds.isEmpty() && !isHW && deck.isLoaded())
+    {
+        float vuL = deck.getVuLeft();
+        float vuR = deck.getVuRight();
+        int vuX = zoomWfBounds.getRight() - 8;
+        int vuY = zoomWfBounds.getY() + 2;
+        int vuH = zoomWfBounds.getHeight() - 4;
+
+        for (int ch = 0; ch < 2; ch++)
+        {
+            float level = (ch == 0) ? vuL : vuR;
+            int bx = vuX + ch * 4;
+            // Background
+            g.setColour(juce::Colour(0x55000000));
+            g.fillRoundedRectangle((float)bx, (float)vuY, 3.0f, (float)vuH, 1.5f);
+            // Fill
+            int fillH = (int)(level * (float)vuH);
+            if (fillH > 0)
+            {
+                float topFrac = 1.0f - (float)fillH / (float)vuH;
+                // Green base, yellow mid, red top
+                juce::Colour fillCol = (level > 0.85f) ? C::red :
+                                       (level > 0.6f)  ? C::ylw : C::grn2;
+                g.setColour(fillCol.withAlpha(0.85f));
+                g.fillRoundedRectangle((float)bx, (float)(vuY + vuH - fillH), 3.0f, (float)fillH, 1.5f);
+                (void)topFrac;
+            }
+        }
+    }
+
+    // Key badge (top-right of zoom waveform, shifted left to avoid VU meter)
     if (!isHW && !deck.getKey().isEmpty() && !zoomWfBounds.isEmpty())
     {
         juce::String keyStr = deck.getKey();
         float kw = (float)(keyStr.length() * 7 + 14);
         auto kr = juce::Rectangle<float>(
-            (float)zoomWfBounds.getRight() - kw - 4,
+            (float)zoomWfBounds.getRight() - kw - 12,  // 12 = 9px VU + 3px gap
             (float)zoomWfBounds.getY() + 4,
             kw, 16.0f);
         g.setColour(juce::Colour(0xbf0c0e12));
@@ -647,10 +694,18 @@ void DeckPanel::resized()
     btnRow.removeFromLeft(4);
     playBtn.setBounds(btnRow);
 
-    // Right column: overview wf | gap | zoom wf
+    // Right column: overview wf | gap | zoom wf | gap | zoom buttons
     ovWfBounds = rightCol.removeFromTop(18);
     rightCol.removeFromTop(3);
+    auto zoomBtnRow = rightCol.removeFromBottom(16);
+    rightCol.removeFromBottom(2);
     zoomWfBounds = rightCol;  // remaining space
+
+    // Zoom buttons (RST | - | +) at bottom-right of right column
+    int zbW = 22, zbGap = 2;
+    zoomRstBtn.setBounds(zoomBtnRow.getRight() - zbW,      zoomBtnRow.getY(), zbW, 14);
+    zoomOutBtn.setBounds(zoomBtnRow.getRight() - zbW*2 - zbGap,   zoomBtnRow.getY(), zbW, 14);
+    zoomInBtn.setBounds(zoomBtnRow.getRight() - zbW*3 - zbGap*2,  zoomBtnRow.getY(), zbW, 14);
 
     // Bottom row: LOAD | EJECT
     int bw2 = (bottomRow.getWidth() - 4) / 2;
@@ -1347,19 +1402,176 @@ void MainComponent::paint(juce::Graphics& g)
     // ── TCNet tab ──
     if (activeTab == TAB_TCNET)
     {
+        // Sub-header
         g.setColour(C::bg);
         g.fillRect(0, 112, w, 32);
         g.setColour(C::tx);
         g.setFont(juce::FontOptions(12.0f, juce::Font::bold));
-        g.drawText("OUTPUT LAYERS (보류)", 14, 112, 300, 32, juce::Justification::centredLeft);
+        g.drawText("TCNet 네트워크", 14, 112, 300, 32, juce::Justification::centredLeft);
         g.setColour(C::bdr);
         g.drawHorizontalLine(144, 0, (float)w);
 
-        g.setColour(C::tx3);
-        g.setFont(juce::FontOptions(13.0f));
-        g.drawText("TCNet 기능 구현 예정",
-            getLocalBounds().withTrimmedTop(148).withTrimmedBottom(26),
-            juce::Justification::centred);
+        auto contentArea = getLocalBounds().withTrimmedTop(152).withTrimmedBottom(26).reduced(14, 4);
+        int cy = contentArea.getY();
+        int cx2 = contentArea.getX();
+        int cw  = contentArea.getWidth();
+
+        // ── Connection status banner ──
+        {
+            bool online = engine.isRunning();
+            auto bannerRect = juce::Rectangle<float>((float)cx2, (float)cy, (float)cw, 32.0f);
+            g.setColour(online ? C::grn2.withAlpha(0.1f) : juce::Colour(0x14ecb210));
+            g.fillRoundedRectangle(bannerRect, 8.0f);
+            g.setColour(online ? C::grn2.withAlpha(0.3f) : juce::Colour(0x26ecb210));
+            g.drawRoundedRectangle(bannerRect.reduced(0.5f), 8.0f, 1.0f);
+
+            float dotX2 = (float)cx2 + 12.0f;
+            float dotY2 = (float)cy + 13.0f;
+            g.setColour(online ? C::grn : C::ylw);
+            g.fillEllipse(dotX2, dotY2, 7.0f, 7.0f);
+
+            g.setColour(online ? C::grn : C::ylw);
+            g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+            g.drawText(online ? "TCNet ONLINE" : "TCNet OFFLINE — START를 눌러 시작하세요",
+                cx2 + 28, cy + 2, cw - 30, 28, juce::Justification::centredLeft);
+
+            if (online)
+            {
+                g.setColour(C::tx3);
+                g.setFont(juce::FontOptions(10.0f));
+                juce::String info = "노드 " + juce::String(engine.getNodeCount())
+                    + "개  |  TX " + juce::String(engine.getPacketCount()) + " pkts"
+                    + "  |  " + formatUptime(engine.getUptimeSeconds());
+                g.drawText(info, cx2, cy + 2, cw - 10, 28, juce::Justification::centredRight);
+            }
+            cy += 40;
+        }
+
+        // ── Statistics grid ──
+        {
+            g.setColour(C::tx4);
+            g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+            g.drawText("패킷 통계", cx2, cy, 100, 14, juce::Justification::centredLeft);
+            cy += 16;
+
+            struct StatCard { juce::String label; juce::String type; int count; juce::Colour col; };
+            StatCard stats[] = {
+                { "TIME",   "0xFE", engine.getTimePacketCount(),   C::blu },
+                { "DATA",   "0xC8", engine.getDataPacketCount(),   C::grn },
+                { "OPTIN",  "0x02", engine.getOptInPacketCount(),  C::ylw },
+                { "STATUS", "0x05", engine.getStatusPacketCount(), C::pur },
+            };
+
+            int cardW2 = (cw - 18) / 4;
+            for (int i = 0; i < 4; i++)
+            {
+                int scx = cx2 + i * (cardW2 + 6);
+                auto sr = juce::Rectangle<float>((float)scx, (float)cy, (float)cardW2, 44.0f);
+                g.setColour(C::bg2);
+                g.fillRoundedRectangle(sr, 6.0f);
+                g.setColour(C::bdr);
+                g.drawRoundedRectangle(sr.reduced(0.5f), 6.0f, 1.0f);
+
+                // Type badge
+                float tbw = (float)(stats[i].type.length() * 6 + 10);
+                auto tbr = juce::Rectangle<float>((float)scx + 6, (float)cy + 6, tbw, 14.0f);
+                g.setColour(stats[i].col.withAlpha(0.15f));
+                g.fillRoundedRectangle(tbr, 3.0f);
+                g.setColour(stats[i].col);
+                g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+                g.drawText(stats[i].type, tbr, juce::Justification::centred);
+
+                // Label
+                g.setColour(C::tx3);
+                g.setFont(juce::FontOptions(9.0f));
+                g.drawText(stats[i].label, scx + 6, cy + 22, cardW2 - 12, 12,
+                           juce::Justification::centredLeft);
+
+                // Count
+                g.setColour(C::tx);
+                g.setFont(juce::FontOptions(13.0f, juce::Font::bold));
+                g.drawText(juce::String(stats[i].count), scx + 6, cy + 24, cardW2 - 12, 18,
+                           juce::Justification::centredRight);
+            }
+            cy += 52;
+        }
+
+        // ── Node table ──
+        {
+            g.setColour(C::tx4);
+            g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+            g.drawText("노드 목록", cx2, cy, 100, 14, juce::Justification::centredLeft);
+            cy += 16;
+
+            // Table header
+            auto hdr = juce::Rectangle<float>((float)cx2, (float)cy, (float)cw, 18.0f);
+            g.setColour(C::bg3);
+            g.fillRoundedRectangle(hdr, 4.0f);
+            g.setColour(C::tx4);
+            g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+            int colXs[] = { cx2 + 8, cx2 + cw * 12 / 100, cx2 + cw * 26 / 100, cx2 + cw * 62 / 100 };
+            const char* colNames[] = { "NODE", "TYPE", "VENDOR / DEVICE", "IP : PORT" };
+            for (int c = 0; c < 4; c++)
+                g.drawText(colNames[c], colXs[c], cy + 1, 100, 16, juce::Justification::centredLeft);
+            cy += 22;
+
+            // Rows
+            auto& nodeMap = engine.getNodes();
+            auto now = juce::Time::currentTimeMillis();
+            bool anyNode = false;
+
+            for (auto& [nk, node] : nodeMap)
+            {
+                if (now - node.lastSeen > 30000) continue;
+                anyNode = true;
+
+                auto rowR = juce::Rectangle<float>((float)cx2, (float)cy, (float)cw, 26.0f);
+                g.setColour(C::bg2);
+                g.fillRoundedRectangle(rowR, 4.0f);
+
+                // Node name
+                g.setColour(C::tx2);
+                g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
+                g.drawText(node.name.isEmpty() ? "NODE" : node.name,
+                    colXs[0], cy + 4, 80, 18, juce::Justification::centredLeft);
+
+                // Type badge (SRV / CLI)
+                bool isSrv = (node.nodeType == 0x02);
+                auto tbr = juce::Rectangle<float>((float)colXs[1], (float)cy + 5, 28.0f, 16.0f);
+                g.setColour(isSrv ? C::grn.withAlpha(0.15f) : C::blu.withAlpha(0.15f));
+                g.fillRoundedRectangle(tbr, 3.0f);
+                g.setColour(isSrv ? C::grn : C::blu);
+                g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+                g.drawText(isSrv ? "SRV" : "CLI", tbr, juce::Justification::centred);
+
+                // Vendor · Device
+                juce::String vd = node.vendor;
+                if (node.device.isNotEmpty()) vd += " \xc2\xb7 " + node.device;
+                g.setColour(C::tx3);
+                g.setFont(juce::FontOptions(10.0f));
+                g.drawText(vd, colXs[2], cy + 4, colXs[3] - colXs[2] - 8, 18,
+                           juce::Justification::centredLeft);
+
+                // IP:lPort
+                juce::String ipStr = node.ip;
+                if (node.listenerPort > 0) ipStr += ":" + juce::String(node.listenerPort);
+                g.setColour(C::tx4);
+                g.setFont(juce::FontOptions(10.0f));
+                g.drawText(ipStr, colXs[3], cy + 4, cw - colXs[3] + cx2 - 8, 18,
+                           juce::Justification::centredLeft);
+
+                cy += 30;
+                if (cy > contentArea.getBottom() - 30) break;
+            }
+
+            if (!anyNode)
+            {
+                g.setColour(C::tx4);
+                g.setFont(juce::FontOptions(12.0f));
+                g.drawText("TCNet 노드가 감지되지 않았습니다",
+                    cx2, cy, cw, 40, juce::Justification::centred);
+            }
+        }
     }
 
     // ── Settings tab header ──
@@ -1387,6 +1599,47 @@ void MainComponent::paint(juce::Graphics& g)
         g.drawText("PRO DJ LINK", sa.getX(), sa.getY() + 100, 90, 16, juce::Justification::centredLeft);
         g.setColour(C::bdr2);
         g.drawHorizontalLine(sa.getY() + 108, (float)(sa.getX() + 96), (float)(sa.getRight()));
+
+        // Info section
+        int infoY = sa.getY() + 190;
+        g.setColour(C::tx4);
+        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+        g.drawText("INFO", sa.getX(), infoY, 60, 16, juce::Justification::centredLeft);
+        g.setColour(C::bdr2);
+        g.drawHorizontalLine(infoY + 8, (float)(sa.getX() + 36), (float)(sa.getRight()));
+
+        struct InfoRow { juce::String label; juce::String value; juce::Colour col; };
+        InfoRow infoRows[] = {
+            { "Version",    "v1.0.0",              C::tx2  },
+            { "Protocol",   "TCNet v3.5",           C::tx2  },
+            { "Data TX",    "BC + 유니캐스트",       C::org  },
+        };
+        int iry = infoY + 20;
+        for (auto& ir : infoRows)
+        {
+            g.setColour(C::tx3);
+            g.setFont(juce::FontOptions(10.0f));
+            g.drawText(ir.label, sa.getX(), iry, 160, 18, juce::Justification::centredLeft);
+            g.setColour(ir.col);
+            g.setFont(juce::FontOptions(10.0f));
+            g.drawText(ir.value, sa.getX() + 160, iry, 200, 18, juce::Justification::centredLeft);
+            iry += 22;
+        }
+
+        // Dual-NIC tip
+        auto tipRect = juce::Rectangle<float>((float)sa.getX(), (float)(iry + 6),
+                                               (float)sa.getWidth(), 36.0f);
+        g.setColour(juce::Colour(0x14ecb210));
+        g.fillRoundedRectangle(tipRect, 6.0f);
+        g.setColour(juce::Colour(0x26ecb210));
+        g.drawRoundedRectangle(tipRect.reduced(0.5f), 6.0f, 1.0f);
+        g.setColour(C::ylw);
+        g.fillEllipse(tipRect.getX() + 8, tipRect.getCentreY() - 3, 6.0f, 6.0f);
+        g.setColour(C::ylw);
+        g.setFont(juce::FontOptions(9.0f));
+        g.drawText("두 NIC: TCNet = 공유기 LAN (192.168.x.x), Pro DJ Link = CDJ 이더넷 (169.254.x.x)",
+            (int)(tipRect.getX() + 22), (int)tipRect.getY(), (int)(tipRect.getWidth() - 24),
+            (int)tipRect.getHeight(), juce::Justification::centredLeft);
     }
 
     // ── Bottom bar (26px) ──

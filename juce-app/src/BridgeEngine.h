@@ -44,11 +44,20 @@ public:
     int getNodeCount() const { return (int)nodes.size(); }
     juce::String getStatusText() const;
 
+    // Per-type packet counters
+    int getTimePacketCount()   const { return pktTime; }
+    int getDataPacketCount()   const { return pktData; }
+    int getOptInPacketCount()  const { return pktOptIn; }
+    int getStatusPacketCount() const { return pktStatus; }
+
     // DJM
     const DJMStatus& getDJMStatus() const { return djm; }
 
     // Devices
     const std::map<juce::String, DeviceInfo>& getDevices() const { return devices; }
+
+    // TCNet nodes
+    const std::map<juce::String, TCNetNode>& getNodes() const { return nodes; }
 
     // Callbacks (called from timer/network thread)
     std::function<void(int layer)> onLayerUpdate;
@@ -80,6 +89,10 @@ private:
     bool running = false;
     int64_t startTime = 0;
     int packetCount = 0;
+    int pktTime   = 0;
+    int pktData   = 0;
+    int pktOptIn  = 0;
+    int pktStatus = 0;
     int tick = 0;
     int dataPhase = 0;
 

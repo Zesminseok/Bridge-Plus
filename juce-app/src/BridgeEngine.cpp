@@ -97,6 +97,7 @@ bool BridgeEngine::start(const juce::String& /*tcnetIface*/, bool isLocal)
     localMode = isLocal;
     startTime = juce::Time::currentTimeMillis();
     packetCount = 0;
+    pktTime = 0; pktData = 0; pktOptIn = 0; pktStatus = 0;
     tick = 0;
     dataPhase = 0;
 
@@ -303,6 +304,7 @@ void BridgeEngine::sendOptIn()
     TCNet::buildOptIn(buf, nodeId, listenerPort, getUptimeSeconds(), nc);
     sendToAll(buf, TCNet::SZ_OPTIN, TCNet::PORT_BC);
     sendToArenas(buf, TCNet::SZ_OPTIN, TCNet::PORT_BC);
+    pktOptIn++;
 }
 
 void BridgeEngine::sendStatus()
@@ -315,6 +317,7 @@ void BridgeEngine::sendStatus()
     TCNet::buildStatus(buf, nodeId, listenerPort, lp, hwMode);
     sendToAll(buf, TCNet::SZ_STATUS, TCNet::PORT_BC);
     sendToArenas(buf, TCNet::SZ_STATUS, TCNet::PORT_BC);
+    pktStatus++;
 }
 
 void BridgeEngine::sendTime()
@@ -328,6 +331,7 @@ void BridgeEngine::sendTime()
     sendToAll(buf, TCNet::SZ_TIME, TCNet::PORT_TIME);
     sendToArenas(buf, TCNet::SZ_TIME, TCNet::PORT_TIME);
     packetCount++;
+    pktTime++;
 }
 
 void BridgeEngine::sendDataCycle()
@@ -359,6 +363,7 @@ void BridgeEngine::sendDataCycle()
             sendToArenas(buf, TCNet::SZ_METRICS, TCNet::PORT_DATA);
         }
         packetCount++;
+        pktData++;
     }
 
     dataPhase = (dataPhase + 1) % 24;

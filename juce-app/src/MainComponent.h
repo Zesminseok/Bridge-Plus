@@ -83,10 +83,14 @@ private:
 
     juce::Label titleLabel, artistLabel;
 
-    juce::TextButton cueBtn   { "CUE" };
-    juce::TextButton playBtn  { juce::CharPointer_UTF8("\xe2\x96\xb6") };
-    juce::TextButton loadBtn  { "LOAD" };
-    juce::TextButton ejectBtn { "EJECT" };
+    juce::TextButton cueBtn    { "CUE" };
+    juce::TextButton playBtn   { juce::CharPointer_UTF8("\xe2\x96\xb6") };
+    juce::TextButton loadBtn   { "LOAD" };
+    juce::TextButton ejectBtn  { "EJECT" };
+    juce::TextButton zoomInBtn { "+" };
+    juce::TextButton zoomOutBtn{ "\xe2\x88\x92" };  // −
+    juce::TextButton zoomRstBtn{ "RST" };
+    float zoomWindowMs = 4000.0f;  // default 4s window
 
     CircleLF circleLF;
 

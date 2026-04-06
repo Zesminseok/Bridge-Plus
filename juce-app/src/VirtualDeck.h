@@ -50,6 +50,10 @@ public:
     void setVolume(float v) { volume = v; }
     void setDeviceName(const juce::String& n) { deviceName = n; }
 
+    // VU meter levels (updated by audio thread, read by UI)
+    float getVuLeft()  const { return vuLeft.load(); }
+    float getVuRight() const { return vuRight.load(); }
+
     void fillLayerState(LayerState& ls) const;
     const std::vector<DetailedWaveformPoint>& getWaveformData() const { return wfData; }
 
@@ -81,4 +85,7 @@ private:
 
     std::vector<DetailedWaveformPoint> wfData;
     static int nextTrackId;
+
+    std::atomic<float> vuLeft  { 0.0f };
+    std::atomic<float> vuRight { 0.0f };
 };

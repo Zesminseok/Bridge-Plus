@@ -232,6 +232,20 @@ void VirtualDeck::getNextAudioBlock(float* left, float* right, int numSamples)
         right[i] = srcR[idx] * volume;
     }
 
+    // VU meter: compute peak for this block
+    float peakL = 0.0f, peakR = 0.0f;
+    for (int i = 0; i < numSamples; i++)
+    {
+        float al = std::abs(left[i]);
+        float ar = std::abs(right[i]);
+        if (al > peakL) peakL = al;
+        if (ar > peakR) peakR = ar;
+    }
+    // Decay: blend towards new peak (fast attack, slow decay)
+    float prevL = vuLeft.load(), prevR = vuRight.load();
+    vuLeft.store(peakL > prevL ? peakL : prevL * 0.92f);
+    vuRight.store(peakR > prevR ? peakR : prevR * 0.92f);
+
     int advance = (int)((double)numSamples * speedRatio);
     pos += advance;
     if (pos >= totalSamples)
