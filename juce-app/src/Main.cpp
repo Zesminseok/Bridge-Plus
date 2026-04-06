@@ -30,7 +30,7 @@ public:
     public:
         MainWindow(juce::String name)
             : DocumentWindow(name,
-                juce::Colour(0xff111318), // dark background
+                juce::Colour(0xff091610), // Stitch surface
                 DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar(true);

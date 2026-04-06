@@ -26,8 +26,26 @@ bool VirtualDeck::loadFile(const juce::File& file)
     // BPM detection
     bpm = detectBpm(audioBuffer, reader->sampleRate);
 
-    // Track info
+    // Track info from metadata (ID3 tags)
     title = file.getFileNameWithoutExtension();
+    artist = {};
+
+    if (reader->metadataValues.containsKey("title"))
+    {
+        auto t = reader->metadataValues.getValue("title", "");
+        if (t.isNotEmpty()) title = t;
+    }
+    if (reader->metadataValues.containsKey("artist"))
+        artist = reader->metadataValues.getValue("artist", "");
+
+    // Check TBPM tag for BPM fallback
+    if (reader->metadataValues.containsKey("bpm"))
+    {
+        float tagBpm = reader->metadataValues.getValue("bpm", "0").getFloatValue();
+        if (tagBpm >= 60.0f && tagBpm <= 200.0f)
+            bpm = tagBpm;
+    }
+
     trackId = nextTrackId++;
     cuePointMs = 0.0f;
 

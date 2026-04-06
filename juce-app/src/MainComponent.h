@@ -2,37 +2,64 @@
 #include <JuceHeader.h>
 #include "BridgeEngine.h"
 
-// ── Color Scheme (matching Electron CSS) ────
+// ── Stitch Material Design 3 Color Tokens ────
 namespace Theme
 {
-    const juce::Colour bg       (0xff111318);
-    const juce::Colour bg2      (0xff1a1c20);
-    const juce::Colour bg3      (0xff1e2024);
-    const juce::Colour bg4      (0xff282a2e);
-    const juce::Colour bgLowest (0xff0c0e12);
-    const juce::Colour bgHighest(0xff333539);
+    // Surface hierarchy
+    const juce::Colour background    (0xff091610);
+    const juce::Colour surface       (0xff091610);
+    const juce::Colour surfDim       (0xff091610);
+    const juce::Colour surfBright    (0xff2f3c35);
+    const juce::Colour surfContLow   (0xff111e18);
+    const juce::Colour surfCont      (0xff15221c);
+    const juce::Colour surfContHigh  (0xff1f2d26);
+    const juce::Colour surfContHi2   (0xff2a3831);
+    const juce::Colour surfContLo2   (0xff05110b);
+    const juce::Colour surfVariant   (0xff2a3831);
 
-    const juce::Colour tx       (0xffe2e2e8);
-    const juce::Colour tx2      (0xffbbcac0);
-    const juce::Colour tx3      (0xff85948b);
-    const juce::Colour tx4      (0xff3c4a42);
+    // Primary (green)
+    const juce::Colour primary       (0xffcbffe2);
+    const juce::Colour primaryCont   (0xff5af0b3);
+    const juce::Colour primaryDim    (0xff45dfa3);
+    const juce::Colour onPrimary     (0xff003825);
+    const juce::Colour onPrimaryCont (0xff006b49);
 
-    const juce::Colour grn      (0xff5af0b3);
-    const juce::Colour grn2     (0xff34d399);
-    const juce::Colour blu      (0xffa4c9ff);
-    const juce::Colour blu2     (0xff0267b8);
-    const juce::Colour ylw      (0xffffd16d);
-    const juce::Colour ylw2     (0xffecb210);
-    const juce::Colour red      (0xffffb4ab);
-    const juce::Colour pur      (0xffa78bfa);
-    const juce::Colour org      (0xfffb923c);
+    // Secondary (blue)
+    const juce::Colour secondary     (0xffa4c9ff);
+    const juce::Colour secondaryCont (0xff224a79);
+    const juce::Colour onSecondary   (0xff00315d);
 
-    const juce::Colour bdr      (0x263c4a42);
-    const juce::Colour bdr2     (0x4d3c4a42);
+    // Tertiary (purple)
+    const juce::Colour tertiary      (0xfff8f0ff);
+    const juce::Colour tertiaryCont  (0xffddd0ff);
+    const juce::Colour tertiaryDim   (0xffcebdff);
+    const juce::Colour onTertiary    (0xff381385);
+    const juce::Colour tertiaryAccent(0xffa78bfa);
+
+    // Text
+    const juce::Colour onSurface     (0xffd7e6dc);
+    const juce::Colour onSurfVar     (0xffbbcac0);
+    const juce::Colour outline       (0xff85948b);
+    const juce::Colour outlineVar    (0xff3c4a42);
+
+    // Semantic
+    const juce::Colour error         (0xffffb4ab);
+    const juce::Colour errorCont     (0xff93000a);
+    const juce::Colour surfTint      (0xff45dfa3);
+
+    // Custom accent (from original Electron)
+    const juce::Colour ylw           (0xffffd16d);
+    const juce::Colour ylw2          (0xffecb210);
+    const juce::Colour org           (0xfffb923c);
+
+    // Glow shadows
+    inline juce::Colour glowGreen()  { return primaryCont.withAlpha(0.3f); }
+    inline juce::Colour glowYellow() { return ylw.withAlpha(0.3f); }
+    inline juce::Colour glowPurple() { return tertiaryAccent.withAlpha(0.3f); }
 }
 
 /**
- * DeckPanel - CDJ-style deck card
+ * DeckPanel - CDJ-style deck card (Stitch design)
  */
 class DeckPanel : public juce::Component
 {
@@ -46,29 +73,48 @@ private:
     int deckNum;
     BridgeEngine& engine;
 
-    // Labels
     juce::Label titleLabel, artistLabel, bpmLabel, timeLabel;
 
-    // Buttons - CDJ style
-    juce::TextButton playBtn  { juce::CharPointer_UTF8("\xe2\x96\xb6") };   // triangle
+    juce::TextButton playBtn  { juce::CharPointer_UTF8("\xe2\x96\xb6") };
     juce::TextButton cueBtn   { "CUE" };
     juce::TextButton loadBtn  { "LOAD" };
     juce::TextButton ejectBtn { "EJECT" };
     juce::TextButton hwBtn    { "VIR" };
 
-    // Volume
     juce::Slider volumeSlider;
 
-    // Display state
     PlayState displayState = PlayState::IDLE;
     uint8_t beatPhase = 0;
+    bool syncFlag = false, masterFlag = false, onAirFlag = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeckPanel)
 };
 
 /**
- * MainComponent - full Bridge+ UI with audio playback
- * Matches Electron design: header, tabs, status, mode bar, decks, bottom bar
+ * OutputLayerPanel - TCNet output layer card (A, B, M)
+ */
+class OutputLayerPanel : public juce::Component
+{
+public:
+    OutputLayerPanel(const juce::String& name, juce::Colour accent, BridgeEngine& engine, int layerIdx);
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+    void updateDisplay();
+
+private:
+    juce::String layerName;
+    juce::Colour accentCol;
+    BridgeEngine& engine;
+    int layerIndex;
+
+    juce::Label timecodeLabel;
+    juce::ComboBox sourceSelector;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OutputLayerPanel)
+};
+
+/**
+ * MainComponent - Bridge+ full application (Stitch design)
  */
 class MainComponent : public juce::AudioAppComponent,
                       private juce::Timer
@@ -77,7 +123,6 @@ public:
     MainComponent();
     ~MainComponent() override;
 
-    // AudioAppComponent
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override;
     void releaseResources() override;
@@ -88,6 +133,8 @@ public:
 private:
     void timerCallback() override;
     void layoutDecks();
+    void layoutSettings();
+    void layoutOutputLayers();
     void addDeck();
 
     BridgeEngine engine;
@@ -95,7 +142,6 @@ private:
 
     // ── Header ──
     juce::TextButton startBtn { "START BRIDGE" };
-    juce::Label statusDotLabel;
     juce::Label statusTextLabel;
     juce::Label versionLabel;
 
@@ -111,14 +157,25 @@ private:
     juce::TextButton virtualBtn { "VIRTUAL" };
     juce::TextButton hwModeBtn  { "HARDWARE" };
     juce::TextButton addDeckBtn { "+ DECK" };
-    bool globalHWMode = false;
 
     // ── Deck Grid ──
     std::array<std::unique_ptr<DeckPanel>, 8> deckPanels;
     int visibleDecks = 0;
 
+    // ── Output Layers (TCNet tab) ──
+    std::unique_ptr<OutputLayerPanel> layerA, layerB, layerM;
+
+    // ── Settings (SETTINGS tab) ──
+    juce::Label nodeNameLabel { {}, "Node Name" };
+    juce::TextEditor nodeNameEditor;
+    juce::Label ifaceLabel { {}, "Network Interface" };
+    juce::ComboBox ifaceSelector;
+    juce::Label fpsLabel { {}, "TCNet FPS" };
+    juce::ComboBox fpsSelector;
+
     // ── Bottom Bar ──
     juce::Label packetLabel;
+    juce::Label latencyLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
