@@ -707,19 +707,21 @@ async function buildRGBWaveform(blob, onChunk){
     const wf=new Array(pts);
     const CHUNK=Math.max(200,Math.floor(pts/30));
     for(let i=0;i<pts;i++){
-      const s0=i*step;let pl=0,pm=0,ph=0,pk=0,mn=0,mx=0;
+      const s0=i*step;let pl=0,pm=0,ph=0,pk=0,mn=0,mx=0,sumSq=0;
       for(let j=0;j<step;j++){
         const s=ch[s0+j]||0;
+        sumSq+=s*s; // RMS accumulator
         const bassLP=_bq(_lpB2,_bq(_lpB1,s));
         const midLP=_bq(_lpM2,_bq(_lpM1,s));
         const bass=bassLP, mid2=midLP-bassLP, tre=s-midLP;
-        // PEAK per band (Mixxx storeIfGreater approach)
+        // PEAK per band (for color), RMS for height
         const ab=Math.abs(bass),am=Math.abs(mid2),at=Math.abs(tre);
         if(ab>pl)pl=ab; if(am>pm)pm=am; if(at>ph)ph=at;
         const a=Math.abs(s);if(a>pk)pk=a;
         if(s<mn)mn=s;if(s>mx)mx=s;
       }
-      wf[i]={h:pk,mn,mx,r:pl,g:pm,b:ph};
+      const rms=Math.sqrt(sumSq/step);
+      wf[i]={h:pk,mn,mx,r:pl,g:pm,b:ph,rms};
       if(onChunk&&(i+1)%CHUNK===0){
         onChunk(i+1,wf);
         await new Promise(r=>setTimeout(r,0)); // yield to UI
@@ -810,8 +812,10 @@ function buildWaveformCache(slot){
     const tot=p.r+p.g+p.b;
     if(tot<0.005)continue;
     const dom=Math.max(p.r,p.g,p.b);
-    // dom^2.5 power curve — strong dynamic range, no artificial boost
-    hs[x]=Math.min(mid,Math.pow(dom,2.5)*mid);
+    // RMS for height — actual perceived loudness, not peak spikes
+    // rms² × 4: rms=0.1→4%, 0.2→16%, 0.3→36%, 0.4→64%
+    const rv=p.rms||0;
+    hs[x]=Math.min(mid,rv*rv*4*mid);
     // Spectral centroid → HSL color
     const cent=(p.r*fB+p.g*fM+p.b*fT)/tot;
     const cn=Math.max(0,Math.min(1,Math.log(cent/fB)/logR));
@@ -863,13 +867,14 @@ function drawOverview(slot,prog){
   const ovR=new Uint8Array(W),ovG=new Uint8Array(W),ovB=new Uint8Array(W);
   for(let px=0;px<W;px++){
     const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
-    let r=0,g=0,b=0;const cnt=Math.max(1,i1-i0+1);
-    for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;}
+    let r=0,g=0,b=0,rmSum=0;const cnt=Math.max(1,i1-i0+1);
+    for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;rmSum+=(p.rms||0);}
     r/=cnt;g/=cnt;b/=cnt;
     const tot=r+g+b;
     if(tot<0.005)continue;
     const dom=Math.max(r,g,b);
-    ovH[px]=Math.min(mid,Math.pow(dom,2.5)*mid);
+    const avgRms=rmSum/cnt;
+    ovH[px]=Math.min(mid,avgRms*avgRms*4*mid);
     const cent=(r*fB+g*fM+b*fT)/tot;
     const cn=Math.max(0,Math.min(1,Math.log(cent/fB)/logR));
     const dominance=Math.min(1,(dom/tot-0.333)/0.667);
