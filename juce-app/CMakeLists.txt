@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(BridgePlus VERSION 0.8.0)
+project(BridgePlus VERSION 0.9.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,8 +19,10 @@ juce_generate_juce_header(BridgePlus)
 target_sources(BridgePlus PRIVATE
     src/Main.cpp
     src/MainComponent.cpp
-    src/WaveformComponent.cpp
-    src/NetworkEngine.cpp
+    src/BridgeEngine.cpp
+    src/ProDJLink.cpp
+    src/TCNetSender.cpp
+    src/VirtualDeck.cpp
 )
 
 target_compile_definitions(BridgePlus PRIVATE
