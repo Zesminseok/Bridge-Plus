@@ -1,3 +1,0 @@
-# Hashes of file build rules.
-ce808831dbb5ce8d2cf7c9a145898d97 BridgePlus_artefacts/JuceLibraryCode/BridgePlus/PkgInfo
-8c2d1ff69ef344a6369e66d5f6abc7ff BridgePlus_artefacts/JuceLibraryCode/JuceHeader.h
