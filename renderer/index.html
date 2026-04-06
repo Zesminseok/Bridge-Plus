@@ -787,10 +787,10 @@ function _wf3BandStack(r,g,b2,totalH,dimF){
 }
 
 // ═══ Waveform Bitmap Cache (OffscreenCanvas) ═══
-// RGB waveform — bass=Red, mid=Green, treble=Blue (vivid, always max channel)
-// Height = log compression (lifts quiet, compresses loud)
-// Shape = smooth envelope path with clip
-const _LOG11=Math.log(11);
+// MiniMeters-style rendering: dB scale + slope tilt + intensity brightness
+// Height = dB metering (-50dB~0dB), Color = RGB with 4.5dB/oct slope tilt
+const _DB_MIN=-50,_DB_RANGE=50; // -50dB floor, 0dB ceiling
+const _SB=1.0,_SM=1.8,_ST=3.5;  // slope tilt: +4.5dB/oct approximation
 function buildWaveformCache(slot){
   const d=DECKS[slot];if(!d)return;
   const wfData=d.rgbWfDetail||d.rgbWf;
@@ -798,30 +798,34 @@ function buildWaveformCache(slot){
   const cv=document.getElementById('wzc'+slot);
   const H=cv?cv.height:100;
   const pts=wfData.length;
-  const cacheKey=pts+'_'+H+'_rgb3';
+  const cacheKey=pts+'_'+H+'_db1';
   if(d._wfCache&&d._wfCacheKey===cacheKey)return;
   const oc=new OffscreenCanvas(pts,H);
   const ctx=oc.getContext('2d',{alpha:false});
   ctx.fillStyle='#000';ctx.fillRect(0,0,pts,H);
   const mid=H/2;
-  // Pass 1: heights + colors
   const hs=new Float32Array(pts);
   const cr=new Uint8Array(pts),cg=new Uint8Array(pts),cb=new Uint8Array(pts);
   for(let x=0;x<pts;x++){
     const p=wfData[x];
-    const mx=Math.max(p.r,p.g,p.b);
-    if(mx<0.005)continue;
-    // Height: log compression — log(1+rms*10)/log(11)
-    // rms=0.05→16%, 0.1→28%, 0.2→46%, 0.3→58%, 0.5→75%
     const rv=p.rms||0;
-    hs[x]=Math.min(mid,Math.log(1+rv*10)/_LOG11*mid);
-    // Color: direct RGB — dominant band always at 255, others proportional
+    if(rv<0.001)continue;
+    // Height: dB scale — pro audio metering
+    // rms=0.003→-50dB→0%, 0.01→-40dB→20%, 0.1→-20dB→60%, 0.5→-6dB→88%
+    const dB=20*Math.log10(rv);
+    const norm=Math.max(0,Math.min(1,(dB-_DB_MIN)/_DB_RANGE));
+    hs[x]=norm*mid;
+    // Color: band peaks with slope tilt (boost mid/treble for balanced spectrum)
+    const rb=p.r*_SB, rm=p.g*_SM, rt=p.b*_ST;
+    const mx=Math.max(rb,rm,rt,0.001);
     const s=255/mx;
-    cr[x]=Math.round(p.r*s); // bass = Red
-    cg[x]=Math.round(p.g*s); // mid = Green
-    cb[x]=Math.round(p.b*s); // treble = Blue
+    // Intensity: quiet=dim, loud=bright (LUT-style brightness from dB level)
+    const bright=0.35+norm*0.65; // 35%→100%
+    cr[x]=Math.min(255,Math.round(rb*s*bright));
+    cg[x]=Math.min(255,Math.round(rm*s*bright));
+    cb[x]=Math.min(255,Math.round(rt*s*bright));
   }
-  // Pass 2: smooth envelope + colored fills
+  // Smooth envelope path + clipped color fills
   ctx.beginPath();
   ctx.moveTo(0,mid-hs[0]);
   for(let x=1;x<pts;x++) ctx.lineTo(x,mid-hs[x]);
@@ -837,7 +841,7 @@ function buildWaveformCache(slot){
   d._wfCache=oc;
   d._wfCacheH=H;
   d._wfCacheKey=cacheKey;
-  console.log(`[WFC] slot${slot} RGB envelope: ${pts}×${H}px`);
+  console.log(`[WFC] slot${slot} dB-metered cache: ${pts}×${H}px`);
 }
 
 function drawOverview(slot,prog){
@@ -849,7 +853,7 @@ function drawOverview(slot,prog){
   const W=cv.width,H=cv.height,ctx=d.wovCtx;
   const pos=Math.max(0,Math.min(1,prog||0));
   const pts=wfOv.length,mid=H/2;
-  // RGB overview — log compression + smooth envelope
+  // dB-metered overview — same algorithm as zoom cache
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   const ovH=new Float32Array(W);
   const ovR=new Uint8Array(W),ovG=new Uint8Array(W),ovB=new Uint8Array(W);
@@ -858,12 +862,18 @@ function drawOverview(slot,prog){
     let r=0,g=0,b=0,rmSum=0;const cnt=Math.max(1,i1-i0+1);
     for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;rmSum+=(p.rms||0);}
     r/=cnt;g/=cnt;b/=cnt;
-    const mx=Math.max(r,g,b);
-    if(mx<0.005)continue;
     const avgRms=rmSum/cnt;
-    ovH[px]=Math.min(mid,Math.log(1+avgRms*10)/_LOG11*mid);
+    if(avgRms<0.001)continue;
+    const dB=20*Math.log10(avgRms);
+    const norm=Math.max(0,Math.min(1,(dB-_DB_MIN)/_DB_RANGE));
+    ovH[px]=norm*mid;
+    const rb=r*_SB,rm=g*_SM,rt=b*_ST;
+    const mx=Math.max(rb,rm,rt,0.001);
     const s=255/mx;
-    ovR[px]=Math.round(r*s);ovG[px]=Math.round(g*s);ovB[px]=Math.round(b*s);
+    const bright=0.35+norm*0.65;
+    ovR[px]=Math.min(255,Math.round(rb*s*bright));
+    ovG[px]=Math.min(255,Math.round(rm*s*bright));
+    ovB[px]=Math.min(255,Math.round(rt*s*bright));
   }
   ctx.beginPath();
   ctx.moveTo(0,mid-ovH[0]);
