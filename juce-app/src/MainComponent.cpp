@@ -1,16 +1,6 @@
 #include "MainComponent.h"
 
 // ── Helpers ──────────────────────────────────
-static juce::String formatTime(float ms)
-{
-    if (ms <= 0) return "00:00.000";
-    int totalMs = (int)ms;
-    int min = totalMs / 60000;
-    int sec = (totalMs % 60000) / 1000;
-    int milli = totalMs % 1000;
-    return juce::String::formatted("%02d:%02d.%03d", min, sec, milli);
-}
-
 static juce::String formatUptime(int secs)
 {
     int h = secs / 3600;
@@ -773,6 +763,8 @@ MainComponent::MainComponent()
                     deckPanels[(size_t)d]->setVisible(showDecks);
             addDeckBtn.setVisible(showDecks);
             modeToggleBtn.setVisible(showDecks);
+            for (int s = 0; s < 3; s++)
+                outSrcSelectors[(size_t)s].setVisible(showDecks);
 
             // Settings visibility
             bool showSettings = (activeTab == TAB_SETTINGS);
@@ -803,6 +795,27 @@ MainComponent::MainComponent()
     setupBadge(arenaBadge,  "Arena: 0",        C::blu);
     setupBadge(deckBadge,   "Decks: 0",        C::tx3);
     setupBadge(uptimeBadge, "Uptime: 00:00:00", C::tx3);
+
+    // ── Output Layer source selectors ──
+    const char* layerNames[] = { "A", "B", "M" };
+    for (int i = 0; i < 3; i++)
+    {
+        addAndMakeVisible(outSrcSelectors[(size_t)i]);
+        outSrcSelectors[(size_t)i].setColour(juce::ComboBox::backgroundColourId, C::bg3);
+        outSrcSelectors[(size_t)i].setColour(juce::ComboBox::textColourId, C::tx3);
+        outSrcSelectors[(size_t)i].setColour(juce::ComboBox::outlineColourId, C::bdr2);
+        outSrcSelectors[(size_t)i].addItem("—", 1);
+        for (int d = 0; d < kMaxDecks; d++)
+            outSrcSelectors[(size_t)i].addItem("Deck " + juce::String(d + 1), d + 2);
+        outSrcSelectors[(size_t)i].setSelectedId(1);
+        outSrcSelectors[(size_t)i].setVisible(false); // starts hidden, shown on TAB_LINK
+        outSrcSelectors[(size_t)i].onChange = [this, i]
+        {
+            int sel = outSrcSelectors[(size_t)i].getSelectedId();
+            outLayers[(size_t)i].srcSlot = (sel <= 1) ? -1 : sel - 2;
+        };
+        (void)layerNames[i];
+    }
 
     // ── Mode Toggle (VIR / HW) — transparent overlay over painted toggle ──
     addAndMakeVisible(modeToggleBtn);
@@ -1007,20 +1020,97 @@ void MainComponent::paint(juce::Graphics& g)
     g.setColour(C::bdr);
     g.drawHorizontalLine(112, 0, (float)w);
 
-    // ── LINK tab: mode bar (32px, y=112) ──
+    // ── LINK tab: OUTPUT LAYERS (y=112, h=80) + mode bar (y=192) ──
+    if (activeTab == TAB_LINK)
+    {
+        // Section label
+        g.setColour(C::tx4);
+        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+        g.drawText("OUTPUT LAYERS", 12, 114, 120, 14, juce::Justification::centredLeft);
+
+        // A / B / M cards
+        const char* lNames[] = { "A", "B", "M" };
+        const juce::Colour lColors[] = { C::grn, C::blu, C::pur };
+        int cardW = (w - 28) / 3;
+        for (int i = 0; i < 3; i++)
+        {
+            int cx = 12 + i * (cardW + 4);
+            int cy = 128;
+            int ch = 56;
+            auto cr = juce::Rectangle<float>((float)cx, (float)cy, (float)cardW, (float)ch);
+
+            // Get source slot timecode
+            int srcSlot = outLayers[(size_t)i].srcSlot;
+            float tcMs = 0.0f;
+            bool playing = false;
+            if (srcSlot >= 0 && srcSlot < visibleDecks)
+            {
+                if (engine.isHWMode(srcSlot))
+                {
+                    auto* ls = engine.getLayerState(srcSlot);
+                    if (ls) { tcMs = ls->timecodeMs; playing = (ls->state == PlayState::PLAYING); }
+                }
+                else
+                {
+                    auto& deck = engine.getVirtualDeck(srcSlot);
+                    tcMs = deck.getPositionMs();
+                    playing = (deck.getState() == PlayState::PLAYING);
+                }
+            }
+
+            g.setColour(playing ? C::bg2.brighter(0.05f) : C::bg2);
+            g.fillRoundedRectangle(cr, 8.0f);
+            if (playing)
+            {
+                g.setColour(lColors[i].withAlpha(0.08f));
+                g.fillRoundedRectangle(cr, 8.0f);
+            }
+            g.setColour(playing ? lColors[i].withAlpha(0.4f) : C::bdr);
+            g.drawRoundedRectangle(cr.reduced(0.5f), 8.0f, 1.0f);
+
+            // Badge
+            auto badgeRect = juce::Rectangle<float>((float)cx + 8, (float)cy + 8, 18.0f, 18.0f);
+            g.setColour(lColors[i]);
+            g.fillRoundedRectangle(badgeRect, 4.0f);
+            g.setColour(C::bgLo);
+            g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+            g.drawText(lNames[i], badgeRect, juce::Justification::centred);
+
+            // Timecode
+            g.setColour(playing ? C::tx : C::tx4);
+            g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+            g.drawText(formatTimecode(tcMs), cx + 30, cy + 6, cardW - 38, 18,
+                       juce::Justification::centredRight);
+
+            // Output mode buttons (LTC/MTC/ART)
+            const char* modes[] = { "LTC", "MTC", "ART" };
+            const bool* modeOn[] = { &outLayers[(size_t)i].ltc, &outLayers[(size_t)i].mtc, &outLayers[(size_t)i].art };
+            const juce::Colour modeColors[] = { C::ylw, C::blu, C::org };
+            int btnW = 28, btnX = cx + 8;
+            for (int m = 0; m < 3; m++)
+            {
+                auto btnRect = juce::Rectangle<float>((float)(btnX + m * 31), (float)(cy + ch - 20), (float)btnW, 14.0f);
+                g.setColour(*modeOn[m] ? modeColors[(size_t)m].withAlpha(0.2f) : juce::Colour(0x08ffffff));
+                g.fillRoundedRectangle(btnRect, 2.0f);
+                g.setColour(*modeOn[m] ? modeColors[(size_t)m] : C::tx4);
+                g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+                g.drawText(modes[m], btnRect, juce::Justification::centred);
+            }
+        }
+    }
     if (activeTab == TAB_LINK)
     {
         g.setColour(C::bg);
-        g.fillRect(0, 112, w, 32);
+        g.fillRect(0, 192, w, 32);
 
         // "DECK MODE" label
         g.setColour(C::tx4);
         g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
-        g.drawText("DECK MODE", 10, 112, 80, 32, juce::Justification::centredLeft);
+        g.drawText("DECK MODE", 10, 192, 80, 32, juce::Justification::centredLeft);
 
         // VIR / HW toggle (drawn manually)
         int toggleX = 96;
-        int toggleY = 118;
+        int toggleY = 198;
         // Outer pill
         g.setColour(C::bgLo);
         g.fillRoundedRectangle((float)toggleX, (float)toggleY, 120.0f, 20.0f, 5.0f);
@@ -1046,12 +1136,12 @@ void MainComponent::paint(juce::Graphics& g)
         g.drawText("HARDWARE", toggleX + 60, toggleY, 60, 20, juce::Justification::centred);
 
         g.setColour(C::bdr);
-        g.drawHorizontalLine(144, 0, (float)w);
+        g.drawHorizontalLine(224, 0, (float)w);
 
         // Alert banner (when not running)
         if (!engine.isRunning())
         {
-            auto alertArea = getLocalBounds().withTrimmedTop(148).withTrimmedBottom(26).reduced(12, 6);
+            auto alertArea = getLocalBounds().withTrimmedTop(228).withTrimmedBottom(26).reduced(12, 6);
             auto bannerRect = alertArea.removeFromTop(36);
             g.setColour(juce::Colour(0x14ecb210)); // ylw2 tint
             g.fillRoundedRectangle(bannerRect.toFloat(), 8.0f);
@@ -1072,7 +1162,7 @@ void MainComponent::paint(juce::Graphics& g)
             g.setColour(C::tx4);
             g.setFont(juce::FontOptions(14.0f));
             g.drawText("+ DECK 버튼으로 Virtual 덱을 추가하세요",
-                getLocalBounds().withTrimmedTop(148).withTrimmedBottom(26),
+                getLocalBounds().withTrimmedTop(228).withTrimmedBottom(26),
                 juce::Justification::centred);
         }
     }
@@ -1266,9 +1356,20 @@ void MainComponent::resized()
     deckBadge.setBounds(sx, 90, 70, 20);    sx += 74;
     uptimeBadge.setBounds(sx, 90, 130, 20);
 
+    // Output layer selectors (LINK tab only)
+    {
+        int cardW = (w - 28) / 3;
+        for (int i = 0; i < 3; i++)
+        {
+            int cx = 12 + i * (cardW + 4);
+            outSrcSelectors[(size_t)i].setBounds(cx, 146, cardW, 18);
+            outSrcSelectors[(size_t)i].setVisible(activeTab == TAB_LINK);
+        }
+    }
+
     // Mode bar / add deck button (LINK tab only)
-    modeToggleBtn.setBounds(96, 115, 122, 22);
-    addDeckBtn.setBounds(w - 130, 115, 118, 22);
+    modeToggleBtn.setBounds(96, 195, 122, 22);
+    addDeckBtn.setBounds(w - 130, 195, 118, 22);
 
     // Bottom
     packetLabel.setBounds(w - 180, getHeight() - 24, 170, 22);
@@ -1284,7 +1385,7 @@ void MainComponent::layoutDecks()
     if (visibleDecks == 0) return;
 
     auto area = getLocalBounds();
-    area.removeFromTop(148);
+    area.removeFromTop(228);  // header(52)+tabs(36)+statusbar(24)+outputlayers(80)+modebar(36)
     area.removeFromBottom(26);
     area = area.reduced(8, 4);
 

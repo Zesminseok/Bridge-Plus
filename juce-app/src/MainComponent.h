@@ -150,6 +150,17 @@ private:
     int visibleDecks = 0;
     static constexpr int kMaxDecks = 6;
 
+    // Output Layers (A=0, B=1, M=2)
+    struct OutputLayer
+    {
+        int srcSlot = -1;   // -1 = none, 0-5 = deck slot
+        bool ltc = false;
+        bool mtc = false;
+        bool art = false;
+    };
+    std::array<OutputLayer, 3> outLayers;
+    std::array<juce::ComboBox, 3> outSrcSelectors;
+
     // Settings
     juce::Label       nodeNameLabel, tcnetIfaceLabel, pdjlIfaceLabel, fpsLabel;
     juce::TextEditor  nodeNameEditor;
