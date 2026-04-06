@@ -433,6 +433,49 @@ void DeckPanel::paint(juce::Graphics& g)
     g.drawText(formatTimecode(tcMs), 0, (int)hdrY, getWidth() - 13, 18,
                juce::Justification::centredRight);
 
+    // ── SYNC / MASTER badges (HW mode) ──
+    if (isHW)
+    {
+        auto* ls = engine.getLayerState(deckNum);
+        float bx = (float)getWidth() - 13.0f;
+        float by = hdrY + 20.0f;
+        // MASTER badge
+        bool isMaster = ls && ls->master;
+        float mw = 42.0f;
+        bx -= mw;
+        auto masterRect = juce::Rectangle<float>(bx, by, mw, 13.0f);
+        g.setColour(isMaster ? C::org.withAlpha(0.18f) : juce::Colour(0x08ffffff));
+        g.fillRoundedRectangle(masterRect, 2.0f);
+        g.setColour(isMaster ? C::org : C::tx4);
+        g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+        g.drawText("MASTER", masterRect, juce::Justification::centred);
+        bx -= 4.0f;
+        // SYNC badge
+        bool isSync = ls && ls->sync;
+        float sw = 36.0f;
+        bx -= sw;
+        auto syncRect = juce::Rectangle<float>(bx, by, sw, 13.0f);
+        g.setColour(isSync ? C::blu.withAlpha(0.2f) : juce::Colour(0x08ffffff));
+        g.fillRoundedRectangle(syncRect, 2.0f);
+        g.setColour(isSync ? C::blu : C::tx4);
+        g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+        g.drawText("SYNC", syncRect, juce::Justification::centred);
+        // ON AIR badge
+        bool isOnAir = ls && ls->onAir;
+        if (isOnAir)
+        {
+            bx -= 4.0f;
+            float ow = 42.0f;
+            bx -= ow;
+            auto onAirRect = juce::Rectangle<float>(bx, by, ow, 13.0f);
+            g.setColour(C::red.withAlpha(0.18f));
+            g.fillRoundedRectangle(onAirRect, 2.0f);
+            g.setColour(C::red);
+            g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+            g.drawText("ON AIR", onAirRect, juce::Justification::centred);
+        }
+    }
+
     // ── Album art placeholder ──
     if (!artBounds.isEmpty())
     {
@@ -480,14 +523,65 @@ void DeckPanel::paint(juce::Graphics& g)
         }
     }
 
-    // ── Bottom: HW/Virtual label ──
+    // ── Progress bar row ──
+    {
+        float progDurMs = isHW
+            ? (engine.getLayerState(deckNum) ? engine.getLayerState(deckNum)->totalLengthMs : 0.0f)
+            : deck.getDurationMs();
+        float posMs2 = isHW
+            ? (engine.getLayerState(deckNum) ? engine.getLayerState(deckNum)->timecodeMs : 0.0f)
+            : deck.getPositionMs();
+
+        float prog = (progDurMs > 0) ? juce::jlimit(0.0f, 1.0f, posMs2 / progDurMs) : 0.0f;
+
+        float prY = (float)(getHeight() - 28);
+        float prX = 13.0f;
+        float prW = (float)(getWidth() - 26);
+        float prH = 3.0f;
+
+        g.setColour(juce::Colour(0x0dffffff));
+        g.fillRoundedRectangle(prX, prY, prW, prH, 1.5f);
+        if (prog > 0.0f)
+        {
+            g.setGradientFill(juce::ColourGradient(
+                C::pur, prX, prY,
+                C::blu, prX + prW, prY, false));
+            g.fillRoundedRectangle(prX, prY, prW * prog, prH, 1.5f);
+        }
+
+        // Duration label on right
+        g.setColour(C::tx4);
+        g.setFont(juce::FontOptions(9.0f));
+        if (progDurMs > 0)
+        {
+            int totSec = (int)(progDurMs / 1000);
+            juce::String dur = juce::String::formatted("%d:%02d", totSec / 60, totSec % 60);
+            g.drawText(dur, (int)(prX + prW) - 36, (int)prY - 14, 36, 12,
+                       juce::Justification::centredRight);
+        }
+    }
+
+    // ── Bottom: BPM + HW/Virtual label ──
+    float bpm = isHW
+        ? (engine.getLayerState(deckNum) ? engine.getLayerState(deckNum)->bpm : 0.0f)
+        : deck.getBpm();
+
     g.setColour(C::tx4);
     g.setFont(juce::FontOptions(9.0f));
     juce::String hwLabel = isHW
         ? juce::CharPointer_UTF8("\xe2\xac\xa1 HW")
-        : juce::CharPointer_UTF8("\xe2\x97\x8e VIRTUAL");
-    g.drawText(hwLabel, 13, getHeight() - 18, getWidth() - 26, 14,
+        : juce::CharPointer_UTF8("\xe2\x97\x8e VIR");
+    g.drawText(hwLabel, 13, getHeight() - 16, 50, 14,
                juce::Justification::centredLeft);
+
+    if (bpm > 0.0f)
+    {
+        g.setColour(showBright ? C::tx2 : C::tx4);
+        g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
+        juce::String bpmStr = juce::String(bpm, 1) + " BPM";
+        g.drawText(bpmStr, 13 + 52, getHeight() - 16, getWidth() - 80, 14,
+                   juce::Justification::centredLeft);
+    }
 }
 
 void DeckPanel::resized()
@@ -678,6 +772,7 @@ MainComponent::MainComponent()
                 if (deckPanels[(size_t)d])
                     deckPanels[(size_t)d]->setVisible(showDecks);
             addDeckBtn.setVisible(showDecks);
+            modeToggleBtn.setVisible(showDecks);
 
             // Settings visibility
             bool showSettings = (activeTab == TAB_SETTINGS);
@@ -708,6 +803,16 @@ MainComponent::MainComponent()
     setupBadge(arenaBadge,  "Arena: 0",        C::blu);
     setupBadge(deckBadge,   "Decks: 0",        C::tx3);
     setupBadge(uptimeBadge, "Uptime: 00:00:00", C::tx3);
+
+    // ── Mode Toggle (VIR / HW) — transparent overlay over painted toggle ──
+    addAndMakeVisible(modeToggleBtn);
+    modeToggleBtn.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+    modeToggleBtn.setColour(juce::TextButton::textColourOffId, juce::Colours::transparentBlack);
+    modeToggleBtn.onClick = [this]
+    {
+        globalHWMode = !globalHWMode;
+        repaint();
+    };
 
     // ── Add Deck button ──
     addAndMakeVisible(addDeckBtn);
@@ -798,7 +903,7 @@ MainComponent::~MainComponent()
 
 void MainComponent::addDeck()
 {
-    if (visibleDecks >= 8) return;
+    if (visibleDecks >= kMaxDecks) return;
     int idx = visibleDecks;
     if (!deckPanels[(size_t)idx])
     {
@@ -811,8 +916,8 @@ void MainComponent::addDeck()
     }
     visibleDecks++;
     layoutDecks();
-    addDeckBtn.setButtonText("+ DECK (" + juce::String(visibleDecks) + "/8)");
-    if (visibleDecks >= 8) addDeckBtn.setEnabled(false);
+    repaint();
+    if (visibleDecks >= kMaxDecks) addDeckBtn.setEnabled(false);
 }
 
 // ── Audio ──
@@ -907,17 +1012,66 @@ void MainComponent::paint(juce::Graphics& g)
     {
         g.setColour(C::bg);
         g.fillRect(0, 112, w, 32);
+
+        // "DECK MODE" label
         g.setColour(C::tx4);
-        g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
+        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
         g.drawText("DECK MODE", 10, 112, 80, 32, juce::Justification::centredLeft);
+
+        // VIR / HW toggle (drawn manually)
+        int toggleX = 96;
+        int toggleY = 118;
+        // Outer pill
+        g.setColour(C::bgLo);
+        g.fillRoundedRectangle((float)toggleX, (float)toggleY, 120.0f, 20.0f, 5.0f);
+        g.setColour(C::bdr2);
+        g.drawRoundedRectangle((float)toggleX, (float)toggleY, 120.0f, 20.0f, 5.0f, 1.0f);
+        // Active segment
+        bool hwActive = globalHWMode;
+        if (!hwActive)
+        {
+            g.setColour(C::bg4);
+            g.fillRoundedRectangle((float)toggleX + 2, (float)toggleY + 2, 58.0f, 16.0f, 4.0f);
+        }
+        else
+        {
+            g.setColour(C::bg4);
+            g.fillRoundedRectangle((float)toggleX + 60, (float)toggleY + 2, 58.0f, 16.0f, 4.0f);
+        }
+        // Labels
+        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+        g.setColour(!hwActive ? C::grn : C::tx.withAlpha(0.4f));
+        g.drawText("VIRTUAL", toggleX, toggleY, 62, 20, juce::Justification::centred);
+        g.setColour(hwActive ? C::grn : C::tx.withAlpha(0.4f));
+        g.drawText("HARDWARE", toggleX + 60, toggleY, 60, 20, juce::Justification::centred);
+
         g.setColour(C::bdr);
         g.drawHorizontalLine(144, 0, (float)w);
 
-        if (visibleDecks == 0)
+        // Alert banner (when not running)
+        if (!engine.isRunning())
+        {
+            auto alertArea = getLocalBounds().withTrimmedTop(148).withTrimmedBottom(26).reduced(12, 6);
+            auto bannerRect = alertArea.removeFromTop(36);
+            g.setColour(juce::Colour(0x14ecb210)); // ylw2 tint
+            g.fillRoundedRectangle(bannerRect.toFloat(), 8.0f);
+            g.setColour(juce::Colour(0x26ecb210));
+            g.drawRoundedRectangle(bannerRect.toFloat().reduced(0.5f), 8.0f, 1.0f);
+            // dot
+            g.setColour(C::ylw);
+            g.fillEllipse((float)(bannerRect.getX() + 12), (float)(bannerRect.getCentreY() - 3), 6.0f, 6.0f);
+            g.setColour(C::ylw);
+            g.setFont(juce::FontOptions(11.0f));
+            g.drawText("START를 눌러 TCNet을 시작하세요",
+                bannerRect.getX() + 26, bannerRect.getY(), bannerRect.getWidth() - 28, bannerRect.getHeight(),
+                juce::Justification::centredLeft);
+        }
+
+        if (visibleDecks == 0 && engine.isRunning())
         {
             g.setColour(C::tx4);
             g.setFont(juce::FontOptions(14.0f));
-            g.drawText("Click \"+ DECK\" to add a virtual deck",
+            g.drawText("+ DECK 버튼으로 Virtual 덱을 추가하세요",
                 getLocalBounds().withTrimmedTop(148).withTrimmedBottom(26),
                 juce::Justification::centred);
         }
@@ -930,36 +1084,107 @@ void MainComponent::paint(juce::Graphics& g)
         g.fillRect(0, 112, w, 32);
         g.setColour(C::tx);
         g.setFont(juce::FontOptions(12.0f, juce::Font::bold));
-        g.drawText("CONNECTED DEVICES", 14, 112, 300, 32, juce::Justification::centredLeft);
+        g.drawText("기기 목록", 14, 112, 300, 32, juce::Justification::centredLeft);
         g.setColour(C::bdr);
         g.drawHorizontalLine(144, 0, (float)w);
 
-        // DJM fader panel
-        auto djmArea = getLocalBounds().withTrimmedTop(148).withTrimmedBottom(26).reduced(14, 8);
-        g.setColour(C::bg2);
-        g.fillRoundedRectangle(djmArea.toFloat(), 12.0f);
-        g.setColour(C::bdr2);
-        g.drawRoundedRectangle(djmArea.toFloat().reduced(0.5f), 12.0f, 1.0f);
+        auto contentArea = getLocalBounds().withTrimmedTop(152).withTrimmedBottom(26).reduced(14, 4);
+        int itemY = contentArea.getY();
+        const int itemH = 52;
+        const int itemGap = 6;
 
-        g.setColour(C::tx2);
-        g.setFont(juce::FontOptions(12.0f, juce::Font::bold));
-        g.drawText("DJM Faders", djmArea.getX() + 12, djmArea.getY() + 10, 200, 20,
-            juce::Justification::centredLeft);
+        // Device bar - shows all connected CDJ/DJM devices
+        auto& devs = engine.getDevices();
+        auto now = juce::Time::currentTimeMillis();
+        bool anyDevice = false;
 
+        for (auto& [key, dev] : devs)
+        {
+            if (now - dev.lastSeen > 15000) continue;
+            anyDevice = true;
+
+            // Device row card
+            auto rowRect = juce::Rectangle<int>(contentArea.getX(), itemY, contentArea.getWidth(), itemH);
+            g.setColour(C::bg2);
+            g.fillRoundedRectangle(rowRect.toFloat(), 10.0f);
+            g.setColour(C::bdr);
+            g.drawRoundedRectangle(rowRect.toFloat().reduced(0.5f), 10.0f, 1.0f);
+
+            // Icon box
+            bool isCDJ = dev.type == "CDJ";
+            auto iconRect = juce::Rectangle<float>((float)rowRect.getX() + 10, (float)rowRect.getY() + 12,
+                                                    28.0f, 28.0f);
+            g.setColour(isCDJ ? C::grn.withAlpha(0.1f) : C::pur.withAlpha(0.1f));
+            g.fillRoundedRectangle(iconRect, 4.0f);
+            g.setColour(isCDJ ? C::grn : C::pur);
+            g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+            g.drawText(isCDJ ? "CDJ" : "DJM", iconRect, juce::Justification::centred);
+
+            // Device name
+            g.setColour(C::tx2);
+            g.setFont(juce::FontOptions(11.0f, juce::Font::plain));
+            g.drawText(dev.name.isEmpty() ? dev.type : dev.name,
+                rowRect.getX() + 46, rowRect.getY() + 8, 200, 16,
+                juce::Justification::centredLeft);
+
+            // IP
+            g.setColour(C::tx3);
+            g.setFont(juce::FontOptions(10.0f));
+            g.drawText(dev.ip, rowRect.getX() + 46, rowRect.getY() + 26, 200, 14,
+                juce::Justification::centredLeft);
+
+            // Player number badge
+            if (dev.playerNum > 0)
+            {
+                auto badgeR = juce::Rectangle<float>((float)rowRect.getRight() - 40,
+                    (float)rowRect.getY() + 14, 28.0f, 24.0f);
+                g.setColour(C::bg4);
+                g.fillRoundedRectangle(badgeR, 4.0f);
+                g.setColour(C::tx3);
+                g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+                g.drawText("#" + juce::String(dev.playerNum), badgeR, juce::Justification::centred);
+            }
+
+            itemY += itemH + itemGap;
+            if (itemY > contentArea.getBottom() - itemH) break;
+        }
+
+        if (!anyDevice)
+        {
+            g.setColour(C::tx4);
+            g.setFont(juce::FontOptions(13.0f));
+            g.drawText("Pro DJ Link 기기가 감지되지 않았습니다",
+                contentArea, juce::Justification::centred);
+        }
+
+        // DJM fader strip at bottom
         auto& djm = engine.getDJMStatus();
+        int stripY = getHeight() - 26 - 70;
+        int stripX = contentArea.getX();
+        int stripW = contentArea.getWidth();
+
+        g.setColour(C::bg2);
+        g.fillRoundedRectangle((float)stripX, (float)stripY, (float)stripW, 60.0f, 8.0f);
+        g.setColour(C::bdr);
+        g.drawRoundedRectangle((float)stripX, (float)stripY, (float)stripW, 60.0f, 8.0f, 1.0f);
+
+        g.setColour(C::tx3);
+        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+        g.drawText("DJM FADERS", stripX + 10, stripY + 4, 100, 14, juce::Justification::centredLeft);
+
         for (int ch = 0; ch < 4; ch++)
         {
-            int fx = djmArea.getX() + 20 + ch * 64;
-            int fy = djmArea.getY() + 38;
-            int fh = 100;
+            int fx = stripX + 10 + ch * 60;
+            int fy = stripY + 22;
+            int fh = 28;
             g.setColour(C::bg4);
-            g.fillRoundedRectangle((float)fx, (float)fy, 8.0f, (float)fh, 3.0f);
+            g.fillRoundedRectangle((float)fx, (float)fy, 6.0f, (float)fh, 2.0f);
             int filledH = (int)(djm.faders[(size_t)ch] * (float)fh);
-            g.setColour(C::grn.withAlpha(0.7f));
-            g.fillRoundedRectangle((float)fx, (float)(fy + fh - filledH), 8.0f, (float)filledH, 3.0f);
+            g.setColour(djm.onAir[(size_t)ch] ? C::grn.withAlpha(0.8f) : C::grn.withAlpha(0.4f));
+            g.fillRoundedRectangle((float)fx, (float)(fy + fh - filledH), 6.0f, (float)filledH, 2.0f);
             g.setColour(djm.onAir[(size_t)ch] ? C::grn : C::tx4);
-            g.setFont(juce::FontOptions(10.0f));
-            g.drawText("CH" + juce::String(ch + 1), fx - 8, fy + fh + 6, 24, 14,
+            g.setFont(juce::FontOptions(9.0f));
+            g.drawText("CH" + juce::String(ch + 1), fx - 6, fy + fh + 2, 18, 12,
                 juce::Justification::centred);
         }
     }
@@ -1041,8 +1266,9 @@ void MainComponent::resized()
     deckBadge.setBounds(sx, 90, 70, 20);    sx += 74;
     uptimeBadge.setBounds(sx, 90, 130, 20);
 
-    // Mode bar / add deck button
-    addDeckBtn.setBounds(w - 130, 115, 118, 26);
+    // Mode bar / add deck button (LINK tab only)
+    modeToggleBtn.setBounds(96, 115, 122, 22);
+    addDeckBtn.setBounds(w - 130, 115, 118, 22);
 
     // Bottom
     packetLabel.setBounds(w - 180, getHeight() - 24, 170, 22);

@@ -47,6 +47,9 @@ public:
     // DJM
     const DJMStatus& getDJMStatus() const { return djm; }
 
+    // Devices
+    const std::map<juce::String, DeviceInfo>& getDevices() const { return devices; }
+
     // Callbacks (called from timer/network thread)
     std::function<void(int layer)> onLayerUpdate;
     std::function<void()>          onStatusUpdate;
