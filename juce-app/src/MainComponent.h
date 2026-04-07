@@ -79,6 +79,8 @@ public:
     void mouseDrag(const juce::MouseEvent& e) override;
     void updateDisplay();
     void setDeckNum(int n) { deckNum = n; repaint(); }
+    void setWfCenterLeft(bool v)  { wfCenterLeftRef = v; }
+    void setPhasorScroll(bool v)  { phasorScrollRef = v; }
 
     // FileDragAndDropTarget
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
@@ -121,6 +123,9 @@ private:
     bool   draggingZoom   = false;
     int    dragStartX     = 0;
     float  dragStartPosMs = 0.0f;
+
+    bool wfCenterLeftRef = false;  // synced from MainComponent
+    bool phasorScrollRef = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeckPanel)
 };
@@ -194,8 +199,17 @@ private:
 
     // Settings
     juce::Label       nodeNameLabel, tcnetIfaceLabel, pdjlIfaceLabel, fpsLabel;
+    juce::Label       tcnetModeLabel, wfCenterLabel, phasorModeLabel, audioOutLabel;
     juce::TextEditor  nodeNameEditor;
     juce::ComboBox    tcnetIfaceSelector, pdjlIfaceSelector, fpsSelector;
+    juce::ComboBox    tcnetModeSelector;   // auto/server/client
+    juce::ComboBox    wfCenterSelector;    // center/left
+    juce::ComboBox    phasorModeSelector;  // blink/scroll
+    juce::ComboBox    audioOutSelector;    // system audio output devices
+
+    // Waveform / phasor settings (applied at runtime)
+    bool wfCenterLeft = false;     // false = center (default), true = left 25%
+    bool phasorScroll = false;     // false = static blink, true = scroll fill
 
     // Bottom
     juce::Label packetLabel;

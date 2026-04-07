@@ -107,12 +107,12 @@ static void drawOverviewWaveform(juce::Graphics& g,
     g.drawRoundedRectangle(bf.reduced(0.5f), 3.0f, 1.0f);
 }
 
-/** Draw zoom waveform (centered on playhead) */
+/** Draw zoom waveform. headFrac = playhead position (0.5=center, 0.25=left) */
 static void drawZoomWaveform(juce::Graphics& g,
     const juce::Rectangle<int>& bounds,
     const std::vector<DetailedWaveformPoint>& wf,
     float posMs, float durMs,
-    float bpm, float windowMs = 4000.0f)
+    float bpm, float windowMs = 4000.0f, float headFrac = 0.5f)
 {
     auto bf = bounds.toFloat();
     g.setColour(C::bgLo);
@@ -132,8 +132,8 @@ static void drawZoomWaveform(juce::Graphics& g,
     int pts = (int)wf.size();
     float dur = juce::jmax(1.0f, durMs);
 
-    // Show windowMs window around playhead
-    float startMs = posMs - windowMs * 0.5f;
+    // Show windowMs window, playhead at headFrac
+    float startMs = posMs - windowMs * headFrac;
     float endMs   = startMs + windowMs;
 
     // Convert to waveform indices
@@ -184,8 +184,8 @@ static void drawZoomWaveform(juce::Graphics& g,
         g.drawVerticalLine(bounds.getX() + x, midY - peakH, midY + peakH);
     }
 
-    // Playhead center line
-    int cx = bounds.getX() + W / 2;
+    // Playhead line at headFrac
+    int cx = bounds.getX() + (int)(headFrac * (float)W);
     g.setColour(juce::Colour(0xeeffffff));
     g.drawVerticalLine(cx, bf.getY() + 1, bf.getBottom() - 1);
 
@@ -626,7 +626,8 @@ void DeckPanel::paint(juce::Graphics& g)
 
     // ── Zoom waveform (leave 9px on right for VU meter) ──
     auto zoomWfDrawBounds = zoomWfBounds.withTrimmedRight(9);
-    drawZoomWaveform(g, zoomWfDrawBounds, deck.getWaveformData(), posMs, durMs, deck.getBpm(), zoomWindowMs);
+    float headFrac = wfCenterLeftRef ? 0.25f : 0.5f;
+    drawZoomWaveform(g, zoomWfDrawBounds, deck.getWaveformData(), posMs, durMs, deck.getBpm(), zoomWindowMs, headFrac);
 
     // ── Stereo VU meter (right edge of zoom wf area) ──
     if (!zoomWfBounds.isEmpty() && !isHW && deck.isLoaded())
@@ -690,12 +691,24 @@ void DeckPanel::paint(juce::Graphics& g)
                 (float)phasorBounds.getX() + (float)i * (segW + 3.0f),
                 (float)phasorBounds.getY(), segW, segH);
 
-            if (playing && i == curBeat)
-                g.setColour(C::grn.withAlpha(0.9f));       // current beat: bright
-            else if (playing && i < curBeat)
-                g.setColour(C::grn.withAlpha(0.12f));       // past beats: very dim
+            if (phasorScrollRef)
+            {
+                // Scroll mode: fill up to current beat
+                if (playing && i <= curBeat)
+                    g.setColour(i == curBeat ? C::grn.withAlpha(0.9f) : C::grn.withAlpha(0.45f));
+                else
+                    g.setColour(juce::Colour(0x0dffffff));
+            }
             else
-                g.setColour(juce::Colour(0x0dffffff));       // inactive
+            {
+                // Blink mode: only current beat lights up
+                if (playing && i == curBeat)
+                    g.setColour(C::grn.withAlpha(0.9f));
+                else if (playing && i < curBeat)
+                    g.setColour(C::grn.withAlpha(0.12f));
+                else
+                    g.setColour(juce::Colour(0x0dffffff));
+            }
             g.fillRoundedRectangle(seg, 3.0f);
         }
     }
@@ -1025,14 +1038,27 @@ MainComponent::MainComponent()
 
             // Settings visibility
             bool showSettings = (activeTab == TAB_SETTINGS);
-            nodeNameLabel.setVisible(showSettings);
-            nodeNameEditor.setVisible(showSettings);
-            tcnetIfaceLabel.setVisible(showSettings);
-            tcnetIfaceSelector.setVisible(showSettings);
-            pdjlIfaceLabel.setVisible(showSettings);
-            pdjlIfaceSelector.setVisible(showSettings);
-            fpsLabel.setVisible(showSettings);
-            fpsSelector.setVisible(showSettings);
+            auto setSettingsVis = [&](juce::Component& c) { c.setVisible(showSettings); };
+            setSettingsVis(nodeNameLabel);    setSettingsVis(nodeNameEditor);
+            setSettingsVis(tcnetIfaceLabel);  setSettingsVis(tcnetIfaceSelector);
+            setSettingsVis(pdjlIfaceLabel);   setSettingsVis(pdjlIfaceSelector);
+            setSettingsVis(fpsLabel);         setSettingsVis(fpsSelector);
+            setSettingsVis(tcnetModeLabel);   setSettingsVis(tcnetModeSelector);
+            setSettingsVis(wfCenterLabel);    setSettingsVis(wfCenterSelector);
+            setSettingsVis(phasorModeLabel);  setSettingsVis(phasorModeSelector);
+            setSettingsVis(audioOutLabel);    setSettingsVis(audioOutSelector);
+
+            // Populate audio devices list lazily
+            if (showSettings && audioOutSelector.getNumItems() <= 1)
+            {
+                auto* devType = deviceManager.getCurrentDeviceTypeObject();
+                if (devType)
+                {
+                    auto devNames = devType->getDeviceNames(false);
+                    for (int di = 0; di < devNames.size(); di++)
+                        audioOutSelector.addItem(devNames[di], di + 2);
+                }
+            }
 
             resized();
             repaint();
@@ -1167,6 +1193,61 @@ MainComponent::MainComponent()
     fpsSelector.addItem("30 fps", 4);
     fpsSelector.setSelectedId(2);
     fpsSelector.setVisible(false);
+
+    // ── TCNet Mode selector ──
+    setupSettingsLabel(tcnetModeLabel, "TCNet 모드");
+    addAndMakeVisible(tcnetModeSelector);
+    tcnetModeSelector.setColour(juce::ComboBox::backgroundColourId, C::bg3);
+    tcnetModeSelector.setColour(juce::ComboBox::textColourId, C::tx);
+    tcnetModeSelector.setColour(juce::ComboBox::outlineColourId, C::bdr2);
+    tcnetModeSelector.addItem("Auto", 1);
+    tcnetModeSelector.addItem("Server", 2);
+    tcnetModeSelector.addItem("Client", 3);
+    tcnetModeSelector.setSelectedId(1);
+    tcnetModeSelector.setVisible(false);
+
+    // ── Waveform center selector ──
+    setupSettingsLabel(wfCenterLabel, "플레이헤드 위치");
+    addAndMakeVisible(wfCenterSelector);
+    wfCenterSelector.setColour(juce::ComboBox::backgroundColourId, C::bg3);
+    wfCenterSelector.setColour(juce::ComboBox::textColourId, C::tx);
+    wfCenterSelector.setColour(juce::ComboBox::outlineColourId, C::bdr2);
+    wfCenterSelector.addItem("중앙 (Center)", 1);
+    wfCenterSelector.addItem("좌측 (Left 25%)", 2);
+    wfCenterSelector.setSelectedId(1);
+    wfCenterSelector.setVisible(false);
+    wfCenterSelector.onChange = [this]
+    {
+        wfCenterLeft = (wfCenterSelector.getSelectedId() == 2);
+        repaint();
+    };
+
+    // ── Phasor mode selector ──
+    setupSettingsLabel(phasorModeLabel, "비트 페이저 모드");
+    addAndMakeVisible(phasorModeSelector);
+    phasorModeSelector.setColour(juce::ComboBox::backgroundColourId, C::bg3);
+    phasorModeSelector.setColour(juce::ComboBox::textColourId, C::tx);
+    phasorModeSelector.setColour(juce::ComboBox::outlineColourId, C::bdr2);
+    phasorModeSelector.addItem("Static (기본)", 1);
+    phasorModeSelector.addItem("Scroll (채우기)", 2);
+    phasorModeSelector.setSelectedId(1);
+    phasorModeSelector.setVisible(false);
+    phasorModeSelector.onChange = [this]
+    {
+        phasorScroll = (phasorModeSelector.getSelectedId() == 2);
+        repaint();
+    };
+
+    // ── Audio output selector ──
+    setupSettingsLabel(audioOutLabel, "오디오 출력 장치");
+    addAndMakeVisible(audioOutSelector);
+    audioOutSelector.setColour(juce::ComboBox::backgroundColourId, C::bg3);
+    audioOutSelector.setColour(juce::ComboBox::textColourId, C::tx);
+    audioOutSelector.setColour(juce::ComboBox::outlineColourId, C::bdr2);
+    audioOutSelector.addItem("시스템 기본", 1);
+    // Device list populated lazily when settings tab is shown
+    audioOutSelector.setSelectedId(1);
+    audioOutSelector.setVisible(false);
 
     // ── Bottom Bar ──
     addAndMakeVisible(packetLabel);
@@ -1810,61 +1891,63 @@ void MainComponent::paint(juce::Graphics& g)
         g.setColour(C::bdr);
         g.drawHorizontalLine(144, 0, (float)w);
 
-        // Section header: TCNet
+        // Section headers drawn at fixed y positions matching layoutSettings()
+        // layoutSettings top = 168+4=172, each section header = 20px
+        // Row heights: 26+3 = 29 per row
         auto sa = getLocalBounds().withTrimmedTop(148).withTrimmedBottom(26).reduced(24, 0);
-        g.setColour(C::tx4);
-        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
-        g.drawText("TCNET", sa.getX(), sa.getY() + 4, 80, 16, juce::Justification::centredLeft);
+        int sy = sa.getY() + 4;  // start y
 
-        g.setColour(C::bdr2);
-        g.drawHorizontalLine(sa.getY() + 12, (float)(sa.getX() + 50), (float)(sa.getRight()));
+        auto drawSection = [&](const char* name, int y)
+        {
+            g.setColour(C::tx4);
+            g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+            float labelW2 = (float)(juce::String(name).length() * 6 + 8);
+            g.drawText(name, sa.getX(), y, (int)labelW2 + 2, 14, juce::Justification::centredLeft);
+            g.setColour(C::bdr2);
+            g.drawHorizontalLine(y + 7, (float)(sa.getX() + (int)labelW2 + 6), (float)sa.getRight());
+        };
 
-        // Section header: Pro DJ Link
-        g.setColour(C::tx4);
-        g.drawText("PRO DJ LINK", sa.getX(), sa.getY() + 100, 90, 16, juce::Justification::centredLeft);
-        g.setColour(C::bdr2);
-        g.drawHorizontalLine(sa.getY() + 108, (float)(sa.getX() + 96), (float)(sa.getRight()));
+        drawSection("웨이브폼 설정", sy);           // 2 rows = 2*29 = 58
+        drawSection("TCNet 설정", sy + 20 + 58);    // 4 rows = 4*29 = 116
+        drawSection("Pro DJ Link", sy + 20 + 58 + 20 + 116);  // 1 row
+        drawSection("오디오 출력",  sy + 20 + 58 + 20 + 116 + 20 + 29); // 1 row
 
-        // Info section
-        int infoY = sa.getY() + 190;
-        g.setColour(C::tx4);
-        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
-        g.drawText("INFO", sa.getX(), infoY, 60, 16, juce::Justification::centredLeft);
-        g.setColour(C::bdr2);
-        g.drawHorizontalLine(infoY + 8, (float)(sa.getX() + 36), (float)(sa.getRight()));
-
+        // Info at bottom
+        int infoY = sy + 20 + 58 + 20 + 116 + 20 + 29 + 20 + 29 + 16;
+        drawSection("정보", infoY);
         struct InfoRow { juce::String label; juce::String value; juce::Colour col; };
         InfoRow infoRows[] = {
-            { "Version",    "v1.0.0",              C::tx2  },
-            { "Protocol",   "TCNet v3.5",           C::tx2  },
-            { "Data TX",    "BC + 유니캐스트",       C::org  },
+            { "Version",    "v1.0.0",        C::tx2 },
+            { "Protocol",   "TCNet v3.5",    C::tx2 },
+            { "Data TX",    "BC + 유니캐스트", C::org },
         };
-        int iry = infoY + 20;
+        int iry = infoY + 18;
         for (auto& ir : infoRows)
         {
             g.setColour(C::tx3);
             g.setFont(juce::FontOptions(10.0f));
             g.drawText(ir.label, sa.getX(), iry, 160, 18, juce::Justification::centredLeft);
             g.setColour(ir.col);
-            g.setFont(juce::FontOptions(10.0f));
             g.drawText(ir.value, sa.getX() + 160, iry, 200, 18, juce::Justification::centredLeft);
-            iry += 22;
+            iry += 20;
         }
 
         // Dual-NIC tip
-        auto tipRect = juce::Rectangle<float>((float)sa.getX(), (float)(iry + 6),
-                                               (float)sa.getWidth(), 36.0f);
-        g.setColour(juce::Colour(0x14ecb210));
-        g.fillRoundedRectangle(tipRect, 6.0f);
-        g.setColour(juce::Colour(0x26ecb210));
-        g.drawRoundedRectangle(tipRect.reduced(0.5f), 6.0f, 1.0f);
-        g.setColour(C::ylw);
-        g.fillEllipse(tipRect.getX() + 8, tipRect.getCentreY() - 3, 6.0f, 6.0f);
-        g.setColour(C::ylw);
-        g.setFont(juce::FontOptions(9.0f));
-        g.drawText("두 NIC: TCNet = 공유기 LAN (192.168.x.x), Pro DJ Link = CDJ 이더넷 (169.254.x.x)",
-            (int)(tipRect.getX() + 22), (int)tipRect.getY(), (int)(tipRect.getWidth() - 24),
-            (int)tipRect.getHeight(), juce::Justification::centredLeft);
+        auto tipRect = juce::Rectangle<float>((float)sa.getX(), (float)(iry + 4),
+                                               (float)sa.getWidth(), 32.0f);
+        if (tipRect.getBottom() < (float)(h - 30))
+        {
+            g.setColour(juce::Colour(0x14ecb210));
+            g.fillRoundedRectangle(tipRect, 6.0f);
+            g.setColour(C::ylw);
+            g.fillEllipse(tipRect.getX() + 8, tipRect.getCentreY() - 3, 6.0f, 6.0f);
+            g.setColour(C::ylw);
+            g.setFont(juce::FontOptions(9.0f));
+            g.drawText("두 NIC: TCNet = 192.168.x.x, Pro DJ Link = 169.254.x.x (CDJ 이더넷)",
+                (int)(tipRect.getX() + 22), (int)tipRect.getY(),
+                (int)(tipRect.getWidth() - 24), (int)tipRect.getHeight(),
+                juce::Justification::centredLeft);
+        }
     }
 
     // ── Bottom bar (26px) ──
@@ -2001,34 +2084,38 @@ void MainComponent::layoutSettings()
     area.removeFromBottom(26);
     area = area.reduced(24, 4);
 
-    int rowH   = 28;
-    int labelW = 170;
-    int ctrlW  = 220;
+    const int rowH   = 26;
+    const int labelW = 180;
+    const int ctrlW  = 200;
+    const int gap    = 3;
 
-    // TCNet section
-    area.removeFromTop(16);  // section header space
+    auto placeRow = [&](juce::Label& lbl, juce::Component& ctrl)
+    {
+        auto row = area.removeFromTop(rowH);
+        lbl.setBounds(row.removeFromLeft(labelW));
+        ctrl.setBounds(row.removeFromLeft(ctrlW));
+        area.removeFromTop(gap);
+    };
 
-    auto row1 = area.removeFromTop(rowH);
-    nodeNameLabel.setBounds(row1.removeFromLeft(labelW));
-    nodeNameEditor.setBounds(row1.removeFromLeft(ctrlW));
-    area.removeFromTop(4);
+    // ── 웨이브폼 설정 ──
+    area.removeFromTop(20);  // section header
+    placeRow(wfCenterLabel,  wfCenterSelector);
+    placeRow(phasorModeLabel, phasorModeSelector);
 
-    auto row2 = area.removeFromTop(rowH);
-    tcnetIfaceLabel.setBounds(row2.removeFromLeft(labelW));
-    tcnetIfaceSelector.setBounds(row2.removeFromLeft(ctrlW));
-    area.removeFromTop(4);
+    // ── TCNet 설정 ──
+    area.removeFromTop(20);
+    placeRow(nodeNameLabel,   nodeNameEditor);
+    placeRow(tcnetIfaceLabel, tcnetIfaceSelector);
+    placeRow(fpsLabel,        fpsSelector);
+    placeRow(tcnetModeLabel,  tcnetModeSelector);
 
-    auto row3 = area.removeFromTop(rowH);
-    fpsLabel.setBounds(row3.removeFromLeft(labelW));
-    fpsSelector.setBounds(row3.removeFromLeft(ctrlW));
-    area.removeFromTop(4);
+    // ── Pro DJ Link 설정 ──
+    area.removeFromTop(20);
+    placeRow(pdjlIfaceLabel,  pdjlIfaceSelector);
 
-    // Pro DJ Link section
-    area.removeFromTop(24);  // section header space
-
-    auto row4 = area.removeFromTop(rowH);
-    pdjlIfaceLabel.setBounds(row4.removeFromLeft(labelW));
-    pdjlIfaceSelector.setBounds(row4.removeFromLeft(ctrlW));
+    // ── 오디오 출력 ──
+    area.removeFromTop(20);
+    placeRow(audioOutLabel,   audioOutSelector);
 }
 
 void MainComponent::timerCallback()
@@ -2059,7 +2146,12 @@ void MainComponent::timerCallback()
 
     if (activeTab == TAB_LINK)
         for (int i = 0; i < visibleDecks; i++)
-            if (deckPanels[(size_t)i]) deckPanels[(size_t)i]->updateDisplay();
+            if (deckPanels[(size_t)i])
+            {
+                deckPanels[(size_t)i]->setWfCenterLeft(wfCenterLeft);
+                deckPanels[(size_t)i]->setPhasorScroll(phasorScroll);
+                deckPanels[(size_t)i]->updateDisplay();
+            }
 
     if (activeTab == TAB_PDJL || activeTab == TAB_TCNET)
         repaint();
