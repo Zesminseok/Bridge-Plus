@@ -853,7 +853,6 @@ function drawOverview(slot,prog){
   if(!wfOv)return;
   const cv=document.getElementById('wov'+slot);if(!cv||!cv.width)return;
   const W=cv.width,H=cv.height,ctx=d.wovCtx;
-  const pos=Math.max(0,Math.min(1,prog||0));
   const pts=wfOv.length,mid=H/2;
   // Gradient overview — ImageData pixel control
   const ovImg=ctx.createImageData(W,H);
@@ -939,7 +938,7 @@ function drawZoomWaveform(slot,prog){
     const modeMap={'rgb':0,'3band':1,'blue':2};
     const mode=modeMap[cfg.wfColor]??0;
     const cX=cfg.wfCenter==='left'?0.25:0.5;
-    d.wgl.draw(pos*d.dur, d.zoomMs||8000, wfDurMs, cX, mode);
+    d.wgl.draw(pos*d.dur, d.zoomMs||8000, cX, mode);
     drawZoomOverlay(slot,prog);
     return;
   }
