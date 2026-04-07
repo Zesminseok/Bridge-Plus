@@ -214,14 +214,18 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 /* Stereo VU — two narrow bars side-by-side */
 .dvm-st{display:flex;gap:1px;width:7px;flex-shrink:0;height:100%}
 .dvm-st .dvm{flex:1;width:3px;border-radius:0}
-.dktn{padding:0 0 3px;display:flex;align-items:baseline;gap:4px;min-width:0;overflow:hidden}
+.dktn{padding:0 0 2px;min-width:0;overflow:hidden}
+.dktn-row{display:flex;align-items:baseline;gap:6px;min-width:0;overflow:hidden}
 .dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 auto;min-width:0;position:relative;text-overflow:ellipsis}
 .dktn-t.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
 @keyframes marquee-scroll{0%,10%{transform:translateX(0)}45%,55%{transform:translateX(var(--scroll-dist,-200px))}90%,100%{transform:translateX(0)}}
-.dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;max-width:160px;min-width:0}
+.dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dk[data-st="play"] .dktn-time,.dk[data-st="hwplay"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
-.dktn-info{padding:0 0 3px;gap:8px;justify-content:flex-start;flex-wrap:nowrap}
+.dktn-time-row{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;padding:0 0 1px;white-space:nowrap}
+.dktn-bpm-row{font:500 10px var(--mn);color:var(--tx3);padding:0 0 3px;white-space:nowrap}
+.dk[data-st="play"] .dktn-time-row,.dk[data-st="hwplay"] .dktn-time-row,.dk[data-st="cue"] .dktn-time-row{color:var(--tx2)}
+.dk[data-st="play"] .dktn-bpm-row,.dk[data-st="hwplay"] .dktn-bpm-row,.dk[data-st="cue"] .dktn-bpm-row{color:var(--tx2)}
 .dbk-hd{font:600 11px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis}
 .dk[data-st="play"] .dbk-hd,.dk[data-st="hwplay"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
 .devbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg2);border:none;border-radius:10px;margin-bottom:10px;min-height:44px;flex-wrap:wrap}
@@ -1274,8 +1278,11 @@ function deckHTML(slot){
           <div class="dhd-l"><span class="did" style="color:var(--pur)">${label}</span><span class="dbadge bp">HW</span></div>
           <div class="dhd-r"><span class="dtc" style="color:var(--tx4)">--:--:--:--</span></div>
         </div>
-        <div class="dktn"><span class="dktn-t" style="color:var(--tx4)">—</span></div>
-        <div class="dktn dktn-info"><span class="dbk-hd" style="color:var(--tx4)">— BPM</span><span class="dktn-time">--:--.--- / --:--.---</span></div>
+        <div class="dktn">
+          <div class="dktn-row"><span class="dktn-t" style="color:var(--tx4)">—</span></div>
+          <div class="dktn-time-row" style="color:var(--tx4)">--:--.--- / --:--.---</div>
+          <div class="dktn-bpm-row" style="color:var(--tx4)">— BPM</div>
+        </div>
         <div class="dtbody">
           <div class="dkctrl">
             <div class="dkart"><span class="noart-icon">♪</span></div>
@@ -1313,8 +1320,12 @@ function deckHTML(slot){
           </div>
         </div>
       </div>
-      <div class="dktn"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span><span class="dktn-a" id="dta${slot}">${d.ar?` · ${d.ar}`:''}</span></div>
-      <div class="dktn dktn-info"><span class="dbk-hd" id="dbk${slot}">—</span><span class="dktn-time" id="dtime${slot}">0:00.00 / --:--.---</span></div>
+      <div class="dktn">
+        <div class="dktn-row"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span></div>
+        <div class="dktn-row"><span class="dktn-a" id="dta${slot}">${d.ar?'· '+d.ar:''}</span></div>
+        <div class="dktn-time-row" id="dtime${slot}">0:00.00 / --:--.---</div>
+        <div class="dktn-bpm-row" id="dbk${slot}">—</div>
+      </div>
       <div class="dtbody">
         <div class="dkctrl">
           <div class="dkart" id="dart${slot}" data-a="eject" data-i="${slot}">${artSrc?`<img src="${artSrc}" alt="">`:'<span class="noart-icon">♪</span>'}</div>
@@ -2060,7 +2071,7 @@ function tick(){
         });
       }
     }
-    const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar?' · '+d.ar:'';
+    const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar?'· '+d.ar:'';
     // Waveform key + BPM overlay
     const wfkEl=document.getElementById('wfkey'+slot);
     if(wfkEl)wfkEl.textContent=d.key||'';
