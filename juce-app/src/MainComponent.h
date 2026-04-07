@@ -202,12 +202,16 @@ private:
     // Settings
     juce::Label       nodeNameLabel, tcnetIfaceLabel, pdjlIfaceLabel, fpsLabel;
     juce::Label       tcnetModeLabel, wfCenterLabel, phasorModeLabel, audioOutLabel;
+    juce::Label       tcFpsLabel, ltcALabel, ltcBLabel, ltcMLabel, artnetIpLabel, artnetPortLabel;
     juce::TextEditor  nodeNameEditor;
     juce::ComboBox    tcnetIfaceSelector, pdjlIfaceSelector, fpsSelector;
     juce::ComboBox    tcnetModeSelector;   // auto/server/client
     juce::ComboBox    wfCenterSelector;    // center/left
     juce::ComboBox    phasorModeSelector;  // blink/scroll
     juce::ComboBox    audioOutSelector;    // system audio output devices
+    juce::ComboBox    tcFpsSelector;       // LTC frame rate
+    juce::ComboBox    ltcASelector, ltcBSelector, ltcMSelector;  // LTC per-layer devices
+    juce::TextEditor  artnetIpEditor, artnetPortEditor;
 
     // Waveform / phasor settings (applied at runtime)
     bool wfCenterLeft = false;     // false = center (default), true = left 25%

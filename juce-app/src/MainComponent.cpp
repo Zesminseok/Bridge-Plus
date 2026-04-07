@@ -837,51 +837,63 @@ void DeckPanel::resized()
     // Remove (✕) button: top-right corner
     removeBtn.setBounds(getWidth() - 22, 6, 16, 16);
 
+    // Compact mode when deck panel is short (4+ decks)
+    bool compact = (getHeight() < 220);
+
     auto area = getLocalBounds().reduced(13);
     area.removeFromTop(32);  // header (painted)
     area.removeFromBottom(20); // bottom label + phasor area
 
     // Track info labels
-    titleLabel.setBounds(area.removeFromTop(16));
-    artistLabel.setBounds(area.removeFromTop(13));
-    area.removeFromTop(4);
+    titleLabel.setBounds(area.removeFromTop(compact ? 13 : 16));
+    if (!compact) artistLabel.setBounds(area.removeFromTop(13));
+    else          artistLabel.setBounds({});  // hidden in compact
+    area.removeFromTop(compact ? 2 : 4);
 
     // Reserve bottom: LOAD/EJECT row + gap
-    auto bottomRow = area.removeFromBottom(26);
-    area.removeFromBottom(5);
+    int loadBtnH = compact ? 20 : 26;
+    auto bottomRow = area.removeFromBottom(loadBtnH);
+    area.removeFromBottom(compact ? 3 : 5);
 
     // Reserve phasor
-    auto phasorRow = area.removeFromBottom(6);
-    area.removeFromBottom(4);
-
+    int phasorH = compact ? 4 : 6;
+    auto phasorRow = area.removeFromBottom(phasorH);
+    area.removeFromBottom(compact ? 2 : 4);
     phasorBounds = phasorRow;
 
-    // Content body: left column (70px) | gap (6px) | right column
-    auto leftCol = area.removeFromLeft(70);
-    area.removeFromLeft(6);
-    auto rightCol = area;  // waveforms
+    // Art width (compact: 54px, full: 70px)
+    int artW = compact ? 54 : 70;
+    int artH = compact ? 54 : 70;
 
-    // Left column: art box (70x70) + gap + [CUE][PLAY]
-    artBounds = leftCol.removeFromTop(70);
-    leftCol.removeFromTop(4);
-    auto btnRow = leftCol.removeFromTop(36);
+    // Content body: left column | gap | right column
+    auto leftCol = area.removeFromLeft(artW);
+    area.removeFromLeft(compact ? 4 : 6);
+    auto rightCol = area;
+
+    // Left column: art box + gap + [CUE][PLAY]
+    artBounds = leftCol.removeFromTop(artH);
+    leftCol.removeFromTop(compact ? 2 : 4);
+    int btnH = compact ? 24 : 36;
+    auto btnRow = leftCol.removeFromTop(btnH);
     int halfBW = (btnRow.getWidth() - 4) / 2;
     cueBtn.setBounds(btnRow.removeFromLeft(halfBW));
     btnRow.removeFromLeft(4);
     playBtn.setBounds(btnRow);
 
     // Right column: overview wf | gap | zoom wf | gap | zoom buttons
-    ovWfBounds = rightCol.removeFromTop(18);
-    rightCol.removeFromTop(3);
-    auto zoomBtnRow = rightCol.removeFromBottom(16);
-    rightCol.removeFromBottom(2);
-    zoomWfBounds = rightCol;  // remaining space
+    int ovH = compact ? 12 : 18;
+    ovWfBounds = rightCol.removeFromTop(ovH);
+    rightCol.removeFromTop(compact ? 2 : 3);
+    auto zoomBtnRow = rightCol.removeFromBottom(compact ? 12 : 16);
+    rightCol.removeFromBottom(compact ? 1 : 2);
+    zoomWfBounds = rightCol;
 
-    // Zoom buttons (RST | - | +) at bottom-right of right column
-    int zbW = 22, zbGap = 2;
-    zoomRstBtn.setBounds(zoomBtnRow.getRight() - zbW,      zoomBtnRow.getY(), zbW, 14);
-    zoomOutBtn.setBounds(zoomBtnRow.getRight() - zbW*2 - zbGap,   zoomBtnRow.getY(), zbW, 14);
-    zoomInBtn.setBounds(zoomBtnRow.getRight() - zbW*3 - zbGap*2,  zoomBtnRow.getY(), zbW, 14);
+    // Zoom buttons
+    int zbW = compact ? 18 : 22, zbGap = 2;
+    int zbH = compact ? 10 : 14;
+    zoomRstBtn.setBounds(zoomBtnRow.getRight() - zbW,               zoomBtnRow.getY(), zbW, zbH);
+    zoomOutBtn.setBounds(zoomBtnRow.getRight() - zbW*2 - zbGap,     zoomBtnRow.getY(), zbW, zbH);
+    zoomInBtn.setBounds( zoomBtnRow.getRight() - zbW*3 - zbGap*2,   zoomBtnRow.getY(), zbW, zbH);
 
     // Bottom row: LOAD | EJECT
     int bw2 = (bottomRow.getWidth() - 4) / 2;
@@ -1083,6 +1095,12 @@ MainComponent::MainComponent()
             setSettingsVis(wfCenterLabel);    setSettingsVis(wfCenterSelector);
             setSettingsVis(phasorModeLabel);  setSettingsVis(phasorModeSelector);
             setSettingsVis(audioOutLabel);    setSettingsVis(audioOutSelector);
+            setSettingsVis(tcFpsLabel);       setSettingsVis(tcFpsSelector);
+            setSettingsVis(ltcALabel);        setSettingsVis(ltcASelector);
+            setSettingsVis(ltcBLabel);        setSettingsVis(ltcBSelector);
+            setSettingsVis(ltcMLabel);        setSettingsVis(ltcMSelector);
+            setSettingsVis(artnetIpLabel);    setSettingsVis(artnetIpEditor);
+            setSettingsVis(artnetPortLabel);  setSettingsVis(artnetPortEditor);
 
             // Populate audio devices list lazily
             if (showSettings && audioOutSelector.getNumItems() <= 1)
@@ -1092,7 +1110,12 @@ MainComponent::MainComponent()
                 {
                     auto devNames = devType->getDeviceNames(false);
                     for (int di = 0; di < devNames.size(); di++)
+                    {
                         audioOutSelector.addItem(devNames[di], di + 2);
+                        ltcASelector.addItem(devNames[di], di + 2);
+                        ltcBSelector.addItem(devNames[di], di + 2);
+                        ltcMSelector.addItem(devNames[di], di + 2);
+                    }
                 }
             }
 
@@ -1302,6 +1325,56 @@ MainComponent::MainComponent()
     // Device list populated lazily when settings tab is shown
     audioOutSelector.setSelectedId(1);
     audioOutSelector.setVisible(false);
+
+    // ── SMPTE 타임코드 출력 ──
+    setupSettingsLabel(tcFpsLabel,      "프레임레이트");
+    setupSettingsLabel(ltcALabel,       "LTC — Layer A 장치");
+    setupSettingsLabel(ltcBLabel,       "LTC — Layer B 장치");
+    setupSettingsLabel(ltcMLabel,       "LTC — Layer M 장치");
+    setupSettingsLabel(artnetIpLabel,   "ArtNet 대상 IP");
+    setupSettingsLabel(artnetPortLabel, "ArtNet 포트");
+
+    addAndMakeVisible(tcFpsSelector);
+    tcFpsSelector.setColour(juce::ComboBox::backgroundColourId, C::bg3);
+    tcFpsSelector.setColour(juce::ComboBox::textColourId, C::tx);
+    tcFpsSelector.setColour(juce::ComboBox::outlineColourId, C::bdr2);
+    tcFpsSelector.addItem("24 fps", 1);
+    tcFpsSelector.addItem("25 fps", 2);
+    tcFpsSelector.addItem("29.97 fps", 3);
+    tcFpsSelector.addItem("30 fps", 4);
+    tcFpsSelector.setSelectedId(2);
+    tcFpsSelector.setVisible(false);
+
+    auto setupLtcSelector = [this](juce::ComboBox& cb)
+    {
+        addAndMakeVisible(cb);
+        cb.setColour(juce::ComboBox::backgroundColourId, C::bg3);
+        cb.setColour(juce::ComboBox::textColourId, C::tx);
+        cb.setColour(juce::ComboBox::outlineColourId, C::bdr2);
+        cb.addItem("시스템 기본", 1);
+        cb.setSelectedId(1);
+        cb.setVisible(false);
+    };
+    setupLtcSelector(ltcASelector);
+    setupLtcSelector(ltcBSelector);
+    setupLtcSelector(ltcMSelector);
+
+    addAndMakeVisible(artnetIpEditor);
+    artnetIpEditor.setColour(juce::TextEditor::backgroundColourId, C::bg3);
+    artnetIpEditor.setColour(juce::TextEditor::textColourId, C::tx);
+    artnetIpEditor.setColour(juce::TextEditor::outlineColourId, C::bdr2);
+    artnetIpEditor.setText("255.255.255.255");
+    artnetIpEditor.setVisible(false);
+
+    addAndMakeVisible(artnetPortEditor);
+    artnetPortEditor.setColour(juce::TextEditor::backgroundColourId, C::bg3);
+    artnetPortEditor.setColour(juce::TextEditor::textColourId, C::tx);
+    artnetPortEditor.setColour(juce::TextEditor::outlineColourId, C::bdr2);
+    artnetPortEditor.setText("6454");
+    artnetPortEditor.setInputRestrictions(5, "0123456789");
+    artnetPortEditor.setVisible(false);
+
+    // Populate LTC device list lazily (same as audio out)
 
     // ── Bottom Bar ──
     addAndMakeVisible(packetLabel);
@@ -1969,13 +2042,20 @@ void MainComponent::paint(juce::Graphics& g)
             g.drawHorizontalLine(y + 7, (float)(sa.getX() + (int)labelW2 + 6), (float)sa.getRight());
         };
 
-        drawSection("웨이브폼 설정", sy);           // 2 rows = 2*29 = 58
-        drawSection("TCNet 설정", sy + 20 + 58);    // 4 rows = 4*29 = 116
-        drawSection("Pro DJ Link", sy + 20 + 58 + 20 + 116);  // 1 row
-        drawSection("오디오 출력",  sy + 20 + 58 + 20 + 116 + 20 + 29); // 1 row
+        // Section header offsets (each row = 29px: rowH=26 + gap=3)
+        // Waveform: 2 rows = 58px
+        // TCNet: 4 rows = 116px
+        // Pro DJ Link: 1 row = 29px
+        // 오디오: 1 row = 29px
+        // SMPTE: 6 rows = 174px
+        drawSection("웨이브폼 설정", sy);
+        drawSection("TCNet 설정",     sy + 20 + 58);
+        drawSection("Pro DJ Link",    sy + 20 + 58 + 20 + 116);
+        drawSection("오디오 출력",    sy + 20 + 58 + 20 + 116 + 20 + 29);
+        drawSection("SMPTE 타임코드 출력", sy + 20 + 58 + 20 + 116 + 20 + 29 + 20 + 29);
 
         // Info at bottom
-        int infoY = sy + 20 + 58 + 20 + 116 + 20 + 29 + 20 + 29 + 16;
+        int infoY = sy + 20 + 58 + 20 + 116 + 20 + 29 + 20 + 29 + 20 + 174 + 16;
         drawSection("정보", infoY);
         struct InfoRow { juce::String label; juce::String value; juce::Colour col; };
         InfoRow infoRows[] = {
@@ -2181,6 +2261,15 @@ void MainComponent::layoutSettings()
     // ── 오디오 출력 ──
     area.removeFromTop(20);
     placeRow(audioOutLabel,   audioOutSelector);
+
+    // ── SMPTE 타임코드 출력 ──
+    area.removeFromTop(20);
+    placeRow(tcFpsLabel,       tcFpsSelector);
+    placeRow(ltcALabel,        ltcASelector);
+    placeRow(ltcBLabel,        ltcBSelector);
+    placeRow(ltcMLabel,        ltcMSelector);
+    placeRow(artnetIpLabel,    artnetIpEditor);
+    placeRow(artnetPortLabel,  artnetPortEditor);
 }
 
 void MainComponent::timerCallback()
