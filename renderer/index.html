@@ -2603,6 +2603,12 @@ async function doStart(){
     if(glMode==='hw')for(let i=0;i<4;i++) window.bridge.setHWMode(i,true);
   }
   run=true;t0=Date.now();pk=0;
+  // Re-send any pending virtual deck artwork to Arena (may have loaded before bridge started)
+  if(E&&window.bridge?.setVirtualArt){
+    Object.values(DECKS).forEach(d=>{
+      if(d.type!=='hw'&&d._artRawB64){window.bridge.setVirtualArt(d.slot,d._artRawB64);}
+    });
+  }
   const hd=document.getElementById('hDot'),hs=document.getElementById('hSt'),mb=document.getElementById('mainBtn');
   hd.style.background='var(--grn)';hd.classList.add('dpu');
   hs.textContent='ONLINE';hs.style.color='var(--grn)';
