@@ -291,6 +291,15 @@ DeckPanel::DeckPanel(int num, BridgeEngine& eng)
         if (onRemove) onRemove();
     };
 
+    // ── EXPAND button (⤢ left of ✕) ──
+    addAndMakeVisible(expandBtn);
+    expandBtn.setColour(juce::TextButton::buttonColourId,  juce::Colours::transparentBlack);
+    expandBtn.setColour(juce::TextButton::textColourOffId, C::tx4);
+    expandBtn.onClick = [this]
+    {
+        if (onExpand) onExpand();
+    };
+
     // ── Zoom buttons ──
     auto setupZoomBtn = [this](juce::TextButton& btn, const char* text)
     {
@@ -848,8 +857,9 @@ void DeckPanel::paint(juce::Graphics& g)
 
 void DeckPanel::resized()
 {
-    // Remove (✕) button: top-right corner
+    // Expand (⤢) and Remove (✕) buttons: top-right corner
     removeBtn.setBounds(getWidth() - 22, 6, 16, 16);
+    expandBtn.setBounds(getWidth() - 40, 6, 16, 16);
 
     // Compact mode when deck panel is short (4+ decks)
     bool compact = (getHeight() < 220);
@@ -1447,6 +1457,7 @@ void MainComponent::removeDeck(int slot)
     }
     deckPanels[(size_t)(visibleDecks - 1)].reset();
     visibleDecks--;
+    if (expandedDeck >= visibleDecks) expandedDeck = -1;
     addDeckBtn.setEnabled(true);
     layoutDecks();
     repaint();
@@ -1460,6 +1471,12 @@ void MainComponent::addDeck()
     {
         deckPanels[(size_t)idx] = std::make_unique<DeckPanel>(idx, engine);
         deckPanels[(size_t)idx]->onRemove = [this, idx] { removeDeck(idx); };
+        deckPanels[(size_t)idx]->onExpand = [this, idx]
+        {
+            expandedDeck = (expandedDeck == idx) ? -1 : idx;
+            layoutDecks();
+            repaint();
+        };
         addAndMakeVisible(deckPanels[(size_t)idx].get());
     }
     else
@@ -2261,6 +2278,22 @@ void MainComponent::layoutDecks()
     area.removeFromTop(260);  // header(52)+tabs(36)+statusbar(24)+outputlayers(96)+modebar(32)+sectionlabel(20)
     area.removeFromBottom(26);
     area = area.reduced(8, 4);
+
+    // If one deck is expanded, give it full width on its own row
+    if (expandedDeck >= 0 && expandedDeck < visibleDecks && deckPanels[(size_t)expandedDeck])
+    {
+        // Expanded deck: full width, full height
+        deckPanels[(size_t)expandedDeck]->setBounds(area);
+
+        // Other decks: hide or lay out below (no room, just stack in zero-height to hide)
+        for (int i = 0; i < visibleDecks; i++)
+        {
+            if (i == expandedDeck || !deckPanels[(size_t)i]) continue;
+            // Place off-screen (or zero-size)
+            deckPanels[(size_t)i]->setBounds(-10000, -10000, 0, 0);
+        }
+        return;
+    }
 
     if (visibleDecks == 1)
     {

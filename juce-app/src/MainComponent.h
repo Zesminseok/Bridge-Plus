@@ -88,7 +88,8 @@ public:
     void fileDragEnter(const juce::StringArray&, int, int) override { dragOver = true;  repaint(); }
     void fileDragExit(const juce::StringArray&) override           { dragOver = false; repaint(); }
 
-    std::function<void()> onRemove;  // set by MainComponent
+    std::function<void()> onRemove;   // set by MainComponent
+    std::function<void()> onExpand;   // set by MainComponent
 
 private:
     int deckNum;
@@ -102,6 +103,7 @@ private:
     juce::TextButton loadBtn   { "LOAD" };
     juce::TextButton ejectBtn  { "EJECT" };
     juce::TextButton removeBtn { juce::CharPointer_UTF8("\xe2\x9c\x95") };  // ✕
+    juce::TextButton expandBtn { juce::CharPointer_UTF8("\xe2\xa4\xa2") };  // ⤢
     juce::TextButton zoomInBtn { "+" };
     juce::TextButton zoomOutBtn{ "\xe2\x88\x92" };  // −
     juce::TextButton zoomRstBtn{ "RST" };
@@ -181,6 +183,7 @@ private:
     // Decks (max 6, matching Electron UI)
     std::array<std::unique_ptr<DeckPanel>, 6> deckPanels;
     int visibleDecks = 0;
+    int expandedDeck = -1;  // -1=none, 0-5=expanded slot
     static constexpr int kMaxDecks = 6;
 
     // Output Layers (A=0, B=1, M=2)
