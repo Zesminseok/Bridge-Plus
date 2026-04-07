@@ -80,8 +80,8 @@ class WaveformGL {
     this._wfTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
@@ -305,34 +305,34 @@ uniform float u_centerX;
 uniform int   u_mode;
 out vec4 fragColor;
 
+// mode=0: rekordbox stacked (default 'rgb' config)
+// mode=1: '3band' config → stacked bands (same as 0, renamed for clarity)
+// mode=2: blue mono
 vec3 wfColor(float bass, float midf, float treble, int mode, float yFrac) {
-  if (mode == 1) {
-    // Pure 3-band additive
-    float B = min(1.0, bass * 2.5);
-    float M = min(1.0, midf * 3.5);
-    float T = min(1.0, treble * 6.0);
-    return vec3(B, M, T) * (1.0 - yFrac * 0.3);
-  } else if (mode == 2) {
+  if (mode == 2) {
     // Blue mono
     float e = min(1.0, sqrt(bass*bass + midf*midf + treble*treble) * 3.0);
-    return vec3(0.05, 0.35, 1.0) * pow(e, 0.6) * (1.0 - yFrac * 0.3);
+    return vec3(0.05, 0.35, 1.0) * pow(e, 0.6) * (0.95 - yFrac * 0.25);
   } else {
-    // Rekordbox stacked bands: zones from center outward = treble → mid → bass
-    float B = min(1.0, bass * 2.8);
-    float M = min(1.0, midf * 3.2);
-    float T = min(1.0, treble * 6.0);
-    float total = B + M + T;
-    if (total < 0.015) return vec3(0.0);
-    // Band boundary positions (0=center edge, 1=bar edge)
-    float tEnd = T / total;          // treble zone: 0 → tEnd
-    float mEnd = tEnd + M / total;   // mid zone: tEnd → mEnd
-    // bass zone: mEnd → 1.0
+    // Rekordbox stacked bands (mode 0 and 1): treble=inner/cyan → mid=green → bass=outer/red
+    // Use raw values normalized — avoid clamping to 1.0 so ratios are meaningful
+    float B = bass * 2.0;
+    float M = midf * 2.5;
+    float T = treble * 5.0;
+    float total = max(B + M + T, 0.001);
+    // Amplitude for brightness
+    float amp = min(1.0, total * 0.55);
+    // Band boundary positions from center outward (0=center, 1=edge)
+    float tEnd = clamp(T / total, 0.0, 1.0);
+    float mEnd = clamp(tEnd + M / total, 0.0, 1.0);
     vec3 col;
     if      (yFrac < tEnd) col = vec3(0.0,  0.72, 1.0);   // treble = cyan
-    else if (yFrac < mEnd) col = vec3(0.08, 0.95, 0.22);  // mid    = green
+    else if (yFrac < mEnd) col = vec3(0.08, 0.95, 0.22);  // mid    = bright green
     else                   col = vec3(1.0,  0.22, 0.04);   // bass   = orange-red
-    // Subtle brightness: very slight edge fade, no heavy gradient
-    return col * (0.92 - yFrac * 0.10);
+    // FFT path feel: solid fill + bright top edge
+    float edge = max(0.0, (yFrac - 0.82) / 0.18);   // ramp up in top 18% of bar
+    float brightness = mix(0.78, 1.0, edge);          // fill=0.78, edge=1.0 (sharp top)
+    return col * brightness * amp;
   }
 }
 
@@ -366,22 +366,20 @@ uniform int   u_mode;
 out vec4 fragColor;
 
 vec3 wfColor(float bass, float midf, float treble, int mode, float yFrac) {
-  if (mode == 1) {
-    float B = min(1.0, bass * 2.5); float M = min(1.0, midf * 3.5); float T = min(1.0, treble * 6.0);
-    return vec3(B, M, T) * (1.0 - yFrac * 0.3);
-  } else if (mode == 2) {
+  if (mode == 2) {
     float e = min(1.0, sqrt(bass*bass+midf*midf+treble*treble)*3.0);
-    return vec3(0.05,0.35,1.0)*pow(e,0.6)*(1.0-yFrac*0.3);
+    return vec3(0.05,0.35,1.0)*pow(e,0.6)*(0.95-yFrac*0.25);
   } else {
-    float B = min(1.0, bass * 2.8); float M = min(1.0, midf * 3.2); float T = min(1.0, treble * 6.0);
-    float total = B + M + T;
-    if (total < 0.015) return vec3(0.0);
-    float tEnd = T/total; float mEnd = tEnd + M/total;
+    float B = bass * 2.0; float M = midf * 2.5; float T = treble * 5.0;
+    float total = max(B + M + T, 0.001);
+    float amp = min(1.0, total * 0.55);
+    float tEnd = clamp(T/total, 0.0, 1.0); float mEnd = clamp(tEnd+M/total, 0.0, 1.0);
     vec3 col;
     if      (yFrac < tEnd) col = vec3(0.0,  0.72, 1.0);
     else if (yFrac < mEnd) col = vec3(0.08, 0.95, 0.22);
     else                   col = vec3(1.0,  0.22, 0.04);
-    return col * (0.92 - yFrac * 0.10);
+    float edge = max(0.0, (yFrac - 0.82) / 0.18);
+    return col * mix(0.78, 1.0, edge) * amp;
   }
 }
 

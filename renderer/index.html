@@ -1430,7 +1430,7 @@ function bindDeck(slot){
   // Physics: drag speed → playbackRate, stationary platter → silence, release → accelerate to 1.0
   const wzDiv=document.getElementById('dwz'+slot);
   if(wzDiv){
-    let _drag=null, _vel=0, _raf=null, _lastMoveT=0;
+    let _drag=null, _vel=0, _raf=null, _lastMoveT=0, _lastSeek=0;
     // Vinyl motor loop — runs at 60fps during scratch
     // Simulates platter inertia: velocity decays when mouse stops, accelerates to 1.0 after release
     const _vinylTick=()=>{
@@ -1467,10 +1467,10 @@ function bindDeck(slot){
       if(e.target.closest('.dzb'))return;
       e.preventDefault();
       const d2=DECKS[slot];if(!d2||!d2.ld)return;
-      DECKS[slot].scratch=true; _vel=0; _lastMoveT=performance.now();
+      DECKS[slot].scratch=true; _vel=0; _lastMoveT=performance.now(); _lastSeek=0;
       _drag={startX:e.clientX,startPos:d2.pos,lastX:e.clientX,lastT:performance.now()};
       wzDiv.setPointerCapture(e.pointerId);
-      if(!_raf)_raf=requestAnimationFrame(_vinylTick);
+      // RAF starts only on first movement — clicking waveform must NOT pause audio
     });
     wzDiv.addEventListener('pointermove',e=>{
       if(!_drag)return;
@@ -1478,7 +1478,9 @@ function bindDeck(slot){
       const rc=wzDiv.getBoundingClientRect(),msPerPx=(DECKS[slot]?.zoomMs||8000)/rc.width;
       const newMs=Math.max(0,Math.min(d2.dur,_drag.startPos-(e.clientX-_drag.startX)*msPerPx));
       d2.pos=newMs;
-      if(d2.au)d2.au.currentTime=newMs/1000;
+      // Throttle seeks to ≤1 per 80ms — prevents audio buffer tearing at 60fps
+      const _now=performance.now();
+      if(d2.au&&_now-_lastSeek>80){d2.au.currentTime=newMs/1000;_lastSeek=_now;}
       const now=performance.now(),dt=Math.max(1,now-_drag.lastT),dx=e.clientX-_drag.lastX;
       _drag.lastX=e.clientX;_drag.lastT=now;
       // Target velocity = |drag px/ms × ms_track/px| = playbackRate (dimensionless)
@@ -1493,7 +1495,7 @@ function bindDeck(slot){
       if(d2?.au){
         // Start spin-up from current velocity toward 1.0
         if(d2.pl){if(!_raf)_raf=requestAnimationFrame(_vinylTick);}
-        else{d2.au.playbackRate=1.0;d2.au.currentTime=(d2.pos||0)/1000;}
+        else{d2.au.pause();d2.au.playbackRate=1.0;d2.au.currentTime=(d2.pos||0)/1000;}
       }
     });
     wzDiv.addEventListener('pointercancel',()=>{
