@@ -316,13 +316,14 @@ vec3 wfColor(float bass, float midf, float treble, int mode) {
     float br = pow(e, 0.6);
     return vec3(br*0.05, br*0.35, br*1.0);
   } else {
-    // CDJ-style: bass=orange, mid=green, treble=blue-white, transients=warm white
-    float B = min(1.0, bass * 2.5);
-    float M = min(1.0, midf * 3.0);
-    float T = min(1.0, treble * 5.5);
-    float r = B*1.0  + M*0.30 + T*0.25;
-    float g = B*0.25 + M*1.0  + T*0.45;
-    float b = B*0.0  + M*0.15 + T*1.0;
+    // beat-link-trigger style: bass=red, mid=blue, treble=green
+    float B = min(1.0, bass * 2.5);   // bass → R
+    float M = min(1.0, midf * 3.0);   // mid  → B
+    float T = min(1.0, treble * 5.5); // treble → G
+    // Combined: high-energy transients → R+G+B = white
+    float r = B*1.0  + T*0.15 + M*0.05;
+    float g = T*1.0  + B*0.15 + M*0.1;
+    float b = M*1.0  + T*0.3  + B*0.05;
     return clamp(vec3(r, g, b), vec3(0.0), vec3(1.0));
   }
 }
@@ -375,9 +376,9 @@ vec3 wfColor(float bass, float midf, float treble, int mode) {
     float B = min(1.0, bass * 2.5);
     float M = min(1.0, midf * 3.0);
     float T = min(1.0, treble * 5.5);
-    float r = B*1.0  + M*0.30 + T*0.25;
-    float g = B*0.25 + M*1.0  + T*0.45;
-    float b = B*0.0  + M*0.15 + T*1.0;
+    float r = B*1.0  + T*0.15 + M*0.05;
+    float g = T*1.0  + B*0.15 + M*0.1;
+    float b = M*1.0  + T*0.3  + B*0.05;
     return clamp(vec3(r,g,b), vec3(0.0), vec3(1.0));
   }
 }

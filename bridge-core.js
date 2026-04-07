@@ -1599,7 +1599,8 @@ class BridgeCore {
 
     // 2) Actual protocol server on REAL_PORT
     this._dbSrvProto = net2.createServer(sock=>{
-      sock.on('error',()=>{});
+      sock.on('error',e=>console.warn('[VDBSRV] sock error:',e.message));
+      console.log(`[VDBSRV] Arena connected to proto port ${REAL_PORT} from ${sock.remoteAddress}`);
       let phase = 'greeting';  // greeting → setup → ready
       let buf = Buffer.alloc(0);
 
@@ -1707,9 +1708,11 @@ class BridgeCore {
   }
 
   _dbBuildArtResponse(txId, jpegBuf){
-    // Response: magic + txId + type(0x4003) + argc(1) + tags + binary(jpeg)
-    const artArg = { tag: 0x03, data: this._dbBinary(jpegBuf) };
-    return this._dbBuildMsg(txId, 0x4003, [artArg]);
+    // Real CDJ format: args[0] = artwork size (UInt32), args[1] = binary JPEG
+    // beat-link analysis: type 0x4003, argc=2, argList=[0x06, 0x03]
+    const sizeArg = this._dbArg4(jpegBuf.length);          // tag 0x06 = number
+    const artArg  = { tag: 0x03, data: this._dbBinary(jpegBuf) };  // tag 0x03 = binary
+    return this._dbBuildMsg(txId, 0x4003, [sizeArg, artArg]);
   }
 
   _dbBuildMetaResponse(txId){
