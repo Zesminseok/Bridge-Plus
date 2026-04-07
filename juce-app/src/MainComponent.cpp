@@ -660,6 +660,26 @@ void DeckPanel::paint(juce::Graphics& g)
         }
     }
 
+    // ── Bar.beat overlay on playhead (Electron style) ──
+    if (!isHW && deck.isLoaded() && deck.getBpm() > 0 && !zoomWfDrawBounds.isEmpty())
+    {
+        float msPerBeat2 = 60000.0f / deck.getBpm();
+        int beatInBar2   = (beatPhase / 64) + 1;  // 1~4
+        int totalBeats2  = (msPerBeat2 > 0) ? (int)(posMs / msPerBeat2) : 0;
+        int barNum2      = totalBeats2 / 4 + 1;
+        juce::String barBeat = juce::String(barNum2) + "." + juce::String(beatInBar2);
+
+        int cx2b = zoomWfDrawBounds.getX() + (int)(headFrac * (float)zoomWfDrawBounds.getWidth());
+        g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+        float tbW = (float)(barBeat.length() * 7 + 8);
+        auto tbRect = juce::Rectangle<float>((float)cx2b - tbW * 0.5f,
+            (float)zoomWfDrawBounds.getY() + 3.0f, tbW, 15.0f);
+        g.setColour(juce::Colour(0xc5000000));
+        g.fillRoundedRectangle(tbRect, 2.0f);
+        g.setColour(juce::Colour(0xff90d4ff));  // #90d4ff — Electron color
+        g.drawText(barBeat, tbRect, juce::Justification::centred);
+    }
+
     // Key badge (top-right of zoom waveform, shifted left to avoid VU meter)
     if (!isHW && !deck.getKey().isEmpty() && !zoomWfBounds.isEmpty())
     {
@@ -768,8 +788,23 @@ void DeckPanel::paint(juce::Graphics& g)
     {
         g.setColour(showBright ? C::tx2 : C::tx4);
         g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
-        juce::String bpmStr = juce::String(bpm2, 1) + " BPM";
-        g.drawText(bpmStr, 13 + 46, botY, 80, 14, juce::Justification::centredLeft);
+
+        // bar.beat — BPM (virtual deck only)
+        if (!isHW && deck.isLoaded())
+        {
+            float msPerBeat = 60000.0f / bpm2;
+            int beatInBar = (beatPhase / 64) + 1;  // 1~4
+            int totalBeats = (msPerBeat > 0) ? (int)(posMs / msPerBeat) : 0;
+            int barNum = totalBeats / 4 + 1;
+            juce::String beatStr = juce::String(barNum) + "." + juce::String(beatInBar)
+                + " \xe2\x80\x94 " + juce::String(bpm2, 1) + " BPM";
+            g.drawText(beatStr, 13 + 46, botY, 120, 14, juce::Justification::centredLeft);
+        }
+        else
+        {
+            juce::String bpmStr = juce::String(bpm2, 1) + " BPM";
+            g.drawText(bpmStr, 13 + 46, botY, 80, 14, juce::Justification::centredLeft);
+        }
     }
 
     // pos / duration in mm:ss.xx format
@@ -792,7 +827,7 @@ void DeckPanel::paint(juce::Graphics& g)
         juce::String posStr = fmtMmSs(curMs2) + " / " + fmtMmSs(totMs2);
         g.setColour(C::tx4);
         g.setFont(juce::FontOptions(9.0f));
-        g.drawText(posStr, 13 + 128, botY, getWidth() - 13 - 128 - 10, 14,
+        g.drawText(posStr, 13 + 170, botY, getWidth() - 13 - 170 - 10, 14,
                    juce::Justification::centredRight);
     }
 }
@@ -1032,6 +1067,7 @@ MainComponent::MainComponent()
             for (int s = 0; s < 3; s++)
             {
                 outSrcSelectors[(size_t)s].setVisible(showDecks);
+                outOffsetEditors[(size_t)s].setVisible(showDecks);
                 for (int m = 0; m < 3; m++)
                     outModeBtns[(size_t)s][(size_t)m].setVisible(showDecks);
             }
@@ -1115,6 +1151,24 @@ MainComponent::MainComponent()
                 };
             }
         }
+    }
+
+    // ── Output Layer offset editors ──
+    for (int i = 0; i < 3; i++)
+    {
+        auto& ed = outOffsetEditors[(size_t)i];
+        addAndMakeVisible(ed);
+        ed.setColour(juce::TextEditor::backgroundColourId, C::bg4);
+        ed.setColour(juce::TextEditor::textColourId, C::tx3);
+        ed.setColour(juce::TextEditor::outlineColourId, C::bdr2);
+        ed.setText("0", juce::dontSendNotification);
+        ed.setInputRestrictions(6, "0123456789-");
+        ed.setJustification(juce::Justification::centred);
+        ed.setVisible(false);
+        ed.onTextChange = [this, i]
+        {
+            outLayers[(size_t)i].offsetMs = outOffsetEditors[(size_t)i].getText().getIntValue();
+        };
     }
 
     // ── Mode Toggle (VIR / HW) — transparent overlay over painted toggle ──
@@ -1447,7 +1501,7 @@ void MainComponent::paint(juce::Graphics& g)
         {
             int cx = 12 + i * (cardW + 4);
             int cy = 128;
-            int ch = 56;
+            int ch = 72;
             auto cr = juce::Rectangle<float>((float)cx, (float)cy, (float)cardW, (float)ch);
 
             // Get source slot timecode
@@ -1493,22 +1547,30 @@ void MainComponent::paint(juce::Graphics& g)
             g.drawText(formatTimecode(tcMs), cx + 30, cy + 6, cardW - 38, 18,
                        juce::Justification::centredRight);
 
-            // LTC/MTC/ART toggle buttons are real juce::TextButton (positioned in resized())
+            // LTC/MTC/ART toggle buttons + OFFSET editor are real juce controls (positioned in resized())
+            // OFFSET label (painted, not a component)
+            if (activeTab == TAB_LINK)
+            {
+                int lx = 12 + i * (cardW + 4);
+                g.setColour(C::tx4);
+                g.setFont(juce::FontOptions(8.0f));
+                g.drawText("OFFSET ms", lx + 8, 196, 60, 11, juce::Justification::centredLeft);
+            }
         }
     }
     if (activeTab == TAB_LINK)
     {
         g.setColour(C::bg);
-        g.fillRect(0, 192, w, 32);
+        g.fillRect(0, 208, w, 32);
 
         // "DECK MODE" label
         g.setColour(C::tx4);
         g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
-        g.drawText("DECK MODE", 10, 192, 80, 32, juce::Justification::centredLeft);
+        g.drawText("DECK MODE", 10, 208, 80, 32, juce::Justification::centredLeft);
 
         // VIR / HW toggle (drawn manually)
         int toggleX = 96;
-        int toggleY = 198;
+        int toggleY = 214;
         // Outer pill
         g.setColour(C::bgLo);
         g.fillRoundedRectangle((float)toggleX, (float)toggleY, 120.0f, 20.0f, 5.0f);
@@ -1534,12 +1596,12 @@ void MainComponent::paint(juce::Graphics& g)
         g.drawText("HARDWARE", toggleX + 60, toggleY, 60, 20, juce::Justification::centred);
 
         g.setColour(C::bdr);
-        g.drawHorizontalLine(224, 0, (float)w);
+        g.drawHorizontalLine(242, 0, (float)w);
 
         // Alert banner (when not running)
         if (!engine.isRunning())
         {
-            auto alertArea = getLocalBounds().withTrimmedTop(228).withTrimmedBottom(26).reduced(12, 6);
+            auto alertArea = getLocalBounds().withTrimmedTop(246).withTrimmedBottom(26).reduced(12, 6);
             auto bannerRect = alertArea.removeFromTop(36);
             g.setColour(juce::Colour(0x14ecb210)); // ylw2 tint
             g.fillRoundedRectangle(bannerRect.toFloat(), 8.0f);
@@ -1561,14 +1623,14 @@ void MainComponent::paint(juce::Graphics& g)
         juce::String sectionLabel = globalHWMode
             ? "INPUT LAYERS \xe2\x80\x94 CDJ / HW"
             : "INPUT LAYERS \xe2\x80\x94 VIRTUAL";
-        g.drawText(sectionLabel, 12, 228, 300, 16, juce::Justification::centredLeft);
+        g.drawText(sectionLabel, 12, 244, 300, 16, juce::Justification::centredLeft);
 
         if (visibleDecks == 0)
         {
             g.setColour(C::tx4);
             g.setFont(juce::FontOptions(13.0f));
             g.drawText("+ DECK 버튼으로 Virtual 덱을 추가하세요",
-                getLocalBounds().withTrimmedTop(244).withTrimmedBottom(26),
+                getLocalBounds().withTrimmedTop(260).withTrimmedBottom(26),
                 juce::Justification::centred);
         }
     }
@@ -2013,23 +2075,26 @@ void MainComponent::resized()
         for (int i = 0; i < 3; i++)
         {
             int cx = 12 + i * (cardW + 4);
-            // Source selector: y=146, inside card at cy=128, ch=56
+            // Source selector: y=146, inside card at cy=128
             outSrcSelectors[(size_t)i].setBounds(cx + 30, 146, cardW - 38, 18);
             outSrcSelectors[(size_t)i].setVisible(showLink);
-            // LTC/MTC/ART buttons: y=165 (= cy+ch-19 = 128+56-19)
+            // LTC/MTC/ART buttons: y=167
             int btnW = 28, btnGap = 3;
             for (int m = 0; m < 3; m++)
             {
                 outModeBtns[(size_t)i][(size_t)m].setBounds(
-                    cx + 8 + m * (btnW + btnGap), 165, btnW, 13);
+                    cx + 8 + m * (btnW + btnGap), 167, btnW, 13);
                 outModeBtns[(size_t)i][(size_t)m].setVisible(showLink);
             }
+            // OFFSET editor: y=194, h=12 (label "OFFSET ms" painted at y=196)
+            outOffsetEditors[(size_t)i].setBounds(cx + 70, 194, cardW - 78, 12);
+            outOffsetEditors[(size_t)i].setVisible(showLink);
         }
     }
 
     // Mode bar / add deck button (LINK tab only)
-    modeToggleBtn.setBounds(96, 195, 122, 22);
-    addDeckBtn.setBounds(w - 130, 195, 118, 22);
+    modeToggleBtn.setBounds(96, 211, 122, 22);
+    addDeckBtn.setBounds(w - 130, 211, 118, 22);
 
     // Bottom
     packetLabel.setBounds(w - 180, getHeight() - 24, 170, 22);
@@ -2045,7 +2110,7 @@ void MainComponent::layoutDecks()
     if (visibleDecks == 0) return;
 
     auto area = getLocalBounds();
-    area.removeFromTop(244);  // header(52)+tabs(36)+statusbar(24)+outputlayers(80)+modebar(36)+sectionlabel(16)
+    area.removeFromTop(260);  // header(52)+tabs(36)+statusbar(24)+outputlayers(96)+modebar(32)+sectionlabel(20)
     area.removeFromBottom(26);
     area = area.reduced(8, 4);
 

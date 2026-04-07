@@ -196,6 +196,8 @@ private:
     std::array<juce::ComboBox, 3> outSrcSelectors;
     // LTC/MTC/ART toggle buttons per layer [layer][mode]
     std::array<std::array<juce::TextButton, 3>, 3> outModeBtns;
+    // Offset (ms) editors per layer
+    std::array<juce::TextEditor, 3> outOffsetEditors;
 
     // Settings
     juce::Label       nodeNameLabel, tcnetIfaceLabel, pdjlIfaceLabel, fpsLabel;
