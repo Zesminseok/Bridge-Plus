@@ -285,6 +285,7 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 <div class="pg" id="pgLink">
   <div class="sbar">
     <div class="sc"><div class="scl">TCNet</div><span class="bd br" id="stBadge">OFFLINE</span></div>
+    <div class="sc"><div class="scl">ArtNet</div><span class="bd br" id="stArtnet">OFF</span></div>
     <div class="sc"><div class="scl">ARENA 노드</div><span class="bd bb" id="stArena">0</span></div>
     <div class="sc"><div class="scl">활성 덱</div><span class="bd bm" id="stDecks">0</span></div>
     <div class="sc"><div class="scl">UPTIME</div><span class="bd bm" id="stUp">—</span></div>
@@ -2248,6 +2249,9 @@ function updateHeader(){
   document.getElementById('stArena').textContent=arenas;
   document.getElementById('stDecks').textContent=active;
   document.getElementById('stUp').textContent=run?Math.floor(up/60)+'m '+(up%60)+'s':'—';
+  const artActive=run&&Object.values(OUT).some(o=>o.art);
+  const stAn=document.getElementById('stArtnet');
+  if(stAn){stAn.className='bd '+(artActive?'bg':'br');stAn.textContent=artActive?'ACTIVE':'OFF';}
   document.getElementById('stAlert').classList.toggle('hide',run);
 }
 
