@@ -1822,11 +1822,10 @@ function loadFile(slot,f){
         const _img=new Image();
         _img.onload=()=>{
           const cv=document.createElement('canvas');
-          cv.width=Math.min(_img.naturalWidth||300,300);
-          cv.height=Math.min(_img.naturalHeight||300,300);
-          cv.getContext('2d').drawImage(_img,0,0,cv.width,cv.height);
+          cv.width=80; cv.height=80;  // CDJ rekordbox stores artwork at 80x80
+          cv.getContext('2d').drawImage(_img,0,0,80,80);
           URL.revokeObjectURL(_rawUrl);
-          cv.toBlob(jpegBlob=>jpegBlob.arrayBuffer().then(ab=>_sendArt(ab)),'image/jpeg',0.92);
+          cv.toBlob(jpegBlob=>jpegBlob.arrayBuffer().then(ab=>_sendArt(ab)),'image/jpeg',0.88);
         };
         _img.onerror=()=>{URL.revokeObjectURL(_rawUrl);_sendArt(tags._artRaw);};
         _img.src=_rawUrl;

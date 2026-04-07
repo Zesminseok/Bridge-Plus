@@ -1680,8 +1680,13 @@ class BridgeCore {
         const artBuf = this._findVirtualArt();
         if(artBuf){
           const isJpeg = artBuf[0]===0xFF && artBuf[1]===0xD8;
-          console.log(`[VDBSRV] artwork req artId=${reqArtId} → ${artBuf.length}B ${isJpeg?'JPEG':'?'}`);
-          sock.write(this._dbBuildArtResponse(actualTxId, artBuf), ()=>sock.end());
+          console.log(`[VDBSRV] artwork req artId=${reqArtId} → ${artBuf.length}B ${isJpeg?'JPEG':'?'} hex=${artBuf.slice(0,4).toString('hex')}`);
+          const artResp = this._dbBuildArtResponse(actualTxId, artBuf);
+          console.log(`[VDBSRV] artwork resp: ${artResp.length}B total, hex_hdr=${artResp.slice(0,16).toString('hex')}`);
+          sock.write(artResp, ()=>{
+            console.log(`[VDBSRV] artwork sent OK, closing conn`);
+            sock.end();
+          });
         } else {
           console.log(`[VDBSRV] artwork req artId=${reqArtId} → no art stored`);
           sock.write(this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]), ()=>sock.end());

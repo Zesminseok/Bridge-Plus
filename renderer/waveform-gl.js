@@ -334,11 +334,10 @@ void main() {
   float M = min(1.0, midf  * 3.0);
   float T = min(1.0, treble * 7.0);
 
-  // Heights: bass outermost, then mid, then treble innermost
-  // Each band drawn as a smooth path — treble shrinks inside mid which shrinks inside bass
+  // Heights: truly independent — bass outermost(100%), mid(max 82%), treble(max 55%)
   float bH = B * scale;
-  float mH = min(bH * 0.95, M * scale);
-  float tH = min(mH * 0.95, T * scale);
+  float mH = min(M * scale, 0.82 * scale);
+  float tH = min(T * scale, 0.55 * scale);
 
   float AA = 1.2;
   float inBass  = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
@@ -402,8 +401,8 @@ void main() {
   float T = min(1.0, treble * 7.0);
 
   float bH = B * scale;
-  float mH = min(bH * 0.95, M * scale);
-  float tH = min(mH * 0.95, T * scale);
+  float mH = min(M * scale, 0.82 * scale);
+  float tH = min(T * scale, 0.55 * scale);
 
   float AA = 0.8;
   float inBass = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
