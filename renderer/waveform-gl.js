@@ -80,8 +80,8 @@ class WaveformGL {
     this._wfTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
@@ -292,8 +292,8 @@ void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
 `;
 
 // ─── Zoom waveform fragment shader ──────────────────────────────────────────
-// Rekordbox-style stacked 3-band: treble(inner/cyan) → mid(green) → bass(outer/red-orange)
-// yFrac = 0 at center, 1 at bar edge; each band occupies proportional zone
+// Smooth path-based 3-band: each band has independent anti-aliased edges
+// treble(inner/cyan) → mid(green) → bass(outer/red-orange)
 const _WGL_ZOOM_FS = `#version 300 es
 precision highp float;
 uniform sampler2D u_wf;
@@ -305,39 +305,8 @@ uniform float u_centerX;
 uniform int   u_mode;
 out vec4 fragColor;
 
-// mode=0: rekordbox stacked (default 'rgb' config)
-// mode=1: '3band' config → stacked bands (same as 0, renamed for clarity)
-// mode=2: blue mono
-vec3 wfColor(float bass, float midf, float treble, int mode, float yFrac) {
-  if (mode == 2) {
-    // Blue mono
-    float e = min(1.0, sqrt(bass*bass + midf*midf + treble*treble) * 3.0);
-    return vec3(0.05, 0.35, 1.0) * pow(e, 0.6) * (0.95 - yFrac * 0.25);
-  } else {
-    // Rekordbox stacked bands (mode 0 and 1): treble=inner/cyan → mid=green → bass=outer/red
-    // Use raw values normalized — avoid clamping to 1.0 so ratios are meaningful
-    float B = bass * 2.0;
-    float M = midf * 2.5;
-    float T = treble * 5.0;
-    float total = max(B + M + T, 0.001);
-    // Amplitude for brightness
-    float amp = min(1.0, total * 0.55);
-    // Band boundary positions from center outward (0=center, 1=edge)
-    float tEnd = clamp(T / total, 0.0, 1.0);
-    float mEnd = clamp(tEnd + M / total, 0.0, 1.0);
-    vec3 col;
-    if      (yFrac < tEnd) col = vec3(0.0,  0.72, 1.0);   // treble = cyan
-    else if (yFrac < mEnd) col = vec3(0.08, 0.95, 0.22);  // mid    = bright green
-    else                   col = vec3(1.0,  0.22, 0.04);   // bass   = orange-red
-    // FFT path feel: solid fill + bright top edge
-    float edge = max(0.0, (yFrac - 0.82) / 0.18);   // ramp up in top 18% of bar
-    float brightness = mix(0.78, 1.0, edge);          // fill=0.78, edge=1.0 (sharp top)
-    return col * brightness * amp;
-  }
-}
-
 void main() {
-  float W = u_res.x, H = u_res.y, mid = H * 0.5;
+  float W = u_res.x, H = u_res.y, midY = H * 0.5;
   float cX = u_centerX * W;
   float pxMs = u_posMs + (gl_FragCoord.x - cX) * (u_zoomMs / W);
 
@@ -345,14 +314,48 @@ void main() {
     fragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
   }
   vec4 wf = texture(u_wf, vec2(clamp(pxMs / u_durMs, 0.0, 1.0), 0.5));
-  float bass = wf.r, midf = wf.g, treble = wf.b, h = wf.a;
+  float bass = wf.r, midf = wf.g, treble = wf.b;
 
-  float halfH = h * mid * 0.95;
-  float yDist = abs(gl_FragCoord.y - mid);
-  if (halfH < 0.5 || yDist > halfH) {
-    fragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
+  float yDist = abs(gl_FragCoord.y - midY);
+  float scale = midY * 0.93;
+
+  if (u_mode == 2) {
+    // Blue mono — single smooth path
+    float energy = min(1.0, (bass + midf + treble) * 0.75);
+    float h = energy * scale;
+    float alpha = 1.0 - smoothstep(h - 1.5, h + 1.5, yDist);
+    if (alpha < 0.005) { fragColor = vec4(0.0,0.0,0.0,1.0); return; }
+    fragColor = vec4(vec3(0.05, 0.35, 1.0) * energy * alpha, 1.0);
+    return;
   }
-  fragColor = vec4(wfColor(bass, midf, treble, u_mode, yDist / halfH), 1.0);
+
+  // Stacked 3-band with per-band independent heights + smooth AA edges
+  float B = min(1.0, bass  * 2.2);
+  float M = min(1.0, midf  * 3.0);
+  float T = min(1.0, treble * 7.0);
+
+  // Heights: bass outermost, then mid, then treble innermost
+  // Each band drawn as a smooth path — treble shrinks inside mid which shrinks inside bass
+  float bH = B * scale;
+  float mH = min(bH * 0.95, M * scale);
+  float tH = min(mH * 0.95, T * scale);
+
+  float AA = 1.2;
+  float inBass  = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
+  if (inBass < 0.005) { fragColor = vec4(0.0,0.0,0.0,1.0); return; }
+
+  float inMid  = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
+  float inTreb = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
+
+  vec3 bassCol = vec3(1.0,  0.22, 0.04);
+  vec3 midCol  = vec3(0.08, 0.95, 0.22);
+  vec3 trebCol = vec3(0.0,  0.72, 1.0);
+
+  vec3 col = mix(bassCol, midCol,  inMid);
+       col = mix(col,     trebCol, inTreb);
+
+  float amp = min(1.0, (B * 0.5 + M * 0.35 + T * 0.15) * 1.4);
+  fragColor = vec4(col * amp * inBass, 1.0);
 }
 `;
 
@@ -365,43 +368,58 @@ uniform vec2  u_res;
 uniform int   u_mode;
 out vec4 fragColor;
 
-vec3 wfColor(float bass, float midf, float treble, int mode, float yFrac) {
-  if (mode == 2) {
-    float e = min(1.0, sqrt(bass*bass+midf*midf+treble*treble)*3.0);
-    return vec3(0.05,0.35,1.0)*pow(e,0.6)*(0.95-yFrac*0.25);
-  } else {
-    float B = bass * 2.0; float M = midf * 2.5; float T = treble * 5.0;
-    float total = max(B + M + T, 0.001);
-    float amp = min(1.0, total * 0.55);
-    float tEnd = clamp(T/total, 0.0, 1.0); float mEnd = clamp(tEnd+M/total, 0.0, 1.0);
-    vec3 col;
-    if      (yFrac < tEnd) col = vec3(0.0,  0.72, 1.0);
-    else if (yFrac < mEnd) col = vec3(0.08, 0.95, 0.22);
-    else                   col = vec3(1.0,  0.22, 0.04);
-    float edge = max(0.0, (yFrac - 0.82) / 0.18);
-    return col * mix(0.78, 1.0, edge) * amp;
-  }
-}
-
 void main() {
-  float W = u_res.x, H = u_res.y, mid = H * 0.5;
+  float W = u_res.x, H = u_res.y, midY = H * 0.5;
   float t = gl_FragCoord.x / W;
   vec4 wf = texture(u_wf, vec2(t, 0.5));
-  float bass=wf.r, midf=wf.g, treble=wf.b, h=wf.a;
+  float bass=wf.r, midf=wf.g, treble=wf.b;
 
+  // Playhead line
   float curX = u_pos * W;
   if (abs(gl_FragCoord.x - curX) < 0.8) {
     fragColor = vec4(1.0, 1.0, 1.0, 1.0); return;
   }
 
-  float halfH = h * mid * 0.95;
-  float yDist = abs(gl_FragCoord.y - mid);
-  if (halfH < 0.5 || yDist > halfH) {
-    fragColor = t < u_pos ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
+  float yDist = abs(gl_FragCoord.y - midY);
+  float scale = midY * 0.93;
+  bool played = t < u_pos;
+
+  if (u_mode == 2) {
+    float energy = min(1.0, (bass + midf + treble) * 0.75);
+    float h = energy * scale;
+    float alpha = 1.0 - smoothstep(h - 1.0, h + 1.0, yDist);
+    if (alpha < 0.005) {
+      fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
+      return;
+    }
+    float dim = played ? 0.4 : 1.0;
+    fragColor = vec4(vec3(0.05,0.35,1.0) * energy * alpha * dim, 1.0);
     return;
   }
-  vec3 col = wfColor(bass, midf, treble, u_mode, yDist / halfH);
-  if (t < u_pos) col *= 0.45;
-  fragColor = vec4(col, 1.0);
+
+  float B = min(1.0, bass  * 2.2);
+  float M = min(1.0, midf  * 3.0);
+  float T = min(1.0, treble * 7.0);
+
+  float bH = B * scale;
+  float mH = min(bH * 0.95, M * scale);
+  float tH = min(mH * 0.95, T * scale);
+
+  float AA = 0.8;
+  float inBass = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
+  if (inBass < 0.005) {
+    fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
+    return;
+  }
+
+  float inMid  = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
+  float inTreb = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
+
+  vec3 col = mix(vec3(1.0,0.22,0.04), vec3(0.08,0.95,0.22), inMid);
+       col = mix(col, vec3(0.0,0.72,1.0), inTreb);
+
+  float amp = min(1.0, (B*0.5+M*0.35+T*0.15)*1.4);
+  float dim = played ? 0.4 : 1.0;
+  fragColor = vec4(col * amp * inBass * dim, 1.0);
 }
 `;
