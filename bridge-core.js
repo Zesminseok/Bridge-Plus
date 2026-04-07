@@ -1199,6 +1199,18 @@ class BridgeCore {
     sendAnn();
     const t=setInterval(sendAnn,1500);
     this._timers.push(t);
+
+    // Virtual CDJ status broadcast every 500ms — keeps Arena updated on virtual decks
+    // Real CDJs broadcast status packets ~every 500ms; Arena stops querying if it stops seeing them
+    const vt=setInterval(()=>{
+      for(let i=0;i<8;i++){
+        const layer=this.layers[i];
+        if(!this.hwMode[i] && layer?.trackId){
+          this._sendVirtualCDJStatus(i+1, layer.trackId, layer.bpm||128);
+        }
+      }
+    },500);
+    this._timers.push(vt);
   }
 
   _onPDJL(msg, rinfo){
@@ -1412,6 +1424,10 @@ class BridgeCore {
       beatPhase:   data.beatPhase||0,
       _updateTime: Date.now(),  // for timecode interpolation
     };
+    // Virtual deck: broadcast CDJ status so Arena queries our dbserver immediately
+    if(!this.hwMode[i] && data.trackId){
+      this._sendVirtualCDJStatus(i+1, data.trackId, data.bpm||128);
+    }
   }
 
   removeLayer(i){ if(i>=0&&i<=7){ this.layers[i]=null; this._syncVirtualDevices(); } }
@@ -1451,42 +1467,98 @@ class BridgeCore {
   // Serves artwork for virtual decks so Resolume Arena can fetch album art
   // Protocol: responds to port-discovery + greeting + artwork requests
 
-  /** Store artwork JPEG buffer for a virtual deck slot (0-based) and push to Resolume */
+  /** Store artwork JPEG buffer for a virtual deck slot (0-based).
+   *  Also triggers PDJL CDJ status broadcast so Arena queries our dbserver,
+   *  and pushes thumbnail via REST API as fallback. */
   setVirtualArt(slot, jpegBuf){
     if(slot<0||slot>7) return;
     this._virtualArt[slot] = jpegBuf;
-    // Artwork stored — virtual dbserver will serve it when Arena queries via ProDJ Link protocol
     console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B`);
+    // Trigger Arena to query our dbserver: send CDJ status with track loaded
+    const layer = this.layers[slot];
+    if(layer && layer.trackId){
+      this._sendVirtualCDJStatus(slot+1, layer.trackId, layer.bpm||128);
+    }
+    // REST fallback: set thumbnail on corresponding clip
+    this._pushArtToResolume(slot, jpegBuf).catch(()=>{});
   }
 
-  /** Push artwork to Resolume Arena via REST API */
+  /** Send a virtual CDJ status packet (type 0x0A) so Resolume Arena sees
+   *  a track-loaded player and queries our virtual dbserver for artwork.
+   *  Offsets verified from Deep Symmetry djl-analysis + parsePDJL in this file:
+   *    0x24=playerNum, 0x28=trackDeviceId, 0x29=slot, 0x2A=trackType, 0x2C=trackId(BE) */
+  _sendVirtualCDJStatus(playerNum, trackId, bpm){
+    if(!this._pdjlAnnSock || !trackId) return;
+    try{
+      const pkt = Buffer.alloc(212);  // 0xD4 = 212 bytes (standard CDJ status size)
+      PDJL.MAGIC.copy(pkt, 0);
+      pkt[0x0A] = PDJL.CDJ;   // 0x0A = CDJ status type
+      pkt[0x0B] = 0x00;
+      const nm = 'BRIDGE-CLONE';
+      Buffer.from(nm,'ascii').copy(pkt, 0x0C, 0, Math.min(nm.length,20));
+      // Header fields matching real CDJ-3000 capture
+      pkt[0x20] = 0x01; pkt[0x21] = 0x04; pkt[0x22] = 0x00; pkt[0x23] = 0xD4;
+      pkt[0x24] = playerNum & 0xFF;   // player number
+      pkt[0x25] = 0x00;
+      // 0x26-0x27: sub-field (unused, zero)
+      // Track source fields — verified offsets from parsePDJL
+      pkt[0x28] = playerNum & 0xFF;   // trackDeviceId = self (same player loaded it)
+      pkt[0x29] = 0x03;               // slot = 3 (USB)
+      pkt[0x2A] = 0x01;               // trackType = 1 (rekordbox analyzed track)
+      pkt[0x2B] = 0x00;
+      pkt.writeUInt32BE(trackId >>> 0, 0x2C);  // trackId (big-endian)
+
+      // Playing state: P1 byte (0x7B) and flags (0x89)
+      pkt[0x7B] = 0x09;   // P1 = playing forward
+      pkt[0x89] = 0x68;   // flags: bit6=playing(0x40) | bit5=master(0x20) | bit3=onAir(0x08)
+      // BPM × 100 as uint16BE at 0x92
+      const bpmVal = Math.round((bpm||128)*100);
+      pkt.writeUInt16BE(bpmVal, 0x92);
+      // Pitch = 0x100000 (no pitch shift) at 0x8C
+      pkt.writeUInt32BE(0x100000, 0x8C);
+
+      const allBCs = [...new Set(
+        getAllInterfaces()
+          .filter(i=>!i.internal && i.broadcast && i.broadcast!=='127.255.255.255')
+          .map(i=>i.broadcast)
+          .concat(['255.255.255.255'])
+      )];
+      for(const bc of allBCs){
+        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,bc);}catch(_){}
+      }
+      console.log(`[PDJL-VIRT] CDJ status P${playerNum} trackId=${trackId} bpm=${bpm||128}`);
+    }catch(e){console.warn('[PDJL-VIRT] status send error:',e.message);}
+  }
+
+  /** Push JPEG artwork to Resolume Arena REST API as clip thumbnail fallback. */
   async _pushArtToResolume(slot, jpegBuf){
     try{
-      const tmpDir = require('os').tmpdir();
-      const artPath = require('path').join(tmpDir, `bridge_art_deck${slot+1}.jpg`);
-      require('fs').writeFileSync(artPath, jpegBuf);
-      console.log(`[ARENA-ART] saved ${artPath} (${jpegBuf.length}B)`);
-
       // Find Arena IP from known nodes
       let arenaIP = '127.0.0.1';
       for(const n of Object.values(this.nodes)){
         if(n.vendor && n.vendor.includes('Resolume')) arenaIP = n.ip;
       }
 
-      // Resolume REST API: load image into layer (slot+1) clip 1
+      // Write to temp file
+      const tmpDir = require('os').tmpdir();
+      const artPath = require('path').join(tmpDir, `bridge_art_deck${slot+1}.jpg`);
+      require('fs').writeFileSync(artPath, jpegBuf);
+
+      // Resolume REST API: PUT thumbnail — sets clip preview image (gif/png/jpg supported)
       const layer = slot + 1;
       const clip = 1;
       const http = require('http');
-      const url = `http://${arenaIP}:8080/api/v1/composition/layers/${layer}/clips/${clip}/open`;
-      const body = JSON.stringify({ uri: `file://${artPath}` });
+      const enc = encodeURIComponent(artPath.replace(/\\/g,'/'));
+      const uri = `file:///${enc}`;
+      const body = JSON.stringify({ uri });
+      const url = `http://${arenaIP}:8080/api/v1/composition/layers/${layer}/clips/${clip}/thumbnail`;
 
-      const req = http.request(url, {method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}}, res=>{
+      const req = http.request(url, {method:'PUT', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}}, res=>{
         let d='';res.on('data',c=>d+=c);
-        res.on('end',()=>console.log(`[ARENA-ART] REST ${res.statusCode}: ${d.slice(0,100)}`));
+        res.on('end',()=>console.log(`[ARENA-ART] thumbnail ${res.statusCode} slot${slot+1}: ${d.slice(0,80)}`));
       });
       req.on('error', e=>console.warn(`[ARENA-ART] REST failed: ${e.message}`));
-      req.write(body);
-      req.end();
+      req.write(body); req.end();
     }catch(e){
       console.warn(`[ARENA-ART] push failed: ${e.message}`);
     }

@@ -1253,6 +1253,8 @@ function renderDecks(){
   if(isHWMode&&hwS.length){
     hwSec.style.display='';
     hwRow.className='deck-row'+(isCompact?' compact':'');
+    // Destroy GL contexts before DOM rebuild to avoid WebGL context limit (16)
+    hwS.forEach(s=>{const d=DECKS[s];if(d?.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}if(d?.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}});
     hwRow.innerHTML=hwS.map(s=>deckHTML(s)).join('');hwS.forEach(bindDeck);
   }else{hwSec.style.display='none';hwRow.innerHTML='';}
 
@@ -1261,6 +1263,8 @@ function renderDecks(){
   if(!isHWMode){
     vtSec.style.display='';
     vtRow.className='deck-row'+(isCompact?' compact':'');
+    // Destroy GL contexts before DOM rebuild to avoid WebGL context limit (16)
+    vtS.forEach(s=>{const d=DECKS[s];if(d?.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}if(d?.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}});
     vtRow.innerHTML=vtS.map(s=>deckHTML(s)).join('');
     vtS.forEach(bindDeck);
   }else{
@@ -1747,13 +1751,29 @@ function loadFile(slot,f){
       if(tags.key) d.key=_toCamelot(tags.key);
       if(tags.bpm>0){d._id3Bpm=tags.bpm;} // store for priority over analysis
       console.log(`[ID3] slot=${slot} title="${d.tn}" artist="${d.ar}" key="${d.key}" bpm=${tags.bpm||'-'} art=${!!tags.art}`);
-      // Send artwork to virtual dbserver for Arena
+      // Send artwork to virtual dbserver for Arena — convert to JPEG first (CDJ/Arena expects JPEG)
       if(tags._artRaw){
-        const u8=new Uint8Array(tags._artRaw);
-        let b64='';const chunk=8192;
-        for(let i=0;i<u8.length;i+=chunk) b64+=String.fromCharCode(...u8.subarray(i,i+chunk));
-        d._artRawB64=btoa(b64);
-        if(E&&run&&window.bridge?.setVirtualArt) window.bridge.setVirtualArt(slot, d._artRawB64);
+        const _sendArt=(buf)=>{
+          const u8=new Uint8Array(buf);
+          let b64='';const chunk=8192;
+          for(let i=0;i<u8.length;i+=chunk) b64+=String.fromCharCode(...u8.subarray(i,i+chunk));
+          d._artRawB64=btoa(b64);
+          if(E&&run&&window.bridge?.setVirtualArt) window.bridge.setVirtualArt(slot, d._artRawB64);
+        };
+        // Convert any format (PNG/BMP/etc.) to JPEG via canvas before sending
+        const _rawBlob=new Blob([tags._artRaw]);
+        const _rawUrl=URL.createObjectURL(_rawBlob);
+        const _img=new Image();
+        _img.onload=()=>{
+          const cv=document.createElement('canvas');
+          cv.width=Math.min(_img.naturalWidth||300,300);
+          cv.height=Math.min(_img.naturalHeight||300,300);
+          cv.getContext('2d').drawImage(_img,0,0,cv.width,cv.height);
+          URL.revokeObjectURL(_rawUrl);
+          cv.toBlob(jpegBlob=>jpegBlob.arrayBuffer().then(ab=>_sendArt(ab)),'image/jpeg',0.92);
+        };
+        _img.onerror=()=>{URL.revokeObjectURL(_rawUrl);_sendArt(tags._artRaw);};
+        _img.src=_rawUrl;
       }
       // Update metadata in-place — avoids DOM rebuild and canvas context reset
       const _tn=document.getElementById('dtn'+slot);if(_tn)_tn.textContent=d.tn||'—';
@@ -2011,11 +2031,11 @@ function doExpandDeck(slot){
   if(!wasExpanded){
     el.classList.add('dk-wide');
   }
-  // resize canvases — use 50ms delay to let CSS grid layout settle before reading offsetWidth
-  setTimeout(()=>{
+  // resize canvases — requestAnimationFrame lets CSS layout settle before the next paint (no stretch)
+  requestAnimationFrame(()=>{
     const d=DECKS[slot];
     const wov=document.getElementById('wov'+slot);
-    if(wov){const p=wov.parentElement;const w=p.offsetWidth||600,h=p.offsetHeight||28;
+    if(wov){const p=wov.parentElement;const w=p?.offsetWidth||600,h=p?.offsetHeight||28;
       if(d&&d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
       wov.width=w; wov.height=h;
       if(d&&w>0){try{d.ovgl=new OverviewGL(wov);}catch(e){console.warn('[WGL] overview reinit',e.message);}
@@ -2023,7 +2043,7 @@ function doExpandDeck(slot){
       }
     }
     const wzc=document.getElementById('wzc'+slot);
-    if(wzc){const p=wzc.parentElement;const w=p.offsetWidth||600,h=p.offsetHeight||90;
+    if(wzc){const p=wzc.parentElement;const w=p?.offsetWidth||600,h=p?.offsetHeight||90;
       if(d&&d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
       wzc.width=w; wzc.height=h;
       if(d&&w>0){
@@ -2031,7 +2051,7 @@ function doExpandDeck(slot){
         if(d.wgl){const wfD=d.rgbWfDetail||d.rgbWf;if(wfD){d.wgl.setData(wfD,(wfD.length/150*1000)||1);drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}}
       }
     }
-  },50);
+  });
 }
 
 function doEject(slot){
