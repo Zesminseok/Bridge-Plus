@@ -35,18 +35,19 @@ class WaveformGL {
     this._wfLen = n;
     this._wfDurMs = wfDurMs || 1;
 
-    const px = new Float32Array(n * 4);
+    const px = new Uint8Array(n * 4);
     for (let i = 0; i < n; i++) {
       const p = wfData[i];
-      px[i*4]   = p.r || 0;
-      px[i*4+1] = p.g || 0;
-      px[i*4+2] = p.b || 0;
-      px[i*4+3] = p.h || Math.max(Math.abs(p.mn||0), Math.abs(p.mx||0)) || 0;
+      const h = p.h || Math.max(Math.abs(p.mn||0), Math.abs(p.mx||0)) || 0;
+      px[i*4]   = Math.min(255, (p.r || 0) * 255) | 0;
+      px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
+      px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
+      px[i*4+3] = Math.min(255, h * 255) | 0;
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     this._wfTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, n, 1, 0, gl.RGBA, gl.FLOAT, px);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -140,18 +141,19 @@ class OverviewGL {
     const gl = this.gl;
     const n = wfData.length;
     if (n < 2) return;
-    const px = new Float32Array(n * 4);
+    const px = new Uint8Array(n * 4);
     for (let i = 0; i < n; i++) {
       const p = wfData[i];
-      px[i*4]   = p.r || 0;
-      px[i*4+1] = p.g || 0;
-      px[i*4+2] = p.b || 0;
-      px[i*4+3] = p.h || Math.max(Math.abs(p.mn||0), Math.abs(p.mx||0)) || 0;
+      const h = p.h || Math.max(Math.abs(p.mn||0), Math.abs(p.mx||0)) || 0;
+      px[i*4]   = Math.min(255, (p.r || 0) * 255) | 0;
+      px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
+      px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
+      px[i*4+3] = Math.min(255, h * 255) | 0;
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     this._wfTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, n, 1, 0, gl.RGBA, gl.FLOAT, px);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);

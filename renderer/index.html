@@ -89,11 +89,11 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* Expanded full-width deck — only widens, no height change */
 .dk.dk-wide{grid-column:1/-1}
 /* Left control column: album art on top, CUE+PLAY row below */
-.dtbody{display:flex;gap:6px;padding:0}
-.dkctrl{display:flex;flex-direction:column;align-items:center;gap:4px;width:60px;flex-shrink:0}
+.dtbody{display:flex;gap:6px;padding:0;min-height:108px}
+.dkctrl{display:flex;flex-direction:column;align-items:center;gap:4px;width:68px;flex-shrink:0}
 .dkctrl-btns{display:flex;gap:4px;width:100%;justify-content:center}
 .dkwaves{flex:1;min-width:0}
-.dkbtn{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 8px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
+.dkbtn{width:30px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 8px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
 .dkbtn:disabled{opacity:.25;cursor:not-allowed}
 .dk[data-st="hw"] .dkbtn,.dk[data-st="hwplay"] .dkbtn{pointer-events:none}
 /* CUE button states: dim → medium (playing) → bright (cue active) → pressed (extra bright) */
@@ -105,8 +105,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dkbtn.dkplay.ac{border-color:var(--grn2);color:var(--grn);background:linear-gradient(180deg,rgba(52,211,153,.15),rgba(52,211,153,.25));box-shadow:0 0 20px rgba(52,211,153,.5),inset 0 0 10px rgba(90,240,179,.15);text-shadow:0 0 8px rgba(90,240,179,.6)}
 .dkbtn.dkplay.blink{animation:play-blink 1s ease-in-out infinite}
 @keyframes play-blink{0%,100%{border-color:rgba(52,211,153,.25);color:rgba(52,211,153,.35);background:transparent;box-shadow:none}50%{border-color:var(--grn);color:var(--grn);background:rgba(52,211,153,.15);box-shadow:0 0 8px rgba(52,211,153,.3)}}
-.deck-row.compact .dkbtn{width:22px;height:22px}
-.deck-row.compact .dkctrl{width:48px;gap:3px}
+.deck-row.compact .dkbtn{width:22px;height:20px}
+.deck-row.compact .dkctrl{width:52px;gap:3px}
 .deck-row.compact .dwov{height:10px;margin-bottom:1px}
 .deck-row.compact .dwz-row{height:52px;margin-bottom:3px}
 /* Waveform + VU side-by-side row */
@@ -157,19 +157,19 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dta{font:400 10px var(--sn);color:var(--tx3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Output Layer 카드 */
 .out-layers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
-.olc{background:var(--bg2);border:none;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .2s;border-left:4px solid var(--tx4)}
+.olc{background:var(--bg2);border:none;border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;gap:5px;transition:box-shadow .2s;border-left:4px solid var(--tx4)}
 .olc-play{box-shadow:0 0 16px rgba(52,211,153,.1)}
-.olh{display:flex;align-items:center;gap:8px}
-.olb{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font:800 10px var(--mn);color:#003825;flex-shrink:0}
-.oltc{font:500 16px var(--mn);color:var(--tx3);letter-spacing:-.02em;font-variant-numeric:tabular-nums;flex:1;text-align:right}
+.olh{display:flex;align-items:center;gap:6px}
+.olb{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font:800 9px var(--mn);color:#003825;flex-shrink:0}
+.oltc{font:500 14px var(--mn);color:var(--tx3);letter-spacing:-.02em;font-variant-numeric:tabular-nums;flex:1;text-align:right}
 .olc-play .oltc{color:var(--tx)}
-.olsr{display:flex;align-items:center;gap:6px}
-.olss{flex:1;min-width:0;font-size:10px}
-.olout{display:flex;gap:3px}
-.olof{display:flex;align-items:center;gap:5px}
-.olofin{width:52px;background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:4px;padding:2px 5px;color:var(--tx);font:400 10px var(--mn);outline:none;text-align:right}
+.olsr{display:flex;align-items:center;gap:5px}
+.olss{flex:1;min-width:0;font-size:9px}
+.olout{display:flex;gap:2px}
+.olof{display:flex;align-items:center;gap:4px}
+.olofin{width:46px;background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:4px;padding:2px 4px;color:var(--tx);font:400 9px var(--mn);outline:none;text-align:right}
 /* TC 버튼 */
-.tcbtn{padding:3px 10px;border-radius:4px;font:700 8px var(--mn);cursor:pointer;border:1px solid var(--bdr2);background:var(--bg-lowest);color:var(--tx3);transition:all .1s;letter-spacing:.05em;text-transform:uppercase}
+.tcbtn{padding:2px 8px;border-radius:4px;font:700 8px var(--mn);cursor:pointer;border:1px solid var(--bdr2);background:var(--bg-lowest);color:var(--tx3);transition:all .1s;letter-spacing:.05em;text-transform:uppercase}
 .tcbtn:hover{color:var(--tx2);background:var(--bg4)}
 .tcbtn.ac-ltc{color:var(--ylw);border-color:rgba(255,209,109,.3);background:rgba(255,209,109,.1)}
 .tcbtn.ac-mtc{color:var(--blu);border-color:rgba(164,201,255,.3);background:rgba(164,201,255,.1)}
@@ -208,13 +208,13 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .btng{background:linear-gradient(180deg,var(--grn),var(--grn2));color:#003825;box-shadow:0 0 15px rgba(52,211,153,.3)}.btng:hover{brightness:1.1}
 .btnr{background:rgba(255,180,171,.1);color:var(--red);border:1px solid rgba(255,180,171,.2)}.btnr:hover{background:rgba(255,180,171,.2)}
 /* Album art — inside dkctrl column, full width */
-.dkart{width:60px;height:60px;border-radius:7px;flex-shrink:0;overflow:hidden;background:var(--bg-lowest);border:1px solid var(--bdr);cursor:pointer;position:relative;transition:filter .15s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.dkart{width:68px;height:68px;border-radius:7px;flex-shrink:0;overflow:hidden;background:var(--bg-lowest);border:1px solid var(--bdr);cursor:pointer;position:relative;transition:filter .15s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .dkart:hover{filter:brightness(.6)}
 .dkart::after{content:'⏏';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;background:rgba(0,0,0,0);border-radius:7px;transition:opacity .15s,background .15s;pointer-events:none;opacity:0}
 .dkart:hover::after{background:rgba(0,0,0,.5);opacity:1}
 .dkart img{width:100%;height:100%;object-fit:cover;display:block}
 .noart-icon{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--tx4);font-size:18px}
-.deck-row.compact .dkart{width:46px;height:46px}
+.deck-row.compact .dkart{width:52px;height:52px}
 .dktn{padding:0 0 2px;min-width:0;overflow:hidden}
 .dktn-row{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden}
 .dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 auto;min-width:0;position:relative;text-overflow:ellipsis}
@@ -590,16 +590,15 @@ function renderOutLayers(){
     return`<div class="olc ${playing?'olc-play':''}">
       <div class="olh"><span class="olb" style="background:${color}">${key}</span><span class="oltc" id="oltc${key}">${tc}</span></div>
       <div class="olsr">
-        <span style="font:400 9px var(--mn);color:var(--tx3)">SOURCE</span>
         <select class="ss olss" data-ol="${key}" style="flex:1;min-width:0">${mkSrcOpts(key)}</select>
-      </div>
-      <div class="olout">
-        <button class="tcbtn${o.ltc?' ac-ltc':''}" data-ol="${key}" data-mode="ltc">LTC</button>
-        <button class="tcbtn${o.mtc?' ac-mtc':''}" data-ol="${key}" data-mode="mtc">MTC</button>
-        <button class="tcbtn${o.art?' ac-art':''}" data-ol="${key}" data-mode="art">ART</button>
+        <div class="olout">
+          <button class="tcbtn${o.ltc?' ac-ltc':''}" data-ol="${key}" data-mode="ltc">LTC</button>
+          <button class="tcbtn${o.mtc?' ac-mtc':''}" data-ol="${key}" data-mode="mtc">MTC</button>
+          <button class="tcbtn${o.art?' ac-art':''}" data-ol="${key}" data-mode="art">ART</button>
+        </div>
       </div>
       <div class="olof">
-        <span style="font:400 9px var(--mn);color:var(--tx3)">OFFSET</span>
+        <span style="font:400 9px var(--mn);color:var(--tx3);flex-shrink:0">OFS</span>
         <input type="number" class="olofin" value="${o.offset}" data-ol="${key}" step="10" placeholder="0">
         <span style="font:400 9px var(--mn);color:var(--tx3)">ms</span>
       </div>
@@ -1991,22 +1990,25 @@ function doExpandDeck(slot){
   _expandedSlot=wasExpanded?null:slot;
   if(!wasExpanded){
     el.classList.add('dk-wide');
-    // resize canvases for expanded width
-    setTimeout(()=>{
-      const wov=document.getElementById('wov'+slot);
-      if(wov){const p=wov.parentElement;wov.width=p.offsetWidth||600;wov.height=p.offsetHeight||28;}
-      const wzc=document.getElementById('wzc'+slot);
-      if(wzc){const p=wzc.parentElement;wzc.width=p.offsetWidth||600;wzc.height=p.offsetHeight||180;}
-    },0);
-  }else{
-    // restore normal canvas sizes
-    setTimeout(()=>{
-      const wov=document.getElementById('wov'+slot);
-      if(wov){const p=wov.parentElement;wov.width=p.offsetWidth||280;wov.height=p.offsetHeight||18;}
-      const wzc=document.getElementById('wzc'+slot);
-      if(wzc){const p=wzc.parentElement;wzc.width=p.offsetWidth||280;wzc.height=p.offsetHeight||80;}
-    },0);
   }
+  // resize canvases — always reinit WebGL after canvas resize
+  setTimeout(()=>{
+    const d=DECKS[slot];
+    const wov=document.getElementById('wov'+slot);
+    if(wov){const p=wov.parentElement;wov.width=p.offsetWidth||600;wov.height=p.offsetHeight||28;
+      if(d&&d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
+      if(d&&p.offsetWidth>0){try{d.ovgl=new OverviewGL(wov);}catch(e){console.warn('[WGL] overview reinit',e.message);}
+        if(d.ovgl&&d.rgbWf)d.ovgl.setData(d.rgbWf);}
+    }
+    const wzc=document.getElementById('wzc'+slot);
+    if(wzc){const p=wzc.parentElement;wzc.width=p.offsetWidth||600;wzc.height=p.offsetHeight||90;
+      if(d&&d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
+      if(d&&p.offsetWidth>0){
+        try{d.wgl=new WaveformGL(wzc);}catch(e){console.warn('[WGL] zoom reinit',e.message);}
+        if(d.wgl){const wfD=d.rgbWfDetail||d.rgbWf;if(wfD){const wfDMs=d.rgbWfDetail?((wfD.length/150)*1000):(d.dur||1);d.wgl.setData(wfD,wfDMs);}}
+      }
+    }
+  },50);
 }
 
 function doEject(slot){
@@ -2220,7 +2222,7 @@ function tick(){
     if(bg){
       const _st=d.type==='hw'?'HW':d.scratch?'SCRATCH':d.pl?'PLAY':d.cu?'CUE':'STOP';
       const isHwPlay=d.type==='hw'&&d.pl;
-      bg.textContent=d.type==='hw'?(d.pl?'PLAY':d.cu?'CUE':'HW'):d.scratch?'PLATTER':d.pl?'PLAY':d.cu?'CUE':'STOP';
+      bg.textContent=d.type==='hw'?(d.pl?'PLAY':d.cu?'CUE':'HW'):d.scratch?'HANDLING':d.pl?'PLAY':d.cu?'CUE':'STOP';
       bg.className='dbadge '+(isHwPlay?'bg':d.type==='hw'?(d.cu?'by':'bp'):d.scratch?'bb':d.pl?'bg':d.cu?'by':'bm');
     }
     // ON AIR badge

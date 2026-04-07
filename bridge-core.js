@@ -352,7 +352,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
     const isPlaying = layerData.state === STATE.PLAYING || layerData.state === STATE.LOOPING;
     if(isPlaying && layerData._updateTime && layerData.bpm > 0) curMs += (Date.now() - layerData._updateTime);
     d.writeUInt32LE(u32(curMs), 12);    // currentPosition ms (interpolated)
-    d.writeUInt32LE(isPlaying ? 0x8000 : 0, 16);  // speed (0x8000=100%, 0=stopped)
+    d.writeUInt32LE(isPlaying ? 0x100000 : 0, 16);  // speed (0x100000=100% per TCNet spec, 0=stopped)
     d.writeUInt32LE(0, 33);                             // beatNumber
     const bpm = layerData.bpm || 0;
     d.writeUInt32LE(Math.round(bpm * 100), 88);        // bpm ×100
