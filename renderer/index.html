@@ -89,11 +89,11 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* Expanded full-width deck — only widens, no height change */
 .dk.dk-wide{grid-column:1/-1}
 /* Left control column: album art on top, CUE+PLAY row below */
-.dtbody{display:flex;gap:6px;padding:0;min-height:108px}
-.dkctrl{display:flex;flex-direction:column;align-items:center;gap:4px;width:68px;flex-shrink:0}
-.dkctrl-btns{display:flex;gap:4px;width:100%;justify-content:center}
+.dtbody{display:flex;gap:6px;padding:0;min-height:108px;align-items:stretch}
+.dkctrl{display:flex;flex-direction:column;align-items:center;justify-content:space-between;width:68px;flex-shrink:0}
+.dkctrl-btns{display:flex;gap:4px;width:100%}
 .dkwaves{flex:1;min-width:0}
-.dkbtn{width:30px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 8px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
+.dkbtn{flex:1;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
 .dkbtn:disabled{opacity:.25;cursor:not-allowed}
 .dk[data-st="hw"] .dkbtn,.dk[data-st="hwplay"] .dkbtn{pointer-events:none}
 /* CUE button states: dim → medium (playing) → bright (cue active) → pressed (extra bright) */
@@ -105,8 +105,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dkbtn.dkplay.ac{border-color:var(--grn2);color:var(--grn);background:linear-gradient(180deg,rgba(52,211,153,.15),rgba(52,211,153,.25));box-shadow:0 0 20px rgba(52,211,153,.5),inset 0 0 10px rgba(90,240,179,.15);text-shadow:0 0 8px rgba(90,240,179,.6)}
 .dkbtn.dkplay.blink{animation:play-blink 1s ease-in-out infinite}
 @keyframes play-blink{0%,100%{border-color:rgba(52,211,153,.25);color:rgba(52,211,153,.35);background:transparent;box-shadow:none}50%{border-color:var(--grn);color:var(--grn);background:rgba(52,211,153,.15);box-shadow:0 0 8px rgba(52,211,153,.3)}}
-.deck-row.compact .dkbtn{width:22px;height:20px}
-.deck-row.compact .dkctrl{width:52px;gap:3px}
+.deck-row.compact .dkbtn{height:26px;font-size:7px}
+.deck-row.compact .dkctrl{width:52px}
 .deck-row.compact .dwov{height:10px;margin-bottom:1px}
 .deck-row.compact .dwz-row{height:52px;margin-bottom:3px}
 /* Waveform + VU side-by-side row */
@@ -1452,57 +1452,59 @@ function bindDeck(slot){
     cb.addEventListener('pointerup',ev=>{ev.preventDefault();doCueUp(slot);});
     cb.addEventListener('pointerleave',()=>{if(DECKS[slot]?.cu&&!DECKS[slot]?.pl)doCueUp(slot);});
   }
-  // init overview canvas — setTimeout re-queries live element to handle DOM rebuilds
+  // init overview canvas — size-guarded to avoid unnecessary WebGL context reset
   if(document.getElementById('wov'+slot)){
     setTimeout(()=>{
       const wov=document.getElementById('wov'+slot);
       if(!wov)return;
       const p=wov.parentElement;
       const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
-      wov.width=w; wov.height=h;
-      // Destroy old GL context before creating new one (prevents WebGL context limit exhaustion)
-      if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
-      try{
-        d.ovgl=new OverviewGL(wov);
-        d.wovCtx=null;
-        const _wfD=d.rgbWfDetail||d.rgbWf;
-        if(_wfD){d.ovgl.setData(_wfD);drawOverview(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
-        console.log('[WGL] slot'+slot+' WebGL2 overview init');
-      }catch(e){
-        console.warn('[WGL] fallback 2D overview:',e);
-        d.wovCtx=wov.getContext('2d');
+      // Destroy if canvas element changed (DOM rebuild) OR dimensions differ
+      const ovCanvasChanged=d.ovgl&&d.ovgl.gl.canvas!==wov;
+      if(ovCanvasChanged){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
+      // Only set canvas size if actually different — setting canvas.width ALWAYS resets WebGL!
+      if(wov.width!==w||wov.height!==h){
+        if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
+        wov.width=w; wov.height=h;
+      }
+      if(!d.ovgl){
+        try{
+          d.ovgl=new OverviewGL(wov); d.wovCtx=null;
+          const _wfD=d.rgbWfDetail||d.rgbWf;
+          if(_wfD){d.ovgl.setData(_wfD);drawOverview(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
+        }catch(e){console.warn('[WGL] fallback 2D overview:',e);d.wovCtx=wov.getContext('2d');}
       }
     },0);
   }
-  // init zoom canvas — re-query to always bind to live canvas
+  // init zoom canvas — size-guarded to avoid unnecessary WebGL context reset
   if(document.getElementById('wzc'+slot)){
     setTimeout(()=>{
       const wzc=document.getElementById('wzc'+slot);
       if(!wzc)return;
       const p=wzc.parentElement;
       const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
-      wzc.width=w; wzc.height=h;
-      // Destroy old GL context before creating new one (prevents WebGL context limit exhaustion)
-      if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
-      try{
-        d.wgl=new WaveformGL(wzc);
-        d.wzCtx=null;
-        const _wfD=d.rgbWfDetail||d.rgbWf;
-        if(_wfD){
-          const _isDet=!!d.rgbWfDetail;
-          const _wfDMs=_isDet?((_wfD.length/150)*1000):(d.dur||1);
-          d.wgl.setData(_wfD,_wfDMs);
-          drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);
+      // Destroy if canvas element changed (DOM rebuild) OR dimensions differ
+      const wglCanvasChanged=d.wgl&&d.wgl.gl.canvas!==wzc;
+      if(wglCanvasChanged){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
+      // Only set canvas size if actually different — setting canvas.width ALWAYS resets WebGL!
+      if(wzc.width!==w||wzc.height!==h){
+        if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
+        wzc.width=w; wzc.height=h;
+      }
+      if(!d.wgl){
+        try{
+          d.wgl=new WaveformGL(wzc); d.wzCtx=null;
+          const _wfD=d.rgbWfDetail||d.rgbWf;
+          if(_wfD){const _isDet=!!d.rgbWfDetail;const _wfDMs=_isDet?((_wfD.length/150)*1000):(d.dur||1);d.wgl.setData(_wfD,_wfDMs);drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
+          const wzov=document.getElementById('wzov'+slot);
+          if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
+        }catch(e){
+          console.warn('[WGL] fallback 2D zoom:',e);
+          const wzc2=document.getElementById('wzc'+slot);
+          if(wzc2)d.wzCtx=wzc2.getContext('2d');
+          const wzov=document.getElementById('wzov'+slot);
+          if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
         }
-        const wzov=document.getElementById('wzov'+slot);
-        if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
-        console.log('[WGL] slot'+slot+' WebGL2 zoom init ok w='+w);
-      }catch(e){
-        console.warn('[WGL] fallback 2D zoom:',e);
-        const wzc2=document.getElementById('wzc'+slot);
-        if(wzc2)d.wzCtx=wzc2.getContext('2d');
-        const wzov=document.getElementById('wzov'+slot);
-        if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
       }
     },0);
   }
