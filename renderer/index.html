@@ -109,19 +109,20 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dkctrl{width:48px;gap:3px}
 .deck-row.compact .dwov{height:10px;margin-bottom:1px}
 .deck-row.compact .dwz{height:44px;margin-bottom:3px}
-/* Right-side VU meter column */
-.dvu-col{display:flex;flex-direction:column;gap:1px;flex-shrink:0;width:7px;background:rgba(0,0,0,.45);border-radius:0 3px 3px 0;overflow:hidden;align-self:stretch}
-.dvu-bar{flex:1;position:relative;overflow:hidden;background:rgba(255,255,255,.03)}
-.dvu-fill{position:absolute;bottom:0;left:0;right:0;height:0%;transition:height .04s}
+/* VU strip: channels side-by-side (horizontal), each bar vertical */
+.dvu-strip{display:flex;flex-direction:row;gap:2px;align-items:flex-end;height:24px;padding:0 0 3px}
+.dvu-ch{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;height:100%}
+.dvu-lbl{font:700 7px var(--mn);color:var(--tx4);height:8px;line-height:8px;flex-shrink:0}
+.dvu-hbar{flex:1;width:100%;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;position:relative;min-height:4px}
+.dvu-hfill{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:2px;transition:height .05s}
 /* Beat phasor: 2×2 square grid */
 .dphs{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);gap:2px;width:16px;height:14px;flex-shrink:0}
 .dphs-seg{border-radius:2px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
 .dphs-seg.on{background:rgba(255,255,255,.15)}
 .dphs-fill{position:absolute;inset:0;border-radius:2px;background:rgba(90,240,179,.65);opacity:0;transition:opacity .06s}
 .dphs-seg.on .dphs-fill{background:rgba(90,240,179,.95)}
-/* Phasor row: BPM text + 2×2 grid inline */
-.dphs-row{display:flex;align-items:center;gap:6px;padding:0 0 4px}
-.dphs-bpm{font:600 10px var(--mn);color:var(--tx3);white-space:nowrap;font-variant-numeric:tabular-nums;flex:1;min-width:0}
+/* BPM + phasor in title row (right side cluster) */
+.dphs-bpm{font:600 10px var(--mn);color:var(--tx3);white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0}
 .dk[data-st="play"] .dphs-bpm,.dk[data-st="hwplay"] .dphs-bpm,.dk[data-st="cue"] .dphs-bpm{color:var(--tx2)}
 /* Zoom overlay buttons on waveform — left side to avoid VU meter */
 .dzoom-btns{position:absolute;top:3px;left:4px;display:flex;flex-direction:column;gap:2px;z-index:2;pointer-events:none}
@@ -213,15 +214,15 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .noart-icon{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--tx4);font-size:18px}
 .deck-row.compact .dkart{width:46px;height:46px}
 .dktn{padding:0 0 2px;min-width:0;overflow:hidden}
-.dktn-row{display:flex;align-items:baseline;gap:6px;min-width:0;overflow:hidden}
+.dktn-row{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden}
 .dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 auto;min-width:0;position:relative;text-overflow:ellipsis}
 .dktn-t.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
 @keyframes marquee-scroll{0%,10%{transform:translateX(0)}45%,55%{transform:translateX(var(--scroll-dist,-200px))}90%,100%{transform:translateX(0)}}
-.dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dk[data-st="play"] .dktn-time,.dk[data-st="hwplay"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
-.dktn-time-row{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;padding:0 0 3px;white-space:nowrap}
-.dk[data-st="play"] .dktn-time-row,.dk[data-st="hwplay"] .dktn-time-row,.dk[data-st="cue"] .dktn-time-row{color:var(--tx2)}
+.dktn-time-row{font:600 14px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;padding:2px 0 3px;white-space:nowrap;letter-spacing:-.01em}
+.dk[data-st="play"] .dktn-time-row,.dk[data-st="hwplay"] .dktn-time-row,.dk[data-st="cue"] .dktn-time-row{color:var(--tx)}
 .dbk-hd{font:600 11px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis}
 .dk[data-st="play"] .dbk-hd,.dk[data-st="hwplay"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
 .devbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg2);border:none;border-radius:10px;margin-bottom:10px;min-height:44px;flex-wrap:wrap}
@@ -338,7 +339,7 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 <script>
 // ════════════════════════════════════════════════════
 const E=typeof window.bridge!=='undefined';
-let run=false,t0=0,up=0,pk=0,curTab='link';
+let run=false,t0=0,up=0,pk=0,curTab='link',TC_NAME='BRIDGE+';
 let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
 // 설정 — 인터페이스 포함
@@ -1284,7 +1285,11 @@ function deckHTML(slot){
           </div>
         </div>
         <div class="dktn">
-          <div class="dktn-row"><span class="dktn-t" id="dtn${slot}" style="color:var(--tx4)">—</span></div>
+          <div class="dktn-row">
+            <span class="dktn-t" id="dtn${slot}" style="color:var(--tx4)">—</span>
+            <span class="dphs-bpm" id="dbk${slot}" style="color:var(--tx4)">— BPM</span>
+            <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
+          </div>
           <div class="dktn-row"><span class="dktn-a" id="dta${slot}"></span></div>
           <div class="dktn-time-row" id="dtime${slot}" style="color:var(--tx4)">--:--.--- / --:--.---</div>
         </div>
@@ -1298,8 +1303,8 @@ function deckHTML(slot){
           </div>
           <div class="dkwaves">
             <div class="dwov" id="dwov${slot}" style="display:flex;align-items:center;justify-content:center"><span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span></div>
-            <div style="display:flex;gap:0;margin-bottom:4px"><div class="dwz" id="dwz${slot}" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px"><span style="font:400 12px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span></div><div class="dvu-col" id="dvucol${slot}"><div class="dvu-bar"><div class="dvu-fill" id="dvuL${slot}"></div></div><div class="dvu-bar"><div class="dvu-fill" id="dvuR${slot}"></div></div></div></div>
-            <div class="dphs-row"><span class="dphs-bpm" id="dbk${slot}" style="color:var(--tx4)">— BPM</span><div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div></div>
+            <div class="dwz" id="dwz${slot}" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px"><span style="font:400 12px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span></div>
+            <div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>
           </div>
         </div>
       </div>
@@ -1326,7 +1331,11 @@ function deckHTML(slot){
         </div>
       </div>
       <div class="dktn">
-        <div class="dktn-row"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span></div>
+        <div class="dktn-row">
+          <span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span>
+          <span class="dphs-bpm" id="dbk${slot}">— BPM</span>
+          <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
+        </div>
         <div class="dktn-row"><span class="dktn-a" id="dta${slot}">${d.ar||''}</span></div>
         <div class="dktn-time-row" id="dtime${slot}">0:00.00 / --:--.---</div>
       </div>
@@ -1340,8 +1349,8 @@ function deckHTML(slot){
         </div>
         <div class="dkwaves">
           <div class="dwov" id="dwov${slot}"><canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div></div>
-          <div style="display:flex;gap:0;margin-bottom:4px"><div class="dwz" id="dwz${slot}" style="position:relative;flex:1"><canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><span class="wf-key" id="wfkey${slot}"></span><span class="wf-bpm" id="wfbpm${slot}"></span><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div><div class="dvu-col" id="dvucol${slot}"><div class="dvu-bar"><div class="dvu-fill" id="dvuL${slot}"></div></div><div class="dvu-bar"><div class="dvu-fill" id="dvuR${slot}"></div></div></div></div>
-          <div class="dphs-row"><span class="dphs-bpm" id="dbk${slot}">— BPM</span><div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div></div>
+          <div class="dwz" id="dwz${slot}" style="position:relative"><canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><span class="wf-key" id="wfkey${slot}"></span><span class="wf-bpm" id="wfbpm${slot}"></span><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div>
+          <div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>
         </div>
       </div>
     </div>
@@ -1412,6 +1421,9 @@ function bindDeck(slot){
       try{
         d.ovgl=new OverviewGL(wov);
         d.wovCtx=null;
+        // 이미 웨이브폼 데이터가 있으면 즉시 복원 (renderDecks 재호출 시)
+        const _wfD=d.rgbWfDetail||d.rgbWf;
+        if(_wfD){d.ovgl.setData(_wfD);drawOverview(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
         console.log('[WGL] slot'+slot+' WebGL2 overview init');
       }catch(e){
         console.warn('[WGL] fallback 2D overview:',e);
@@ -1429,13 +1441,23 @@ function bindDeck(slot){
       try{
         d.wgl=new WaveformGL(wzc);
         d.wzCtx=null;
+        // 이미 웨이브폼 데이터가 있으면 즉시 복원 (renderDecks 재호출 시)
+        const _wfD=d.rgbWfDetail||d.rgbWf;
+        if(_wfD){
+          const _isDet=!!d.rgbWfDetail;
+          const _wfDMs=_isDet?((_wfD.length/150)*1000):(d.dur||1);
+          d.wgl.setData(_wfD,_wfDMs);
+          drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);
+        }
+        const wzov=document.getElementById('wzov'+slot);
+        if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
         console.log('[WGL] slot'+slot+' WebGL2 zoom init');
       }catch(e){
         console.warn('[WGL] fallback 2D zoom:',e);
         d.wzCtx=wzc.getContext('2d');
+        const wzov=document.getElementById('wzov'+slot);
+        if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
       }
-      const wzov=document.getElementById('wzov'+slot);
-      if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
     },0);
   }
 }
@@ -1800,22 +1822,29 @@ function loadFile(slot,f){
       if(d.scratch)return; // ignore during scrub/drag
       d.pl=false;d.pos=d.dur||0; // stay at end, don't jump to start
     });
-    // VU meter: stereo L/R via ChannelSplitter → two AnalyserNodes
+    // VU meter: 멀티채널 지원 — ChannelSplitter로 실제 채널 수 감지
     try{
       if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
       const ac=_getAuCtx();
       const src=ac.createMediaElementSource(d.au);
-      const split=ac.createChannelSplitter(2);
-      const anL=ac.createAnalyser();anL.fftSize=256;anL.smoothingTimeConstant=0.65;
-      const anR=ac.createAnalyser();anR.fftSize=256;anR.smoothingTimeConstant=0.65;
-      src.connect(split);
-      split.connect(anL,0);split.connect(anR,1);
-      // merge back to destination for audio output
-      const merge=ac.createChannelMerger(2);
-      anL.connect(merge,0,0);anR.connect(merge,0,1);
+      // 실제 채널 수는 src.channelCount (오디오 로드 후 알 수 있음)
+      // 일단 최대 8채널까지 ChannelSplitter 생성
+      const numCh=Math.min(Math.max(src.channelCount||2,2),8);
+      const split=ac.createChannelSplitter(numCh);
+      const ans=[],bufs=[];
+      for(let i=0;i<numCh;i++){
+        const an=ac.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=0.65;
+        split.connect(an,i);ans.push(an);bufs.push(new Uint8Array(an.fftSize));
+      }
+      const merge=ac.createChannelMerger(numCh);
+      ans.forEach((an,i)=>an.connect(merge,0,Math.min(i,numCh-1)));
       merge.connect(ac.destination);
-      d.vuSrc=src;d.vuAn=anL;d.vuBuf=new Uint8Array(anL.fftSize);
-      d.vuAnL=anL;d.vuAnR=anR;d.vuBufL=new Uint8Array(anL.fftSize);d.vuBufR=new Uint8Array(anR.fftSize);
+      src.connect(split);
+      d.vuSrc=src;d.vuChs=ans;d.vuBufs=bufs;d.vuChCount=numCh;
+      d.vuAnL=ans[0];d.vuAnR=ans[1]||ans[0];d.vuBufL=bufs[0];d.vuBufR=bufs[1]||bufs[0];
+      d.vuAn=ans[0];d.vuBuf=bufs[0];
+      // VU strip에 채널 수에 맞는 바 생성
+      _buildVuStrip(slot,numCh);
     }catch(e){console.warn('[VU]',e);}
   };
   if(/\.aiff?$/i.test(f.name)){
@@ -1828,13 +1857,36 @@ function loadFile(slot,f){
 
 // ════ Deck actions ═══════════════════════════════════
 
+// VU strip: 채널 수에 맞게 동적으로 채널 바 추가
+function _buildVuStrip(slot,numCh){
+  const strip=document.getElementById('dvustrip'+slot);if(!strip)return;
+  const CH_LABELS=['L','R','3','4','5','6','7','8'];
+  strip.innerHTML='';
+  for(let i=0;i<numCh;i++){
+    const lbl=CH_LABELS[i]||String(i+1);
+    strip.innerHTML+=`<div class="dvu-ch"><span class="dvu-lbl">${lbl}</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvu${i<2?(['L','R'][i]):(i+1)}${slot}"></div></div></div>`;
+  }
+}
+
+function _sendTCState(slot){
+  const d=DECKS[slot];if(!d||!E||!run||d.type==='hw')return;
+  window.bridge.updateLayer(slot,{
+    state:d.pl?3:d.cu?7:(d.ld?5:0),
+    timecodeMs:Math.round(d.pos),
+    bpm:d.bpm||0,trackId:d.trackId||0,totalLength:Math.round(d.dur)||0,
+    trackName:d.tn||'',artistName:d.ar||'',deviceName:'CDJ-3000',
+    beatPhase:Math.floor((d.pos/(60000/(d.bpm||128)))%4)*64,
+  });
+}
+
 function doPlay(slot){
   const d=DECKS[slot];if(!d?.ld||!d.au||d.type==='hw')return;
   if(d.pl){
-    d.au.pause();d.pl=false; // pause: cue point unchanged
+    d.au.pause();d.pl=false;
   } else {
     d.au.play().catch(()=>{});d.pl=true;d.cu=false;
   }
+  _sendTCState(slot);
 }
 
 /**
@@ -1847,7 +1899,7 @@ function doPlay(slot){
 function doCueDown(slot){
   const d=DECKS[slot];if(!d?.ld||!d.au||d.type==='hw')return;
   if(d.pl){
-    d.au.pause();d.pl=false;d.cu=true;d.cuw=false;
+    d.au.pause();d.pl=false;d.cu=true;d.cuw=false;_sendTCState(slot);
   } else {
     d.cp=d.au.currentTime; // current position becomes new cue point
     d.cuw=false;
@@ -1868,6 +1920,7 @@ function doCueUp(slot){
   d.au.pause();
   d.au.currentTime=d.cp||0;
   d.pl=false;d.cu=true;
+  _sendTCState(slot);
 }
 
 let _expandedSlot=null;
@@ -2079,22 +2132,37 @@ function tick(){
     const wfkEl=document.getElementById('wfkey'+slot);
     if(wfkEl)wfkEl.textContent=d.key||'';
     const wfbEl=document.getElementById('wfbpm'+slot);
-    if(wfbEl)wfbEl.textContent=d.bpm>0?(d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1)):'';
+    if(wfbEl&&d.bpm>0){
+      const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
+      const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
+      wfbEl.textContent=(d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1))+' '+ps;
+    }else if(wfbEl)wfbEl.textContent='';
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
 
     // VU meter — ALWAYS for virtual, only run-gated for HW
+    const _getRms=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let s=0;for(let i=0;i<buf.length;i++){const v=(buf[i]-128)/128;s+=v*v;}return Math.sqrt(s/buf.length);};
     if(d.type==='hw'){
       if(run){d.vu=d.hwVu>0?d.hwVu:Math.max(0,(d.vu||0)-0.02);d.hwVu=Math.max(0,(d.hwVu||0)-0.04);d.vuL=d.vu;d.vuR=d.vu;}
     } else {
-      const _getRms=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let s=0;for(let i=0;i<buf.length;i++){const v=(buf[i]-128)/128;s+=v*v;}return Math.sqrt(s/buf.length);};
       const active=d.pl||d.cu;
-      if(d.vuAnL&&d.vuBufL){const v=_getRms(d.vuAnL,d.vuBufL);d.vuL=active?v:Math.max(0,(d.vuL||0)-0.015);}
-      if(d.vuAnR&&d.vuBufR){const v=_getRms(d.vuAnR,d.vuBufR);d.vuR=active?v:Math.max(0,(d.vuR||0)-0.015);}
+      if(d.vuChs&&d.vuBufs){
+        // 멀티채널
+        d.vuChs.forEach((an,i)=>{const v=_getRms(an,d.vuBufs[i]);d.vuChs[i]._lvl=active?v:Math.max(0,(d.vuChs[i]._lvl||0)-0.015);});
+        d.vuL=d.vuChs[0]._lvl||0;d.vuR=(d.vuChs[1]?._lvl)||0;
+      } else {
+        if(d.vuAnL&&d.vuBufL){const v=_getRms(d.vuAnL,d.vuBufL);d.vuL=active?v:Math.max(0,(d.vuL||0)-0.015);}
+        if(d.vuAnR&&d.vuBufR){const v=_getRms(d.vuAnR,d.vuBufR);d.vuR=active?v:Math.max(0,(d.vuR||0)-0.015);}
+      }
       d.vu=Math.max(d.vuL||0,d.vuR||0);
     }
     const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const h=Math.min(100,v*350);el2.style.height=h+'%';el2.style.background=h>70?'var(--red)':h>40?'var(--ylw)':'var(--grn)';};
-    _vuBar('dvuL'+slot,d.vuL||0);_vuBar('dvuR'+slot,d.vuR||0);
+    if(d.vuChs&&d.vuChs.length>2){
+      const CH_IDS=['L','R','3','4','5','6','7','8'];
+      d.vuChs.forEach((an,i)=>_vuBar('dvu'+(CH_IDS[i]||String(i+1))+slot, an._lvl||0));
+    } else {
+      _vuBar('dvuL'+slot,d.vuL||0);_vuBar('dvuR'+slot,d.vuR||0);
+    }
 
     const bg=document.getElementById('dbg'+slot);
     if(bg){
@@ -2270,12 +2338,12 @@ function renderPDJL(){
 function renderTcnet(){
   const nodes=Object.values(tcNodes).filter(n=>Date.now()-n.lastSeen<10000);
   document.getElementById('pgTcnet').innerHTML=`
-    ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span><div><div style="font:500 11px var(--sn);color:var(--grn)">TCNet — BRIDGE29</div><div style="font:400 9px var(--mn);color:var(--tx3)">Data: 브로드캐스트 + Arena 유니캐스트 동시</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">오프라인</span></div>`}
+    ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span><div><div style="font:500 11px var(--sn);color:var(--grn)">TCNet — ${TC_NAME||'BRIDGE+'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">Data: 브로드캐스트 + Resolume Arena 유니캐스트 동시</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">오프라인</span></div>`}
     <div class="sl">노드</div>
     <div class="tbl">
-      <div class="tblh" style="grid-template-columns:2fr 1fr 2fr 1fr">${['NODE','TYPE','VENDOR/DEVICE','IP:lPort'].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>
-      <div class="tblr" style="grid-template-columns:2fr 1fr 2fr 1fr"><div style="font:400 11px var(--mn);color:var(--tx)">BRIDGE29</div><div><span class="bd bg">SERVER</span></div><div style="font:400 10px var(--mn);color:var(--tx3)">PIONEER DJ / PRODJLINK BRIDGE</div><div style="font:400 9px var(--mn);color:var(--tx3)">active</div></div>
-      ${nodes.map(n=>`<div class="tblr" style="grid-template-columns:2fr 1fr 2fr 1fr"><div style="font:400 11px var(--mn);color:var(--tx)">${n.name}</div><div><span class="bd ${n.type===2?'bg':'bb'}">${n.type===2?'SRV':'CLI'}</span></div><div style="font:400 10px var(--mn);color:var(--tx3)">${n.vendor||'—'}/${n.device||'—'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">${n.ip}:${n.lPort}</div></div>`).join('')}
+      <div class="tblh" style="grid-template-columns:1.5fr 1fr 2fr 1.5fr">${['NODE','TYPE','VENDOR / DEVICE','IP'].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>
+      <div class="tblr" style="grid-template-columns:1.5fr 1fr 2fr 1.5fr"><div style="font:400 11px var(--mn);color:var(--tx)">${TC_NAME||'BRIDGE+'}</div><div><span class="bd bg">SERVER</span></div><div style="font:400 10px var(--mn);color:var(--tx3)">BRIDGE+</div><div style="font:400 9px var(--mn);color:var(--tx3)">active</div></div>
+      ${nodes.map(n=>{const vendorStr=(n.vendor&&n.device)?(n.vendor===n.device?n.vendor:n.vendor+' '+n.device):(n.vendor||n.device||'—');return`<div class="tblr" style="grid-template-columns:1.5fr 1fr 2fr 1.5fr"><div style="font:400 11px var(--mn);color:var(--tx)">${n.name}</div><div><span class="bd ${n.type===2?'bg':'bb'}">${n.type===2?'SERVER':'Client'}</span></div><div style="font:400 10px var(--mn);color:var(--tx3)">${vendorStr}</div><div style="font:400 9px var(--mn);color:var(--tx3)">${n.ip}</div></div>`;}).join('')}
       ${nodes.length===0?'<div style="padding:9px 12px;color:var(--tx3);font:400 11px var(--sn)">Arena 미감지 — Arena에서 TCNet 활성화하세요</div>':''}
     </div>
     <div class="sl mt">통계</div>
@@ -2419,6 +2487,7 @@ async function doStart(){
     });
     if(!r.ok){alert('시작 실패: '+r.err);return;}
     pdjlPort=r.pdjlPort||null;
+    if(r.nodeName) TC_NAME=r.nodeName;
     // re-register all existing virtual decks after start
     for(const [slot,d] of Object.entries(DECKS)){
       if(d.type==='virtual'){

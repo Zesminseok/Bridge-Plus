@@ -1433,6 +1433,7 @@ class BridgeCore {
   getActiveNodes(){ const now=Date.now(); return Object.values(this.nodes).filter(n=>now-n.lastSeen<10000); }
   getActiveDevices(){ const now=Date.now(); return Object.values(this.devices).filter(d=>now-d.lastSeen<10000); }
   getPDJLPort(){ return this.pdjlPort; }
+  get nodeName(){ return TC.NNAME; }
 
   // ── Virtual dbserver (TCP 12523 emulation) ────
   // Serves artwork for virtual decks so Resolume Arena can fetch album art

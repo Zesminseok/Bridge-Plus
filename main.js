@@ -125,7 +125,7 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     setTimeout(()=>bridge?.refreshAllMetadata(), 3000);
     setTimeout(()=>bridge?.refreshAllMetadata(), 8000);
     setTimeout(()=>bridge?.refreshAllMetadata(), 20000);
-    return{ok:true,pdjlPort:bridge.getPDJLPort(),broadcastAddr:bridge.broadcastAddr};
+    return{ok:true,pdjlPort:bridge.getPDJLPort(),broadcastAddr:bridge.broadcastAddr,nodeName:bridge.nodeName||'BRIDGE+'};
   }catch(e){return{ok:false,err:e.message};}
 });
 ipcMain.handle('bridge:stop',async()=>{bridge?.stop();clearInterval(iv);return{ok:true};});
