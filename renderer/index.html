@@ -1435,7 +1435,10 @@ function bindDeck(slot){
       e.preventDefault();
       const d2=DECKS[slot];if(!d2||!d2.ld)return;
       DECKS[slot].scratch=true;
-      _drag={startX:e.clientX,startPos:d2.pos};
+      // Pause audio during drag so it doesn't play forward when movement stops
+      const wasPlaying=d2.au&&!d2.au.paused;
+      if(wasPlaying)d2.au.pause();
+      _drag={startX:e.clientX,startPos:d2.pos,wasPlaying};
       wzDiv.setPointerCapture(e.pointerId);
     });
     wzDiv.addEventListener('pointermove',e=>{
@@ -1446,8 +1449,18 @@ function bindDeck(slot){
       const newMs=Math.max(0,Math.min(d2.dur,_drag.startPos-(e.clientX-_drag.startX)*msPerPx));
       d2.pos=newMs;if(d2.au)d2.au.currentTime=newMs/1000;
     });
-    wzDiv.addEventListener('pointerup',()=>{_drag=null;DECKS[slot].scratch=false;});
-    wzDiv.addEventListener('pointercancel',()=>{_drag=null;DECKS[slot].scratch=false;});
+    wzDiv.addEventListener('pointerup',()=>{
+      // Resume playback if audio was playing before drag started
+      if(_drag?.wasPlaying&&DECKS[slot]?.au&&DECKS[slot].pl){
+        DECKS[slot].au.currentTime=(DECKS[slot].pos||0)/1000;
+        DECKS[slot].au.play().catch(()=>{});
+      }
+      _drag=null;DECKS[slot].scratch=false;
+    });
+    wzDiv.addEventListener('pointercancel',()=>{
+      if(_drag?.wasPlaying&&DECKS[slot]?.au&&DECKS[slot].pl)DECKS[slot].au.play().catch(()=>{});
+      _drag=null;DECKS[slot].scratch=false;
+    });
   }
   // CUE button — pointerdown/up for hold-to-cue behaviour
   const cb=el.querySelector('[data-a="cue"]');
@@ -2143,7 +2156,8 @@ function tick(){
     const slot=d.slot;
     const el=document.getElementById('dk'+slot);if(!el)return;
     // update virtual deck playback position — ALWAYS (not gated by run)
-    if(d.type!=='hw'&&d.au&&d.ld){
+    // Skip during scratch/drag: pos is controlled by pointermove, not audio element
+    if(d.type!=='hw'&&d.au&&d.ld&&!d.scratch){
       d.pos=d.au.currentTime*1000;
     }
 
@@ -2238,22 +2252,24 @@ function tick(){
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
 
     // VU meter — ALWAYS for virtual, only run-gated for HW
-    const _getRms=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let s=0;for(let i=0;i<buf.length;i++){const v=(buf[i]-128)/128;s+=v*v;}return Math.sqrt(s/buf.length);};
+    // Peak meter: returns instantaneous peak (0-1) from time domain buffer
+    const _getPeak=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i++){const v=Math.abs((buf[i]-128)/128);if(v>pk)pk=v;}return pk;};
     if(d.type==='hw'){
-      if(run){d.vu=d.hwVu>0?d.hwVu:Math.max(0,(d.vu||0)-0.02);d.hwVu=Math.max(0,(d.hwVu||0)-0.04);d.vuL=d.vu;d.vuR=d.vu;}
+      if(run){d.vu=d.hwVu>0?d.hwVu:Math.max(0,(d.vu||0)-0.025);d.hwVu=Math.max(0,(d.hwVu||0)-0.04);d.vuL=d.vu;d.vuR=d.vu;}
     } else {
       const active=d.pl||d.cu;
       if(d.vuChs&&d.vuBufs){
-        // 멀티채널
-        d.vuChs.forEach((an,i)=>{const v=_getRms(an,d.vuBufs[i]);const p=d.vuChs[i]._lvl||0;d.vuChs[i]._lvl=active?(v*0.25+p*0.75):Math.max(0,p-0.012);});
+        // 멀티채널: fast attack (instant), slow decay
+        d.vuChs.forEach((an,i)=>{const v=_getPeak(an,d.vuBufs[i]);const p=d.vuChs[i]._lvl||0;d.vuChs[i]._lvl=active?(v>p?v:v*0.4+p*0.6):Math.max(0,p-0.025);});
         d.vuL=d.vuChs[0]._lvl||0;d.vuR=(d.vuChs[1]?._lvl)||0;
       } else {
-        if(d.vuAnL&&d.vuBufL){const v=_getRms(d.vuAnL,d.vuBufL);const p=d.vuL||0;d.vuL=active?(v*0.25+p*0.75):Math.max(0,p-0.012);}
-        if(d.vuAnR&&d.vuBufR){const v=_getRms(d.vuAnR,d.vuBufR);const p=d.vuR||0;d.vuR=active?(v*0.25+p*0.75):Math.max(0,p-0.012);}
+        if(d.vuAnL&&d.vuBufL){const v=_getPeak(d.vuAnL,d.vuBufL);const p=d.vuL||0;d.vuL=active?(v>p?v:v*0.4+p*0.6):Math.max(0,p-0.025);}
+        if(d.vuAnR&&d.vuBufR){const v=_getPeak(d.vuAnR,d.vuBufR);const p=d.vuR||0;d.vuR=active?(v>p?v:v*0.4+p*0.6):Math.max(0,p-0.025);}
       }
       d.vu=Math.max(d.vuL||0,d.vuR||0);
     }
-    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-60;const h=Math.min(100,Math.max(0,(db+54)*100/54));el2.style.height=h+'%';el2.style.background=h>85?'var(--red)':h>60?'var(--ylw)':'var(--grn)';};
+    // dB scale: peak 1.0 → 0dB, -60dB floor, +6dB headroom so loud music fills to top
+    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-60;const h=Math.min(100,Math.max(0,(db+60)*100/60));el2.style.height=h+'%';el2.style.background=h>90?'var(--red)':h>70?'var(--ylw)':'var(--grn)';};
     if(d.vuChs&&d.vuChs.length>2){
       const CH_IDS=['L','R','3','4','5','6','7','8'];
       d.vuChs.forEach((an,i)=>_vuBar('dvu'+(CH_IDS[i]||String(i+1))+slot, an._lvl||0));

@@ -61,10 +61,25 @@ class WaveformGL {
       px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
       px[i*4+3] = Math.min(255, h * 255) | 0;
     }
+    // Cap texture width at GPU MAX_TEXTURE_SIZE — long tracks (>109s at 150pts/s) exceed 16384 limit
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+    let texN = n, texPx = px;
+    if (n > maxTex) {
+      texN = maxTex;
+      texPx = new Uint8Array(texN * 4);
+      const ratio = (n - 1) / (texN - 1);
+      for (let i = 0; i < texN; i++) {
+        const fi = i * ratio, i0 = Math.min(n-1, fi|0), i1 = Math.min(n-1, i0+1), t = fi-i0;
+        texPx[i*4]   = (px[i0*4]   * (1-t) + px[i1*4]   * t) | 0;
+        texPx[i*4+1] = (px[i0*4+1] * (1-t) + px[i1*4+1] * t) | 0;
+        texPx[i*4+2] = (px[i0*4+2] * (1-t) + px[i1*4+2] * t) | 0;
+        texPx[i*4+3] = (px[i0*4+3] * (1-t) + px[i1*4+3] * t) | 0;
+      }
+    }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     this._wfTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -184,10 +199,25 @@ class OverviewGL {
       px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
       px[i*4+3] = Math.min(255, h * 255) | 0;
     }
+    // Cap at GPU MAX_TEXTURE_SIZE
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+    let texN = n, texPx = px;
+    if (n > maxTex) {
+      texN = maxTex;
+      texPx = new Uint8Array(texN * 4);
+      const ratio = (n - 1) / (texN - 1);
+      for (let i = 0; i < texN; i++) {
+        const fi = i * ratio, i0 = Math.min(n-1, fi|0), i1 = Math.min(n-1, i0+1), t = fi-i0;
+        texPx[i*4]   = (px[i0*4]   * (1-t) + px[i1*4]   * t) | 0;
+        texPx[i*4+1] = (px[i0*4+1] * (1-t) + px[i1*4+1] * t) | 0;
+        texPx[i*4+2] = (px[i0*4+2] * (1-t) + px[i1*4+2] * t) | 0;
+        texPx[i*4+3] = (px[i0*4+3] * (1-t) + px[i1*4+3] * t) | 0;
+      }
+    }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     this._wfTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
