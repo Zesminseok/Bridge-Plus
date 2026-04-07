@@ -338,6 +338,7 @@ void main() {
   float tH = T * scale;
 
   // Use max of all three as the outer boundary — avoids cutting off treble/mid when bass is quiet
+  float AA = 1.0;
   float outerH = max(bH, max(mH, tH));
   float alpha = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
   if (alpha < 0.005) { fragColor = vec4(0.0,0.0,0.0,1.0); return; }
