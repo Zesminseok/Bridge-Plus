@@ -109,15 +109,20 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dkctrl{width:48px;gap:3px}
 .deck-row.compact .dwov{height:10px;margin-bottom:1px}
 .deck-row.compact .dwz{height:44px;margin-bottom:3px}
-.dvm{width:5px;flex-shrink:0;background:rgba(0,0,0,.5);border-radius:0 2px 2px 0;position:relative;overflow:hidden}
-.dvmf{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:2px 2px 0 0;transition:height .04s}
-/* Beat phasor: 4-segment bar below zoom waveform */
-.dphs{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;height:6px;margin:0 0 6px}
-.dphs-seg{border-radius:3px;background:rgba(255,255,255,.05);position:relative;overflow:hidden}
-.dphs-seg.on{background:rgba(255,255,255,.12)}
-.dphs-fill{position:absolute;top:0;left:0;height:100%;border-radius:3px;background:rgba(90,240,179,.6);width:0}
-.dphs-seg.on .dphs-fill{background:rgba(90,240,179,.9)}
-.deck-row.compact .dphs{height:5px;margin-bottom:3px}
+/* Right-side VU meter column */
+.dvu-col{display:flex;flex-direction:column;gap:1px;flex-shrink:0;width:7px;background:rgba(0,0,0,.45);border-radius:0 3px 3px 0;overflow:hidden;align-self:stretch}
+.dvu-bar{flex:1;position:relative;overflow:hidden;background:rgba(255,255,255,.03)}
+.dvu-fill{position:absolute;bottom:0;left:0;right:0;height:0%;transition:height .04s}
+/* Beat phasor: 2×2 square grid */
+.dphs{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);gap:2px;width:16px;height:14px;flex-shrink:0}
+.dphs-seg{border-radius:2px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
+.dphs-seg.on{background:rgba(255,255,255,.15)}
+.dphs-fill{position:absolute;inset:0;border-radius:2px;background:rgba(90,240,179,.65);opacity:0;transition:opacity .06s}
+.dphs-seg.on .dphs-fill{background:rgba(90,240,179,.95)}
+/* Phasor row: BPM text + 2×2 grid inline */
+.dphs-row{display:flex;align-items:center;gap:6px;padding:0 0 4px}
+.dphs-bpm{font:600 10px var(--mn);color:var(--tx3);white-space:nowrap;font-variant-numeric:tabular-nums;flex:1;min-width:0}
+.dk[data-st="play"] .dphs-bpm,.dk[data-st="hwplay"] .dphs-bpm,.dk[data-st="cue"] .dphs-bpm{color:var(--tx2)}
 /* Zoom overlay buttons on waveform — left side to avoid VU meter */
 .dzoom-btns{position:absolute;top:3px;left:4px;display:flex;flex-direction:column;gap:2px;z-index:2;pointer-events:none}
 .dzb{pointer-events:auto;padding:0;width:18px;height:14px;border-radius:2px;font:600 10px var(--mn);cursor:pointer;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.55);color:rgba(255,255,255,.65);transition:all .1s;display:flex;align-items:center;justify-content:center;line-height:1}
@@ -137,10 +142,6 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dil{font:400 9px var(--sn);color:var(--tx3);letter-spacing:.04em}
 .div{font:600 11px var(--mn);color:var(--tx4);transition:color .15s;font-variant-numeric:tabular-nums}
 .dk[data-st="play"] .div,.dk[data-st="hwplay"] .div,.dk[data-st="cue"] .div{color:var(--tx)}
-.dfrow{display:flex;align-items:center;gap:7px;padding:4px 13px;border-top:1px solid var(--bg3)}
-.dfbar{flex:1;height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
-.dfbarf{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--pur),var(--blu));transition:width .08s}
-.dfpct{font:600 9px var(--mn);color:var(--tx3);min-width:28px;text-align:right;font-variant-numeric:tabular-nums}
 .dtr{padding:5px 13px;border-top:1px solid var(--bg3);display:flex;align-items:center;gap:8px}
 .dart{width:44px;height:44px;border-radius:5px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.04);border:1px solid var(--bdr)}
 .dartp{display:flex;align-items:center;justify-content:center}
@@ -211,9 +212,6 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .dkart img{width:100%;height:100%;object-fit:cover;display:block}
 .noart-icon{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--tx4);font-size:18px}
 .deck-row.compact .dkart{width:46px;height:46px}
-/* Stereo VU — two narrow bars side-by-side */
-.dvm-st{display:flex;gap:1px;width:7px;flex-shrink:0;height:100%}
-.dvm-st .dvm{flex:1;width:3px;border-radius:0}
 .dktn{padding:0 0 2px;min-width:0;overflow:hidden}
 .dktn-row{display:flex;align-items:baseline;gap:6px;min-width:0;overflow:hidden}
 .dktn-t{font:600 12px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 auto;min-width:0;position:relative;text-overflow:ellipsis}
@@ -222,10 +220,8 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dk[data-st="play"] .dktn-time,.dk[data-st="hwplay"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
-.dktn-time-row{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;padding:0 0 1px;white-space:nowrap}
-.dktn-bpm-row{font:500 10px var(--mn);color:var(--tx3);padding:0 0 3px;white-space:nowrap}
+.dktn-time-row{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;padding:0 0 3px;white-space:nowrap}
 .dk[data-st="play"] .dktn-time-row,.dk[data-st="hwplay"] .dktn-time-row,.dk[data-st="cue"] .dktn-time-row{color:var(--tx2)}
-.dk[data-st="play"] .dktn-bpm-row,.dk[data-st="hwplay"] .dktn-bpm-row,.dk[data-st="cue"] .dktn-bpm-row{color:var(--tx2)}
 .dbk-hd{font:600 11px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis}
 .dk[data-st="play"] .dbk-hd,.dk[data-st="hwplay"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
 .devbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg2);border:none;border-radius:10px;margin-bottom:10px;min-height:44px;flex-wrap:wrap}
@@ -1271,35 +1267,43 @@ function deckHTML(slot){
         <div class="ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">드래그 또는 클릭하여 열기</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG · M4A</div></div>
       </div>`;
     }
-    // HW unloaded: same structure as loaded deck but with empty waveform placeholders
+    // HW unloaded: identical structure to loaded deck
     return`<div class="dk" id="dk${slot}" data-st="hw">
       <div class="dshim"></div>
       <div class="dtop">
         <div class="dhd">
-          <div class="dhd-l"><span class="did" style="color:var(--pur)">${label}</span><span class="dbadge bp">HW</span></div>
-          <div class="dhd-r"><span class="dtc" style="color:var(--tx4)">--:--:--:--</span></div>
+          <div class="dhd-l">
+            <span class="did" id="did${slot}" style="color:var(--pur)">${label}</span>
+            <span class="dbadge bp" id="dbg${slot}">HW</span>
+            <span class="dbadge br hide" id="dair${slot}">ON AIR</span>
+          </div>
+          <div class="dhd-r">
+            <span class="dtc" id="dtc${slot}" style="color:var(--tx4)">--:--:--:--</span>
+            <div class="dksm" id="dksm${slot}"><span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}">SYNC</span><span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}">MASTER</span></div>
+            <div class="dht"><button class="dhtb" data-a="expand" data-i="${slot}" style="font-size:10px;padding:3px 5px">⤢</button></div>
+          </div>
         </div>
         <div class="dktn">
-          <div class="dktn-row"><span class="dktn-t" style="color:var(--tx4)">—</span></div>
-          <div class="dktn-time-row" style="color:var(--tx4)">--:--.--- / --:--.---</div>
-          <div class="dktn-bpm-row" style="color:var(--tx4)">— BPM</div>
+          <div class="dktn-row"><span class="dktn-t" id="dtn${slot}" style="color:var(--tx4)">—</span></div>
+          <div class="dktn-row"><span class="dktn-a" id="dta${slot}"></span></div>
+          <div class="dktn-time-row" id="dtime${slot}" style="color:var(--tx4)">--:--.--- / --:--.---</div>
         </div>
         <div class="dtbody">
           <div class="dkctrl">
-            <div class="dkart"><span class="noart-icon">♪</span></div>
+            <div class="dkart" id="dart${slot}"><span class="noart-icon">♪</span></div>
             <div class="dkctrl-btns">
               <button class="dkbtn dkcue" disabled>CUE</button>
               <button class="dkbtn dkplay" disabled>▶</button>
             </div>
           </div>
           <div class="dkwaves">
-            <div class="dwov" style="display:flex;align-items:center;justify-content:center"><span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span></div>
-            <div class="dwz" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px"><span style="font:400 12px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span></div>
-            <div class="dphs">${[1,2,3,4].map(()=>'<div class="dphs-seg"><div class="dphs-fill"></div></div>').join('')}</div>
+            <div class="dwov" id="dwov${slot}" style="display:flex;align-items:center;justify-content:center"><span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span></div>
+            <div style="display:flex;gap:0;margin-bottom:4px"><div class="dwz" id="dwz${slot}" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px"><span style="font:400 12px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span></div><div class="dvu-col" id="dvucol${slot}"><div class="dvu-bar"><div class="dvu-fill" id="dvuL${slot}"></div></div><div class="dvu-bar"><div class="dvu-fill" id="dvuR${slot}"></div></div></div></div>
+            <div class="dphs-row"><span class="dphs-bpm" id="dbk${slot}" style="color:var(--tx4)">— BPM</span><div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div></div>
           </div>
         </div>
       </div>
-      <div class="dhw"><span class="dhwl">${d.model?'⬡ '+d.model:'⬡ HW'}</span></div>
+      <div class="dhw" id="dhw${slot}"><span class="dhwl" id="dhwl${slot}">${d.model?'⬡ '+d.model:'⬡ HW'}</span></div>
     </div>`;
   }
   const artSrc=d.art||d.artUrl||'';
@@ -1323,9 +1327,8 @@ function deckHTML(slot){
       </div>
       <div class="dktn">
         <div class="dktn-row"><span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span></div>
-        <div class="dktn-row"><span class="dktn-a" id="dta${slot}">${d.ar?'· '+d.ar:''}</span></div>
+        <div class="dktn-row"><span class="dktn-a" id="dta${slot}">${d.ar||''}</span></div>
         <div class="dktn-time-row" id="dtime${slot}">0:00.00 / --:--.---</div>
-        <div class="dktn-bpm-row" id="dbk${slot}">—</div>
       </div>
       <div class="dtbody">
         <div class="dkctrl">
@@ -1337,8 +1340,8 @@ function deckHTML(slot){
         </div>
         <div class="dkwaves">
           <div class="dwov" id="dwov${slot}"><canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div></div>
-          <div class="dwz" id="dwz${slot}" style="position:relative"><canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dvm-st"><div class="dvm"><div class="dvmf" id="dvuL${slot}"></div></div><div class="dvm"><div class="dvmf" id="dvuR${slot}"></div></div></div><span class="wf-key" id="wfkey${slot}"></span><span class="wf-bpm" id="wfbpm${slot}"></span><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div>
-          <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
+          <div style="display:flex;gap:0;margin-bottom:4px"><div class="dwz" id="dwz${slot}" style="position:relative;flex:1"><canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><span class="wf-key" id="wfkey${slot}"></span><span class="wf-bpm" id="wfbpm${slot}"></span><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div><div class="dvu-col" id="dvucol${slot}"><div class="dvu-bar"><div class="dvu-fill" id="dvuL${slot}"></div></div><div class="dvu-bar"><div class="dvu-fill" id="dvuR${slot}"></div></div></div></div>
+          <div class="dphs-row"><span class="dphs-bpm" id="dbk${slot}">— BPM</span><div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div></div>
         </div>
       </div>
     </div>
@@ -2044,7 +2047,6 @@ function tick(){
       let bkTxt='';
       if(d.bpm>0){const _b=d.baseBpm||d.bpm;bkTxt=(_b%1===0?_b.toFixed(0):_b.toFixed(1))+' BPM';}
       else bkTxt='— BPM';
-      if(d.key) bkTxt+=' '+d.key;
       bkEl.textContent=bkTxt;
     }
     const dtnEl=document.getElementById('dtn'+slot);
@@ -2072,16 +2074,12 @@ function tick(){
         });
       }
     }
-    const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar?'· '+d.ar:'';
+    const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar||'';
     // Waveform key + BPM overlay
     const wfkEl=document.getElementById('wfkey'+slot);
     if(wfkEl)wfkEl.textContent=d.key||'';
     const wfbEl=document.getElementById('wfbpm'+slot);
-    if(wfbEl&&d.bpm>0){
-      const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
-      const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
-      wfbEl.textContent=(d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1))+' '+ps;
-    }else if(wfbEl)wfbEl.textContent='';
+    if(wfbEl)wfbEl.textContent=d.bpm>0?(d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1)):'';
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
 
@@ -2194,20 +2192,14 @@ function tick(){
         phaseInBeat=(posInBar%beatMs)/beatMs;
         if(d.dur>0&&displayPos>=d.dur-100) shouldShow=false;
       }
-      const blink=cfg.phasorMode==='blink';
       for(let b=1;b<=4;b++){
         const seg=document.getElementById('dphs'+slot+'_'+b);
         const fill=document.getElementById('dphsf'+slot+'_'+b);
         if(!seg||!fill)continue;
-        if(!shouldShow){seg.classList.remove('on');fill.style.width='0%';continue;}
+        if(!shouldShow){seg.classList.remove('on');fill.style.opacity='0';continue;}
         const active=b===beatInBar;
-        if(blink){
-          seg.classList.toggle('on',active);
-          fill.style.width=active?'100%':'0%';
-        }else{
-          seg.classList.toggle('on',active);
-          fill.style.width=active?(phaseInBeat*100).toFixed(1)+'%':'0%';
-        }
+        seg.classList.toggle('on',active);
+        fill.style.opacity=active?'1':'0';
       }
     }
 

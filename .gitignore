@@ -18,3 +18,6 @@ secrets.json
 token.json
 *.p12
 *.pfx
+
+# macOS App bundles
+*.app/

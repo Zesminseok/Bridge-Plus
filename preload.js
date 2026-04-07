@@ -26,5 +26,6 @@ contextBridge.exposeInMainWorld('bridge',{
   requestArtwork:(d)=>ipcRenderer.invoke('bridge:requestArtwork',d),
   setVirtualArt:(slot,jpegBase64)=>ipcRenderer.invoke('bridge:setVirtualArt',{slot,jpegBase64}),
   sendArtnet:(d)=>ipcRenderer.invoke('bridge:artTimeCode',d),
+  findRekordboxWaveform:(filename)=>ipcRenderer.invoke('bridge:findRekordboxWaveform',{filename}),
   onQuitting:(cb)=>ipcRenderer.on('app:quitting',()=>cb()),
 });
