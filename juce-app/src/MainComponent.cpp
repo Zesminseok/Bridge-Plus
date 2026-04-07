@@ -84,13 +84,13 @@ static void drawOverviewWaveform(juce::Graphics& g,
         float peakH  = p.peak  * H * 0.48f;
 
         // Peak envelope (very dim)
-        g.setColour(juce::Colour(0x22e2e2e8));
+        g.setColour(juce::Colour(0x18e2e2e8));
         g.drawVerticalLine(bounds.getX() + x, midY - peakH, midY + peakH);
-        // Mid (green)
-        g.setColour(juce::Colour(0x8034d399));
+        // Mid (amber - rekordbox style)
+        g.setColour(juce::Colour(0x70FFA600));
         g.drawVerticalLine(bounds.getX() + x, midY - midH,  midY + midH);
-        // Bass (blue)
-        g.setColour(juce::Colour(0x9960a5fa));
+        // Bass (CDJ-blue)
+        g.setColour(juce::Colour(0x880055E1));
         g.drawVerticalLine(bounds.getX() + x, midY - bassH, midY + bassH);
     }
 
@@ -155,33 +155,32 @@ static void drawZoomWaveform(juce::Graphics& g,
         }
     }
 
-    // Waveform bars
+    // Waveform bars (rekordbox color scheme: bass=blue, mid=amber, treble=white)
     float ptsPerPx = (float)(endPt - startPt) / (float)W;
     for (int x = 0; x < W; x++)
     {
         int idx = juce::jlimit(0, pts - 1, startPt + (int)((float)x * ptsPerPx));
         const auto& p = wf[(size_t)idx];
 
-        float bassH   = p.bass   * H * 0.40f;
-        float midH    = p.mid    * H * 0.35f;
-        float trebleH = p.treble * H * 0.25f;
-        float peakH   = p.peak   * H * 0.48f;
+        float bassH   = p.bass   * H * 0.42f;
+        float midH    = p.mid    * H * 0.38f;
+        float trebleH = p.treble * H * 0.28f;
 
-        // Past (left of playhead): dimmer
-        float distNorm = std::abs((float)x / (float)W - 0.5f);
-        bool isPast = (x < W / 2);
-        float alpha = isPast ? 0.45f : 0.85f;
-        alpha *= (1.0f - distNorm * 0.3f);
+        // Distance fade: center = bright, edges = 75% dim
+        float distNorm = std::abs((float)x / (float)W - headFrac);
+        float br = 1.0f - distNorm * 0.75f;
+        bool isPast = ((float)x / (float)W < headFrac);
+        float alpha = isPast ? 0.45f * br : 0.85f * br;
 
-        g.setColour(juce::Colour(0xff60a5fa).withAlpha(alpha * 0.7f));
+        // Bass: CDJ-blue  #0055E1
+        g.setColour(juce::Colour(0xff0055E1).withAlpha(alpha * 0.9f));
         g.drawVerticalLine(bounds.getX() + x, midY - bassH, midY + bassH);
-        g.setColour(juce::Colour(0xff34d399).withAlpha(alpha * 0.75f));
-        g.drawVerticalLine(bounds.getX() + x, midY - midH,  midY + midH);
-        g.setColour(juce::Colour(0xffe2e8f0).withAlpha(alpha * 0.45f));
+        // Mid: amber #FFA600
+        g.setColour(juce::Colour(0xffFFA600).withAlpha(alpha * 0.85f));
+        g.drawVerticalLine(bounds.getX() + x, midY - midH, midY + midH);
+        // Treble: white
+        g.setColour(juce::Colour(0xffFFFFFF).withAlpha(alpha * 0.5f));
         g.drawVerticalLine(bounds.getX() + x, midY - trebleH, midY + trebleH);
-        // Peak envelope
-        g.setColour(juce::Colour(0x18e2e2e8));
-        g.drawVerticalLine(bounds.getX() + x, midY - peakH, midY + peakH);
     }
 
     // Playhead line at headFrac
