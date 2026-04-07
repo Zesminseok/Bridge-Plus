@@ -21,7 +21,7 @@ const TC = {
   NOTIFY: 0x0D,
   P_BC  : 60000, P_TIME: 60001, P_DATA: 60002,
   NID   : Buffer.from([Math.floor(Math.random()*256), 0xFE]), // random per instance
-  NNAME : 'BRIDGE29',
+  NNAME : 'Bridge01',
   NTYPE : 0x02,   // 0x02 = Server (Arena = 0x04 = Client)
   NOPTS : Buffer.from([0x07, 0x00]),
   VENDOR: 'BRIDGE+', DEVICE: 'BRIDGE+',
@@ -191,10 +191,10 @@ function mkStatus(port, devices, layers, faders, hwMode){
     d[10+n] = (hasLayer || isHW) ? (n+1) : 0;
   }
 
-  // layerStatus[0-7] at body[18-25] — TCNet state values (1=Playing)
+  // layerStatus[0-7] at body[18-25] — raw TCNetLayerStatus (0=IDLE,3=PLAYING,5=PAUSED,6=STOPPED)
   for(let n=0;n<8;n++){
     const layerData = layers && layers[n];
-    d[18+n] = layerData ? toTCNetState(layerData.state) : 0;
+    d[18+n] = layerData ? (layerData.state||0) : 0;
   }
 
   // trackID[0-7] at body[26-57] (LE u32 × 8)
@@ -265,10 +265,10 @@ function mkTime(layers, uptimeMs){
     if(ld) d[64+n] = ld.beatPhase || 0;
   }
 
-  // layerState[0-7] at body[72-79] — TCNet state values (1=Playing)
+  // layerState[0-7] at body[72-79] — raw TCNetLayerStatus (3=PLAYING,5=PAUSED...)
   for(let n=0;n<8;n++){
     const ld = layers && layers[n];
-    if(ld) d[72+n] = toTCNetState(ld.state);
+    if(ld) d[72+n] = ld.state||0;
   }
 
   // generalSMPTEMode at body[81]
@@ -344,7 +344,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
   d[1] = layerIdx;        // 1-based layer index
 
   if(layerData){
-    d[3] = toTCNetState(layerData.state);  // TCNet state (1=Playing)
+    d[3] = layerData.state||0;  // raw TCNetLayerStatus (3=PLAYING,5=PAUSED,6=STOPPED)
     d[5] = 0x01;  // syncMaster = Master
     d[7] = layerData.beatPhase || 0;
     d.writeUInt32LE(layerData.totalLength || 0, 8);   // trackLength ms

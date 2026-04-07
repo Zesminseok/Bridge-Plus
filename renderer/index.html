@@ -62,7 +62,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dwz{height:48px;margin-bottom:4px}
 .deck-row.compact .ddz{padding:16px 10px;min-height:100px}
 .dk{background:var(--bg2);border:none;border-radius:12px;overflow:hidden;transition:box-shadow .2s;min-width:0;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.dk[data-st="play"]{box-shadow:0 0 20px rgba(52,211,153,.15),0 2px 8px rgba(0,0,0,.3)}.dk[data-st="cue"]{box-shadow:0 0 16px rgba(255,209,109,.12),0 2px 8px rgba(0,0,0,.3)}.dk[data-st="hw"]{box-shadow:0 0 12px rgba(167,139,250,.1),0 2px 8px rgba(0,0,0,.3)}.dk[data-st="hwplay"]{box-shadow:0 0 20px rgba(52,211,153,.15),0 2px 8px rgba(0,0,0,.3)}.dk.dov{box-shadow:0 0 16px rgba(164,201,255,.15),0 2px 8px rgba(0,0,0,.3)!important}
+.dk[data-st="play"]{box-shadow:0 0 10px rgba(52,211,153,.09),0 2px 8px rgba(0,0,0,.3)}.dk[data-st="cue"]{box-shadow:0 0 8px rgba(255,209,109,.08),0 2px 8px rgba(0,0,0,.3)}.dk[data-st="hw"]{box-shadow:0 0 6px rgba(167,139,250,.07),0 2px 8px rgba(0,0,0,.3)}.dk[data-st="hwplay"]{box-shadow:0 0 10px rgba(52,211,153,.09),0 2px 8px rgba(0,0,0,.3)}.dk.dov{box-shadow:0 0 8px rgba(164,201,255,.09),0 2px 8px rgba(0,0,0,.3)!important}
 .dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--grn),transparent)}
 .dk[data-st="play"] .dshim,.dk[data-st="hwplay"] .dshim{opacity:1;animation:shimmer 2s ease-in-out infinite}
 .dk[data-st="cue"] .dshim{opacity:.6;background:linear-gradient(90deg,transparent,var(--ylw),transparent)}
@@ -354,13 +354,14 @@ let run=false,t0=0,up=0,pk=0,curTab='link',TC_NAME='BRIDGE+';
 let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
 // 설정 — 인터페이스 포함
-let cfg={nm:'BRIDGE29',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
-  tcFps:'25',phasorMode:'blink',wfColor:'3band',wfCenter:'left',
-  tcLtcA:'',   // Layer A LTC 오디오 장치
-  tcLtcB:'',   // Layer B LTC 오디오 장치
-  tcLtcM:'',   // Layer M LTC 오디오 장치
-  tcMidiOutId:'',
+const _CFG_DEF={nm:'Bridge Plus %%',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
+  tcFps:'25',wfColor:'3band',wfCenter:'left',
+  tcLtcA:'',tcLtcB:'',tcLtcM:'',tcMidiOutId:'',
   tcArtnetIp:'255.255.255.255',tcArtnetPort:'6454'};
+// Load persisted settings
+let cfg=Object.assign({},_CFG_DEF);
+try{const _s=localStorage.getItem('bridge_cfg');if(_s){const _p=JSON.parse(_s);Object.assign(cfg,_p);}}catch(_){}
+function _saveCfg(){try{localStorage.setItem('bridge_cfg',JSON.stringify(cfg));}catch(_){}}
 
 const MAX_DECKS=6;
 const DECKS={};
@@ -590,17 +591,17 @@ function renderOutLayers(){
     return`<div class="olc ${playing?'olc-play':''}">
       <div class="olh"><span class="olb" style="background:${color}">${key}</span><span class="oltc" id="oltc${key}">${tc}</span></div>
       <div class="olsr">
-        <select class="ss olss" data-ol="${key}" style="flex:1;min-width:0">${mkSrcOpts(key)}</select>
+        <select class="ss olss" data-ol="${key}" style="width:80px;min-width:0;flex-shrink:1">${mkSrcOpts(key)}</select>
         <div class="olout">
           <button class="tcbtn${o.ltc?' ac-ltc':''}" data-ol="${key}" data-mode="ltc">LTC</button>
           <button class="tcbtn${o.mtc?' ac-mtc':''}" data-ol="${key}" data-mode="mtc">MTC</button>
           <button class="tcbtn${o.art?' ac-art':''}" data-ol="${key}" data-mode="art">ART</button>
         </div>
-      </div>
-      <div class="olof">
-        <span style="font:400 9px var(--mn);color:var(--tx3);flex-shrink:0">OFS</span>
-        <input type="number" class="olofin" value="${o.offset}" data-ol="${key}" step="10" placeholder="0">
-        <span style="font:400 9px var(--mn);color:var(--tx3)">ms</span>
+        <div style="display:flex;align-items:center;gap:3px;flex-shrink:0">
+          <span style="font:400 9px var(--mn);color:var(--tx3)">OFS</span>
+          <input type="number" class="olofin" value="${o.offset}" data-ol="${key}" step="10" placeholder="0" style="width:40px">
+          <span style="font:400 9px var(--mn);color:var(--tx3)">ms</span>
+        </div>
       </div>
     </div>`;
   };
@@ -1746,7 +1747,12 @@ function loadFile(slot,f){
         d._artRawB64=btoa(b64);
         if(E&&run&&window.bridge?.setVirtualArt) window.bridge.setVirtualArt(slot, d._artRawB64);
       }
-      renderDecks();
+      // Update metadata in-place — avoids DOM rebuild and canvas context reset
+      const _tn=document.getElementById('dtn'+slot);if(_tn)_tn.textContent=d.tn||'—';
+      const _ta=document.getElementById('dta'+slot);if(_ta)_ta.textContent=d.ar||'';
+      const _art=document.getElementById('dart'+slot);
+      if(_art&&d.artUrl){const _img=_art.querySelector('img')||document.createElement('img');_img.src=d.artUrl;_img.alt='';if(!_art.contains(_img))_art.innerHTML='';if(!_art.contains(_img))_art.appendChild(_img);}
+      if(E&&run)window.bridge.updateLayer(slot,{trackName:d.tn||'',artistName:d.ar||''});
     });
   }
   // audio init — AIFF files are converted to WAV first (Chromium has no AIFF decoder)
@@ -1853,7 +1859,9 @@ function loadFile(slot,f){
             d._barAnchorMs=anchor;
             console.log(`[BPM] slot=${slot} id3Bpm=${d._id3Bpm||'-'} analyzed=${analyzedBpm} final=${d.bpm} startMs=${startMs.toFixed(1)} beats=${beats.length}`);
           }
-          renderDecks();
+          // Update BPM display in-place — avoids DOM rebuild / canvas context reset
+          const _bpmEl=document.getElementById('wfbpm'+slot);
+          if(_bpmEl)_bpmEl.textContent=d.bpm>0?`${d.baseBpm||d.bpm} / ${d.bpm} ±0.00%`:'';
         });
       },100); // 100ms delay — let audio element finish loading
     });
@@ -2451,7 +2459,6 @@ function renderSettings(){
     <div class="sl">웨이브폼 설정</div>
     <div class="sgr">
       <div class="srw"><span class="srl">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
-      <div class="srw"><span class="srl">비트 페이저 모드</span><select class="ss" id="phasorModeSel"><option value="blink" ${cfg.phasorMode==='blink'?'selected':''}>Static (기본)</option><option value="scroll" ${cfg.phasorMode==='scroll'?'selected':''}>Scroll (채우기)</option></select></div>
     </div>
     <div class="sl">TCNet 설정</div>
     <div class="sgr">
@@ -2510,13 +2517,12 @@ function renderSettings(){
       }
       else if(k==='tcArtnetIp'||k==='tcArtnetPort'){cfg[k]=e.target.value;}
       else cfg[k]=e.target.value;
+      _saveCfg();
     });
   });
   // Waveform settings
   const wfCenterSel=el.querySelector('#wfCenterSel');
-  if(wfCenterSel){wfCenterSel.value=cfg.wfCenter||'center';wfCenterSel.onchange=e=>{cfg.wfCenter=e.target.value;};}
-  const phasorSel=el.querySelector('#phasorModeSel');
-  if(phasorSel){phasorSel.value=cfg.phasorMode||'blink';phasorSel.onchange=e=>{cfg.phasorMode=e.target.value;};}
+  if(wfCenterSel){wfCenterSel.value=cfg.wfCenter||'left';wfCenterSel.onchange=e=>{cfg.wfCenter=e.target.value;_saveCfg();};}
   // MIDI output device list
   const midiSel=el.querySelector('#midiOutSel');
   if(midiSel&&_midiAccess){
