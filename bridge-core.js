@@ -1654,43 +1654,43 @@ class BridgeCore {
 
       if(reqType === 0x2002){
         // MetadataReq → MenuAvail with item count=1
-        // Parse RMST arg: header=32B, arg[0] at offset 32 (0x11 + 4B)
-        const rmst = buf.length >= 37 ? buf.readUInt32BE(33) : 0;
+        // Store trackId from request for use in 0x3000 (avoids relying on layers state)
         const trackIdReq = buf.length >= 42 ? buf.readUInt32BE(38) : 0;
-        console.log(`[VDBSRV] meta req rmst=0x${rmst.toString(16)} trackId=${trackIdReq}`);
-        const resp = this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(1)]);
-        sock.write(resp);
+        sock._vdbTrackId = trackIdReq;  // save per-connection
+        console.log(`[VDBSRV] meta req trackId=${trackIdReq}`);
+        sock.write(this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(1)]));
       } else if(reqType === 0x3000){
         // RenderMenuReq → send MenuItem(s) + render complete
-        let title='BRIDGE+', artist='', artworkId=1;
+        // Use trackId from 0x2002 request (or fall back to layers state)
+        let title='BRIDGE+', artist='';
         for(let i=0;i<8;i++){
           const ld=this.layers[i];
-          if(ld?.trackName){title=ld.trackName;artist=ld.artistName||'';artworkId=ld.trackId||1;break;}
+          if(ld?.trackName){title=ld.trackName;artist=ld.artistName||'';break;}
         }
         const art=this._findVirtualArt();
-        if(!art) artworkId=0;
+        // Prefer trackId from the 0x2002 request on this same connection
+        const artworkId = art ? (sock._vdbTrackId || (this.layers.find(l=>l?.trackId)?.trackId) || 1) : 0;
         const item=this._dbBuildMenuItem(actualTxId, title, artist, artworkId);
         const done=this._dbBuildMsg(actualTxId+1, 0x4003, [this._dbArg4(1)]);
         sock.write(Buffer.concat([item, done]));
         console.log(`[VDBSRV] render menu: title="${title}" artworkId=${artworkId}`);
       } else if(reqType === 0x2003){
-        // ArtworkReq → serve stored JPEG
-        // Parse artworkId from request: header=32B, arg[0]=RMST(5B), arg[1]=artworkId at offset 37
+        // ArtworkReq → serve stored JPEG, then close (EOF signals response complete)
         const reqArtId = buf.length >= 42 ? buf.readUInt32BE(38) : 0;
         const artBuf = this._findVirtualArt();
         if(artBuf){
           const isJpeg = artBuf[0]===0xFF && artBuf[1]===0xD8;
-          console.log(`[VDBSRV] artwork req artId=${reqArtId} → ${artBuf.length}B ${isJpeg?'JPEG':'?'} magic=${artBuf.slice(0,4).toString('hex')}`);
-          sock.write(this._dbBuildArtResponse(actualTxId, artBuf));
+          console.log(`[VDBSRV] artwork req artId=${reqArtId} → ${artBuf.length}B ${isJpeg?'JPEG':'?'}`);
+          sock.write(this._dbBuildArtResponse(actualTxId, artBuf), ()=>sock.end());
         } else {
           console.log(`[VDBSRV] artwork req artId=${reqArtId} → no art stored`);
-          sock.write(this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]));
+          sock.write(this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]), ()=>sock.end());
         }
       } else if(reqType === 0x0100){
-        // TEARDOWN — client is closing connection, just let it close (no response needed)
+        // TEARDOWN — client is closing connection
         sock.end();
       } else {
-        // Unknown — generic OK (empty response)
+        // Unknown data request — send empty success
         sock.write(this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(0)]));
       }
     }catch(e){
