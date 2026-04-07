@@ -1541,29 +1541,18 @@ class BridgeCore {
         if(n.vendor && n.vendor.includes('Resolume')) arenaIP = n.ip;
       }
 
-      // Write to temp file
-      const tmpDir = require('os').tmpdir();
-      const artPath = require('path').join(tmpDir, `bridge_art_deck${slot+1}.jpg`);
-      require('fs').writeFileSync(artPath, jpegBuf);
-
-      // Resolume REST API: PUT thumbnail — sets clip preview image
+      // Resolume REST API: PUT raw JPEG binary as clip thumbnail
       const layer = slot + 1;
       const clip = 1;
       const http = require('http');
-      // Correct file URI: don't encodeURIComponent the full path (that encodes slashes)
-      // macOS/Linux: file:///absolute/path, Windows: file:///C:/path
-      const normalized = artPath.replace(/\\/g,'/');
-      const uri = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`;
-      const body = JSON.stringify({ uri });
       const url = `http://${arenaIP}:8080/api/v1/composition/layers/${layer}/clips/${clip}/thumbnail`;
-      console.log(`[ARENA-ART] PUT ${url} uri=${uri}`);
-
-      const req = http.request(url, {method:'PUT', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}}, res=>{
+      console.log(`[ARENA-ART] PUT ${url} (${jpegBuf.length}B JPEG)`);
+      const req = http.request(url, {method:'PUT', headers:{'Content-Type':'image/jpeg','Content-Length':jpegBuf.length}}, res=>{
         let d='';res.on('data',c=>d+=c);
         res.on('end',()=>console.log(`[ARENA-ART] thumbnail ${res.statusCode} slot${slot+1}: ${d.slice(0,80)}`));
       });
-      req.on('error', e=>console.warn(`[ARENA-ART] REST failed: ${e.message}`));
-      req.write(body); req.end();
+      req.on('error', e=>console.warn(`[ARENA-ART] REST failed: ${e.message} (enable HTTP server in Arena Preferences)`));
+      req.write(jpegBuf); req.end();
     }catch(e){
       console.warn(`[ARENA-ART] push failed: ${e.message}`);
     }
@@ -1690,9 +1679,12 @@ class BridgeCore {
           sock.write(this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]));
           console.log('[VDBSRV] no artwork available');
         }
+      } else if(reqType === 0x0100){
+        // TEARDOWN — client is closing connection, just let it close (no response needed)
+        sock.end();
       } else {
-        // Unknown — generic OK
-        sock.write(this._dbBuildMsg(actualTxId, 0x4000, [this._dbArg4(0)]));
+        // Unknown — generic OK (empty response)
+        sock.write(this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(0)]));
       }
     }catch(e){
       console.warn(`[VDBSRV] handleRequest error: ${e.message}`);
