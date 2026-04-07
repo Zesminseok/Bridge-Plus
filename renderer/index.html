@@ -1426,17 +1426,51 @@ function bindDeck(slot){
     const r=e.target.closest('.dwov');if(!r)return;
     const rc=r.getBoundingClientRect();doSeek(slot,Math.max(0,Math.min(1,(e.clientX-rc.left)/rc.width)));
   });
-  // Zoom canvas: drag to scrub (scratch feel) — cue point NOT changed
+  // Zoom canvas: vinyl scratch simulation
+  // Physics: drag speed → playbackRate, stationary platter → silence, release → accelerate to 1.0
   const wzDiv=document.getElementById('dwz'+slot);
   if(wzDiv){
-    let _drag=null;
+    let _drag=null, _vel=0, _raf=null, _lastMoveT=0;
+    // Vinyl motor loop — runs at 60fps during scratch
+    // Simulates platter inertia: velocity decays when mouse stops, accelerates to 1.0 after release
+    const _vinylTick=()=>{
+      _raf=null;
+      const d2=DECKS[slot];if(!d2)return;
+      const au=d2.au;
+      if(d2.scratch){
+        // During scratch: decay velocity if mouse has been still >35ms (platter friction)
+        if(!_drag||performance.now()-_lastMoveT>35) _vel*=0.80;
+        if(au){
+          if(_vel<0.02){
+            if(!au.paused)au.pause();
+            au.playbackRate=0.05;
+          } else {
+            au.playbackRate=Math.min(4.0,_vel);
+            if(au.paused&&au.readyState>=2)au.play().catch(()=>{});
+          }
+        }
+        if(_vel>0.003||performance.now()-_lastMoveT<100) _raf=requestAnimationFrame(_vinylTick);
+      } else {
+        // After release: motor spin-up — gradually accelerate playbackRate to 1.0
+        if(au&&!au.paused&&d2.pl){
+          const cur=au.playbackRate;
+          if(cur<0.98){
+            au.playbackRate=Math.min(1.0,cur*1.25+0.05); // fast acceleration
+            _raf=requestAnimationFrame(_vinylTick);
+          } else {
+            au.playbackRate=1.0;
+          }
+        }
+      }
+    };
     wzDiv.addEventListener('pointerdown',e=>{
       if(e.target.closest('.dzb'))return;
       e.preventDefault();
       const d2=DECKS[slot];if(!d2||!d2.ld)return;
-      DECKS[slot].scratch=true;
+      DECKS[slot].scratch=true; _vel=0; _lastMoveT=performance.now();
       _drag={startX:e.clientX,startPos:d2.pos,lastX:e.clientX,lastT:performance.now()};
       wzDiv.setPointerCapture(e.pointerId);
+      if(!_raf)_raf=requestAnimationFrame(_vinylTick);
     });
     wzDiv.addEventListener('pointermove',e=>{
       if(!_drag)return;
@@ -1444,28 +1478,29 @@ function bindDeck(slot){
       const rc=wzDiv.getBoundingClientRect(),msPerPx=(DECKS[slot]?.zoomMs||8000)/rc.width;
       const newMs=Math.max(0,Math.min(d2.dur,_drag.startPos-(e.clientX-_drag.startX)*msPerPx));
       d2.pos=newMs;
-      if(d2.au){
-        d2.au.currentTime=newMs/1000;
-        // Velocity-based playbackRate for vinyl scratch feel
-        const now=performance.now();
-        const dt=Math.max(1,now-_drag.lastT);
-        const dx=e.clientX-_drag.lastX;
-        _drag.lastX=e.clientX; _drag.lastT=now;
-        const velPx=dx/dt;
-        const trackVel=Math.abs(velPx*msPerPx);
-        const rate=Math.max(0.05,Math.min(4.0,trackVel*1.2||0.05));
-        d2.au.playbackRate=rate;
-        if(d2.au.paused&&d2.au.readyState>=2) d2.au.play().catch(()=>{});
-      }
+      if(d2.au)d2.au.currentTime=newMs/1000;
+      const now=performance.now(),dt=Math.max(1,now-_drag.lastT),dx=e.clientX-_drag.lastX;
+      _drag.lastX=e.clientX;_drag.lastT=now;
+      // Target velocity = |drag px/ms × ms_track/px| = playbackRate (dimensionless)
+      const targetVel=Math.abs((dx/dt)*msPerPx);
+      _vel=_vel*0.3+targetVel*0.7; // low-pass: fast response to new speed
+      _lastMoveT=now;
+      if(!_raf)_raf=requestAnimationFrame(_vinylTick);
     });
     wzDiv.addEventListener('pointerup',()=>{
+      _drag=null; DECKS[slot].scratch=false;
       const d2=DECKS[slot];
-      if(d2?.au){d2.au.playbackRate=1.0;d2.au.currentTime=(d2.pos||0)/1000;if(d2.pl)d2.au.play().catch(()=>{});}
-      _drag=null;DECKS[slot].scratch=false;
+      if(d2?.au){
+        // Start spin-up from current velocity toward 1.0
+        if(d2.pl){if(!_raf)_raf=requestAnimationFrame(_vinylTick);}
+        else{d2.au.playbackRate=1.0;d2.au.currentTime=(d2.pos||0)/1000;}
+      }
     });
     wzDiv.addEventListener('pointercancel',()=>{
-      if(DECKS[slot]?.au){DECKS[slot].au.playbackRate=1.0;if(DECKS[slot].pl)DECKS[slot].au.play().catch(()=>{});}
-      _drag=null;DECKS[slot].scratch=false;
+      _drag=null;_vel=0;DECKS[slot].scratch=false;
+      if(_raf){cancelAnimationFrame(_raf);_raf=null;}
+      const d2=DECKS[slot];
+      if(d2?.au){d2.au.playbackRate=1.0;if(d2.pl)d2.au.play().catch(()=>{});}
     });
   }
   // CUE button — pointerdown/up for hold-to-cue behaviour

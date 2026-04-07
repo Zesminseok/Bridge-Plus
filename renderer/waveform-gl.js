@@ -292,6 +292,8 @@ void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
 `;
 
 // ─── Zoom waveform fragment shader ──────────────────────────────────────────
+// Rekordbox-style stacked 3-band: treble(inner/cyan) → mid(green) → bass(outer/red-orange)
+// yFrac = 0 at center, 1 at bar edge; each band occupies proportional zone
 const _WGL_ZOOM_FS = `#version 300 es
 precision highp float;
 uniform sampler2D u_wf;
@@ -303,53 +305,54 @@ uniform float u_centerX;
 uniform int   u_mode;
 out vec4 fragColor;
 
-vec3 wfColor(float bass, float midf, float treble, int mode) {
+vec3 wfColor(float bass, float midf, float treble, int mode, float yFrac) {
   if (mode == 1) {
-    // Pure 3-band RGB: each band boosted independently
+    // Pure 3-band additive
     float B = min(1.0, bass * 2.5);
     float M = min(1.0, midf * 3.5);
     float T = min(1.0, treble * 6.0);
-    return vec3(B, M, T);
+    return vec3(B, M, T) * (1.0 - yFrac * 0.3);
   } else if (mode == 2) {
     // Blue mono
     float e = min(1.0, sqrt(bass*bass + midf*midf + treble*treble) * 3.0);
-    float br = pow(e, 0.6);
-    return vec3(br*0.05, br*0.35, br*1.0);
+    return vec3(0.05, 0.35, 1.0) * pow(e, 0.6) * (1.0 - yFrac * 0.3);
   } else {
-    // beat-link-trigger style: dominant band determines color (not additive)
-    // bass=red, mid=blue, treble=green
-    float B = min(1.0, bass * 2.5);
-    float M = min(1.0, midf * 3.0);
-    float T = min(1.0, treble * 5.5);
-    float mx = max(max(B, M), T);
-    if (mx < 0.01) return vec3(0.0);
-    float nr = B/mx; float ng = T/mx; float nb = M/mx;
-    return vec3(pow(nr, 2.5), pow(ng, 2.5), pow(nb, 2.5)) * mx;
+    // Rekordbox stacked bands: zones from center outward = treble → mid → bass
+    float B = min(1.0, bass * 2.8);
+    float M = min(1.0, midf * 3.2);
+    float T = min(1.0, treble * 6.0);
+    float total = B + M + T;
+    if (total < 0.015) return vec3(0.0);
+    // Band boundary positions (0=center edge, 1=bar edge)
+    float tEnd = T / total;          // treble zone: 0 → tEnd
+    float mEnd = tEnd + M / total;   // mid zone: tEnd → mEnd
+    // bass zone: mEnd → 1.0
+    vec3 col;
+    if      (yFrac < tEnd) col = vec3(0.0,  0.72, 1.0);   // treble = cyan
+    else if (yFrac < mEnd) col = vec3(0.08, 0.95, 0.22);  // mid    = green
+    else                   col = vec3(1.0,  0.22, 0.04);   // bass   = orange-red
+    // Subtle brightness: very slight edge fade, no heavy gradient
+    return col * (0.92 - yFrac * 0.10);
   }
 }
 
 void main() {
   float W = u_res.x, H = u_res.y, mid = H * 0.5;
   float cX = u_centerX * W;
-  float msPerPx = u_zoomMs / W;
-  float pxMs = u_posMs + (gl_FragCoord.x - cX) * msPerPx;
+  float pxMs = u_posMs + (gl_FragCoord.x - cX) * (u_zoomMs / W);
 
   if (pxMs < 0.0 || pxMs > u_durMs) {
     fragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
   }
-  float t = clamp(pxMs / u_durMs, 0.0, 1.0);
-  vec4 wf = texture(u_wf, vec2(t, 0.5));
+  vec4 wf = texture(u_wf, vec2(clamp(pxMs / u_durMs, 0.0, 1.0), 0.5));
   float bass = wf.r, midf = wf.g, treble = wf.b, h = wf.a;
 
   float halfH = h * mid * 0.95;
   float yDist = abs(gl_FragCoord.y - mid);
-
   if (halfH < 0.5 || yDist > halfH) {
     fragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
   }
-  vec3 col = wfColor(bass, midf, treble, u_mode);
-  float brightness = 1.0 - (yDist / halfH) * 0.75;
-  fragColor = vec4(col * brightness, 1.0);
+  fragColor = vec4(wfColor(bass, midf, treble, u_mode, yDist / halfH), 1.0);
 }
 `;
 
@@ -362,25 +365,23 @@ uniform vec2  u_res;
 uniform int   u_mode;
 out vec4 fragColor;
 
-vec3 wfColor(float bass, float midf, float treble, int mode) {
+vec3 wfColor(float bass, float midf, float treble, int mode, float yFrac) {
   if (mode == 1) {
-    float B = min(1.0, bass * 2.5);
-    float M = min(1.0, midf * 3.5);
-    float T = min(1.0, treble * 6.0);
-    return vec3(B, M, T);
+    float B = min(1.0, bass * 2.5); float M = min(1.0, midf * 3.5); float T = min(1.0, treble * 6.0);
+    return vec3(B, M, T) * (1.0 - yFrac * 0.3);
   } else if (mode == 2) {
     float e = min(1.0, sqrt(bass*bass+midf*midf+treble*treble)*3.0);
-    float br = pow(e,0.6);
-    return vec3(br*0.05, br*0.35, br*1.0);
+    return vec3(0.05,0.35,1.0)*pow(e,0.6)*(1.0-yFrac*0.3);
   } else {
-    // beat-link-trigger style: dominant band determines color (not additive)
-    float B = min(1.0, bass * 2.5);
-    float M = min(1.0, midf * 3.0);
-    float T = min(1.0, treble * 5.5);
-    float mx = max(max(B, M), T);
-    if (mx < 0.01) return vec3(0.0);
-    float nr = B/mx; float ng = T/mx; float nb = M/mx;
-    return vec3(pow(nr, 2.5), pow(ng, 2.5), pow(nb, 2.5)) * mx;
+    float B = min(1.0, bass * 2.8); float M = min(1.0, midf * 3.2); float T = min(1.0, treble * 6.0);
+    float total = B + M + T;
+    if (total < 0.015) return vec3(0.0);
+    float tEnd = T/total; float mEnd = tEnd + M/total;
+    vec3 col;
+    if      (yFrac < tEnd) col = vec3(0.0,  0.72, 1.0);
+    else if (yFrac < mEnd) col = vec3(0.08, 0.95, 0.22);
+    else                   col = vec3(1.0,  0.22, 0.04);
+    return col * (0.92 - yFrac * 0.10);
   }
 }
 
@@ -398,14 +399,11 @@ void main() {
   float halfH = h * mid * 0.95;
   float yDist = abs(gl_FragCoord.y - mid);
   if (halfH < 0.5 || yDist > halfH) {
-    if (t < u_pos) fragColor = vec4(0.04, 0.04, 0.06, 1.0);
-    else fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    fragColor = t < u_pos ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
     return;
   }
-
-  vec3 col = wfColor(bass, midf, treble, u_mode);
-  float brightness = 1.0 - (yDist / halfH) * 0.75;
-  if (t < u_pos) brightness *= 0.45;
-  fragColor = vec4(col * brightness, 1.0);
+  vec3 col = wfColor(bass, midf, treble, u_mode, yDist / halfH);
+  if (t < u_pos) col *= 0.45;
+  fragColor = vec4(col, 1.0);
 }
 `;
