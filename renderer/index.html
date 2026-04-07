@@ -354,13 +354,15 @@ let run=false,t0=0,up=0,pk=0,curTab='link',TC_NAME='BRIDGE+';
 let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
 // 설정 — 인터페이스 포함
-const _CFG_DEF={nm:'Bridge Plus %%',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
+const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
   tcFps:'25',wfColor:'3band',wfCenter:'left',
   tcLtcA:'',tcLtcB:'',tcLtcM:'',tcMidiOutId:'',
   tcArtnetIp:'255.255.255.255',tcArtnetPort:'6454'};
 // Load persisted settings
 let cfg=Object.assign({},_CFG_DEF);
 try{const _s=localStorage.getItem('bridge_cfg');if(_s){const _p=JSON.parse(_s);Object.assign(cfg,_p);}}catch(_){}
+// Migrate old long node names that exceed 8-char TCNet limit
+if(cfg.nm&&cfg.nm.endsWith('%%')&&cfg.nm.replace('%%','').length>6){cfg.nm='Bridge%%';}
 function _saveCfg(){try{localStorage.setItem('bridge_cfg',JSON.stringify(cfg));}catch(_){}}
 
 const MAX_DECKS=6;
@@ -1458,6 +1460,8 @@ function bindDeck(slot){
       const p=wov.parentElement;
       const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
       wov.width=w; wov.height=h;
+      // Destroy old GL context before creating new one (prevents WebGL context limit exhaustion)
+      if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
       try{
         d.ovgl=new OverviewGL(wov);
         d.wovCtx=null;
@@ -1478,6 +1482,8 @@ function bindDeck(slot){
       const p=wzc.parentElement;
       const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
       wzc.width=w; wzc.height=h;
+      // Destroy old GL context before creating new one (prevents WebGL context limit exhaustion)
+      if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
       try{
         d.wgl=new WaveformGL(wzc);
         d.wzCtx=null;
@@ -2462,7 +2468,7 @@ function renderSettings(){
     </div>
     <div class="sl">TCNet 설정</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">Node Name <span style="font:400 9px var(--mn);color:var(--tx4)">(%%=자동번호)</span></span><input type="text" value="${cfg.nm}" data-cfg="nm" placeholder="Bridge%%" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:110px;text-align:right"></div>
+      <div class="srw"><span class="srl">Node Name <span style="font:400 9px var(--mn);color:var(--tx4)">(%%=자동번호, 최대8자)</span></span><input type="text" value="${cfg.nm}" data-cfg="nm" placeholder="Bridge%%" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:110px;text-align:right" maxlength="9"></div>
       <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
       <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
