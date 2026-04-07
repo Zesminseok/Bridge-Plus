@@ -1497,7 +1497,27 @@ void MainComponent::paint(juce::Graphics& g)
         g.setColour(C::bdr);
         g.drawHorizontalLine(144, 0, (float)w);
 
-        auto contentArea = getLocalBounds().withTrimmedTop(152).withTrimmedBottom(26).reduced(14, 4);
+        // PDJL status banner
+        {
+            int pdjlPort = engine.getPDJLPort();
+            auto bannerRect = juce::Rectangle<float>(14.0f, 150.0f, (float)(w - 28), 28.0f);
+            g.setColour(pdjlPort ? C::grn2.withAlpha(0.08f) : C::red.withAlpha(0.08f));
+            g.fillRoundedRectangle(bannerRect, 6.0f);
+            g.setColour(pdjlPort ? C::grn2.withAlpha(0.25f) : C::red.withAlpha(0.2f));
+            g.drawRoundedRectangle(bannerRect.reduced(0.5f), 6.0f, 1.0f);
+            g.setColour(pdjlPort ? C::grn : C::red);
+            g.fillEllipse(bannerRect.getX() + 10, bannerRect.getCentreY() - 3, 6.0f, 6.0f);
+            g.setColour(pdjlPort ? C::grn : C::red);
+            g.setFont(juce::FontOptions(11.0f));
+            juce::String pdjlTxt = pdjlPort
+                ? "Pro DJ Link — UDP " + juce::String(pdjlPort) + " 수신 중"
+                : "Pro DJ Link — 비활성 (START 필요)";
+            g.drawText(pdjlTxt, (int)(bannerRect.getX() + 24), (int)bannerRect.getY(),
+                (int)(bannerRect.getWidth() - 26), (int)bannerRect.getHeight(),
+                juce::Justification::centredLeft);
+        }
+
+        auto contentArea = getLocalBounds().withTrimmedTop(184).withTrimmedBottom(26).reduced(14, 4);
         int itemY = contentArea.getY();
         const int itemH = 52;
         const int itemGap = 6;

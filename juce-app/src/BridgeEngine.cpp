@@ -218,6 +218,11 @@ int BridgeEngine::getUptimeSeconds() const
     return (int)((juce::Time::currentTimeMillis() - startTime) / 1000);
 }
 
+int BridgeEngine::getPDJLPort() const
+{
+    return (running && pdjlReceiver) ? 50001 : 0;
+}
+
 juce::String BridgeEngine::getStatusText() const
 {
     if (!running) return "Stopped";

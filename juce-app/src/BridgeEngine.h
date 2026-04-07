@@ -53,6 +53,9 @@ public:
     // DJM
     const DJMStatus& getDJMStatus() const { return djm; }
 
+    // PDJL receiver port (0 = not bound)
+    int getPDJLPort() const;  // returns 50001 when active, 0 otherwise
+
     // Devices
     const std::map<juce::String, DeviceInfo>& getDevices() const { return devices; }
 
