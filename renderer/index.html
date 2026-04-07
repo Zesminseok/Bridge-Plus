@@ -1663,11 +1663,12 @@ function loadFile(slot,f){
       if(tags.bpm>0){d._id3Bpm=tags.bpm;} // store for priority over analysis
       console.log(`[ID3] slot=${slot} title="${d.tn}" artist="${d.ar}" key="${d.key}" bpm=${tags.bpm||'-'} art=${!!tags.art}`);
       // Send artwork to virtual dbserver for Arena
-      if(tags._artRaw && window.bridge?.setVirtualArt){
+      if(tags._artRaw){
         const u8=new Uint8Array(tags._artRaw);
         let b64='';const chunk=8192;
         for(let i=0;i<u8.length;i+=chunk) b64+=String.fromCharCode(...u8.subarray(i,i+chunk));
-        window.bridge.setVirtualArt(slot, btoa(b64));
+        d._artRawB64=btoa(b64);
+        if(E&&run&&window.bridge?.setVirtualArt) window.bridge.setVirtualArt(slot, d._artRawB64);
       }
       renderDecks();
     });
@@ -1889,7 +1890,7 @@ function doEject(slot){
   if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
   if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
-  Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
+  Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
   if(E&&run)window.bridge.removeLayer(slot);
   renderDecks();
 }
@@ -2205,7 +2206,7 @@ function tick(){
     } else if(d.ld){
       const beatPhase=Math.floor((d.pos/(60000/(d.bpm||128)))%4)*64;
       window.bridge.updateLayer(slot,{
-        state:d.pl?3:d.cu?7:0,
+        state:d.pl?3:d.cu?7:(d.ld?5:0),
         timecodeMs:Math.round(d.pos),
         bpm:d.bpm||0,
         trackId:d.trackId||0,
@@ -2413,7 +2414,11 @@ async function doStart(){
     pdjlPort=r.pdjlPort||null;
     // re-register all existing virtual decks after start
     for(const [slot,d] of Object.entries(DECKS)){
-      if(d.type==='virtual') window.bridge.registerVirtualDeck(Number(slot),'CDJ-3000');
+      if(d.type==='virtual'){
+        window.bridge.registerVirtualDeck(Number(slot),'CDJ-3000');
+        if(d._artRawB64 && window.bridge?.setVirtualArt)
+          window.bridge.setVirtualArt(Number(slot), d._artRawB64);
+      }
     }
     // Enable HW mode on bridge if in HW mode
     if(glMode==='hw')for(let i=0;i<4;i++) window.bridge.setHWMode(i,true);
