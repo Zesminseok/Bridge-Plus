@@ -1707,6 +1707,35 @@ void MainComponent::paint(juce::Graphics& g)
         g.setColour(hwActive ? C::grn : C::tx.withAlpha(0.4f));
         g.drawText("HARDWARE", toggleX + 60, toggleY, 60, 20, juce::Justification::centred);
 
+        // DJM hint text (right side of mode bar)
+        {
+            auto& devs = engine.getDevices();
+            auto now2 = juce::Time::currentTimeMillis();
+            juce::String djmNames;
+            for (auto& [k, dev] : devs)
+            {
+                if (dev.type == "DJM" && now2 - dev.lastSeen < 10000)
+                {
+                    if (djmNames.isNotEmpty()) djmNames += ", ";
+                    djmNames += dev.name.isEmpty() ? "DJM" : dev.name;
+                }
+            }
+            if (djmNames.isNotEmpty())
+            {
+                g.setColour(C::grn);
+                g.setFont(juce::FontOptions(9.0f));
+                juce::String hint = "\xe2\x99\xaa " + djmNames + " CONNECTED";
+                g.drawText(hint, w - 280, 208, 268, 26, juce::Justification::centredRight);
+            }
+            else
+            {
+                g.setColour(C::tx4);
+                g.setFont(juce::FontOptions(9.0f));
+                g.drawText("CDJ \xec\x97\xb0\xea\xb2\xb0 \xec\x8b\x9c \xec\x9e\x90\xeb\x8f\x99 \xea\xb0\x90\xec\xa7\x80\xeb\x90\xa9\xeb\x8b\x88\xeb\x8b\xa4",
+                    w - 280, 208, 268, 26, juce::Justification::centredRight);
+            }
+        }
+
         g.setColour(C::bdr);
         g.drawHorizontalLine(242, 0, (float)w);
 
