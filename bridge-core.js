@@ -1140,21 +1140,33 @@ class BridgeCore {
   // Pro DJ Link keep-alive announcement on 50000
   // CDJs only send status to devices they see on the network
   _startPDJLAnnounce(){
-    // Find the link-local (169.254.x.x) interface for PDJL
-    let pdjlIP=null, pdjlMAC='00:00:00:00:00:00', pdjlBC='169.254.255.255';
-    for(const iface of getAllInterfaces()){
-      if(!iface.internal && iface.address.startsWith('169.254.')){
-        pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC;
-        pdjlBC=iface.broadcast||pdjlBC;
-        break;
+    // Use TCNet interface (same subnet as Arena/CDJs) so announcement reaches them
+    // Fallback: 169.254.x.x link-local, then any non-internal interface
+    let pdjlIP=null, pdjlMAC='00:00:00:00:00:00', pdjlBC='255.255.255.255';
+
+    // 1st choice: same interface as TCNet (this.localAddr set during start)
+    if(this.localAddr && !this.isLocalMode){
+      pdjlIP = this.localAddr;
+      for(const iface of getAllInterfaces()){
+        if(iface.address===pdjlIP){
+          pdjlMAC=iface.mac||pdjlMAC;
+          pdjlBC=iface.broadcast||pdjlBC;
+          break;
+        }
       }
     }
-    // Also try pdjlBindAddr if specified
-    if(this.pdjlBindAddr && this.pdjlBindAddr.startsWith('169.254.')){
-      pdjlIP=this.pdjlBindAddr;
-    }
+    // 2nd choice: link-local 169.254.x.x (legacy CDJ peer-to-peer subnet)
     if(!pdjlIP){
-      // Try all non-internal interfaces
+      for(const iface of getAllInterfaces()){
+        if(!iface.internal && iface.address.startsWith('169.254.')){
+          pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC;
+          pdjlBC=iface.broadcast||pdjlBC;
+          break;
+        }
+      }
+    }
+    // 3rd choice: any non-internal interface
+    if(!pdjlIP){
       for(const iface of getAllInterfaces()){
         if(!iface.internal && !iface.isLoopback){
           pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC;

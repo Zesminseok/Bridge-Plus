@@ -57,6 +57,9 @@ class WaveformGL {
   /** Render waveform. mode: 0=rgb 1=3band 2=blue */
   draw(posMs, zoomMs, centerX, mode) {
     if (!this._wfTex) return;
+    // Detect WebGL context reset: canvas.width assignment clears all GPU objects
+    // gl.isProgram() returns false for handles invalidated by context reset
+    if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
     gl.viewport(0, 0, cv.width, cv.height);
@@ -162,6 +165,7 @@ class OverviewGL {
 
   draw(pos, mode) {
     if (!this._wfTex) return;
+    if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
     gl.viewport(0, 0, cv.width, cv.height);
