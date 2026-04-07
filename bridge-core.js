@@ -2178,8 +2178,8 @@ class BridgeCore {
         this._artCache[cacheKey] = b64;
         this.onAlbumArt?.(playerNum, b64);
         console.log(`[DBSRV] P${playerNum} artwork: ${img.length}B ${mime}`);
-        // Also push to Resolume Arena
-        this._pushArtToResolume(playerNum-1, img);
+        // Store in virtual dbserver — Arena fetches via ProDJ Link dbserver protocol
+        this.setVirtualArt(playerNum-1, img);
       } else {
         console.log(`[DBSRV] P${playerNum} artwork: no image in ${artResp.length}B`);
       }
