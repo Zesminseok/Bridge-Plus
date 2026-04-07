@@ -24,7 +24,7 @@ const TC = {
   NNAME : 'BRIDGE29',
   NTYPE : 0x02,   // 0x02 = Server (Arena = 0x04 = Client)
   NOPTS : Buffer.from([0x07, 0x00]),
-  VENDOR: 'PIONEER DJ CORP', DEVICE: 'PRODJLINK BRIDGE',
+  VENDOR: 'BRIDGE+', DEVICE: 'BRIDGE+',
   APPV  : { ma:1, mi:1, bug:67 },
   H     : 24,
   SZ_OI : 68, SZ_ST: 300, SZ_TM: 154,
@@ -670,8 +670,13 @@ class BridgeCore {
     this.broadcastAddr = this._resolveBroadcast();
 
     if(!this._nameSet){
-      const suffix = String(Math.floor(Math.random()*900)+100);
-      TC.NNAME = 'BRIDGE' + suffix;
+      const existingNames = new Set(Object.values(this.nodes).map(n=>n.name));
+      let suffix = '01';
+      for(let n=1; n<=8; n++){
+        const candidate = 'Bridge' + String(n).padStart(2,'0');
+        if(!existingNames.has(candidate)){ suffix = String(n).padStart(2,'0'); break; }
+      }
+      TC.NNAME = 'Bridge' + suffix;
       this._nameSet = true;
       console.log(`[TCNet] name=${TC.NNAME}`);
     }
