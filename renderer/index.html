@@ -108,9 +108,9 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dkbtn{width:22px;height:22px}
 .deck-row.compact .dkctrl{width:48px;gap:3px}
 .deck-row.compact .dwov{height:10px;margin-bottom:1px}
-.deck-row.compact .dwz-row{height:44px;margin-bottom:3px}
+.deck-row.compact .dwz-row{height:52px;margin-bottom:3px}
 /* Waveform + VU side-by-side row */
-.dwz-row{display:flex;flex-direction:row;gap:0;margin:0 0 4px;height:64px}
+.dwz-row{display:flex;flex-direction:row;gap:0;margin:0 0 4px;height:90px}
 .dwz-row .dwz{flex:1;min-width:0;margin:0;height:100%;border-radius:6px 0 0 6px}
 /* VU strip: right side of waveform, channels side-by-side, bars vertical */
 .dvu-strip{display:flex;flex-direction:row;gap:2px;align-items:stretch;width:28px;flex-shrink:0;background:var(--bg-lowest);border:1px solid var(--bdr);border-left:none;border-radius:0 6px 6px 0;padding:3px 3px 3px 2px}
@@ -124,8 +124,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dphs-seg.on{background:rgba(255,255,255,.15)}
 .dphs-fill{position:absolute;inset:0;border-radius:2px;background:rgba(90,240,179,.65);opacity:0;transition:opacity .06s}
 .dphs-seg.on .dphs-fill{background:rgba(90,240,179,.95)}
-/* Phasor + time right-cluster in title row */
-.dktn-r{display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex-shrink:0}
+/* Phasor + time right-cluster in title row: time on top, phasor below */
+.dktn-r{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
 /* Zoom overlay buttons on waveform — left side to avoid VU meter */
 .dzoom-btns{position:absolute;top:3px;left:4px;display:flex;flex-direction:column;gap:2px;z-index:2;pointer-events:none}
 .dzb{pointer-events:auto;padding:0;width:18px;height:14px;border-radius:2px;font:600 10px var(--mn);cursor:pointer;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.55);color:rgba(255,255,255,.65);transition:all .1s;display:flex;align-items:center;justify-content:center;line-height:1}
@@ -256,6 +256,8 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .mode-hint{font:400 10px var(--sn);color:var(--tx4);margin-left:auto}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes shimmer{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
+#masterVol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--grn);cursor:pointer;border:none}
+#masterVol::-webkit-slider-thumb:hover{background:var(--grn2);box-shadow:0 0 6px rgba(52,211,153,.5)}
 </style>
 <script src="./waveform-gl.js"></script>
 </head><body>
@@ -270,6 +272,13 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
       <span style="font:500 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-transform:uppercase" id="hSt">READY</span>
     </div>
     <button class="btn btng" id="mainBtn">START</button>
+    <div style="display:flex;align-items:center;gap:5px;-webkit-app-region:no-drag" title="출력 볼륨">
+      <span style="font:700 8px var(--mn);color:var(--tx4);letter-spacing:.06em">VOL</span>
+      <input type="range" id="masterVol" min="0" max="100" value="100" step="1"
+        style="width:64px;height:4px;appearance:none;background:linear-gradient(to right,var(--grn) 100%,rgba(255,255,255,.12) 100%);border-radius:2px;outline:none;cursor:pointer;-webkit-app-region:no-drag"
+        oninput="setMasterVol(this.value)">
+      <span id="masterVolLbl" style="font:600 9px var(--mn);color:var(--tx3);min-width:26px;text-align:right;font-variant-numeric:tabular-nums">100%</span>
+    </div>
   </div>
 </div>
 
@@ -346,7 +355,7 @@ let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
 // 설정 — 인터페이스 포함
 let cfg={nm:'BRIDGE29',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
-  tcFps:'25',phasorMode:'blink',wfColor:'3band',wfCenter:'center',
+  tcFps:'25',phasorMode:'blink',wfColor:'3band',wfCenter:'left',
   tcLtcA:'',   // Layer A LTC 오디오 장치
   tcLtcB:'',   // Layer B LTC 오디오 장치
   tcLtcM:'',   // Layer M LTC 오디오 장치
@@ -1290,8 +1299,8 @@ function deckHTML(slot){
           <div class="dktn-row">
             <span class="dktn-t" id="dtn${slot}" style="color:var(--tx4)">—</span>
             <div class="dktn-r">
-              <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
               <div class="dktn-time-row" id="dtime${slot}" style="color:var(--tx4)">--:--.--- / --:--.---</div>
+              <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
             </div>
           </div>
           <div class="dktn-row"><span class="dktn-a" id="dta${slot}"></span></div>
@@ -1327,6 +1336,7 @@ function deckHTML(slot){
           <span class="dbadge br hide" id="dair${slot}">ON AIR</span>
         </div>
         <div class="dhd-r">
+          ${!isHW?'<span style="font:600 8px var(--mn);color:var(--tx3);border:1px solid rgba(255,255,255,.1);padding:1px 5px;border-radius:3px;letter-spacing:.04em;flex-shrink:0">◎ VIRT</span>':''}
           <span class="dtc" id="dtc${slot}">00:00:00:00</span>
           <div class="dksm" id="dksm${slot}"><span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}">SYNC</span><span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}">MASTER</span></div>
           <div class="dht">
@@ -1339,8 +1349,8 @@ function deckHTML(slot){
         <div class="dktn-row">
           <span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span>
           <div class="dktn-r">
-            <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
             <div class="dktn-time-row" id="dtime${slot}">0:00.00 / --:--.---</div>
+            <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
           </div>
         </div>
         <div class="dktn-row"><span class="dktn-a" id="dta${slot}">${d.ar||''}</span></div>
@@ -1723,6 +1733,7 @@ function loadFile(slot,f){
   const _initAudio=(audioBlob)=>{
     if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
     d.au=new Audio();d.au.src=URL.createObjectURL(audioBlob);d.au.preload='auto';
+    d.au.volume=_masterVol;
     if(cfg.aoId)setOut(d.au,cfg.aoId);
     d.au.addEventListener('loadedmetadata',()=>{
       d.dur=d.au.duration*1000;d.bpm=0;d.ld=true;
@@ -1877,10 +1888,22 @@ function _buildVuStrip(slot,numCh){
   }
 }
 
+// Master volume — applied to all virtual deck audio elements
+let _masterVol=1.0;
+function setMasterVol(v){
+  _masterVol=v/100;
+  const lbl=document.getElementById('masterVolLbl');
+  if(lbl)lbl.textContent=v+'%';
+  const sl=document.getElementById('masterVol');
+  if(sl)sl.style.background=`linear-gradient(to right,var(--grn) ${v}%,rgba(255,255,255,.12) ${v}%)`;
+  Object.values(DECKS).forEach(d=>{if(d.au)d.au.volume=_masterVol;});
+}
+
 function _sendTCState(slot){
   const d=DECKS[slot];if(!d||!E||!run||d.type==='hw')return;
+  // scratch/platter=8(PLATTERDOWN), playing=3, cue-held=3(PLAY), loaded-stopped=5, idle=0
   window.bridge.updateLayer(slot,{
-    state:d.pl?3:d.cu?7:(d.ld?5:0),
+    state:d.scratch?8:d.pl?3:d.cu?3:(d.ld?5:0),
     timecodeMs:Math.round(d.pos),
     bpm:d.bpm||0,trackId:d.trackId||0,totalLength:Math.round(d.dur)||0,
     trackName:d.tn||'',artistName:d.ar||'',deviceName:'CDJ-3000',
@@ -2094,7 +2117,7 @@ function tick(){
     const prog=d.dur>0?(displayPos/d.dur):0;
 
     // UI updates — ALWAYS
-    el.setAttribute('data-st',d.type==='hw'?(d.pl?'hwplay':'hw'):d.pl?'play':d.cu?'cue':'stop');
+    el.setAttribute('data-st',d.type==='hw'?(d.pl?'hwplay':'hw'):d.scratch?'play':d.pl?'play':d.cu?'cue':'stop');
     // USB media color border — persisted via inline style to override data-st CSS
     if(d._mediaColor>0){
       const MCOLORS={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
@@ -2173,8 +2196,8 @@ function tick(){
     if(bg){
       const _st=d.type==='hw'?'HW':d.scratch?'SCRATCH':d.pl?'PLAY':d.cu?'CUE':'STOP';
       const isHwPlay=d.type==='hw'&&d.pl;
-      bg.textContent=d.type==='hw'?(d.pl?'PLAY':d.cu?'CUE':'HW'):d.scratch?'SCRATCH':d.pl?'PLAY':d.cu?'CUE':'STOP';
-      bg.className='dbadge '+(isHwPlay?'bg':d.type==='hw'?(d.cu?'by':'bp'):d.scratch?'bp':d.pl?'bg':d.cu?'by':'bm');
+      bg.textContent=d.type==='hw'?(d.pl?'PLAY':d.cu?'CUE':'HW'):d.scratch?'PLATTER':d.pl?'PLAY':d.cu?'CUE':'STOP';
+      bg.className='dbadge '+(isHwPlay?'bg':d.type==='hw'?(d.cu?'by':'bp'):d.scratch?'bb':d.pl?'bg':d.cu?'by':'bm');
     }
     // ON AIR badge
     const bAir=document.getElementById('dair'+slot);
@@ -2211,9 +2234,32 @@ function tick(){
 
     // Waveform — ALWAYS
     if(d.rgbWf){
+      // Canvas stale-ref recovery: if WGL/2D ctx refers to a detached canvas, reinit
+      const wzc=document.getElementById('wzc'+slot);
+      if(wzc){
+        const wglStale=d.wgl&&d.wgl.gl.canvas!==wzc;
+        const ctx2Stale=!d.wgl&&d.wzCtx&&d.wzCtx.canvas!==wzc;
+        if(wglStale||ctx2Stale||(wzc.width===0)){
+          // Reinit WGL on live canvas
+          if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
+          const p=wzc.parentElement;
+          if(p&&p.offsetWidth>0){
+            wzc.width=p.offsetWidth; wzc.height=p.offsetHeight;
+            try{
+              d.wgl=new WaveformGL(wzc); d.wzCtx=null;
+              const wzov=document.getElementById('wzov'+slot);
+              if(wzov){wzov.width=wzc.width;wzov.height=wzc.height;d.wovCtx2=wzov.getContext('2d');}
+            }catch(e){d.wzCtx=wzc.getContext('2d');}
+          }
+        }
+        // Re-upload texture if WGL exists but texture is missing
+        if(d.wgl&&!d.wgl._wfTex){
+          const wfD=d.rgbWfDetail||d.rgbWf;
+          if(wfD){const isDet=!!d.rgbWfDetail;const wfDMs=isDet?(wfD.length/150*1000):(d.dur||1);d.wgl.setData(wfD,wfDMs);}
+        }
+      }
       const wov=document.getElementById('wov'+slot);
       if(wov&&wov.width>0)drawOverview(slot,prog);
-      const wzc=document.getElementById('wzc'+slot);
       if(wzc&&wzc.width>0)drawZoomWaveform(slot,prog);
     }
 
@@ -2283,7 +2329,7 @@ function tick(){
     } else if(d.ld){
       const beatPhase=Math.floor((d.pos/(60000/(d.bpm||128)))%4)*64;
       window.bridge.updateLayer(slot,{
-        state:d.pl?3:d.cu?7:(d.ld?5:0),
+        state:d.scratch?8:d.pl?3:d.cu?3:(d.ld?5:0),
         timecodeMs:Math.round(d.pos),
         bpm:d.bpm||0,
         trackId:d.trackId||0,
