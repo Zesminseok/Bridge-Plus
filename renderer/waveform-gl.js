@@ -292,8 +292,8 @@ void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
 `;
 
 // ─── Zoom waveform fragment shader ──────────────────────────────────────────
-// Smooth path-based 3-band: each band has independent anti-aliased edges
-// treble(inner/cyan) → mid(green) → bass(outer/red-orange)
+// Wavypy-style stacked 3-band: bass(outer/blue) → mid(amber) → treble(inner/white)
+// sqrt scaling for dynamic range; independent heights; Rekordbox color palette
 const _WGL_ZOOM_FS = `#version 300 es
 precision highp float;
 uniform sampler2D u_wf;
@@ -317,48 +317,55 @@ void main() {
   float bass = wf.r, midf = wf.g, treble = wf.b;
 
   float yDist = abs(gl_FragCoord.y - midY);
-  float scale = midY * 0.93;
+  float scale = midY * 0.95;
 
   if (u_mode == 2) {
-    // Blue mono — single smooth path
-    float energy = min(1.0, (bass + midf + treble) * 0.75);
-    float h = energy * scale;
-    float alpha = 1.0 - smoothstep(h - 1.5, h + 1.5, yDist);
+    // Blue mono
+    float e = sqrt(max(bass, max(midf, treble)));
+    float h = e * scale;
+    float alpha = 1.0 - smoothstep(h - 1.2, h + 1.2, yDist);
     if (alpha < 0.005) { fragColor = vec4(0.0,0.0,0.0,1.0); return; }
-    fragColor = vec4(vec3(0.05, 0.35, 1.0) * energy * alpha, 1.0);
+    fragColor = vec4(vec3(0.05, 0.35, 1.0) * e * alpha, 1.0);
     return;
   }
 
-  // Stacked 3-band with per-band independent heights + smooth AA edges
-  float B = min(1.0, bass  * 2.2);
-  float M = min(1.0, midf  * 3.0);
-  float T = min(1.0, treble * 7.0);
+  // Wavypy 3-band: sqrt scaling preserves dynamics even in loud music
+  // Raw peak values: bass/midf/treble are in [0,1] (PEAK per step window)
+  float B = sqrt(bass);                         // 0-1 with sqrt compression
+  float M = sqrt(midf);
+  float T = min(1.0, sqrt(treble) * 1.4);       // treble is quieter, mild boost
 
-  // Heights: truly independent — bass outermost(100%), mid(max 82%), treble(max 55%)
+  // Independent heights: bass outermost, treble innermost
+  // No clamping or nesting — each band reflects its own amplitude
   float bH = B * scale;
-  float mH = min(M * scale, 0.82 * scale);
-  float tH = min(T * scale, 0.55 * scale);
+  float mH = M * 0.68 * scale;
+  float tH = T * 0.40 * scale;
 
-  float AA = 1.2;
-  float inBass  = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
+  // Rekordbox 3-band palette: bass=#0055E1 (deep blue), mid=#FFA600 (amber), treble=#FFFFFF (white)
+  vec3 bassCol = vec3(0.0,  0.333, 0.882);
+  vec3 midCol  = vec3(1.0,  0.651, 0.0);
+  vec3 trebCol = vec3(1.0,  1.0,   1.0);
+
+  float AA = 1.0;
+  float inBass = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
   if (inBass < 0.005) { fragColor = vec4(0.0,0.0,0.0,1.0); return; }
 
   float inMid  = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
   float inTreb = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
 
-  vec3 bassCol = vec3(1.0,  0.22, 0.04);
-  vec3 midCol  = vec3(0.08, 0.95, 0.22);
-  vec3 trebCol = vec3(0.0,  0.72, 1.0);
+  // Layer: start bass, overlay mid, overlay treble (innermost on top)
+  vec3 col = bassCol;
+  col = mix(col, midCol,  inMid);
+  col = mix(col, trebCol, inTreb);
 
-  vec3 col = mix(bassCol, midCol,  inMid);
-       col = mix(col,     trebCol, inTreb);
-
-  float amp = min(1.0, (B * 0.5 + M * 0.35 + T * 0.15) * 1.4);
-  fragColor = vec4(col * amp * inBass, 1.0);
+  // Slight brightness dim in quiet sections
+  float bright = mix(0.55, 1.0, B);
+  fragColor = vec4(col * bright * inBass, 1.0);
 }
 `;
 
 // ─── Overview waveform fragment shader ──────────────────────────────────────
+// Wavypy-style: same palette + sqrt scaling, with playhead and played-section dim
 const _WGL_OV_FS = `#version 300 es
 precision highp float;
 uniform sampler2D u_wf;
@@ -380,31 +387,31 @@ void main() {
   }
 
   float yDist = abs(gl_FragCoord.y - midY);
-  float scale = midY * 0.93;
+  float scale = midY * 0.95;
   bool played = t < u_pos;
 
   if (u_mode == 2) {
-    float energy = min(1.0, (bass + midf + treble) * 0.75);
-    float h = energy * scale;
-    float alpha = 1.0 - smoothstep(h - 1.0, h + 1.0, yDist);
+    float e = sqrt(max(bass, max(midf, treble)));
+    float h = e * scale;
+    float alpha = 1.0 - smoothstep(h - 0.6, h + 0.6, yDist);
     if (alpha < 0.005) {
       fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
       return;
     }
     float dim = played ? 0.4 : 1.0;
-    fragColor = vec4(vec3(0.05,0.35,1.0) * energy * alpha * dim, 1.0);
+    fragColor = vec4(vec3(0.05,0.35,1.0) * e * alpha * dim, 1.0);
     return;
   }
 
-  float B = min(1.0, bass  * 2.2);
-  float M = min(1.0, midf  * 3.0);
-  float T = min(1.0, treble * 7.0);
+  float B = sqrt(bass);
+  float M = sqrt(midf);
+  float T = min(1.0, sqrt(treble) * 1.4);
 
   float bH = B * scale;
-  float mH = min(M * scale, 0.82 * scale);
-  float tH = min(T * scale, 0.55 * scale);
+  float mH = M * 0.68 * scale;
+  float tH = T * 0.40 * scale;
 
-  float AA = 0.8;
+  float AA = 0.6;
   float inBass = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
   if (inBass < 0.005) {
     fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
@@ -414,11 +421,12 @@ void main() {
   float inMid  = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
   float inTreb = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
 
-  vec3 col = mix(vec3(1.0,0.22,0.04), vec3(0.08,0.95,0.22), inMid);
-       col = mix(col, vec3(0.0,0.72,1.0), inTreb);
+  vec3 col = vec3(0.0, 0.333, 0.882);            // bass blue
+  col = mix(col, vec3(1.0, 0.651, 0.0),  inMid); // mid amber
+  col = mix(col, vec3(1.0, 1.0,   1.0),  inTreb);// treble white
 
-  float amp = min(1.0, (B*0.5+M*0.35+T*0.15)*1.4);
-  float dim = played ? 0.4 : 1.0;
-  fragColor = vec4(col * amp * inBass * dim, 1.0);
+  float bright = mix(0.55, 1.0, B);
+  float dim = played ? 0.38 : 1.0;
+  fragColor = vec4(col * bright * inBass * dim, 1.0);
 }
 `;
