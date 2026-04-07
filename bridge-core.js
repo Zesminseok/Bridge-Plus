@@ -1459,11 +1459,8 @@ class BridgeCore {
   setVirtualArt(slot, jpegBuf){
     if(slot<0||slot>7) return;
     this._virtualArt[slot] = jpegBuf;
+    // Artwork stored — virtual dbserver will serve it when Arena queries via ProDJ Link protocol
     console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B`);
-    // Save to temp file and push to Resolume Arena via REST API
-    if(jpegBuf && jpegBuf.length > 0){
-      this._pushArtToResolume(slot, jpegBuf);
-    }
   }
 
   /** Push artwork to Resolume Arena via REST API */
@@ -2169,8 +2166,6 @@ class BridgeCore {
         this._artCache[cacheKey] = b64;
         this.onAlbumArt?.(playerNum, b64);
         console.log(`[DBSRV] P${playerNum} artwork: ${img.length}B ${mime}`);
-        // Also push to Resolume Arena
-        this._pushArtToResolume(playerNum-1, img);
       } else {
         console.log(`[DBSRV] P${playerNum} artwork: no image in ${artResp.length}B`);
       }
