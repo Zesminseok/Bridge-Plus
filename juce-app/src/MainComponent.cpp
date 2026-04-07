@@ -696,40 +696,55 @@ void DeckPanel::paint(juce::Graphics& g)
         g.drawText(keyStr, kr, juce::Justification::centred);
     }
 
-    // ── Beat phasor (4 segments, only current beat lit) ──
+    // ── Beat phasor (4 segments) ──
     if (!phasorBounds.isEmpty())
     {
         float totalW = (float)phasorBounds.getWidth();
         float segW   = (totalW - 9.0f) / 4.0f;
         float segH   = (float)phasorBounds.getHeight();
-        int curBeat  = beatPhase / 64;
+        int curBeat  = beatPhase / 64;          // 0~3
+        float phaseInBeat = (beatPhase % 64) / 64.0f;  // 0.0~1.0 within current beat
         bool playing = (displayState == PlayState::PLAYING || displayState == PlayState::LOOPING);
 
         for (int i = 0; i < 4; i++)
         {
-            auto seg = juce::Rectangle<float>(
-                (float)phasorBounds.getX() + (float)i * (segW + 3.0f),
-                (float)phasorBounds.getY(), segW, segH);
+            float segX = (float)phasorBounds.getX() + (float)i * (segW + 3.0f);
+            float segY = (float)phasorBounds.getY();
 
+            // Background
+            g.setColour(juce::Colour(0x0dffffff));
+            g.fillRoundedRectangle(segX, segY, segW, segH, 3.0f);
+
+            if (!playing) continue;
+
+            bool isCurrent = (i == curBeat);
             if (phasorScrollRef)
             {
-                // Scroll mode: fill up to current beat
-                if (playing && i <= curBeat)
-                    g.setColour(i == curBeat ? C::grn.withAlpha(0.9f) : C::grn.withAlpha(0.45f));
-                else
-                    g.setColour(juce::Colour(0x0dffffff));
+                // Scroll mode: current beat partially filled (Electron style)
+                if (isCurrent)
+                {
+                    float fillW = segW * phaseInBeat;
+                    if (fillW > 0)
+                    {
+                        g.setColour(C::grn.withAlpha(0.85f));
+                        g.fillRoundedRectangle(segX, segY, fillW, segH, 3.0f);
+                    }
+                }
             }
             else
             {
-                // Blink mode: only current beat lights up
-                if (playing && i == curBeat)
+                // Blink mode: current beat = full on, others dim
+                if (isCurrent)
+                {
                     g.setColour(C::grn.withAlpha(0.9f));
-                else if (playing && i < curBeat)
+                    g.fillRoundedRectangle(segX, segY, segW, segH, 3.0f);
+                }
+                else if (i < curBeat)
+                {
                     g.setColour(C::grn.withAlpha(0.12f));
-                else
-                    g.setColour(juce::Colour(0x0dffffff));
+                    g.fillRoundedRectangle(segX, segY, segW, segH, 3.0f);
+                }
             }
-            g.fillRoundedRectangle(seg, 3.0f);
         }
     }
 

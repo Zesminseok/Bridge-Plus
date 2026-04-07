@@ -261,8 +261,11 @@ uint8_t VirtualDeck::getBeatPhase() const
 {
     if (bpm <= 0) return 0;
     float msPerBeat = 60000.0f / bpm;
+    // phase 0.0–1.0 over one 4-beat bar
     float phase = std::fmod(positionMs.load(), msPerBeat * 4.0f) / (msPerBeat * 4.0f);
-    return (uint8_t)((int)(phase * 4.0f) * 64);
+    // Encode: bits[7:6] = beat number (0-3), bits[5:0] = intra-beat phase (0-63)
+    // → full range 0-255
+    return (uint8_t)(phase * 256.0f);
 }
 
 void VirtualDeck::fillLayerState(LayerState& ls) const
