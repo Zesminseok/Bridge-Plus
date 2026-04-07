@@ -329,34 +329,36 @@ void main() {
     return;
   }
 
-  // Wavypy 3-band: each band height = its own amplitude (제일큰소리 기준)
-  // No height caps — band heights directly proportional to peak amplitude
-  float B = bass;
-  float M = midf;
-  float T = treble;
+  // Wavypy 3-band: each band height = its own amplitude directly
+  // Outer boundary = tallest band (제일큰소리 기준: loudest band defines outer edge)
+  float B = bass, M = midf, T = treble;
 
   float bH = B * scale;
   float mH = M * scale;
   float tH = T * scale;
+
+  // Use max of all three as the outer boundary — avoids cutting off treble/mid when bass is quiet
+  float outerH = max(bH, max(mH, tH));
+  float alpha = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
+  if (alpha < 0.005) { fragColor = vec4(0.0,0.0,0.0,1.0); return; }
 
   // Rekordbox 3-band palette: bass=#0055E1 (deep blue), mid=#FFA600 (amber), treble=#FFFFFF (white)
   vec3 bassCol = vec3(0.0,  0.333, 0.882);
   vec3 midCol  = vec3(1.0,  0.651, 0.0);
   vec3 trebCol = vec3(1.0,  1.0,   1.0);
 
-  float AA = 1.0;
-  float inBass = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
-  if (inBass < 0.005) { fragColor = vec4(0.0,0.0,0.0,1.0); return; }
+  float AA2 = AA;
+  float inBass = 1.0 - smoothstep(bH - AA2, bH + AA2, yDist);
+  float inMid  = 1.0 - smoothstep(mH - AA2, mH + AA2, yDist);
+  float inTreb = 1.0 - smoothstep(tH - AA2, tH + AA2, yDist);
 
-  float inMid  = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
-  float inTreb = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
-
-  // Layer: start bass, overlay mid, overlay treble (innermost on top)
+  // Layer: bass base → mid overlay → treble on top
+  // Dominant (tallest) band defines outer edge color, treble (whitest) shows at center
   vec3 col = bassCol;
   col = mix(col, midCol,  inMid);
   col = mix(col, trebCol, inTreb);
 
-  fragColor = vec4(col * inBass, 1.0);
+  fragColor = vec4(col * alpha, 1.0);
 }
 `;
 
@@ -399,29 +401,29 @@ void main() {
     return;
   }
 
-  float B = bass;
-  float M = midf;
-  float T = treble;
+  float B = bass, M = midf, T = treble;
 
   float bH = B * scale;
   float mH = M * scale;
   float tH = T * scale;
 
-  float AA = 0.6;
-  float inBass = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
-  if (inBass < 0.005) {
+  float outerH = max(bH, max(mH, tH));
+  float AA2 = 0.6;
+  float alpha = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
+  if (alpha < 0.005) {
     fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
     return;
   }
 
-  float inMid  = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
-  float inTreb = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
+  float inBass = 1.0 - smoothstep(bH - AA2, bH + AA2, yDist);
+  float inMid  = 1.0 - smoothstep(mH - AA2, mH + AA2, yDist);
+  float inTreb = 1.0 - smoothstep(tH - AA2, tH + AA2, yDist);
 
   vec3 col = vec3(0.0, 0.333, 0.882);
   col = mix(col, vec3(1.0, 0.651, 0.0),  inMid);
   col = mix(col, vec3(1.0, 1.0,   1.0),  inTreb);
 
   float dim = played ? 0.38 : 1.0;
-  fragColor = vec4(col * inBass * dim, 1.0);
+  fragColor = vec4(col * alpha * dim, 1.0);
 }
 `;
