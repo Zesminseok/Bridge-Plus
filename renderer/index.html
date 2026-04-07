@@ -1544,7 +1544,7 @@ async function readID3Tags(file){
           if(fsz<=0||ip+10+fsz>ie)break;
           const fdata=new Uint8Array(id3Buf,ip+10,fsz);
           if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TKEY'||fid==='TBPM'){const txt=_id3DecodeText(fdata);if(fid==='TIT2'&&txt)tags.title=txt;if(fid==='TPE1'&&txt)tags.artist=txt;if(fid==='TPE2'&&txt&&!tags.artist)tags.artist=txt;if(fid==='TKEY'&&txt)tags.key=txt;if(fid==='TBPM'&&txt){const b=parseFloat(txt);if(b>0)tags.bpm=b;}}
-          if(fid==='APIC'&&!tags.art){try{const enc=fdata[0];let o=1;let mime='';while(o<fdata.length&&fdata[o]!==0){mime+=String.fromCharCode(fdata[o]);o++;}o++;o++;if(enc===0||enc===3){while(o<fdata.length&&fdata[o]!==0)o++;o++;}else{while(o+1<fdata.length){if(fdata[o]===0&&fdata[o+1]===0){o+=2;break;}o+=2;}}if(o<fdata.length){const imgData=fdata.slice(o);if(!mime||mime==='image/')mime=imgData[0]===0x89?'image/png':'image/jpeg';const blob=new Blob([imgData],{type:mime});tags.art=URL.createObjectURL(blob);}}catch(_){}}
+          if(fid==='APIC'&&!tags.art){try{const enc=fdata[0];let o=1;let mime='';while(o<fdata.length&&fdata[o]!==0){mime+=String.fromCharCode(fdata[o]);o++;}o++;o++;if(enc===0||enc===3){while(o<fdata.length&&fdata[o]!==0)o++;o++;}else{while(o+1<fdata.length){if(fdata[o]===0&&fdata[o+1]===0){o+=2;break;}o+=2;}}if(o<fdata.length){const imgData=fdata.slice(o);if(!mime||mime==='image/')mime=imgData[0]===0x89?'image/png':'image/jpeg';const blob=new Blob([imgData],{type:mime});tags.art=URL.createObjectURL(blob);tags._artRaw=imgData;}}catch(_){}}
           ip+=10+fsz;
         }
         return tags;
