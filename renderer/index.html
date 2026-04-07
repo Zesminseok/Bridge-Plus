@@ -1757,7 +1757,11 @@ function loadFile(slot,f){
       const _tn=document.getElementById('dtn'+slot);if(_tn)_tn.textContent=d.tn||'—';
       const _ta=document.getElementById('dta'+slot);if(_ta)_ta.textContent=d.ar||'';
       const _art=document.getElementById('dart'+slot);
-      if(_art&&d.artUrl){const _img=_art.querySelector('img')||document.createElement('img');_img.src=d.artUrl;_img.alt='';if(!_art.contains(_img))_art.innerHTML='';if(!_art.contains(_img))_art.appendChild(_img);}
+      if(_art&&d.artUrl){
+        const _existImg=_art.querySelector('img');
+        if(_existImg){_existImg.src=d.artUrl;}
+        else{_art.innerHTML=`<img src="${d.artUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;}
+      }
       if(E&&run)window.bridge.updateLayer(slot,{trackName:d.tn||'',artistName:d.ar||''});
     });
   }
@@ -1769,27 +1773,27 @@ function loadFile(slot,f){
     d.au.addEventListener('loadedmetadata',()=>{
       d.dur=d.au.duration*1000;d.bpm=0;d.ld=true;
       renderDecks();
-      // Setup canvases immediately — re-query inside setTimeout for live elements
+      // Setup canvases — guard: only resize if dimensions changed (setting canvas.width ALWAYS resets WebGL context!)
       setTimeout(()=>{
         const wov=document.getElementById('wov'+slot);
         if(wov){
           const p=wov.parentElement;
           const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
-          wov.width=w; wov.height=h;
-          if(!d.ovgl||d.ovgl.gl.canvas!==wov){
-            try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}
-            catch(e){d.wovCtx=wov.getContext('2d');}
+          if(wov.width!==w||wov.height!==h){
+            if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
+            wov.width=w; wov.height=h;
           }
+          if(!d.ovgl){try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}}
         }
         const wzc=document.getElementById('wzc'+slot);
         if(wzc){
           const p=wzc.parentElement;
           const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
-          wzc.width=w; wzc.height=h;
-          if(!d.wgl||d.wgl.gl.canvas!==wzc){
-            try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}
-            catch(e){d.wzCtx=wzc.getContext('2d');}
+          if(wzc.width!==w||wzc.height!==h){
+            if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
+            wzc.width=w; wzc.height=h;
           }
+          if(!d.wgl){try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}catch(e){d.wzCtx=wzc.getContext('2d');}}
           const wzov=document.getElementById('wzov'+slot);
           if(wzov&&!d.wovCtx2){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
         }
@@ -2005,21 +2009,24 @@ function doExpandDeck(slot){
   if(!wasExpanded){
     el.classList.add('dk-wide');
   }
-  // resize canvases — always reinit WebGL after canvas resize
+  // resize canvases — use 50ms delay to let CSS grid layout settle before reading offsetWidth
   setTimeout(()=>{
     const d=DECKS[slot];
     const wov=document.getElementById('wov'+slot);
-    if(wov){const p=wov.parentElement;wov.width=p.offsetWidth||600;wov.height=p.offsetHeight||28;
+    if(wov){const p=wov.parentElement;const w=p.offsetWidth||600,h=p.offsetHeight||28;
       if(d&&d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
-      if(d&&p.offsetWidth>0){try{d.ovgl=new OverviewGL(wov);}catch(e){console.warn('[WGL] overview reinit',e.message);}
-        if(d.ovgl&&d.rgbWf)d.ovgl.setData(d.rgbWf);}
+      wov.width=w; wov.height=h;
+      if(d&&w>0){try{d.ovgl=new OverviewGL(wov);}catch(e){console.warn('[WGL] overview reinit',e.message);}
+        if(d.ovgl){const wfD=d.rgbWfDetail||d.rgbWf;if(wfD)d.ovgl.setData(wfD);drawOverview(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
+      }
     }
     const wzc=document.getElementById('wzc'+slot);
-    if(wzc){const p=wzc.parentElement;wzc.width=p.offsetWidth||600;wzc.height=p.offsetHeight||90;
+    if(wzc){const p=wzc.parentElement;const w=p.offsetWidth||600,h=p.offsetHeight||90;
       if(d&&d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
-      if(d&&p.offsetWidth>0){
+      wzc.width=w; wzc.height=h;
+      if(d&&w>0){
         try{d.wgl=new WaveformGL(wzc);}catch(e){console.warn('[WGL] zoom reinit',e.message);}
-        if(d.wgl){const wfD=d.rgbWfDetail||d.rgbWf;if(wfD){const wfDMs=d.rgbWfDetail?((wfD.length/150)*1000):(d.dur||1);d.wgl.setData(wfD,wfDMs);}}
+        if(d.wgl){const wfD=d.rgbWfDetail||d.rgbWf;if(wfD){const wfDMs=d.rgbWfDetail?((wfD.length/150)*1000):(d.dur||1);d.wgl.setData(wfD,wfDMs);drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}}
       }
     }
   },50);
@@ -2750,11 +2757,8 @@ if(E){
     const el=document.getElementById('dart'+li);
     if(el){
       const img=el.querySelector('img');
-      if(img)img.src=d.art;
-      else{
-        const noart=el.querySelector('.noart-icon');
-        if(noart){el.innerHTML=`<img src="${d.art}" alt="">`;}
-      }
+      if(img){img.src=d.art;}
+      else{el.innerHTML=`<img src="${d.art}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;}
     }
   });
   // HW cue points from dbserver (memory cues + hot cues)
