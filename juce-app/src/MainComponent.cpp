@@ -74,6 +74,10 @@ static void drawOverviewWaveform(juce::Graphics& g,
     int pts = (int)wf.size();
     float step = (float)pts / (float)W;
 
+    // Clip to bounds so bars don't overflow rounded corners
+    g.saveState();
+    g.reduceClipRegion(bounds);
+
     for (int x = 0; x < W; x++)
     {
         int idx = juce::jlimit(0, pts - 1, (int)((float)x * step));
@@ -103,6 +107,7 @@ static void drawOverviewWaveform(juce::Graphics& g,
         g.drawVerticalLine(px, bf.getY(), bf.getBottom());
     }
 
+    g.restoreState();
     g.setColour(C::bdr);
     g.drawRoundedRectangle(bf.reduced(0.5f), 3.0f, 1.0f);
 }
@@ -136,6 +141,10 @@ static void drawZoomWaveform(juce::Graphics& g,
     float startMs = posMs - windowMs * headFrac;
     float endMs   = startMs + windowMs;
 
+    // Clip to bounds so bars don't overflow rounded corners
+    g.saveState();
+    g.reduceClipRegion(bounds);
+
     // Convert to waveform indices
     float msPerPt = dur / (float)pts;
     int startPt = (int)(startMs / msPerPt);
@@ -159,6 +168,10 @@ static void drawZoomWaveform(juce::Graphics& g,
     float ptsPerPx = (float)(endPt - startPt) / (float)W;
     for (int x = 0; x < W; x++)
     {
+        float posAtX = startMs + (float)x / (float)W * windowMs;
+        if (posAtX < 0)
+            continue;  // 음원 시작 이전 구간은 그리지 않음
+
         int idx = juce::jlimit(0, pts - 1, startPt + (int)((float)x * ptsPerPx));
         const auto& p = wf[(size_t)idx];
 
@@ -183,6 +196,19 @@ static void drawZoomWaveform(juce::Graphics& g,
         g.drawVerticalLine(bounds.getX() + x, midY - trebleH, midY + trebleH);
     }
 
+    // 음원 시작 이전 구간에 어두운 오버레이
+    if (startMs < 0)
+    {
+        float blankFrac = juce::jlimit(0.0f, 1.0f, -startMs / windowMs);
+        g.setColour(juce::Colour(0x90000000));
+        g.fillRect(bounds.getX(), bounds.getY(),
+                   (int)(blankFrac * (float)W), bounds.getHeight());
+        // 구분선
+        int blankX = bounds.getX() + (int)(blankFrac * (float)W);
+        g.setColour(juce::Colour(0x60ffffff));
+        g.drawVerticalLine(blankX, bf.getY() + 1, bf.getBottom() - 1);
+    }
+
     // Playhead line at headFrac
     int cx = bounds.getX() + (int)(headFrac * (float)W);
     g.setColour(juce::Colour(0xeeffffff));
@@ -198,6 +224,7 @@ static void drawZoomWaveform(juce::Graphics& g,
                    80, 16, juce::Justification::centredLeft);
     }
 
+    g.restoreState();
     g.setColour(C::bdr);
     g.drawRoundedRectangle(bf.reduced(0.5f), 6.0f, 1.0f);
 }
@@ -545,7 +572,7 @@ void DeckPanel::paint(juce::Graphics& g)
                        displayState == PlayState::CUED    || displayState == PlayState::CUEING);
     g.setColour(showBright ? C::tx : C::tx4);
     g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-    g.drawText(formatTimecode(tcMs), 0, (int)hdrY, getWidth() - 13, 18,
+    g.drawText(formatTimecode(tcMs), 0, (int)hdrY, getWidth() - 52, 18,
                juce::Justification::centredRight);
 
     // ── SYNC / MASTER badges (HW mode) ──
@@ -1038,6 +1065,10 @@ void DeckPanel::updateDisplay()
 
 MainComponent::MainComponent()
 {
+    // ── 한글/특수문자 렌더링: Apple SD Gothic Neo (macOS 기본 한글 폰트) ──
+    juce::LookAndFeel::getDefaultLookAndFeel()
+        .setDefaultSansSerifTypefaceName("Apple SD Gothic Neo");
+
     // ── Header ──
     addAndMakeVisible(startBtn);
     startBtn.setColour(juce::TextButton::buttonColourId, C::grn2.withAlpha(0.15f));
@@ -2302,22 +2333,28 @@ void MainComponent::layoutDecks()
         return;
     }
 
+    // 최대 덱 높이 360px로 제한 (Electron 앱과 유사)
+    const int kMaxDeckH = 360;
+
     if (visibleDecks == 1)
     {
-        deckPanels[0]->setBounds(area.withWidth(area.getWidth() / 2));
+        int deckH = juce::jmin(area.getHeight(), kMaxDeckH);
+        deckPanels[0]->setBounds(area.getX(), area.getY(),
+                                 area.getWidth() / 2, deckH);
     }
     else if (visibleDecks == 2)
     {
         int halfW = (area.getWidth() - 8) / 2;
-        deckPanels[0]->setBounds(area.getX(), area.getY(), halfW, area.getHeight());
-        deckPanels[1]->setBounds(area.getX() + halfW + 8, area.getY(), halfW, area.getHeight());
+        int deckH = juce::jmin(area.getHeight(), kMaxDeckH);
+        deckPanels[0]->setBounds(area.getX(), area.getY(), halfW, deckH);
+        deckPanels[1]->setBounds(area.getX() + halfW + 8, area.getY(), halfW, deckH);
     }
     else
     {
         int cols = 2;
         int rows = (visibleDecks + 1) / 2;
         int cellW = (area.getWidth() - 8) / cols;
-        int cellH = (area.getHeight() - (rows - 1) * 8) / rows;
+        int cellH = juce::jmin((area.getHeight() - (rows - 1) * 8) / rows, kMaxDeckH);
         for (int i = 0; i < visibleDecks; i++)
         {
             if (!deckPanels[(size_t)i]) continue;

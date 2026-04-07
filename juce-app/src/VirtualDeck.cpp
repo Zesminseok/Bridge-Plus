@@ -75,12 +75,29 @@ bool VirtualDeck::loadFile(const juce::File& file)
                 if (std::strncmp(tag, "APIC", 4) == 0 && fSize > 4)
                 {
                     size_t p = pos;
-                    p += 1; // skip encoding byte
-                    while (p < pos + fSize && d[p] != 0) p++; // skip mime type
+                    uint8_t enc = d[p];   // 0=Latin1, 1/2=UTF-16, 3=UTF-8
+                    p += 1;
+                    // MIME type: always ISO-8859-1, single-byte null terminator
+                    while (p < pos + fSize && d[p] != 0) p++;
                     p += 1; // null terminator
                     if (p < pos + fSize) p += 1; // picture type byte
-                    while (p < pos + fSize && d[p] != 0) p++; // skip description
-                    p += 1; // null terminator
+                    // Description: encoding-aware null terminator
+                    if (enc == 1 || enc == 2)
+                    {
+                        // UTF-16: skip BOM if present
+                        if (p + 1 < pos + fSize &&
+                            ((d[p] == 0xFF && d[p+1] == 0xFE) || (d[p] == 0xFE && d[p+1] == 0xFF)))
+                            p += 2;
+                        // Find double-null terminator (must be 2-byte aligned)
+                        while (p + 1 < pos + fSize && !(d[p] == 0 && d[p+1] == 0)) p += 2;
+                        p += 2;
+                    }
+                    else
+                    {
+                        // Latin-1 or UTF-8: single-byte null terminator
+                        while (p < pos + fSize && d[p] != 0) p++;
+                        p += 1;
+                    }
                     if (p < pos + fSize)
                     {
                         juce::MemoryInputStream imgStream(d + p, pos + fSize - p, false);
@@ -271,7 +288,7 @@ uint8_t VirtualDeck::getBeatPhase() const
 void VirtualDeck::fillLayerState(LayerState& ls) const
 {
     PlayState st = state.load();
-    ls.state        = (st == PlayState::CUEING) ? PlayState::CUED : st;
+    ls.state        = st;  // keep CUEING as-is so TCNet correctly reports audio output
     ls.timecodeMs   = positionMs.load();
     ls.totalLengthMs = durationMs;
     ls.bpm          = bpm * (1.0f + pitch / 100.0f);

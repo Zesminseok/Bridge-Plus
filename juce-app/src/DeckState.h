@@ -40,9 +40,9 @@ inline uint8_t toTCNetState(PlayState s)
 {
     switch (s)
     {
-        case PlayState::PLAYING: case PlayState::LOOPING:  return 1;
-        case PlayState::PAUSED:  case PlayState::CUED:
-        case PlayState::CUEING:                            return 2;
+        case PlayState::PLAYING: case PlayState::LOOPING:
+        case PlayState::CUEING:                            return 1;  // audio running
+        case PlayState::PAUSED:  case PlayState::CUED:     return 2;
         case PlayState::STOPPED: case PlayState::ENDED:     return 3;
         case PlayState::SEEKING:                           return 4;
         case PlayState::REVERSE:                           return 5;
