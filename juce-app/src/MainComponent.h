@@ -109,6 +109,7 @@ private:
 
     PlayState displayState = PlayState::IDLE;
     uint8_t   beatPhase = 0;
+    float     shimmerPhase = 0.0f;  // 0–1 for shimmer animation
 
     // Layout areas (set in resized, used in paint)
     juce::Rectangle<int> artBounds;

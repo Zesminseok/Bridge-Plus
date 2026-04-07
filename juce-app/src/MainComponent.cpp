@@ -215,12 +215,14 @@ DeckPanel::DeckPanel(int num, BridgeEngine& eng)
     titleLabel.setFont(juce::FontOptions(12.0f, juce::Font::bold));
     titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcbd5e1));
     titleLabel.setText("Empty", juce::dontSendNotification);
+    titleLabel.setMinimumHorizontalScale(0.01f);  // allow text to shrink
 
     // Artist label
     addAndMakeVisible(artistLabel);
     artistLabel.setFont(juce::FontOptions(10.0f));
     artistLabel.setColour(juce::Label::textColourId, C::tx3);
     artistLabel.setText("Load a track", juce::dontSendNotification);
+    artistLabel.setMinimumHorizontalScale(0.01f);
 
     // ── CUE button (yellow, circular) ──
     addAndMakeVisible(cueBtn);
@@ -443,15 +445,16 @@ void DeckPanel::paint(juce::Graphics& g)
         g.fillRoundedRectangle(bounds, 12.0f);
     }
 
-    // ── Shimmer line at top (2px) ──
-    juce::Colour shimCol = juce::Colours::transparentBlack;
-    if (displayState == PlayState::PLAYING || displayState == PlayState::LOOPING)
-        shimCol = C::grn;
-    else if (displayState == PlayState::CUED || displayState == PlayState::CUEING)
-        shimCol = C::ylw.withAlpha(0.6f);
-
-    if (!shimCol.isTransparent())
+    // ── Shimmer line at top (2px, animated) ──
+    bool isPlaying2 = (displayState == PlayState::PLAYING || displayState == PlayState::LOOPING);
+    bool isCueing2  = (displayState == PlayState::CUED    || displayState == PlayState::CUEING);
+    if (isPlaying2 || isCueing2)
     {
+        // shimmerPhase drives 0.3→1.0→0.3 brightness cycle
+        float brightness = 0.3f + 0.7f * (0.5f + 0.5f * std::sin(shimmerPhase * juce::MathConstants<float>::twoPi));
+        juce::Colour shimBase = isPlaying2 ? C::grn : C::ylw.withAlpha(0.6f);
+        juce::Colour shimCol  = shimBase.withAlpha(shimBase.getAlpha() * brightness);
+
         auto hw = bounds.getWidth() / 2.0f;
         g.setGradientFill(juce::ColourGradient(
             juce::Colours::transparentBlack, bounds.getX(), 0,
@@ -923,6 +926,9 @@ void DeckPanel::updateDisplay()
             artistLabel.setText("Load a track", juce::dontSendNotification);
         }
     }
+
+    // Advance shimmer animation (20Hz timer → ~2s cycle)
+    shimmerPhase = std::fmod(shimmerPhase + 0.025f, 1.0f);
 
     // CUE button colors
     bool cueLit = (displayState == PlayState::CUED || displayState == PlayState::CUEING);
