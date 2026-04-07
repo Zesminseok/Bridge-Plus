@@ -1127,7 +1127,9 @@ MainComponent::MainComponent()
     // Status bar values are drawn as pills in paint()
 
     // ── Output Layer source selectors ──
-    const char* layerNames[] = { "A", "B", "M" };
+    // Output layer source selectors
+    // Layer A (i=0) and B (i=1): deck slots only
+    // Layer M (i=2): Layer A (-10), Layer B (-11), or deck slots
     for (int i = 0; i < 3; i++)
     {
         addAndMakeVisible(outSrcSelectors[(size_t)i]);
@@ -1135,16 +1137,32 @@ MainComponent::MainComponent()
         outSrcSelectors[(size_t)i].setColour(juce::ComboBox::textColourId, C::tx3);
         outSrcSelectors[(size_t)i].setColour(juce::ComboBox::outlineColourId, C::bdr2);
         outSrcSelectors[(size_t)i].addItem("—", 1);
+        if (i == 2)
+        {
+            // M layer: can also use Layer A or B as source
+            outSrcSelectors[(size_t)i].addItem("Layer A", 2);
+            outSrcSelectors[(size_t)i].addItem("Layer B", 3);
+        }
+        int baseId = (i == 2) ? 10 : 2;
         for (int d = 0; d < kMaxDecks; d++)
-            outSrcSelectors[(size_t)i].addItem("Deck " + juce::String(d + 1), d + 2);
+            outSrcSelectors[(size_t)i].addItem("Deck " + juce::String(d + 1), baseId + d);
         outSrcSelectors[(size_t)i].setSelectedId(1);
         outSrcSelectors[(size_t)i].setVisible(false); // starts hidden, shown on TAB_LINK
         outSrcSelectors[(size_t)i].onChange = [this, i]
         {
             int sel = outSrcSelectors[(size_t)i].getSelectedId();
-            outLayers[(size_t)i].srcSlot = (sel <= 1) ? -1 : sel - 2;
+            if (sel <= 1)
+                outLayers[(size_t)i].srcSlot = -1;
+            else if (i == 2 && sel == 2)
+                outLayers[(size_t)i].srcSlot = -10;  // Layer A
+            else if (i == 2 && sel == 3)
+                outLayers[(size_t)i].srcSlot = -11;  // Layer B
+            else
+            {
+                int baseId = (i == 2) ? 10 : 2;
+                outLayers[(size_t)i].srcSlot = sel - baseId;
+            }
         };
-        (void)layerNames[i];
     }
 
     // ── Output mode buttons (LTC/MTC/ART × 3 layers) ──
@@ -1578,19 +1596,26 @@ void MainComponent::paint(juce::Graphics& g)
             auto cr = juce::Rectangle<float>((float)cx, (float)cy, (float)cardW, (float)ch);
 
             // Get source slot timecode
+            // srcSlot: -1=none, -10=LayerA, -11=LayerB, 0-5=deck slot
             int srcSlot = outLayers[(size_t)i].srcSlot;
             float tcMs = 0.0f;
             bool playing = false;
-            if (srcSlot >= 0 && srcSlot < visibleDecks)
+
+            // M layer: redirect to Layer A or B source
+            int resolvedSlot = srcSlot;
+            if (srcSlot == -10)       resolvedSlot = outLayers[0].srcSlot;  // Layer A src
+            else if (srcSlot == -11)  resolvedSlot = outLayers[1].srcSlot;  // Layer B src
+
+            if (resolvedSlot >= 0 && resolvedSlot < visibleDecks)
             {
-                if (engine.isHWMode(srcSlot))
+                if (engine.isHWMode(resolvedSlot))
                 {
-                    auto* ls = engine.getLayerState(srcSlot);
+                    auto* ls = engine.getLayerState(resolvedSlot);
                     if (ls) { tcMs = ls->timecodeMs; playing = (ls->state == PlayState::PLAYING); }
                 }
                 else
                 {
-                    auto& deck = engine.getVirtualDeck(srcSlot);
+                    auto& deck = engine.getVirtualDeck(resolvedSlot);
                     tcMs = deck.getPositionMs();
                     playing = (deck.getState() == PlayState::PLAYING);
                 }
