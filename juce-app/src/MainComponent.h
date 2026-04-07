@@ -66,7 +66,8 @@ public:
  *   >= 180px: medium (small art + short zoom wf)
  *   <  180px: compact (no art, overview only, horizontal)
  */
-class DeckPanel : public juce::Component
+class DeckPanel : public juce::Component,
+                  public juce::FileDragAndDropTarget
 {
 public:
     DeckPanel(int deckNum, BridgeEngine& engine);
@@ -75,11 +76,22 @@ public:
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
+    void mouseDrag(const juce::MouseEvent& e) override;
     void updateDisplay();
+    void setDeckNum(int n) { deckNum = n; repaint(); }
+
+    // FileDragAndDropTarget
+    bool isInterestedInFileDrag(const juce::StringArray& files) override;
+    void filesDropped(const juce::StringArray& files, int x, int y) override;
+    void fileDragEnter(const juce::StringArray&, int, int) override { dragOver = true;  repaint(); }
+    void fileDragExit(const juce::StringArray&) override           { dragOver = false; repaint(); }
+
+    std::function<void()> onRemove;  // set by MainComponent
 
 private:
     int deckNum;
     BridgeEngine& engine;
+    bool dragOver = false;
 
     juce::Label titleLabel, artistLabel;
 
@@ -87,6 +99,7 @@ private:
     juce::TextButton playBtn   { juce::CharPointer_UTF8("\xe2\x96\xb6") };
     juce::TextButton loadBtn   { "LOAD" };
     juce::TextButton ejectBtn  { "EJECT" };
+    juce::TextButton removeBtn { juce::CharPointer_UTF8("\xe2\x9c\x95") };  // ✕
     juce::TextButton zoomInBtn { "+" };
     juce::TextButton zoomOutBtn{ "\xe2\x88\x92" };  // −
     juce::TextButton zoomRstBtn{ "RST" };
@@ -102,6 +115,11 @@ private:
     juce::Rectangle<int> ovWfBounds;
     juce::Rectangle<int> zoomWfBounds;
     juce::Rectangle<int> phasorBounds;
+
+    // Zoom waveform drag-to-scrub state
+    bool   draggingZoom   = false;
+    int    dragStartX     = 0;
+    float  dragStartPosMs = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DeckPanel)
 };
@@ -128,6 +146,7 @@ private:
     void layoutDecks();
     void layoutSettings();
     void addDeck();
+    void removeDeck(int slot);
 
     BridgeEngine engine;
     double currentSampleRate = 44100.0;
@@ -165,9 +184,12 @@ private:
         bool ltc = false;
         bool mtc = false;
         bool art = false;
+        int  offsetMs = 0;
     };
     std::array<OutputLayer, 3> outLayers;
     std::array<juce::ComboBox, 3> outSrcSelectors;
+    // LTC/MTC/ART toggle buttons per layer [layer][mode]
+    std::array<std::array<juce::TextButton, 3>, 3> outModeBtns;
 
     // Settings
     juce::Label       nodeNameLabel, tcnetIfaceLabel, pdjlIfaceLabel, fpsLabel;

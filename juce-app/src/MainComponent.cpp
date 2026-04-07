@@ -23,6 +23,34 @@ static juce::String formatTimecode(float ms, int fps = 25)
 // Persistent last-used directory for file chooser
 static juce::File sLastDir = juce::File::getSpecialLocation(juce::File::userMusicDirectory);
 
+// ── Camelot Wheel key notation ──────────────────
+static juce::String toCamelot(const juce::String& rawKey)
+{
+    if (rawKey.isEmpty()) return {};
+    static const std::pair<const char*, const char*> kMap[] = {
+        {"C","8B"},{"G","9B"},{"D","10B"},{"A","11B"},{"E","12B"},{"B","1B"},
+        {"Cb","1B"},{"F#","2B"},{"Gb","2B"},{"C#","3B"},{"Db","3B"},
+        {"G#","4B"},{"Ab","4B"},{"D#","5B"},{"Eb","5B"},{"A#","6B"},{"Bb","6B"},
+        {"F","7B"},
+        {"Am","8A"},{"Em","9A"},{"Bm","10A"},{"F#m","11A"},{"Gbm","11A"},
+        {"C#m","12A"},{"Dbm","12A"},{"G#m","1A"},{"Abm","1A"},
+        {"D#m","2A"},{"Ebm","2A"},{"A#m","3A"},{"Bbm","3A"},
+        {"Fm","4A"},{"Cm","5A"},{"Gm","6A"},{"Dm","7A"},
+    };
+
+    // Already Camelot format?
+    auto t = rawKey.trim();
+    if (t.matchesWildcard("[0-9]A", true) || t.matchesWildcard("[0-9]B", true) ||
+        t.matchesWildcard("1[0-2]A", true) || t.matchesWildcard("1[0-2]B", true))
+        return t.toUpperCase();
+
+    // Normalise "minor" suffix
+    auto norm = t.replace(" minor", "m").replace(" Minor", "m").replace("min", "m").trimEnd();
+    for (auto& [k, v] : kMap)
+        if (norm.equalsIgnoreCase(k)) return juce::String(v) + " / " + t;
+    return t;
+}
+
 // ─────────────────────────────────────────────
 // Waveform drawing helpers
 // ─────────────────────────────────────────────
@@ -252,6 +280,16 @@ DeckPanel::DeckPanel(int num, BridgeEngine& eng)
         updateDisplay();
     };
 
+    // ── REMOVE button (✕ top-right) ──
+    addAndMakeVisible(removeBtn);
+    removeBtn.setColour(juce::TextButton::buttonColourId,  juce::Colours::transparentBlack);
+    removeBtn.setColour(juce::TextButton::textColourOffId, C::tx4);
+    removeBtn.onClick = [this]
+    {
+        if (engine.isHWMode(deckNum)) return;
+        if (onRemove) onRemove();
+    };
+
     // ── Zoom buttons ──
     auto setupZoomBtn = [this](juce::TextButton& btn, const char* text)
     {
@@ -287,6 +325,34 @@ void DeckPanel::mouseDown(const juce::MouseEvent& e)
             engine.getVirtualDeck(deckNum).cueDown();
         return;
     }
+
+    // Overview waveform click → seek
+    if (!engine.isHWMode(deckNum) && ovWfBounds.contains(e.getPosition()))
+    {
+        auto& deck = engine.getVirtualDeck(deckNum);
+        if (deck.isLoaded() && deck.getDurationMs() > 0)
+        {
+            float t = juce::jlimit(0.0f, 1.0f,
+                (float)(e.getPosition().x - ovWfBounds.getX()) / (float)ovWfBounds.getWidth());
+            deck.seekTo(t * deck.getDurationMs());
+            updateDisplay();
+        }
+        return;
+    }
+
+    // Zoom waveform drag-to-scrub
+    if (!engine.isHWMode(deckNum) && zoomWfBounds.contains(e.getPosition()))
+    {
+        auto& deck = engine.getVirtualDeck(deckNum);
+        if (deck.isLoaded())
+        {
+            draggingZoom   = true;
+            dragStartX     = e.getPosition().x;
+            dragStartPosMs = deck.getPositionMs();
+        }
+        return;
+    }
+
     Component::mouseDown(e);
 }
 
@@ -299,7 +365,32 @@ void DeckPanel::mouseUp(const juce::MouseEvent& e)
             engine.getVirtualDeck(deckNum).cueUp();
         return;
     }
+
+    if (draggingZoom)
+    {
+        draggingZoom = false;
+        return;
+    }
+
     Component::mouseUp(e);
+}
+
+void DeckPanel::mouseDrag(const juce::MouseEvent& e)
+{
+    if (draggingZoom && !engine.isHWMode(deckNum))
+    {
+        auto& deck = engine.getVirtualDeck(deckNum);
+        if (deck.isLoaded() && zoomWfBounds.getWidth() > 0)
+        {
+            // px offset → ms: drag right = earlier (waveform follows finger)
+            float msPerPx = zoomWindowMs / (float)zoomWfBounds.getWidth();
+            float newMs = dragStartPosMs - (float)(e.getPosition().x - dragStartX) * msPerPx;
+            newMs = juce::jlimit(0.0f, deck.getDurationMs(), newMs);
+            deck.seekTo(newMs);
+        }
+        return;
+    }
+    Component::mouseDrag(e);
 }
 
 // ── Paint ──
@@ -370,6 +461,14 @@ void DeckPanel::paint(juce::Graphics& g)
             shimCol, bounds.getX() + hw, 0,
             juce::Colours::transparentBlack, bounds.getRight(), 0, false));
         g.fillRect(bounds.getX() + hw, bounds.getY(), hw, 2.0f);
+    }
+
+    // ── Drag-over overlay ──
+    if (dragOver)
+    {
+        g.setColour(C::blu.withAlpha(0.12f));
+        g.fillRoundedRectangle(bounds, 12.0f);
+        borderCol = C::blu.withAlpha(0.6f);
     }
 
     g.setColour(borderCol);
@@ -560,7 +659,7 @@ void DeckPanel::paint(juce::Graphics& g)
     // Key badge (top-right of zoom waveform, shifted left to avoid VU meter)
     if (!isHW && !deck.getKey().isEmpty() && !zoomWfBounds.isEmpty())
     {
-        juce::String keyStr = deck.getKey();
+        juce::String keyStr = toCamelot(deck.getKey());
         float kw = (float)(keyStr.length() * 7 + 14);
         auto kr = juce::Rectangle<float>(
             (float)zoomWfBounds.getRight() - kw - 12,  // 12 = 9px VU + 3px gap
@@ -636,31 +735,57 @@ void DeckPanel::paint(juce::Graphics& g)
         }
     }
 
-    // ── Bottom: BPM + HW/Virtual label ──
-    float bpm = isHW
+    // ── Bottom bar: HW/VIR | BPM | pos/dur ──
+    float bpm2 = isHW
         ? (engine.getLayerState(deckNum) ? engine.getLayerState(deckNum)->bpm : 0.0f)
         : deck.getBpm();
 
+    int botY = getHeight() - 16;
     g.setColour(C::tx4);
     g.setFont(juce::FontOptions(9.0f));
     juce::String hwLabel = isHW
         ? juce::CharPointer_UTF8("\xe2\xac\xa1 HW")
         : juce::CharPointer_UTF8("\xe2\x97\x8e VIR");
-    g.drawText(hwLabel, 13, getHeight() - 16, 50, 14,
-               juce::Justification::centredLeft);
+    g.drawText(hwLabel, 13, botY, 44, 14, juce::Justification::centredLeft);
 
-    if (bpm > 0.0f)
+    if (bpm2 > 0.0f)
     {
         g.setColour(showBright ? C::tx2 : C::tx4);
         g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
-        juce::String bpmStr = juce::String(bpm, 1) + " BPM";
-        g.drawText(bpmStr, 13 + 52, getHeight() - 16, getWidth() - 80, 14,
-                   juce::Justification::centredLeft);
+        juce::String bpmStr = juce::String(bpm2, 1) + " BPM";
+        g.drawText(bpmStr, 13 + 46, botY, 80, 14, juce::Justification::centredLeft);
+    }
+
+    // pos / duration in mm:ss.xx format
+    {
+        float curMs2 = isHW
+            ? (engine.getLayerState(deckNum) ? engine.getLayerState(deckNum)->timecodeMs : 0.0f)
+            : deck.getPositionMs();
+        float totMs2 = isHW
+            ? (engine.getLayerState(deckNum) ? engine.getLayerState(deckNum)->totalLengthMs : 0.0f)
+            : deck.getDurationMs();
+
+        auto fmtMmSs = [](float ms) -> juce::String {
+            if (ms < 0) ms = 0;
+            int totalCs = (int)(ms / 10);
+            int m = totalCs / 6000; totalCs %= 6000;
+            int s = totalCs / 100;  int cs = totalCs % 100;
+            return juce::String::formatted("%d:%02d.%02d", m, s, cs);
+        };
+
+        juce::String posStr = fmtMmSs(curMs2) + " / " + fmtMmSs(totMs2);
+        g.setColour(C::tx4);
+        g.setFont(juce::FontOptions(9.0f));
+        g.drawText(posStr, 13 + 128, botY, getWidth() - 13 - 128 - 10, 14,
+                   juce::Justification::centredRight);
     }
 }
 
 void DeckPanel::resized()
 {
+    // Remove (✕) button: top-right corner
+    removeBtn.setBounds(getWidth() - 22, 6, 16, 16);
+
     auto area = getLocalBounds().reduced(13);
     area.removeFromTop(32);  // header (painted)
     area.removeFromBottom(20); // bottom label + phasor area
@@ -712,6 +837,35 @@ void DeckPanel::resized()
     loadBtn.setBounds(bottomRow.removeFromLeft(bw2));
     bottomRow.removeFromLeft(4);
     ejectBtn.setBounds(bottomRow);
+}
+
+bool DeckPanel::isInterestedInFileDrag(const juce::StringArray& files)
+{
+    if (engine.isHWMode(deckNum)) return false;
+    for (auto& f : files)
+    {
+        juce::String ext = juce::File(f).getFileExtension().toLowerCase();
+        if (ext == ".mp3" || ext == ".wav" || ext == ".flac" ||
+            ext == ".aiff" || ext == ".aif" || ext == ".m4a" ||
+            ext == ".aac"  || ext == ".ogg")
+            return true;
+    }
+    return false;
+}
+
+void DeckPanel::filesDropped(const juce::StringArray& files, int, int)
+{
+    dragOver = false;
+    if (engine.isHWMode(deckNum) || files.isEmpty()) return;
+    auto file = juce::File(files[0]);
+    if (!file.existsAsFile()) return;
+    sLastDir = file.getParentDirectory();
+    auto& deck = engine.getVirtualDeck(deckNum);
+    if (deck.loadFile(file))
+    {
+        engine.setVirtualDeckActive(deckNum, true);
+        updateDisplay();
+    }
 }
 
 void DeckPanel::updateDisplay()
@@ -857,7 +1011,11 @@ MainComponent::MainComponent()
             addDeckBtn.setVisible(showDecks);
             modeToggleBtn.setVisible(showDecks);
             for (int s = 0; s < 3; s++)
+            {
                 outSrcSelectors[(size_t)s].setVisible(showDecks);
+                for (int m = 0; m < 3; m++)
+                    outModeBtns[(size_t)s][(size_t)m].setVisible(showDecks);
+            }
 
             // Settings visibility
             bool showSettings = (activeTab == TAB_SETTINGS);
@@ -896,6 +1054,35 @@ MainComponent::MainComponent()
             outLayers[(size_t)i].srcSlot = (sel <= 1) ? -1 : sel - 2;
         };
         (void)layerNames[i];
+    }
+
+    // ── Output mode buttons (LTC/MTC/ART × 3 layers) ──
+    {
+        const char* modeLabels[] = { "LTC", "MTC", "ART" };
+        const juce::Colour modeColors[] = { C::ylw, C::blu, C::org };
+        for (int i = 0; i < 3; i++)
+        {
+            for (int m = 0; m < 3; m++)
+            {
+                auto& btn = outModeBtns[(size_t)i][(size_t)m];
+                btn.setButtonText(modeLabels[m]);
+                addAndMakeVisible(btn);
+                btn.setColour(juce::TextButton::buttonColourId,   juce::Colours::transparentBlack);
+                btn.setColour(juce::TextButton::textColourOffId,  C::tx4);
+                btn.setColour(juce::TextButton::buttonOnColourId, modeColors[(size_t)m].withAlpha(0.2f));
+                btn.setColour(juce::TextButton::textColourOnId,   modeColors[(size_t)m]);
+                btn.setClickingTogglesState(true);
+                btn.setVisible(false);  // shown on TAB_LINK
+                btn.onClick = [this, i, m]
+                {
+                    bool on = outModeBtns[(size_t)i][(size_t)m].getToggleState();
+                    if (m == 0) outLayers[(size_t)i].ltc = on;
+                    else if (m == 1) outLayers[(size_t)i].mtc = on;
+                    else             outLayers[(size_t)i].art = on;
+                    repaint();
+                };
+            }
+        }
     }
 
     // ── Mode Toggle (VIR / HW) — transparent overlay over painted toggle ──
@@ -995,6 +1182,30 @@ MainComponent::~MainComponent()
     engine.stop();
 }
 
+void MainComponent::removeDeck(int slot)
+{
+    if (slot < 0 || slot >= visibleDecks) return;
+    // Eject the deck
+    engine.getVirtualDeck(slot).eject();
+    engine.setVirtualDeckActive(slot, false);
+    // Shift panels left
+    for (int i = slot; i < visibleDecks - 1; i++)
+    {
+        if (deckPanels[(size_t)i] && deckPanels[(size_t)(i + 1)])
+        {
+            // swap to shift deck data left (slot numbers differ; simplest: hide and rebuild)
+        }
+        deckPanels[(size_t)i] = std::move(deckPanels[(size_t)(i + 1)]);
+        if (deckPanels[(size_t)i])
+            deckPanels[(size_t)i]->setDeckNum(i);
+    }
+    deckPanels[(size_t)(visibleDecks - 1)].reset();
+    visibleDecks--;
+    addDeckBtn.setEnabled(true);
+    layoutDecks();
+    repaint();
+}
+
 void MainComponent::addDeck()
 {
     if (visibleDecks >= kMaxDecks) return;
@@ -1002,6 +1213,7 @@ void MainComponent::addDeck()
     if (!deckPanels[(size_t)idx])
     {
         deckPanels[(size_t)idx] = std::make_unique<DeckPanel>(idx, engine);
+        deckPanels[(size_t)idx]->onRemove = [this, idx] { removeDeck(idx); };
         addAndMakeVisible(deckPanels[(size_t)idx].get());
     }
     else
@@ -1194,20 +1406,7 @@ void MainComponent::paint(juce::Graphics& g)
             g.drawText(formatTimecode(tcMs), cx + 30, cy + 6, cardW - 38, 18,
                        juce::Justification::centredRight);
 
-            // Output mode buttons (LTC/MTC/ART)
-            const char* modes[] = { "LTC", "MTC", "ART" };
-            const bool* modeOn[] = { &outLayers[(size_t)i].ltc, &outLayers[(size_t)i].mtc, &outLayers[(size_t)i].art };
-            const juce::Colour modeColors[] = { C::ylw, C::blu, C::org };
-            int btnW = 28, btnX = cx + 8;
-            for (int m = 0; m < 3; m++)
-            {
-                auto btnRect = juce::Rectangle<float>((float)(btnX + m * 31), (float)(cy + ch - 20), (float)btnW, 14.0f);
-                g.setColour(*modeOn[m] ? modeColors[(size_t)m].withAlpha(0.2f) : juce::Colour(0x08ffffff));
-                g.fillRoundedRectangle(btnRect, 2.0f);
-                g.setColour(*modeOn[m] ? modeColors[(size_t)m] : C::tx4);
-                g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
-                g.drawText(modes[m], btnRect, juce::Justification::centred);
-            }
+            // LTC/MTC/ART toggle buttons are real juce::TextButton (positioned in resized())
         }
     }
     if (activeTab == TAB_LINK)
@@ -1698,14 +1897,24 @@ void MainComponent::resized()
 
     // Status bar drawn in paint() as pills
 
-    // Output layer selectors (LINK tab only)
+    // Output layer selectors + mode buttons (LINK tab only)
     {
         int cardW = (w - 28) / 3;
+        bool showLink = (activeTab == TAB_LINK);
         for (int i = 0; i < 3; i++)
         {
             int cx = 12 + i * (cardW + 4);
-            outSrcSelectors[(size_t)i].setBounds(cx, 146, cardW, 18);
-            outSrcSelectors[(size_t)i].setVisible(activeTab == TAB_LINK);
+            // Source selector: y=146, inside card at cy=128, ch=56
+            outSrcSelectors[(size_t)i].setBounds(cx + 30, 146, cardW - 38, 18);
+            outSrcSelectors[(size_t)i].setVisible(showLink);
+            // LTC/MTC/ART buttons: y=165 (= cy+ch-19 = 128+56-19)
+            int btnW = 28, btnGap = 3;
+            for (int m = 0; m < 3; m++)
+            {
+                outModeBtns[(size_t)i][(size_t)m].setBounds(
+                    cx + 8 + m * (btnW + btnGap), 165, btnW, 13);
+                outModeBtns[(size_t)i][(size_t)m].setVisible(showLink);
+            }
         }
     }
 
