@@ -2183,17 +2183,18 @@ void MainComponent::paint(juce::Graphics& g)
     g.setColour(C::bdr);
     g.drawHorizontalLine(h - 26, 0, (float)w);
 
-    // Deck state dots
+    // Deck state dots with player numbers (Electron style)
     float dotX = 14.0f;
     float dotY = (float)(h - 26) + 10.0f;
     for (int i = 0; i < visibleDecks; i++)
     {
         juce::Colour dotCol = C::tx4;
+        bool isPlaying = false;
         if (engine.isHWMode(i))
         {
             auto* ls = engine.getLayerState(i);
             if (ls && (ls->state == PlayState::PLAYING || ls->state == PlayState::LOOPING))
-                dotCol = C::grn;
+            { dotCol = C::grn; isPlaying = true; }
             else
                 dotCol = C::pur.withAlpha(0.6f);
         }
@@ -2201,7 +2202,7 @@ void MainComponent::paint(juce::Graphics& g)
         {
             auto st = engine.getVirtualDeck(i).getState();
             if (st == PlayState::PLAYING || st == PlayState::LOOPING)
-                dotCol = C::grn;
+            { dotCol = C::grn; isPlaying = true; }
             else if (st == PlayState::CUED || st == PlayState::CUEING)
                 dotCol = C::ylw;
             else if (engine.getVirtualDeck(i).isLoaded())
@@ -2209,7 +2210,13 @@ void MainComponent::paint(juce::Graphics& g)
         }
         g.setColour(dotCol);
         g.fillEllipse(dotX, dotY, 6.0f, 6.0f);
-        dotX += 11.0f;
+        // Player number
+        g.setColour(C::tx4);
+        g.setFont(juce::FontOptions(8.0f));
+        g.drawText(juce::String(i + 1), (int)(dotX + 8), (int)(dotY - 1), 10, 9,
+                   juce::Justification::centredLeft);
+        dotX += 20.0f;
+        (void)isPlaying;
     }
 }
 
