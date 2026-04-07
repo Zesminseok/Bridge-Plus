@@ -32,6 +32,23 @@ class WaveformGL {
     const gl = this.gl;
     const n = wfData.length;
     if (n < 2) return;
+    // Recover from WebGL context reset (canvas.width assignment clears GPU state)
+    if (!this._prog || !gl.isProgram(this._prog)) {
+      try {
+        this._prog = this._compileProgram(_WGL_VS, _WGL_ZOOM_FS);
+        this._vao = null;
+        this._initGeometry();
+        this._locs = {
+          wf:      gl.getUniformLocation(this._prog, 'u_wf'),
+          posMs:   gl.getUniformLocation(this._prog, 'u_posMs'),
+          zoomMs:  gl.getUniformLocation(this._prog, 'u_zoomMs'),
+          durMs:   gl.getUniformLocation(this._prog, 'u_durMs'),
+          res:     gl.getUniformLocation(this._prog, 'u_res'),
+          centerX: gl.getUniformLocation(this._prog, 'u_centerX'),
+          mode:    gl.getUniformLocation(this._prog, 'u_mode'),
+        };
+      } catch(e) { console.warn('[WGL] recover failed:', e.message); return; }
+    }
     this._wfLen = n;
     this._wfDurMs = wfDurMs || 1;
 
@@ -144,6 +161,20 @@ class OverviewGL {
     const gl = this.gl;
     const n = wfData.length;
     if (n < 2) return;
+    // Recover from WebGL context reset
+    if (!this._prog || !gl.isProgram(this._prog)) {
+      try {
+        this._prog = this._compileProgram(_WGL_VS, _WGL_OV_FS);
+        this._vao = null;
+        this._initGeometry();
+        this._locs = {
+          wf:   gl.getUniformLocation(this._prog, 'u_wf'),
+          pos:  gl.getUniformLocation(this._prog, 'u_pos'),
+          res:  gl.getUniformLocation(this._prog, 'u_res'),
+          mode: gl.getUniformLocation(this._prog, 'u_mode'),
+        };
+      } catch(e) { console.warn('[WGL] ovgl recover failed:', e.message); return; }
+    }
     const px = new Uint8Array(n * 4);
     for (let i = 0; i < n; i++) {
       const p = wfData[i];

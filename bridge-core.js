@@ -1140,80 +1140,64 @@ class BridgeCore {
   // Pro DJ Link keep-alive announcement on 50000
   // CDJs only send status to devices they see on the network
   _startPDJLAnnounce(){
-    // Use TCNet interface (same subnet as Arena/CDJs) so announcement reaches them
-    // Fallback: 169.254.x.x link-local, then any non-internal interface
-    let pdjlIP=null, pdjlMAC='00:00:00:00:00:00', pdjlBC='255.255.255.255';
+    // Determine the "primary" IP to embed in the PDJL packet:
+    // Arena uses this IP to connect to our VDB server (port 12523).
+    // Must be the TCNet interface IP so Arena (on the same subnet) can reach us.
+    let pdjlIP=null, pdjlMAC='00:00:00:00:00:00';
 
-    // 1st choice: same interface as TCNet (this.localAddr set during start)
     if(this.localAddr && !this.isLocalMode){
       pdjlIP = this.localAddr;
       for(const iface of getAllInterfaces()){
-        if(iface.address===pdjlIP){
-          pdjlMAC=iface.mac||pdjlMAC;
-          pdjlBC=iface.broadcast||pdjlBC;
-          break;
-        }
+        if(iface.address===pdjlIP){ pdjlMAC=iface.mac||pdjlMAC; break; }
       }
     }
-    // 2nd choice: link-local 169.254.x.x (legacy CDJ peer-to-peer subnet)
     if(!pdjlIP){
       for(const iface of getAllInterfaces()){
-        if(!iface.internal && iface.address.startsWith('169.254.')){
-          pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC;
-          pdjlBC=iface.broadcast||pdjlBC;
-          break;
+        if(!iface.internal && !iface.address.startsWith('169.254.')){
+          pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC; break;
         }
       }
     }
-    // 3rd choice: any non-internal interface
-    if(!pdjlIP){
-      for(const iface of getAllInterfaces()){
-        if(!iface.internal && !iface.isLoopback){
-          pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC;
-          pdjlBC=iface.broadcast||pdjlBC;
-        }
-      }
-    }
-    if(!pdjlIP){console.warn('[PDJL] no interface found for keep-alive');return;}
+    if(!pdjlIP){ console.warn('[PDJL] no interface found for keep-alive'); return; }
 
-    console.log(`[PDJL] announcing on ${pdjlIP} → ${pdjlBC}:50000 MAC=${pdjlMAC}`);
+    // Collect ALL non-internal broadcast addresses so every subnet (including Arena's) receives the keepalive
+    const allBCs = [...new Set(
+      getAllInterfaces()
+        .filter(i=>!i.internal && i.broadcast && i.broadcast!=='127.255.255.255')
+        .map(i=>i.broadcast)
+        .concat(['255.255.255.255'])
+    )];
+    console.log(`[PDJL] announcing IP=${pdjlIP} MAC=${pdjlMAC} → ${allBCs.join(',')}:50000`);
 
-    // Build keep-alive packet (type 0x06, 54 bytes)
     const macBytes=pdjlMAC.split(':').map(h=>parseInt(h,16));
     const ipParts=pdjlIP.split('.').map(Number);
 
-    // Create a dedicated socket for 50000 broadcast (CDJ announcement)
+    // Bind to 0.0.0.0 so we can send to any subnet
     this._pdjlAnnSock=dgram.createSocket({type:'udp4',reuseAddr:true});
     this._pdjlAnnSock.on('error',()=>{});
-    this._pdjlAnnSock.bind(0, pdjlIP, ()=>{
+    this._pdjlAnnSock.bind(0, ()=>{
       try{this._pdjlAnnSock.setBroadcast(true);}catch(_){}
     });
 
     const sendAnn=()=>{
       const pkt=Buffer.alloc(54);
-      PDJL.MAGIC.copy(pkt,0);          // 0x00: magic (10 bytes)
-      pkt[0x0A]=0x06;                   // type = keep-alive
-      pkt[0x0B]=0x00;                   // sub-type byte
-      // Device name: 20 bytes at 0x0C-0x1F (padded with 0)
+      PDJL.MAGIC.copy(pkt,0);
+      pkt[0x0A]=0x06; pkt[0x0B]=0x00;
       const nameStr='BRIDGE-CLONE';
       Buffer.from(nameStr,'ascii').copy(pkt,0x0C,0,Math.min(nameStr.length,20));
-      pkt[0x20]=0x01;                   // unknown (always 1 in captures)
-      pkt[0x21]=0x01;                   // proto ver?
-      pkt[0x22]=0x00;                   // pad
-      pkt[0x23]=0x36;                   // length marker
-      pkt[0x24]=0x05;                   // D = device/player number: 5 (avoids conflict with P1-P4)
-      pkt[0x25]=0x01;                   // Dt = device type: 0x01=CDJ (required for dbserver)
-      // MAC address at 0x26-0x2B
+      pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x22]=0x00; pkt[0x23]=0x36;
+      pkt[0x24]=0x05; pkt[0x25]=0x01;
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
-      // IP at 0x2C-0x2F
-      for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
-      // Tail bytes
-      pkt[0x30]=0x08; pkt[0x34]=0x05; pkt[0x35]=0x64; // 0x35=0x64 for CDJ-3000 compatibility
-      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,pdjlBC);}catch(e){console.warn('[PDJL] ann:',e.message);}
+      for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];  // embed TCNet IP so Arena connects to us
+      pkt[0x30]=0x08; pkt[0x34]=0x05; pkt[0x35]=0x64;
+      // Send to all broadcast addresses — covers Arena's subnet even if PDJL/TCNet on different NICs
+      for(const bc of allBCs){
+        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
+      }
     };
 
     sendAnn();
-    const t=setInterval(sendAnn,1500); // 1.5s like real CDJs
+    const t=setInterval(sendAnn,1500);
     this._timers.push(t);
   }
 
