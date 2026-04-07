@@ -81,7 +81,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* waveform analysis progress bar (shown while buildRGBWaveform runs) */
 .dwov-prog{position:absolute;bottom:0;left:0;height:2px;width:0;background:rgba(96,165,250,.7);border-radius:1px;pointer-events:none;transition:width .1s linear}
 /* Zoom: scrolling RGB waveform + beat grid */
-.dwz{height:64px;margin:0 0 4px;background:var(--bg-lowest);border-radius:6px;overflow:hidden;cursor:pointer;display:flex;position:relative;border:1px solid var(--bdr)}
+.dwz{height:64px;margin:0 0 4px;background:var(--bg-lowest);border-radius:6px;overflow:hidden;cursor:pointer;position:relative;border:1px solid var(--bdr)}
 .dwz canvas{flex:1;height:100%;display:block;min-width:0}
 .wf-key{position:absolute;top:4px;right:8px;font:700 13px var(--mn);color:var(--grn);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 7px;border-radius:4px}
 .wf-bpm{position:absolute;bottom:4px;right:8px;font:600 11px var(--mn);color:var(--tx2);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 7px;border-radius:4px}
@@ -108,22 +108,24 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dkbtn{width:22px;height:22px}
 .deck-row.compact .dkctrl{width:48px;gap:3px}
 .deck-row.compact .dwov{height:10px;margin-bottom:1px}
-.deck-row.compact .dwz{height:44px;margin-bottom:3px}
-/* VU strip: channels side-by-side (horizontal), each bar vertical */
-.dvu-strip{display:flex;flex-direction:row;gap:2px;align-items:flex-end;height:24px;padding:0 0 3px}
+.deck-row.compact .dwz-row{height:44px;margin-bottom:3px}
+/* Waveform + VU side-by-side row */
+.dwz-row{display:flex;flex-direction:row;gap:0;margin:0 0 4px;height:64px}
+.dwz-row .dwz{flex:1;min-width:0;margin:0;height:100%;border-radius:6px 0 0 6px}
+/* VU strip: right side of waveform, channels side-by-side, bars vertical */
+.dvu-strip{display:flex;flex-direction:row;gap:2px;align-items:stretch;width:28px;flex-shrink:0;background:var(--bg-lowest);border:1px solid var(--bdr);border-left:none;border-radius:0 6px 6px 0;padding:3px 3px 3px 2px}
 .dvu-ch{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;height:100%}
-.dvu-lbl{font:700 7px var(--mn);color:var(--tx4);height:8px;line-height:8px;flex-shrink:0}
-.dvu-hbar{flex:1;width:100%;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;position:relative;min-height:4px}
+.dvu-lbl{font:700 6px var(--mn);color:var(--tx4);height:7px;line-height:7px;flex-shrink:0}
+.dvu-hbar{flex:1;width:100%;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;position:relative}
 .dvu-hfill{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:2px;transition:height .05s}
-/* Beat phasor: 2×2 square grid */
-.dphs{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);gap:2px;width:16px;height:14px;flex-shrink:0}
+/* Beat phasor: 2×2 square grid — row-major = TL→TR→BL→BR (clockwise) */
+.dphs{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);grid-auto-flow:row;gap:2px;width:16px;height:14px;flex-shrink:0}
 .dphs-seg{border-radius:2px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
 .dphs-seg.on{background:rgba(255,255,255,.15)}
 .dphs-fill{position:absolute;inset:0;border-radius:2px;background:rgba(90,240,179,.65);opacity:0;transition:opacity .06s}
 .dphs-seg.on .dphs-fill{background:rgba(90,240,179,.95)}
-/* BPM + phasor in title row (right side cluster) */
-.dphs-bpm{font:600 10px var(--mn);color:var(--tx3);white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0}
-.dk[data-st="play"] .dphs-bpm,.dk[data-st="hwplay"] .dphs-bpm,.dk[data-st="cue"] .dphs-bpm{color:var(--tx2)}
+/* Phasor + time right-cluster in title row */
+.dktn-r{display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex-shrink:0}
 /* Zoom overlay buttons on waveform — left side to avoid VU meter */
 .dzoom-btns{position:absolute;top:3px;left:4px;display:flex;flex-direction:column;gap:2px;z-index:2;pointer-events:none}
 .dzb{pointer-events:auto;padding:0;width:18px;height:14px;border-radius:2px;font:600 10px var(--mn);cursor:pointer;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.55);color:rgba(255,255,255,.65);transition:all .1s;display:flex;align-items:center;justify-content:center;line-height:1}
@@ -221,7 +223,7 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .dktn-a{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
 .dktn-time{font:500 11px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dk[data-st="play"] .dktn-time,.dk[data-st="hwplay"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
-.dktn-time-row{font:600 14px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;padding:2px 0 3px;white-space:nowrap;letter-spacing:-.01em}
+.dktn-time-row{font:600 12px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em;text-align:right}
 .dk[data-st="play"] .dktn-time-row,.dk[data-st="hwplay"] .dktn-time-row,.dk[data-st="cue"] .dktn-time-row{color:var(--tx)}
 .dbk-hd{font:600 11px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis}
 .dk[data-st="play"] .dbk-hd,.dk[data-st="hwplay"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
@@ -1287,11 +1289,12 @@ function deckHTML(slot){
         <div class="dktn">
           <div class="dktn-row">
             <span class="dktn-t" id="dtn${slot}" style="color:var(--tx4)">—</span>
-            <span class="dphs-bpm" id="dbk${slot}" style="color:var(--tx4)">— BPM</span>
-            <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
+            <div class="dktn-r">
+              <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
+              <div class="dktn-time-row" id="dtime${slot}" style="color:var(--tx4)">--:--.--- / --:--.---</div>
+            </div>
           </div>
           <div class="dktn-row"><span class="dktn-a" id="dta${slot}"></span></div>
-          <div class="dktn-time-row" id="dtime${slot}" style="color:var(--tx4)">--:--.--- / --:--.---</div>
         </div>
         <div class="dtbody">
           <div class="dkctrl">
@@ -1303,8 +1306,10 @@ function deckHTML(slot){
           </div>
           <div class="dkwaves">
             <div class="dwov" id="dwov${slot}" style="display:flex;align-items:center;justify-content:center"><span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span></div>
-            <div class="dwz" id="dwz${slot}" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px"><span style="font:400 12px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span></div>
-            <div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>
+            <div class="dwz-row">
+              <div class="dwz" id="dwz${slot}" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px"><span style="font:400 12px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span></div>
+              <div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1333,11 +1338,12 @@ function deckHTML(slot){
       <div class="dktn">
         <div class="dktn-row">
           <span class="dktn-t" id="dtn${slot}">${d.tn||'—'}</span>
-          <span class="dphs-bpm" id="dbk${slot}">— BPM</span>
-          <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
+          <div class="dktn-r">
+            <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
+            <div class="dktn-time-row" id="dtime${slot}">0:00.00 / --:--.---</div>
+          </div>
         </div>
         <div class="dktn-row"><span class="dktn-a" id="dta${slot}">${d.ar||''}</span></div>
-        <div class="dktn-time-row" id="dtime${slot}">0:00.00 / --:--.---</div>
       </div>
       <div class="dtbody">
         <div class="dkctrl">
@@ -1349,8 +1355,10 @@ function deckHTML(slot){
         </div>
         <div class="dkwaves">
           <div class="dwov" id="dwov${slot}"><canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div></div>
-          <div class="dwz" id="dwz${slot}" style="position:relative"><canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><span class="wf-key" id="wfkey${slot}"></span><span class="wf-bpm" id="wfbpm${slot}"></span><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div>
-          <div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>
+          <div class="dwz-row">
+            <div class="dwz" id="dwz${slot}" style="position:relative"><canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><span class="wf-key" id="wfkey${slot}"></span><span class="wf-bpm" id="wfbpm${slot}"></span><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div>
+            <div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1411,17 +1419,17 @@ function bindDeck(slot){
     cb.addEventListener('pointerup',ev=>{ev.preventDefault();doCueUp(slot);});
     cb.addEventListener('pointerleave',()=>{if(DECKS[slot]?.cu&&!DECKS[slot]?.pl)doCueUp(slot);});
   }
-  // init overview canvas
-  const wov=document.getElementById('wov'+slot);
-  if(wov){
+  // init overview canvas — setTimeout re-queries live element to handle DOM rebuilds
+  if(document.getElementById('wov'+slot)){
     setTimeout(()=>{
+      const wov=document.getElementById('wov'+slot);
+      if(!wov)return;
       const p=wov.parentElement;
       const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
       wov.width=w; wov.height=h;
       try{
         d.ovgl=new OverviewGL(wov);
         d.wovCtx=null;
-        // 이미 웨이브폼 데이터가 있으면 즉시 복원 (renderDecks 재호출 시)
         const _wfD=d.rgbWfDetail||d.rgbWf;
         if(_wfD){d.ovgl.setData(_wfD);drawOverview(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
         console.log('[WGL] slot'+slot+' WebGL2 overview init');
@@ -1431,17 +1439,17 @@ function bindDeck(slot){
       }
     },0);
   }
-  // init zoom canvas
-  const wzc=document.getElementById('wzc'+slot);
-  if(wzc){
+  // init zoom canvas — re-query to always bind to live canvas
+  if(document.getElementById('wzc'+slot)){
     setTimeout(()=>{
+      const wzc=document.getElementById('wzc'+slot);
+      if(!wzc)return;
       const p=wzc.parentElement;
       const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
       wzc.width=w; wzc.height=h;
       try{
         d.wgl=new WaveformGL(wzc);
         d.wzCtx=null;
-        // 이미 웨이브폼 데이터가 있으면 즉시 복원 (renderDecks 재호출 시)
         const _wfD=d.rgbWfDetail||d.rgbWf;
         if(_wfD){
           const _isDet=!!d.rgbWfDetail;
@@ -1451,10 +1459,11 @@ function bindDeck(slot){
         }
         const wzov=document.getElementById('wzov'+slot);
         if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
-        console.log('[WGL] slot'+slot+' WebGL2 zoom init');
+        console.log('[WGL] slot'+slot+' WebGL2 zoom init ok w='+w);
       }catch(e){
         console.warn('[WGL] fallback 2D zoom:',e);
-        d.wzCtx=wzc.getContext('2d');
+        const wzc2=document.getElementById('wzc'+slot);
+        if(wzc2)d.wzCtx=wzc2.getContext('2d');
         const wzov=document.getElementById('wzov'+slot);
         if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
       }
@@ -1718,14 +1727,14 @@ function loadFile(slot,f){
     d.au.addEventListener('loadedmetadata',()=>{
       d.dur=d.au.duration*1000;d.bpm=0;d.ld=true;
       renderDecks();
-      // Setup canvases immediately
+      // Setup canvases immediately — re-query inside setTimeout for live elements
       setTimeout(()=>{
         const wov=document.getElementById('wov'+slot);
         if(wov){
           const p=wov.parentElement;
           const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
           wov.width=w; wov.height=h;
-          if(!d.ovgl){
+          if(!d.ovgl||d.ovgl.gl.canvas!==wov){
             try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}
             catch(e){d.wovCtx=wov.getContext('2d');}
           }
@@ -1735,7 +1744,7 @@ function loadFile(slot,f){
           const p=wzc.parentElement;
           const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
           wzc.width=w; wzc.height=h;
-          if(!d.wgl){
+          if(!d.wgl||d.wgl.gl.canvas!==wzc){
             try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}
             catch(e){d.wzCtx=wzc.getContext('2d');}
           }
@@ -2095,13 +2104,6 @@ function tick(){
     if(tc)tc.textContent=fTC(displayPos);
     const timeEl=document.getElementById('dtime'+slot);
     if(timeEl)timeEl.textContent=fTmMs(displayPos)+' / '+(d.dur>0?fTmMs(d.dur):'--:--.---');
-    const bkEl=document.getElementById('dbk'+slot);
-    if(bkEl){
-      let bkTxt='';
-      if(d.bpm>0){const _b=d.baseBpm||d.bpm;bkTxt=(_b%1===0?_b.toFixed(0):_b.toFixed(1))+' BPM';}
-      else bkTxt='— BPM';
-      bkEl.textContent=bkTxt;
-    }
     const dtnEl=document.getElementById('dtn'+slot);
     if(dtnEl){
       const txt=d.tn||'—';
@@ -2133,10 +2135,13 @@ function tick(){
     if(wfkEl)wfkEl.textContent=d.key||'';
     const wfbEl=document.getElementById('wfbpm'+slot);
     if(wfbEl&&d.bpm>0){
+      const baseBpm=d.baseBpm||d.bpm;
       const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
       const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
-      wfbEl.textContent=(d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1))+' '+ps;
-    }else if(wfbEl)wfbEl.textContent='';
+      const baseStr=baseBpm%1===0?baseBpm.toFixed(0):baseBpm.toFixed(1);
+      const curStr=d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1);
+      wfbEl.innerHTML=baseStr+' / <strong style="color:var(--tx)">'+curStr+'</strong> '+ps;
+    }else if(wfbEl)wfbEl.innerHTML='';
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
 
@@ -2374,7 +2379,7 @@ function renderSettings(){
     </div>
     <div class="sl">TCNet 설정</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">Node Name</span><input type="text" value="${cfg.nm}" data-cfg="nm" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:100px;text-align:right"></div>
+      <div class="srw"><span class="srl">Node Name <span style="font:400 9px var(--mn);color:var(--tx4)">(%%=자동번호)</span></span><input type="text" value="${cfg.nm}" data-cfg="nm" placeholder="Bridge%%" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:110px;text-align:right"></div>
       <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
       <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
@@ -2484,6 +2489,7 @@ async function doStart(){
       tcnetIface:cfg.tcnetIface||null,
       pdjlIface:cfg.pdjlIface||null,
       tcnetMode:cfg.tcnetMode||'auto',
+      nodeName:cfg.nm||'BRIDGE29',
     });
     if(!r.ok){alert('시작 실패: '+r.err);return;}
     pdjlPort=r.pdjlPort||null;

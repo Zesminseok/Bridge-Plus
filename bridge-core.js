@@ -602,8 +602,9 @@ function parsePDJL(msg){
 // ─────────────────────────────────────────────
 class BridgeCore {
   constructor(opts={}){
-    this.tcnetBindAddr = opts.tcnetIface||null;
-    this.pdjlBindAddr  = opts.pdjlIface||null;
+    this.tcnetBindAddr  = opts.tcnetIface||null;
+    this.pdjlBindAddr   = opts.pdjlIface||null;
+    this._requestedName = opts.nodeName||null;
     this.broadcastAddr = 'auto';
 
     this.isLocalMode   = (opts.tcnetIface==='127.0.0.1');
@@ -671,12 +672,27 @@ class BridgeCore {
 
     if(!this._nameSet){
       const existingNames = new Set(Object.values(this.nodes).map(n=>n.name));
-      let suffix = '01';
-      for(let n=1; n<=8; n++){
-        const candidate = 'Bridge' + String(n).padStart(2,'0');
-        if(!existingNames.has(candidate)){ suffix = String(n).padStart(2,'0'); break; }
+      const req = this._requestedName;
+      if(req && req.endsWith('%%')){
+        // Auto-number: find available slot with custom prefix
+        const prefix = req.slice(0,-2);
+        let found = prefix+'01';
+        for(let n=1; n<=99; n++){
+          const cand = prefix + String(n).padStart(2,'0');
+          if(!existingNames.has(cand)){ found=cand; break; }
+        }
+        TC.NNAME = found.slice(0,8);
+      } else if(req && req.trim()){
+        TC.NNAME = req.trim().slice(0,8);
+      } else {
+        // Default auto-numbering with 'Bridge' prefix
+        let suffix='01';
+        for(let n=1; n<=8; n++){
+          const candidate='Bridge'+String(n).padStart(2,'0');
+          if(!existingNames.has(candidate)){ suffix=String(n).padStart(2,'0'); break; }
+        }
+        TC.NNAME = 'Bridge'+suffix;
       }
-      TC.NNAME = 'Bridge' + suffix;
       this._nameSet = true;
       console.log(`[TCNet] name=${TC.NNAME}`);
     }
