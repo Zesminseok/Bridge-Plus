@@ -1429,7 +1429,7 @@ function bindDeck(slot){
   // Zoom canvas: drag to scrub (scratch feel) — cue point NOT changed
   const wzDiv=document.getElementById('dwz'+slot);
   if(wzDiv){
-    let _drag=null,_scratchTmr=null;
+    let _drag=null;
     wzDiv.addEventListener('pointerdown',e=>{
       if(e.target.closest('.dzb'))return;
       e.preventDefault();
@@ -1451,25 +1451,19 @@ function bindDeck(slot){
         const dt=Math.max(1,now-_drag.lastT);
         const dx=e.clientX-_drag.lastX;
         _drag.lastX=e.clientX; _drag.lastT=now;
-        const velPx=dx/dt; // px per ms (positive = rightward = backward in track)
-        // trackVel: ms of track per ms real = playback multiplier
+        const velPx=dx/dt;
         const trackVel=Math.abs(velPx*msPerPx);
         const rate=Math.max(0.05,Math.min(4.0,trackVel*1.2||0.05));
         d2.au.playbackRate=rate;
         if(d2.au.paused&&d2.au.readyState>=2) d2.au.play().catch(()=>{});
-        // Simulate vinyl held still: pause if no movement for 80ms
-        clearTimeout(_scratchTmr);
-        _scratchTmr=setTimeout(()=>{if(DECKS[slot]?.scratch&&d2.au&&!d2.au.paused)d2.au.pause();},80);
       }
     });
     wzDiv.addEventListener('pointerup',()=>{
-      clearTimeout(_scratchTmr);
       const d2=DECKS[slot];
       if(d2?.au){d2.au.playbackRate=1.0;d2.au.currentTime=(d2.pos||0)/1000;if(d2.pl)d2.au.play().catch(()=>{});}
       _drag=null;DECKS[slot].scratch=false;
     });
     wzDiv.addEventListener('pointercancel',()=>{
-      clearTimeout(_scratchTmr);
       if(DECKS[slot]?.au){DECKS[slot].au.playbackRate=1.0;if(DECKS[slot].pl)DECKS[slot].au.play().catch(()=>{});}
       _drag=null;DECKS[slot].scratch=false;
     });

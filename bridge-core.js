@@ -1658,40 +1658,41 @@ class BridgeCore {
 
   _handleVDbRequest(sock, buf){
     try{
-      // Parse message: magic(5) + txId(5) + type(3) + argc(2) + tags(17) + args...
       if(buf.length < 32) return;
-      const txId = buf.readUInt32BE(1+1);  // UInt32 field at offset 1 (skip 0x11 tag)
-      // Correct txId parse: field[0]=0x11,val[1-4]; field2[5]=0x11,val[6-9]
-      const actualTxId = buf.readUInt32BE(6);
-      const reqType = buf.readUInt16BE(11);  // type field: 0x10 tag + 2B value
-
+      const actualTxId = buf.readUInt32BE(6);  // txId field at bytes 6-9
+      const reqType = buf.readUInt16BE(11);     // type field at bytes 11-12
       console.log(`[VDBSRV] request type=0x${reqType.toString(16)} txId=${actualTxId}`);
 
-      if(reqType === 0x2003){
-        // Artwork request — args: RMST(4B) + artworkId(4B)
-        // Find artwork from virtual decks
-        // RMST format: (reqPlayer<<24)|(menu<<16)|(slot<<8)|trackType
-        // artworkId is typically trackId-based
-        // For virtual decks, serve any stored artwork
+      if(reqType === 0x2002){
+        // MetadataReq → MenuAvail with item count=1
+        const resp = this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(1)]);
+        sock.write(resp);
+      } else if(reqType === 0x3000){
+        // RenderMenuReq → send MenuItem(s) + render complete
+        let title='BRIDGE+', artist='', artworkId=1;
+        for(let i=0;i<8;i++){
+          const ld=this.layers[i];
+          if(ld?.trackName){title=ld.trackName;artist=ld.artistName||'';artworkId=ld.trackId||1;break;}
+        }
+        const art=this._findVirtualArt();
+        if(!art) artworkId=0;
+        const item=this._dbBuildMenuItem(actualTxId, title, artist, artworkId);
+        const done=this._dbBuildMsg(actualTxId+1, 0x4003, [this._dbArg4(1)]);
+        sock.write(Buffer.concat([item, done]));
+        console.log(`[VDBSRV] render menu: title="${title}" artworkId=${artworkId}`);
+      } else if(reqType === 0x2003){
+        // ArtworkReq → serve stored JPEG
         const artBuf = this._findVirtualArt();
         if(artBuf){
-          // Build response with artwork as binary blob
-          const resp = this._dbBuildArtResponse(actualTxId, artBuf);
-          sock.write(resp);
+          sock.write(this._dbBuildArtResponse(actualTxId, artBuf));
           console.log(`[VDBSRV] artwork response: ${artBuf.length}B`);
         } else {
-          // Empty response
-          const resp = this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]);
-          sock.write(resp);
+          sock.write(this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]));
+          console.log('[VDBSRV] no artwork available');
         }
-      } else if(reqType === 0x2002){
-        // Metadata request — return track info from layers
-        const metaResp = this._dbBuildMetaResponse(actualTxId);
-        sock.write(metaResp);
       } else {
-        // Unknown request — send generic OK
-        const resp = this._dbBuildMsg(actualTxId, 0x4000+reqType, [this._dbArg4(0)]);
-        sock.write(resp);
+        // Unknown — generic OK
+        sock.write(this._dbBuildMsg(actualTxId, 0x4000, [this._dbArg4(0)]));
       }
     }catch(e){
       console.warn(`[VDBSRV] handleRequest error: ${e.message}`);
@@ -1699,32 +1700,49 @@ class BridgeCore {
   }
 
   _findVirtualArt(){
-    // Return first available virtual deck artwork
     for(const slot of Object.keys(this._virtualArt)){
-      const buf = this._virtualArt[slot];
-      if(buf && buf.length > 0) return buf;
+      const buf=this._virtualArt[slot];
+      if(buf&&buf.length>0) return buf;
     }
     return null;
   }
 
-  _dbBuildArtResponse(txId, jpegBuf){
-    // Real CDJ format: args[0] = artwork size (UInt32), args[1] = binary JPEG
-    // beat-link analysis: type 0x4003, argc=2, argList=[0x06, 0x03]
-    const sizeArg = this._dbArg4(jpegBuf.length);          // tag 0x06 = number
-    const artArg  = { tag: 0x03, data: this._dbBinary(jpegBuf) };  // tag 0x03 = binary
-    return this._dbBuildMsg(txId, 0x4003, [sizeArg, artArg]);
+  // Build a 0x4101 MenuItem message — used to tell Arena about artworkId
+  // args[3]=label1(str), args[4]=label2(str), args[6]=itemType, args[8]=artworkId
+  _dbBuildMenuItem(txId, label1, label2, artworkId){
+    // argList type codes for 12 args of a MenuItem (prolink-connect protocol)
+    const TYPE_CODES = [0x06,0x06,0x06,0x26,0x26,0x06,0x06,0x06,0x06,0x06,0x26,0x06];
+    const argList = Buffer.from(TYPE_CODES);
+    const args = [
+      this._dbArg4(1),                                          // [0] item id
+      this._dbArg4(0),                                          // [1] numeric
+      this._dbArg4(0),                                          // [2] color
+      {tag:0x26, data:this._dbStr(label1)},                    // [3] title
+      {tag:0x26, data:this._dbStr(label2||'')},                // [4] artist
+      this._dbArg4(artworkId?1:0),                              // [5] has artwork flag
+      this._dbArg4(0x0004),                                     // [6] itemType = title track
+      this._dbArg4(0),                                          // [7]
+      this._dbArg4(artworkId),                                  // [8] artworkId
+      this._dbArg4(0),                                          // [9]
+      {tag:0x26, data:this._dbStr('')},                        // [10] empty
+      this._dbArg4(0),                                          // [11]
+    ];
+    const parts=[
+      this._dbNum4(0x872349ae),
+      this._dbNum4(txId),
+      this._dbNum2(0x4101),
+      this._dbNum1(args.length),
+      this._dbBinary(argList),
+    ];
+    for(const a of args) parts.push(a.data);
+    return Buffer.concat(parts);
   }
 
-  _dbBuildMetaResponse(txId){
-    // Simple metadata response with track info from first active layer
-    for(let i=0;i<8;i++){
-      const ld = this.layers[i];
-      if(ld && ld.trackName){
-        const titleArg = { tag: 0x02, data: this._dbBinary(Buffer.from(ld.trackName,'utf8')) };
-        return this._dbBuildMsg(txId, 0x4002, [titleArg]);
-      }
-    }
-    return this._dbBuildMsg(txId, 0x4002, [this._dbArg4(0)]);
+  _dbBuildArtResponse(txId, jpegBuf){
+    // Real CDJ format: args[0]=size(UInt32), args[1]=binary JPEG
+    const sizeArg = this._dbArg4(jpegBuf.length);
+    const artArg  = { tag: 0x03, data: this._dbBinary(jpegBuf) };
+    return this._dbBuildMsg(txId, 0x4003, [sizeArg, artArg]);
   }
 
   // ── dbserver metadata client (TCP 12523) ────
@@ -1795,6 +1813,8 @@ class BridgeCore {
 
   _dbBinary(buf){ const hdr=Buffer.alloc(5); hdr[0]=0x14; hdr.writeUInt32BE(buf.length,1); return Buffer.concat([hdr,buf]); }
   _dbArg4(v){ return { tag:0x06, data: this._dbNum4(v) }; }
+  // UTF-16BE string field (tag 0x26): 4-byte char count (incl. null) + UTF-16BE chars
+  _dbStr(str){ const cs=(str||'').split('').map(c=>c.charCodeAt(0)); cs.push(0); const d=Buffer.alloc(cs.length*2); cs.forEach((c,i)=>d.writeUInt16BE(c&0xFFFF,i*2)); const h=Buffer.alloc(5); h[0]=0x26; h.writeUInt32BE(cs.length,1); return Buffer.concat([h,d]); }
 
   _dbRMST(reqPlayer, menu, slot, trackType){
     const v = ((reqPlayer&0xFF)<<24)|((menu&0xFF)<<16)|((slot&0xFF)<<8)|(trackType&0xFF);

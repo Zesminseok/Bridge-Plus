@@ -316,15 +316,15 @@ vec3 wfColor(float bass, float midf, float treble, int mode) {
     float br = pow(e, 0.6);
     return vec3(br*0.05, br*0.35, br*1.0);
   } else {
-    // beat-link-trigger style: bass=red, mid=blue, treble=green
-    float B = min(1.0, bass * 2.5);   // bass → R
-    float M = min(1.0, midf * 3.0);   // mid  → B
-    float T = min(1.0, treble * 5.5); // treble → G
-    // Combined: high-energy transients → R+G+B = white
-    float r = B*1.0  + T*0.15 + M*0.05;
-    float g = T*1.0  + B*0.15 + M*0.1;
-    float b = M*1.0  + T*0.3  + B*0.05;
-    return clamp(vec3(r, g, b), vec3(0.0), vec3(1.0));
+    // beat-link-trigger style: dominant band determines color (not additive)
+    // bass=red, mid=blue, treble=green
+    float B = min(1.0, bass * 2.5);
+    float M = min(1.0, midf * 3.0);
+    float T = min(1.0, treble * 5.5);
+    float mx = max(max(B, M), T);
+    if (mx < 0.01) return vec3(0.0);
+    float nr = B/mx; float ng = T/mx; float nb = M/mx;
+    return vec3(pow(nr, 2.5), pow(ng, 2.5), pow(nb, 2.5)) * mx;
   }
 }
 
@@ -373,13 +373,14 @@ vec3 wfColor(float bass, float midf, float treble, int mode) {
     float br = pow(e,0.6);
     return vec3(br*0.05, br*0.35, br*1.0);
   } else {
+    // beat-link-trigger style: dominant band determines color (not additive)
     float B = min(1.0, bass * 2.5);
     float M = min(1.0, midf * 3.0);
     float T = min(1.0, treble * 5.5);
-    float r = B*1.0  + T*0.15 + M*0.05;
-    float g = T*1.0  + B*0.15 + M*0.1;
-    float b = M*1.0  + T*0.3  + B*0.05;
-    return clamp(vec3(r,g,b), vec3(0.0), vec3(1.0));
+    float mx = max(max(B, M), T);
+    if (mx < 0.01) return vec3(0.0);
+    float nr = B/mx; float ng = T/mx; float nb = M/mx;
+    return vec3(pow(nr, 2.5), pow(ng, 2.5), pow(nb, 2.5)) * mx;
   }
 }
 
