@@ -41,7 +41,7 @@ class WaveformGL {
       px[i*4]   = p.r || 0;
       px[i*4+1] = p.g || 0;
       px[i*4+2] = p.b || 0;
-      px[i*4+3] = p.h || 0;
+      px[i*4+3] = p.h || Math.max(Math.abs(p.mn||0), Math.abs(p.mx||0)) || 0;
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     this._wfTex = gl.createTexture();
@@ -146,7 +146,7 @@ class OverviewGL {
       px[i*4]   = p.r || 0;
       px[i*4+1] = p.g || 0;
       px[i*4+2] = p.b || 0;
-      px[i*4+3] = p.h || 0;
+      px[i*4+3] = p.h || Math.max(Math.abs(p.mn||0), Math.abs(p.mx||0)) || 0;
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     this._wfTex = gl.createTexture();

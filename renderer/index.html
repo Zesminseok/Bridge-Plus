@@ -253,7 +253,9 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .mode-hint{font:400 10px var(--sn);color:var(--tx4);margin-left:auto}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes shimmer{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
-</style></head><body>
+</style>
+<script src="./waveform-gl.js"></script>
+</head><body>
 
 <div class="hdr">
   <div class="logo"><div class="li">B+</div>
@@ -838,7 +840,14 @@ function buildWaveformCache(slot){
 }
 
 function drawOverview(slot,prog){
-  const d=DECKS[slot];if(!d||!d.wovCtx)return;
+  const d=DECKS[slot];if(!d)return;
+  const pos=Math.max(0,Math.min(1,prog||0));
+  if(d.ovgl&&(d.rgbWfDetail||d.rgbWf)){
+    const modeMap={'rgb':0,'3band':1,'blue':2};
+    d.ovgl.draw(pos, modeMap[cfg.wfColor]??0);
+    return;
+  }
+  if(!d.wovCtx)return;
   // Prefer detail waveform (richer color data) for overview, fallback to preview
   const wfOv=d.rgbWfDetail||d.rgbWf;
   if(!wfOv)return;
@@ -902,76 +911,156 @@ function drawOverview(slot,prog){
   ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(Math.round(pos*W)-.5,0,1,H);
 }
 
-// Zoom waveform — direct path rendering (wavesurfer.js polygon fill approach)
-// No bitmap cache scaling — renders at screen resolution with Canvas AA
+// Zoom waveform — GPU path (WebGL) + CPU fallback (2D Canvas)
 function drawZoomWaveform(slot,prog){
   const d=DECKS[slot];
   const wfData=d?.rgbWfDetail||d?.rgbWf;
-  if(!d||!wfData||!d.wzCtx)return;
+  if(!d||!wfData)return;
+  const pos=Math.max(0,Math.min(1,prog||0));
+
+  // Store bar.beat for overlay use
+  if(d.bpm>0&&d.dur>0){
+    const dur=d.dur,posMs=pos*dur;
+    if(d._beatGrid&&d._beatGrid.length>0){
+      const bg=d._beatGrid;
+      let lo=0, hi=bg.length-1;
+      while(lo<hi){const mid2=(lo+hi+1)>>1;if(bg[mid2].timeMs<=posMs)lo=mid2;else hi=mid2-1;}
+      const barCount=Math.floor(lo/4)+1;
+      const beatInBar=bg[lo].beatInBar||((lo%4)+1);
+      d._barBeat=barCount+'.'+beatInBar;
+    }else{
+      d._barBeat=fBars(posMs,d.baseBpm||d.bpm);
+    }
+  }
+
+  if(d.wgl){
+    const isDetail=!!d.rgbWfDetail;
+    const wfDurMs=isDetail?((wfData.length/150)*1000):(d.dur||1);
+    const modeMap={'rgb':0,'3band':1,'blue':2};
+    const mode=modeMap[cfg.wfColor]??0;
+    const cX=cfg.wfCenter==='left'?0.25:0.5;
+    d.wgl.draw(pos*d.dur, d.zoomMs||8000, wfDurMs, cX, mode);
+    drawZoomOverlay(slot,prog);
+    return;
+  }
+
+  // CPU 2D canvas fallback
+  if(!d.wzCtx)return;
   const cv=document.getElementById('wzc'+slot);if(!cv||!cv.width)return;
   const W=cv.width,H=cv.height,ctx=d.wzCtx;
-  const pos=Math.max(0,Math.min(1,prog||0));
+  const dur=d.dur,posMs=pos*dur;
   const pts=wfData.length;
   const isDetail=!!d.rgbWfDetail;
-  const dur=d.dur,posMs=pos*dur;
   const wfDur=isDetail?(pts/150*1000):(dur||1);
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  // --- Direct path rendering: per-pixel interpolation ---
   const pxPerMs=pts/wfDur;
   const mid=H/2;
-  const hs=new Float32Array(W); // heights per screen pixel
-  const _gc=[]; // gradient color stops
-  const step=Math.max(1,W>>8); // max ~256 gradient stops
+  const hs=new Float32Array(W);
+  const _gc=[];
+  const step=Math.max(1,W>>8);
   for(let px=0;px<W;px++){
     const ms=posMs+(px-cX)*msPerPx;
-    const di=ms*pxPerMs; // float data index
+    const di=ms*pxPerMs;
     const i0=Math.max(0,Math.min(pts-1,di|0));
     const i1=Math.min(pts-1,i0+1);
     const f=di-i0;
     const p0=wfData[i0],p1=wfData[i1];
     if(!p0){hs[px]=0;continue;}
-    // Interpolate peak height
     hs[px]=((p0.h||0)+(((p1?.h||0)-(p0.h||0))*f))*mid*0.95;
-    // Gradient color stops (subsampled)
     if(px%step===0||px===W-1){
       const r=p0.r+((p1?.r||0)-p0.r)*f;
       const g=p0.g+((p1?.g||0)-p0.g)*f;
       const b=p0.b+((p1?.b||0)-p0.b)*f;
       const mx=Math.max(r,g,b,0.001);
       const sc=255/mx;
-      _gc.push({t:px/(W-1),
-        c:`rgb(${Math.min(255,r*sc)|0},${Math.min(255,g*sc)|0},${Math.min(255,b*sc)|0})`});
+      _gc.push({t:px/(W-1),c:`rgb(${Math.min(255,r*sc)|0},${Math.min(255,g*sc)|0},${Math.min(255,b*sc)|0})`});
     }
   }
-  // Filled polygon path (wavesurfer.js technique) — Canvas native anti-aliasing
-  ctx.beginPath();
-  ctx.moveTo(0,mid-hs[0]);
+  ctx.beginPath();ctx.moveTo(0,mid-hs[0]);
   for(let px=1;px<W;px++) ctx.lineTo(px,mid-hs[px]);
   for(let px=W-1;px>=0;px--) ctx.lineTo(px,mid+hs[px]);
-  ctx.closePath();
-  // Clip + gradient fill for per-column frequency coloring
-  ctx.save();
-  ctx.clip();
+  ctx.closePath();ctx.save();ctx.clip();
   const grad=ctx.createLinearGradient(0,0,W,0);
   for(const s of _gc) grad.addColorStop(s.t,s.c);
-  ctx.fillStyle=grad;
-  ctx.fillRect(0,0,W,H);
-  ctx.restore();
-  // Beat grid overlaid — use dbserver beat grid if available, else fallback to calculated
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);ctx.restore();
+  // beat grid + cues + cursor (2D fallback)
   if(d.bpm>0&&dur>0){
-    const viewL=posMs-cX*msPerPx, viewR=posMs+(W-cX)*msPerPx;
+    const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
     ctx.font='bold 9px "DM Mono",monospace';
     if(d._beatGrid&&d._beatGrid.length>0){
-      // Binary search for first visible beat
-      const bg=d._beatGrid;
-      let lo=0, hi=bg.length-1;
-      while(lo<hi){const mid=(lo+hi)>>1;if(bg[mid].timeMs<viewL)lo=mid+1;else hi=mid;}
-      // Draw from first visible beat (with 1 beat margin) to end of view
+      const bg=d._beatGrid;let lo=0,hi=bg.length-1;
+      while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<viewL)lo=mid2+1;else hi=mid2;}
       for(let i=Math.max(0,lo-1);i<bg.length;i++){
-        const bt=bg[i];
-        if(bt.timeMs>viewR)break;
+        const bt=bg[i];if(bt.timeMs>viewR)break;
+        const bpx=Math.round((bt.timeMs-posMs)/msPerPx+cX);
+        if(bpx<1||bpx>=W-1)continue;
+        if(bt.beatInBar===1){ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);}
+        else{ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(bt.beatInBar,bpx+2,H-2);}
+      }
+    }else{
+      const beatMs=60000/(d.baseBpm||d.bpm);const anchor=d._barAnchorMs||0;
+      const firstB=Math.ceil((posMs-cX*msPerPx-anchor)/beatMs),lastB=Math.floor((posMs+(W-cX)*msPerPx-anchor)/beatMs);
+      for(let b=firstB;b<=lastB;b++){
+        const bMs=anchor+b*beatMs;const bpx=Math.round((bMs-posMs)/msPerPx+cX);
+        if(bpx<1||bpx>=W-1)continue;
+        const barNum=((b%4)+4)%4+1;
+        if(barNum===1){ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);}
+        else{ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(barNum,bpx+2,H-2);}
+      }
+    }
+  }
+  const _cueColorsZ={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
+  if(d.cuePoints&&dur>0){
+    ctx.font='bold 8px "DM Mono",monospace';
+    for(const cue of d.cuePoints){
+      const cpx=Math.round((cue.timeMs-posMs)/msPerPx+cX);if(cpx<0||cpx>=W)continue;
+      const col=cue.type==='hot'?(_cueColorsZ[cue.colorId]||'#00e676'):'#fff';
+      ctx.fillStyle=col+'99';ctx.fillRect(cpx-.5,0,1,H);
+      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx-3,0);ctx.lineTo(cpx+3,0);ctx.lineTo(cpx,5);ctx.closePath();ctx.fill();
+    }
+  }
+  if(d.cp>0&&dur>0){const cpx=Math.round((d.cp*1000-posMs)/msPerPx+cX);if(cpx>=0&&cpx<W){ctx.fillStyle='rgba(251,191,36,.9)';ctx.fillRect(cpx-.5,0,1,H);}}
+  const phGrd=ctx.createLinearGradient(cX-8,0,cX+8,0);
+  phGrd.addColorStop(0,'rgba(255,255,255,0)');phGrd.addColorStop(.5,'rgba(255,255,255,.18)');phGrd.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=phGrd;ctx.fillRect(cX-8,0,16,H);
+  ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
+  // BAR.BEAT counter
+  if(d._barBeat){
+    ctx.font='bold 11px "DM Mono",monospace';
+    const bw=ctx.measureText(d._barBeat).width;
+    const bx=cX-bw/2;
+    ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(bx-4,1,bw+8,15);
+    ctx.fillStyle='#90d4ff';ctx.fillText(d._barBeat,bx,13);
+  }
+}
+
+// Zoom overlay — beat grid, cue points, position cursor (transparent 2D canvas on top of WebGL)
+function drawZoomOverlay(slot, prog){
+  const d=DECKS[slot];if(!d||!d.wovCtx2)return;
+  const wzov=document.getElementById('wzov'+slot);if(!wzov||!wzov.width)return;
+  const W=wzov.width,H=wzov.height,ctx=d.wovCtx2;
+  const pos=Math.max(0,Math.min(1,prog||0));
+  const dur=d.dur,posMs=pos*dur;
+  const wfData=d?.rgbWfDetail||d?.rgbWf;
+  const isDetail=!!d.rgbWfDetail;
+  const wfDur=isDetail?((wfData?.length||0)/150*1000):(dur||1);
+  const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
+  const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Beat grid
+  if(d.bpm>0&&dur>0){
+    const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
+    ctx.font='bold 9px "DM Mono",monospace';
+    if(d._beatGrid&&d._beatGrid.length>0){
+      const bg=d._beatGrid;
+      let lo=0,hi=bg.length-1;
+      while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<viewL)lo=mid2+1;else hi=mid2;}
+      for(let i=Math.max(0,lo-1);i<bg.length;i++){
+        const bt=bg[i];if(bt.timeMs>viewR)break;
         const bpx=Math.round((bt.timeMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
         if(bt.beatInBar===1){
@@ -982,80 +1071,64 @@ function drawZoomWaveform(slot,prog){
           ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(bt.beatInBar,bpx+2,H-2);
         }
       }
-    }else{
-      // Fallback: calculated beat grid
+    }else if(d.bpm>0){
       const beatMs=60000/(d.baseBpm||d.bpm);
       const anchor=d._barAnchorMs||0;
-      const firstB=Math.ceil((viewL-anchor)/beatMs), lastB=Math.floor((viewR-anchor)/beatMs);
+      const firstB=Math.ceil((posMs-cX*msPerPx-anchor)/beatMs);
+      const lastB=Math.floor((posMs+(W-cX)*msPerPx-anchor)/beatMs);
       for(let b=firstB;b<=lastB;b++){
         const bMs=anchor+b*beatMs;
         const bpx=Math.round((bMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
         const barNum=((b%4)+4)%4+1;
-        if(barNum===1){
-          ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);
-        }else{
-          ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);
-          ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(barNum,bpx+2,H-2);
-        }
+        if(barNum===1){ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);}
+        else{ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(barNum,bpx+2,H-2);}
       }
     }
   }
-  // Cue points from dbserver (memory + hot cues)
+
+  // Cue points
   const _cueColorsZ={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
   if(d.cuePoints&&dur>0){
     ctx.font='bold 8px "DM Mono",monospace';
     for(const cue of d.cuePoints){
       const cpx=Math.round((cue.timeMs-posMs)/msPerPx+cX);
       if(cpx<0||cpx>=W)continue;
-      const col=cue.type==='hot'?(_cueColorsZ[cue.colorId]||'#00e676'):'rgba(255,255,255,.7)';
-      ctx.fillStyle=col;ctx.fillRect(cpx-.5,0,1,H);
-      ctx.beginPath();ctx.moveTo(cpx-4,H);ctx.lineTo(cpx+4,H);ctx.lineTo(cpx,H-6);ctx.closePath();
-      ctx.fill();
+      const col=cue.type==='hot'?(_cueColorsZ[cue.colorId]||'#00e676'):'#fff';
+      ctx.fillStyle=col+'99';ctx.fillRect(cpx-.5,0,1,H);
+      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx-3,0);ctx.lineTo(cpx+3,0);ctx.lineTo(cpx,5);ctx.closePath();ctx.fill();
       if(cue.type==='hot'&&cue.hotCueNum>0){
-        const label=String.fromCharCode(64+cue.hotCueNum); // 1→A, 2→B...
-        ctx.fillStyle=col;ctx.fillText(label,cpx+2,H-2);
-      }else if(cue.type==='memory'){
-        ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillText('M',cpx+2,H-2);
+        const lbl=String.fromCharCode(64+cue.hotCueNum);
+        ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cpx+1,0,9,10);
+        ctx.fillStyle=col;ctx.fillText(lbl,cpx+2,9);
       }
     }
   }
-  // Active cue point: yellow marker
+
+  // Main cue point
   if(d.cp>0&&dur>0){
-    const cpPx=Math.round((d.cp*1000-posMs)/msPerPx+cX);
-    if(cpPx>0&&cpPx<W){
-      ctx.fillStyle='rgba(251,191,36,.9)';ctx.fillRect(cpPx-.5,0,1,H);
-      ctx.beginPath();ctx.moveTo(cpPx-6,0);ctx.lineTo(cpPx+6,0);ctx.lineTo(cpPx,8);ctx.closePath();
-      ctx.fillStyle='rgba(251,191,36,1)';ctx.fill();
+    const cpx=Math.round((d.cp*1000-posMs)/msPerPx+cX);
+    if(cpx>=0&&cpx<W){
+      ctx.fillStyle='rgba(251,191,36,.9)';ctx.fillRect(cpx-.5,0,1,H);
+      ctx.beginPath();ctx.moveTo(cpx-3,0);ctx.lineTo(cpx+3,0);ctx.lineTo(cpx,4);ctx.closePath();ctx.fillStyle='rgba(251,191,36,1)';ctx.fill();
     }
   }
-  // Center playhead
-  ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
+
+  // Position cursor + glow
   const phGrd=ctx.createLinearGradient(cX-8,0,cX+8,0);
-  phGrd.addColorStop(0,'rgba(255,255,255,0)');phGrd.addColorStop(.5,'rgba(255,255,255,.08)');phGrd.addColorStop(1,'rgba(255,255,255,0)');
+  phGrd.addColorStop(0,'rgba(255,255,255,0)');
+  phGrd.addColorStop(.5,'rgba(255,255,255,.18)');
+  phGrd.addColorStop(1,'rgba(255,255,255,0)');
   ctx.fillStyle=phGrd;ctx.fillRect(cX-8,0,16,H);
-  // BAR.BEAT counter — centered on playhead line, top
-  if(d.bpm>0&&dur>0){
-    ctx.font='bold 11px "DM Mono",monospace';
-    let bars;
-    if(d._beatGrid&&d._beatGrid.length>0){
-      // Lookup bar.beat from beat grid
-      const bg=d._beatGrid;
-      let lo=0, hi=bg.length-1;
-      while(lo<hi){const mid=(lo+hi+1)>>1;if(bg[mid].timeMs<=posMs)lo=mid;else hi=mid-1;}
-      const barCount=Math.floor(lo/4)+1;
-      const beatInBar=bg[lo].beatInBar||((lo%4)+1);
-      bars=barCount+'.'+beatInBar;
-    }else{
-      bars=fBars(posMs,d.baseBpm||d.bpm);
-    }
-    const bw=ctx.measureText(bars).width;
-    const bx=cX-bw/2;
-    ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(bx-4,1,bw+8,15);
-    ctx.fillStyle='#90d4ff';ctx.fillText(bars,bx,13);
+  ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
+
+  // bar.beat overlay
+  if(d._barBeat){
+    ctx.font='bold 9px "DM Mono",monospace';
+    const bw=ctx.measureText(d._barBeat).width;
+    ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(cX-bw/2-4,1,bw+8,15);
+    ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillText(d._barBeat,cX-bw/2,12);
   }
-  // KEY + BPM/pitch rendered via HTML overlay (wf-key, wf-bpm spans) — not canvas
 }
 
 // ════ Deck management ════════════════════════════════
@@ -1253,7 +1326,7 @@ function deckHTML(slot){
         </div>
         <div class="dkwaves">
           <div class="dwov" id="dwov${slot}"><canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div></div>
-          <div class="dwz" id="dwz${slot}"><canvas id="wzc${slot}"></canvas><div class="dvm-st"><div class="dvm"><div class="dvmf" id="dvuL${slot}"></div></div><div class="dvm"><div class="dvmf" id="dvuR${slot}"></div></div></div><span class="wf-key" id="wfkey${slot}"></span><span class="wf-bpm" id="wfbpm${slot}"></span><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div>
+          <div class="dwz" id="dwz${slot}" style="position:relative"><canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dvm-st"><div class="dvm"><div class="dvmf" id="dvuL${slot}"></div></div><div class="dvm"><div class="dvmf" id="dvuR${slot}"></div></div></div><span class="wf-key" id="wfkey${slot}"></span><span class="wf-bpm" id="wfbpm${slot}"></span><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div></div>
           <div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>
         </div>
       </div>
@@ -1317,10 +1390,40 @@ function bindDeck(slot){
   }
   // init overview canvas
   const wov=document.getElementById('wov'+slot);
-  if(wov){d.wovCtx=wov.getContext('2d');setTimeout(()=>{const p=wov.parentElement;wov.width=p?.offsetWidth||280;wov.height=p?.offsetHeight||18;},0);}
+  if(wov){
+    setTimeout(()=>{
+      const p=wov.parentElement;
+      const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
+      wov.width=w; wov.height=h;
+      try{
+        d.ovgl=new OverviewGL(wov);
+        d.wovCtx=null;
+        console.log('[WGL] slot'+slot+' WebGL2 overview init');
+      }catch(e){
+        console.warn('[WGL] fallback 2D overview:',e);
+        d.wovCtx=wov.getContext('2d');
+      }
+    },0);
+  }
   // init zoom canvas
   const wzc=document.getElementById('wzc'+slot);
-  if(wzc){d.wzCtx=wzc.getContext('2d');setTimeout(()=>{const p=wzc.parentElement;wzc.width=p?.offsetWidth||280;wzc.height=p?.offsetHeight||80;},0);}
+  if(wzc){
+    setTimeout(()=>{
+      const p=wzc.parentElement;
+      const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
+      wzc.width=w; wzc.height=h;
+      try{
+        d.wgl=new WaveformGL(wzc);
+        d.wzCtx=null;
+        console.log('[WGL] slot'+slot+' WebGL2 zoom init');
+      }catch(e){
+        console.warn('[WGL] fallback 2D zoom:',e);
+        d.wzCtx=wzc.getContext('2d');
+      }
+      const wzov=document.getElementById('wzov'+slot);
+      if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
+    },0);
+  }
 }
 
 // ID3v2 tag parser — TIT2 (title), TPE1/TPE2 (artist), APIC (album art)
@@ -1580,8 +1683,28 @@ function loadFile(slot,f){
       renderDecks();
       // Setup canvases immediately
       setTimeout(()=>{
-        const wov=document.getElementById('wov'+slot);if(wov){d.wovCtx=wov.getContext('2d');const p=wov.parentElement;wov.width=p?.offsetWidth||280;wov.height=p?.offsetHeight||16;}
-        const wzc=document.getElementById('wzc'+slot);if(wzc){d.wzCtx=wzc.getContext('2d');const p=wzc.parentElement;wzc.width=p?.offsetWidth||280;wzc.height=p?.offsetHeight||72;}
+        const wov=document.getElementById('wov'+slot);
+        if(wov){
+          const p=wov.parentElement;
+          const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
+          wov.width=w; wov.height=h;
+          if(!d.ovgl){
+            try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}
+            catch(e){d.wovCtx=wov.getContext('2d');}
+          }
+        }
+        const wzc=document.getElementById('wzc'+slot);
+        if(wzc){
+          const p=wzc.parentElement;
+          const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
+          wzc.width=w; wzc.height=h;
+          if(!d.wgl){
+            try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}
+            catch(e){d.wzCtx=wzc.getContext('2d');}
+          }
+          const wzov=document.getElementById('wzov'+slot);
+          if(wzov&&!d.wovCtx2){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
+        }
       },0);
       if(E&&run){
         window.bridge.updateLayer(slot,{
@@ -1607,7 +1730,10 @@ function loadFile(slot,f){
               }));
               d._pwv7=true; // flag: using PWV7 data (different weight scheme)
               d._wfCache=null;
-              buildWaveformCache(slot);drawOverview(slot,0);drawZoomWaveform(slot,0);
+              buildWaveformCache(slot);
+              if(d.wgl){const wfD=d.rgbWfDetail||d.rgbWf;const isDet=!!d.rgbWfDetail;const wfDMs=isDet?((wfD.length/150)*1000):(d.dur||1);d.wgl.setData(wfD,wfDMs);}
+              if(d.ovgl){d.ovgl.setData(d.rgbWfDetail||d.rgbWf);}
+              drawOverview(slot,0);drawZoomWaveform(slot,0);
               usedPWV7=true;
               console.log(`[WF] slot${slot} using Rekordbox PWV7: ${pwv7.length} entries`);
             }
@@ -1625,7 +1751,12 @@ function loadFile(slot,f){
             d._wfCache=null;
             const prog2=document.getElementById('dwov-prog'+slot);
             if(prog2)prog2.style.width='0';
-            if(wf){buildWaveformCache(slot);drawOverview(slot,0);drawZoomWaveform(slot,0);}
+            if(wf){
+              buildWaveformCache(slot);
+              if(d.wgl){const wfD=d.rgbWfDetail||d.rgbWf;const isDet=!!d.rgbWfDetail;const wfDMs=isDet?((wfD.length/150)*1000):(d.dur||1);d.wgl.setData(wfD,wfDMs);}
+              if(d.ovgl){d.ovgl.setData(d.rgbWfDetail||d.rgbWf);}
+              drawOverview(slot,0);drawZoomWaveform(slot,0);
+            }
           });
         }
         analyzeBPM(audioBlob).then(result=>{
@@ -2431,6 +2562,8 @@ if(E){
       if(!dk.dur||dk.dur<=0) dk.dur=dk.rgbWf.length*30;
       dk._wfCache=null; // invalidate cache
       buildWaveformCache(li);
+      if(dk.wgl){const wfD=dk.rgbWfDetail||dk.rgbWf;const isDet=!!dk.rgbWfDetail;const wfDMs=isDet?((wfD.length/150)*1000):(dk.dur||1);dk.wgl.setData(wfD,wfDMs);}
+      if(dk.ovgl){dk.ovgl.setData(dk.rgbWfDetail||dk.rgbWf);}
       console.log(`[UI] P${d.playerNum} waveform: ${dk.rgbWf.length}pts (${d.wfType})`);
       drawOverview(li, dk.dur>0&&dk.pos>0 ? dk.pos/dk.dur : 0);
     }
@@ -2481,6 +2614,8 @@ if(E){
       if(!dk.dur||dk.dur<=0||Math.abs(dk.dur-detailDur)>5000) dk.dur=detailDur;
       dk._wfCache=null; // invalidate cache — detail waveform replaces preview
       buildWaveformCache(li);
+      if(dk.wgl){const wfD=dk.rgbWfDetail||dk.rgbWf;const isDet=!!dk.rgbWfDetail;const wfDMs=isDet?((wfD.length/150)*1000):(dk.dur||1);dk.wgl.setData(wfD,wfDMs);}
+      if(dk.ovgl){dk.ovgl.setData(dk.rgbWfDetail||dk.rgbWf);}
       console.log(`[UI] P${d.playerNum} detail waveform: ${d.pts.length}pts (${Math.round(detailDur/1000)}s)`);
     }
   });
