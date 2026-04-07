@@ -329,17 +329,15 @@ void main() {
     return;
   }
 
-  // Wavypy 3-band: sqrt scaling preserves dynamics even in loud music
-  // Raw peak values: bass/midf/treble are in [0,1] (PEAK per step window)
-  float B = sqrt(bass);                         // 0-1 with sqrt compression
-  float M = sqrt(midf);
-  float T = min(1.0, sqrt(treble) * 1.4);       // treble is quieter, mild boost
+  // Wavypy 3-band: each band height = its own amplitude (제일큰소리 기준)
+  // No height caps — band heights directly proportional to peak amplitude
+  float B = bass;
+  float M = midf;
+  float T = treble;
 
-  // Independent heights: bass outermost, treble innermost
-  // No clamping or nesting — each band reflects its own amplitude
   float bH = B * scale;
-  float mH = M * 0.68 * scale;
-  float tH = T * 0.40 * scale;
+  float mH = M * scale;
+  float tH = T * scale;
 
   // Rekordbox 3-band palette: bass=#0055E1 (deep blue), mid=#FFA600 (amber), treble=#FFFFFF (white)
   vec3 bassCol = vec3(0.0,  0.333, 0.882);
@@ -358,9 +356,7 @@ void main() {
   col = mix(col, midCol,  inMid);
   col = mix(col, trebCol, inTreb);
 
-  // Slight brightness dim in quiet sections
-  float bright = mix(0.55, 1.0, B);
-  fragColor = vec4(col * bright * inBass, 1.0);
+  fragColor = vec4(col * inBass, 1.0);
 }
 `;
 
@@ -403,13 +399,13 @@ void main() {
     return;
   }
 
-  float B = sqrt(bass);
-  float M = sqrt(midf);
-  float T = min(1.0, sqrt(treble) * 1.4);
+  float B = bass;
+  float M = midf;
+  float T = treble;
 
   float bH = B * scale;
-  float mH = M * 0.68 * scale;
-  float tH = T * 0.40 * scale;
+  float mH = M * scale;
+  float tH = T * scale;
 
   float AA = 0.6;
   float inBass = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
@@ -421,12 +417,11 @@ void main() {
   float inMid  = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
   float inTreb = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
 
-  vec3 col = vec3(0.0, 0.333, 0.882);            // bass blue
-  col = mix(col, vec3(1.0, 0.651, 0.0),  inMid); // mid amber
-  col = mix(col, vec3(1.0, 1.0,   1.0),  inTreb);// treble white
+  vec3 col = vec3(0.0, 0.333, 0.882);
+  col = mix(col, vec3(1.0, 0.651, 0.0),  inMid);
+  col = mix(col, vec3(1.0, 1.0,   1.0),  inTreb);
 
-  float bright = mix(0.55, 1.0, B);
   float dim = played ? 0.38 : 1.0;
-  fragColor = vec4(col * bright * inBass * dim, 1.0);
+  fragColor = vec4(col * inBass * dim, 1.0);
 }
 `;

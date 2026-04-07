@@ -645,6 +645,7 @@ class BridgeCore {
     this._dbConns  = {};  // ip -> net.Socket
     this._virtualArt = {};  // slot -> Buffer (JPEG data for virtual deck artwork)
     this._dbSrv = null;  // virtual dbserver (TCP 12523 emulation)
+    this._lastVdbTrackId = 0;  // last trackId from 0x2002 (cross-connection fallback)
   }
 
   _resolveBroadcast(){
@@ -1657,6 +1658,7 @@ class BridgeCore {
         // Store trackId from request for use in 0x3000 (avoids relying on layers state)
         const trackIdReq = buf.length >= 42 ? buf.readUInt32BE(38) : 0;
         sock._vdbTrackId = trackIdReq;  // save per-connection
+        if(trackIdReq) this._lastVdbTrackId = trackIdReq;  // global fallback
         console.log(`[VDBSRV] meta req trackId=${trackIdReq}`);
         sock.write(this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(1)]));
       } else if(reqType === 0x3000){
@@ -1669,7 +1671,7 @@ class BridgeCore {
         }
         const art=this._findVirtualArt();
         // Prefer trackId from the 0x2002 request on this same connection
-        const artworkId = art ? (sock._vdbTrackId || (this.layers.find(l=>l?.trackId)?.trackId) || 1) : 0;
+        const artworkId = art ? (sock._vdbTrackId || this._lastVdbTrackId || (this.layers.find(l=>l?.trackId)?.trackId) || 1) : 0;
         const item=this._dbBuildMenuItem(actualTxId, title, artist, artworkId);
         const done=this._dbBuildMsg(actualTxId+1, 0x4003, [this._dbArg4(1)]);
         sock.write(Buffer.concat([item, done]));
