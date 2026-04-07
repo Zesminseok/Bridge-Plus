@@ -1435,10 +1435,8 @@ function bindDeck(slot){
       e.preventDefault();
       const d2=DECKS[slot];if(!d2||!d2.ld)return;
       DECKS[slot].scratch=true;
-      // Pause audio during drag so it doesn't play forward when movement stops
-      const wasPlaying=d2.au&&!d2.au.paused;
-      if(wasPlaying)d2.au.pause();
-      _drag={startX:e.clientX,startPos:d2.pos,wasPlaying};
+      // DO NOT pause audio — let it play from wherever we drag (DJ scratch behaviour)
+      _drag={startX:e.clientX,startPos:d2.pos};
       wzDiv.setPointerCapture(e.pointerId);
     });
     wzDiv.addEventListener('pointermove',e=>{
@@ -1449,18 +1447,8 @@ function bindDeck(slot){
       const newMs=Math.max(0,Math.min(d2.dur,_drag.startPos-(e.clientX-_drag.startX)*msPerPx));
       d2.pos=newMs;if(d2.au)d2.au.currentTime=newMs/1000;
     });
-    wzDiv.addEventListener('pointerup',()=>{
-      // Resume playback if audio was playing before drag started
-      if(_drag?.wasPlaying&&DECKS[slot]?.au&&DECKS[slot].pl){
-        DECKS[slot].au.currentTime=(DECKS[slot].pos||0)/1000;
-        DECKS[slot].au.play().catch(()=>{});
-      }
-      _drag=null;DECKS[slot].scratch=false;
-    });
-    wzDiv.addEventListener('pointercancel',()=>{
-      if(_drag?.wasPlaying&&DECKS[slot]?.au&&DECKS[slot].pl)DECKS[slot].au.play().catch(()=>{});
-      _drag=null;DECKS[slot].scratch=false;
-    });
+    wzDiv.addEventListener('pointerup',()=>{_drag=null;DECKS[slot].scratch=false;});
+    wzDiv.addEventListener('pointercancel',()=>{_drag=null;DECKS[slot].scratch=false;});
   }
   // CUE button — pointerdown/up for hold-to-cue behaviour
   const cb=el.querySelector('[data-a="cue"]');
@@ -2032,39 +2020,47 @@ function doCueUp(slot){
 }
 
 let _expandedSlot=null;
+function _resizeDeckCanvases(s){
+  const d2=DECKS[s];if(!d2)return;
+  const wov=document.getElementById('wov'+s);
+  if(wov){const p=wov.parentElement;const w=p?.offsetWidth||0,h=p?.offsetHeight||14;
+    if(w>0){
+      if(d2.ovgl){try{d2.ovgl.destroy();}catch(_){}d2.ovgl=null;}
+      wov.width=w; wov.height=h;
+      try{d2.ovgl=new OverviewGL(wov);d2.wovCtx=null;}catch(e){d2.wovCtx=wov.getContext('2d');}
+      if(d2.ovgl){const wfD=d2.rgbWfDetail||d2.rgbWf;if(wfD)d2.ovgl.setData(wfD);drawOverview(s,d2.dur>0&&d2.pos>0?d2.pos/d2.dur:0);}
+    }
+  }
+  const wzc=document.getElementById('wzc'+s);
+  if(wzc){const p=wzc.parentElement;const w=p?.offsetWidth||0,h=p?.offsetHeight||64;
+    if(w>0){
+      if(d2.wgl){try{d2.wgl.destroy();}catch(_){}d2.wgl=null;}
+      wzc.width=w; wzc.height=h;
+      try{d2.wgl=new WaveformGL(wzc);d2.wzCtx=null;}catch(e){d2.wzCtx=wzc.getContext('2d');}
+      const wzov=document.getElementById('wzov'+s);
+      if(wzov){wzov.width=w;wzov.height=h;d2.wovCtx2=wzov.getContext('2d');}
+      if(d2.wgl){const wfD=d2.rgbWfDetail||d2.rgbWf;if(wfD){d2.wgl.setData(wfD,(wfD.length/150*1000)||1);drawZoomWaveform(s,d2.dur>0&&d2.pos>0?d2.pos/d2.dur:0);}}
+    }
+  }
+}
+
 function doExpandDeck(slot){
   const el=document.getElementById('dk'+slot);if(!el)return;
   const wasExpanded=_expandedSlot===slot;
+  const prevSlot=_expandedSlot;
   // collapse previously expanded deck
-  if(_expandedSlot!=null){
-    const prev=document.getElementById('dk'+_expandedSlot);
+  if(prevSlot!=null){
+    const prev=document.getElementById('dk'+prevSlot);
     if(prev)prev.classList.remove('dk-wide');
   }
   _expandedSlot=wasExpanded?null:slot;
-  if(!wasExpanded){
-    el.classList.add('dk-wide');
-  }
-  // resize canvases — requestAnimationFrame lets CSS layout settle before the next paint (no stretch)
-  requestAnimationFrame(()=>{
-    const d=DECKS[slot];
-    const wov=document.getElementById('wov'+slot);
-    if(wov){const p=wov.parentElement;const w=p?.offsetWidth||600,h=p?.offsetHeight||28;
-      if(d&&d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
-      wov.width=w; wov.height=h;
-      if(d&&w>0){try{d.ovgl=new OverviewGL(wov);}catch(e){console.warn('[WGL] overview reinit',e.message);}
-        if(d.ovgl){const wfD=d.rgbWfDetail||d.rgbWf;if(wfD)d.ovgl.setData(wfD);drawOverview(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
-      }
-    }
-    const wzc=document.getElementById('wzc'+slot);
-    if(wzc){const p=wzc.parentElement;const w=p?.offsetWidth||600,h=p?.offsetHeight||90;
-      if(d&&d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
-      wzc.width=w; wzc.height=h;
-      if(d&&w>0){
-        try{d.wgl=new WaveformGL(wzc);}catch(e){console.warn('[WGL] zoom reinit',e.message);}
-        if(d.wgl){const wfD=d.rgbWfDetail||d.rgbWf;if(wfD){d.wgl.setData(wfD,(wfD.length/150*1000)||1);drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}}
-      }
-    }
-  });
+  if(!wasExpanded) el.classList.add('dk-wide');
+  // Double rAF: first rAF triggers layout reflow, second reads settled dimensions
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(!wasExpanded) _resizeDeckCanvases(slot);
+    // Also resize the collapsed deck to prevent stretch artifact
+    if(prevSlot!=null&&prevSlot!==slot) _resizeDeckCanvases(prevSlot);
+  }));
 }
 
 function doEject(slot){

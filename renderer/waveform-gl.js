@@ -304,22 +304,26 @@ uniform int   u_mode;
 out vec4 fragColor;
 
 vec3 wfColor(float bass, float midf, float treble, int mode) {
-  float mx = max(max(bass, midf), max(treble, 0.001));
   if (mode == 1) {
-    float tot = bass + midf + treble + 0.001;
-    float rn = bass/tot, gn = midf/tot, bn = treble/tot;
-    return vec3(
-      gn*1.0  + bn*1.0,
-      rn*0.333 + gn*0.651 + bn*1.0,
-      rn*0.882 + bn*1.0
-    );
+    // Pure 3-band RGB: each band boosted independently
+    float B = min(1.0, bass * 2.5);
+    float M = min(1.0, midf * 3.5);
+    float T = min(1.0, treble * 6.0);
+    return vec3(B, M, T);
   } else if (mode == 2) {
-    float e = min(1.0, sqrt(bass*bass + midf*midf + treble*treble));
-    float w = treble / (bass + midf + treble + 0.001);
-    float br = pow(e, 0.55);
-    return vec3(br*0.0 + w*0.667, br*0.333 + w*0.529, br*0.690 + w*0.310);
+    // Blue mono
+    float e = min(1.0, sqrt(bass*bass + midf*midf + treble*treble) * 3.0);
+    float br = pow(e, 0.6);
+    return vec3(br*0.05, br*0.35, br*1.0);
   } else {
-    return vec3(pow(bass/mx,1.5), pow(midf/mx,1.5), pow(treble/mx,1.5));
+    // CDJ-style: bass=orange, mid=green, treble=blue-white, transients=warm white
+    float B = min(1.0, bass * 2.5);
+    float M = min(1.0, midf * 3.0);
+    float T = min(1.0, treble * 5.5);
+    float r = B*1.0  + M*0.30 + T*0.25;
+    float g = B*0.25 + M*1.0  + T*0.45;
+    float b = B*0.0  + M*0.15 + T*1.0;
+    return clamp(vec3(r, g, b), vec3(0.0), vec3(1.0));
   }
 }
 
@@ -358,18 +362,23 @@ uniform int   u_mode;
 out vec4 fragColor;
 
 vec3 wfColor(float bass, float midf, float treble, int mode) {
-  float mx = max(max(bass, midf), max(treble, 0.001));
   if (mode == 1) {
-    float tot = bass + midf + treble + 0.001;
-    float rn = bass/tot, gn = midf/tot, bn = treble/tot;
-    return vec3(gn*1.0+bn*1.0, rn*0.333+gn*0.651+bn*1.0, rn*0.882+bn*1.0);
+    float B = min(1.0, bass * 2.5);
+    float M = min(1.0, midf * 3.5);
+    float T = min(1.0, treble * 6.0);
+    return vec3(B, M, T);
   } else if (mode == 2) {
-    float e = min(1.0, sqrt(bass*bass+midf*midf+treble*treble));
-    float w = treble/(bass+midf+treble+0.001);
-    float br = pow(e,0.55);
-    return vec3(br*0.0+w*0.667, br*0.333+w*0.529, br*0.690+w*0.310);
+    float e = min(1.0, sqrt(bass*bass+midf*midf+treble*treble)*3.0);
+    float br = pow(e,0.6);
+    return vec3(br*0.05, br*0.35, br*1.0);
   } else {
-    return vec3(pow(bass/mx,1.5), pow(midf/mx,1.5), pow(treble/mx,1.5));
+    float B = min(1.0, bass * 2.5);
+    float M = min(1.0, midf * 3.0);
+    float T = min(1.0, treble * 5.5);
+    float r = B*1.0  + M*0.30 + T*0.25;
+    float g = B*0.25 + M*1.0  + T*0.45;
+    float b = B*0.0  + M*0.15 + T*1.0;
+    return clamp(vec3(r,g,b), vec3(0.0), vec3(1.0));
   }
 }
 

@@ -1523,7 +1523,9 @@ class BridgeCore {
           .map(i=>i.broadcast)
           .concat(['255.255.255.255'])
       )];
+      // Send to BOTH 50001 and 50002 — CDJ-3000 uses 50002, some older firmware uses 50001
       for(const bc of allBCs){
+        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50002,bc);}catch(_){}
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,bc);}catch(_){}
       }
       console.log(`[PDJL-VIRT] CDJ status P${playerNum} trackId=${trackId} bpm=${bpm||128}`);
@@ -1544,14 +1546,17 @@ class BridgeCore {
       const artPath = require('path').join(tmpDir, `bridge_art_deck${slot+1}.jpg`);
       require('fs').writeFileSync(artPath, jpegBuf);
 
-      // Resolume REST API: PUT thumbnail — sets clip preview image (gif/png/jpg supported)
+      // Resolume REST API: PUT thumbnail — sets clip preview image
       const layer = slot + 1;
       const clip = 1;
       const http = require('http');
-      const enc = encodeURIComponent(artPath.replace(/\\/g,'/'));
-      const uri = `file:///${enc}`;
+      // Correct file URI: don't encodeURIComponent the full path (that encodes slashes)
+      // macOS/Linux: file:///absolute/path, Windows: file:///C:/path
+      const normalized = artPath.replace(/\\/g,'/');
+      const uri = normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`;
       const body = JSON.stringify({ uri });
       const url = `http://${arenaIP}:8080/api/v1/composition/layers/${layer}/clips/${clip}/thumbnail`;
+      console.log(`[ARENA-ART] PUT ${url} uri=${uri}`);
 
       const req = http.request(url, {method:'PUT', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}}, res=>{
         let d='';res.on('data',c=>d+=c);
@@ -1622,9 +1627,10 @@ class BridgeCore {
             if(buf[typeOff] === 0x10){  // UInt16 field
               const reqType = buf.readUInt16BE(typeOff+1);
               if(reqType === 0x0000){  // SETUP
-                console.log('[VDBSRV] SETUP received');
-                // Reply with success: same format with type=0x4000
-                const resp = this._dbBuildMsg(0xfffffffe, 0x4000, [this._dbArg4(1)]);
+                const setupTxId = buf.readUInt32BE(6);  // echo client's txId
+                console.log(`[VDBSRV] SETUP received txId=0x${setupTxId.toString(16)}`);
+                // Reply with success: echo txId back
+                const resp = this._dbBuildMsg(setupTxId, 0x4000, [this._dbArg4(1)]);
                 sock.write(resp);
                 phase = 'ready';
                 buf = buf.length > 37 ? buf.slice(37) : Buffer.alloc(0);
