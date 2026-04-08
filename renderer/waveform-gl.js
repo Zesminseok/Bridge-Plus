@@ -329,13 +329,14 @@ void main() {
     return;
   }
 
-  // Wavypy 3-band: each band height = its own amplitude directly
-  // Outer boundary = tallest band (제일큰소리 기준: loudest band defines outer edge)
+  // Wavypy 3-band: perceptual gain correction applied per band
+  // Raw analysis yields T > M > B (treble-heavy); compensate so bass dominates visually
+  // Bass: sqrt expansion + 1.4x boost | Mid: linear 1.0x | Treble: 0.5x reduction
   float B = bass, M = midf, T = treble;
 
-  float bH = B * scale;
-  float mH = M * scale;
-  float tH = T * scale;
+  float bH = sqrt(max(B, 0.0)) * scale * 1.4;
+  float mH = max(M, 0.0) * scale * 1.0;
+  float tH = max(T, 0.0) * scale * 0.5;
 
   // Use max of all three as the outer boundary — avoids cutting off treble/mid when bass is quiet
   float AA = 1.0;
@@ -402,9 +403,10 @@ void main() {
 
   float B = bass, M = midf, T = treble;
 
-  float bH = B * scale;
-  float mH = M * scale;
-  float tH = T * scale;
+  // Same perceptual gain correction as zoom shader
+  float bH = sqrt(max(B, 0.0)) * scale * 1.4;
+  float mH = max(M, 0.0) * scale * 1.0;
+  float tH = max(T, 0.0) * scale * 0.5;
 
   float outerH = max(bH, max(mH, tH));
   float AA2 = 0.6;

@@ -816,7 +816,8 @@ function _wfBlend(r,g,b2,dimF){
 }
 // 3BAND stacked rendering helper: returns [{color,h},...] from bottom to top
 function _wf3BandStack(r,g,b2,totalH,dimF){
-  const bH=Math.round(r*totalH),mH=Math.round(g*totalH),tH=Math.round(b2*totalH);
+  // Perceptual gain: bass sqrt+boost, treble 0.5x — matches WebGL shader correction
+  const bH=Math.round(Math.sqrt(r)*1.4*totalH),mH=Math.round(g*totalH),tH=Math.round(b2*0.5*totalH);
   return[
     {R:Math.round(0x00*dimF),G:Math.round(0x55*dimF),B:Math.round(0xE1*dimF),h:bH},   // bass=blue
     {R:Math.round(0xFF*dimF),G:Math.round(0xA6*dimF),B:Math.round(0x00*dimF),h:mH},   // mid=amber
