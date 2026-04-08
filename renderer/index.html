@@ -957,11 +957,25 @@ function drawZoomWaveform(slot,prog){
       const bg=d._beatGrid;
       let lo=0, hi=bg.length-1;
       while(lo<hi){const mid2=(lo+hi+1)>>1;if(bg[mid2].timeMs<=posMs)lo=mid2;else hi=mid2-1;}
-      const barCount=Math.floor(lo/4)+1;
-      const beatInBar=bg[lo].beatInBar||((lo%4)+1);
-      d._barBeat=barCount+'.'+beatInBar;
+      if(bg[lo].timeMs<=posMs){
+        const barNum=Math.floor(lo/4)+1;
+        const beatInBar=bg[lo].beatInBar||((lo%4)+1);
+        d._barBeat=barNum+'.'+beatInBar+'Bars';
+      }else{
+        // Before first beat — negative bars
+        const beatMs=60000/(bg[0].bpm||d.bpm);
+        const beatsBack=Math.ceil((bg[0].timeMs-posMs)/beatMs);
+        const beatIdx=-beatsBack;
+        const barNum=Math.floor(beatIdx/4);
+        const beatInBar=((beatIdx%4)+4)%4+1;
+        d._barBeat=barNum+'.'+beatInBar+'Bars';
+      }
     }else{
-      d._barBeat=fBars(posMs,d.baseBpm||d.bpm);
+      const beatMs=60000/(d.baseBpm||d.bpm),anchor=d._barAnchorMs||0;
+      const beatIdx=Math.floor((posMs-anchor)/beatMs);
+      const barNum=beatIdx>=0?Math.floor(beatIdx/4)+1:Math.floor(beatIdx/4);
+      const beatInBar=((beatIdx%4)+4)%4+1;
+      d._barBeat=barNum+'.'+beatInBar+'Bars';
     }
   }
 
@@ -1024,7 +1038,6 @@ function drawZoomWaveform(slot,prog){
   // beat grid + cues + cursor (2D fallback)
   if(d.bpm>0&&dur>0){
     const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
-    ctx.font='bold 9px "DM Mono",monospace';
     if(d._beatGrid&&d._beatGrid.length>0){
       const bg=d._beatGrid;let lo=0,hi=bg.length-1;
       while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<viewL)lo=mid2+1;else hi=mid2;}
@@ -1032,8 +1045,8 @@ function drawZoomWaveform(slot,prog){
         const bt=bg[i];if(bt.timeMs>viewR)break;
         const bpx=Math.round((bt.timeMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
-        if(bt.beatInBar===1){ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);}
-        else{ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(bt.beatInBar,bpx+2,H-2);}
+        if(bt.beatInBar===1){ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.7)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
+        else{ctx.fillStyle='rgba(0,191,255,.18)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
       }
     }else{
       const beatMs=60000/(d.baseBpm||d.bpm);const anchor=d._barAnchorMs||0;
@@ -1042,8 +1055,8 @@ function drawZoomWaveform(slot,prog){
         const bMs=anchor+b*beatMs;const bpx=Math.round((bMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
         const barNum=((b%4)+4)%4+1;
-        if(barNum===1){ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);}
-        else{ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(barNum,bpx+2,H-2);}
+        if(barNum===1){ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.7)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
+        else{ctx.fillStyle='rgba(0,191,255,.18)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
       }
     }
   }
@@ -1062,13 +1075,13 @@ function drawZoomWaveform(slot,prog){
   phGrd.addColorStop(0,'rgba(255,255,255,0)');phGrd.addColorStop(.5,'rgba(255,255,255,.18)');phGrd.addColorStop(1,'rgba(255,255,255,0)');
   ctx.fillStyle=phGrd;ctx.fillRect(cX-8,0,16,H);
   ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
-  // BAR.BEAT counter
+  // BAR.BEAT counter — left of playhead, Rekordbox cyan
   if(d._barBeat){
-    ctx.font='bold 11px "DM Mono",monospace';
+    ctx.font='bold 10px "DM Mono",monospace';
     const bw=ctx.measureText(d._barBeat).width;
-    const bx=cX-bw/2;
-    ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(bx-4,1,bw+8,15);
-    ctx.fillStyle='#90d4ff';ctx.fillText(d._barBeat,bx,13);
+    const bx=cX-bw-8;
+    if(bx>=2){ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(bx-2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,bx,13);}
+    else{ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,4,13);}
   }
 }
 
@@ -1089,7 +1102,6 @@ function drawZoomOverlay(slot, prog){
   // Beat grid
   if(d.bpm>0&&dur>0){
     const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
-    ctx.font='bold 9px "DM Mono",monospace';
     if(d._beatGrid&&d._beatGrid.length>0){
       const bg=d._beatGrid;
       let lo=0,hi=bg.length-1;
@@ -1098,13 +1110,8 @@ function drawZoomOverlay(slot, prog){
         const bt=bg[i];if(bt.timeMs>viewR)break;
         const bpx=Math.round((bt.timeMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
-        if(bt.beatInBar===1){
-          ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);
-        }else{
-          ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);
-          ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(bt.beatInBar,bpx+2,H-2);
-        }
+        if(bt.beatInBar===1){ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.7)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
+        else{ctx.fillStyle='rgba(0,191,255,.18)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
       }
     }else if(d.bpm>0){
       const beatMs=60000/(d.baseBpm||d.bpm);
@@ -1116,8 +1123,8 @@ function drawZoomOverlay(slot, prog){
         const bpx=Math.round((bMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
         const barNum=((b%4)+4)%4+1;
-        if(barNum===1){ctx.fillStyle='rgba(255,140,0,.55)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(255,165,0,.95)';ctx.fillText('1',bpx+2,H-2);}
-        else{ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(bpx-.5,H*.25,1,H*.75);ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(barNum,bpx+2,H-2);}
+        if(barNum===1){ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.7)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
+        else{ctx.fillStyle='rgba(0,191,255,.18)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
       }
     }
   }
@@ -1157,12 +1164,13 @@ function drawZoomOverlay(slot, prog){
   ctx.fillStyle=phGrd;ctx.fillRect(cX-8,0,16,H);
   ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
 
-  // bar.beat overlay
+  // bar.beat overlay — left of playhead, Rekordbox cyan
   if(d._barBeat){
-    ctx.font='bold 9px "DM Mono",monospace';
+    ctx.font='bold 10px "DM Mono",monospace';
     const bw=ctx.measureText(d._barBeat).width;
-    ctx.fillStyle='rgba(0,0,0,.78)';ctx.fillRect(cX-bw/2-4,1,bw+8,15);
-    ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillText(d._barBeat,cX-bw/2,12);
+    const bx=cX-bw-8;
+    if(bx>=2){ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(bx-2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,bx,13);}
+    else{ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,4,13);}
   }
 }
 
@@ -1791,7 +1799,11 @@ function loadFile(slot,f){
   if(d.type==='hw'){console.warn('[loadFile] HW 모드 덱에 파일 로드 차단');return;}
   if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
+  d._artRawB64=null;  // clear stale artwork from previous track
   d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;d._fileName=f.name;d._pwv7=false;
+  // Immediately clear artwork UI
+  const _dartReset=document.getElementById('dart'+slot);
+  if(_dartReset)_dartReset.innerHTML='<span class="noart-icon">♪</span>';
   // filename parsing used as fallback only — ID3 tags take priority
   const n=f.name.replace(/\.[^.]+$/,'');
   if(n.includes(' - ')){const p=n.split(' - ');d.ar=p[0].trim();d.tn=p.slice(1).join(' - ').trim();}
