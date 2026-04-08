@@ -1804,6 +1804,7 @@ function loadFile(slot,f){
   if(d.type==='hw'){console.warn('[loadFile] HW 모드 덱에 파일 로드 차단');return;}
   if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
+  d.art=null;         // clear dbserver-fetched artwork (HW/virtual)
   d._artRawB64=null;  // clear stale artwork from previous track
   d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;d._fileName=f.name;d._pwv7=false;
   // Immediately clear artwork UI
@@ -1815,8 +1816,8 @@ function loadFile(slot,f){
   else{d.tn=n;d.ar='';}
   // trackId: 파일명 해시로 고유 ID 생성
   d.trackId=(f.name+f.size).split('').reduce((h,c)=>((h<<5)-h+c.charCodeAt(0))|0,0)>>>0;
-  // async ID3 tag read (MP3, AIFF, WAV)
-  if(/\.(mp3|aiff?|wav)$/i.test(f.name)){
+  // async ID3 tag read (MP3, AIFF, WAV, FLAC — all use ID3v2 at start)
+  if(/\.(mp3|aiff?|wav|flac)$/i.test(f.name)){
     readID3Tags(f).then(tags=>{
       if(tags.title) d.tn=tags.title;
       if(tags.artist) d.ar=tags.artist;
@@ -2139,7 +2140,7 @@ function doEject(slot){
   if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
   if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
-  Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
+  Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,art:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
   if(E&&run)window.bridge.removeLayer(slot);
   renderDecks();
 }

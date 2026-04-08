@@ -1705,8 +1705,9 @@ class BridgeCore {
         // TEARDOWN — client is closing connection
         sock.end();
       } else {
-        // Unknown data request — send empty success
-        sock.write(this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(0)]));
+        // Unknown data request — send empty render-done (0x4003) so Arena doesn't stall
+        console.log(`[VDBSRV] unhandled reqType=0x${reqType.toString(16)}, sending empty done`);
+        sock.write(this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]), ()=>sock.end());
       }
     }catch(e){
       console.warn(`[VDBSRV] handleRequest error: ${e.message}`);
