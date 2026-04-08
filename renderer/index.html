@@ -1449,11 +1449,11 @@ function bindDeck(slot){
         // During scratch: decay velocity if mouse has been still >35ms (platter friction)
         if(!_drag||performance.now()-_lastMoveT>35) _vel*=0.80;
         if(au){
-          if(_vel<0.02){
+          if(_vel<0.08){
+            // Below Chromium minimum rate (~0.0625) — just pause (don't set rate)
             if(!au.paused)au.pause();
-            au.playbackRate=0.05;
           } else {
-            au.playbackRate=Math.min(4.0,_vel);
+            try{au.playbackRate=Math.min(4.0,Math.max(0.08,_vel));}catch(_){}
             if(au.paused&&au.readyState>=2)au.play().catch(()=>{});
           }
         }

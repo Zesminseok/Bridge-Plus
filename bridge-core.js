@@ -1613,22 +1613,30 @@ class BridgeCore {
         if(phase === 'setup'){
           // SETUP_REQ: magic(5) + txId(5) + type(3) + argc(2) + tags(17) + arg(5) = 37+ bytes
           if(buf.length >= 32){
-            // Parse type
             const typeOff = 10;  // after magic(5)+txId(5)
             if(buf[typeOff] === 0x10){  // UInt16 field
               const reqType = buf.readUInt16BE(typeOff+1);
               if(reqType === 0x0000){  // SETUP
-                const setupTxId = buf.readUInt32BE(6);  // echo client's txId
+                const setupTxId = buf.readUInt32BE(6);
                 console.log(`[VDBSRV] SETUP received txId=0x${setupTxId.toString(16)}`);
-                // Reply with success: echo txId back
                 const resp = this._dbBuildMsg(setupTxId, 0x4000, [this._dbArg4(1)]);
                 sock.write(resp);
                 phase = 'ready';
                 buf = buf.length > 37 ? buf.slice(37) : Buffer.alloc(0);
+                // Fall through to handle any remaining buffered requests
+                if(buf.length < 32) return;
+              } else {
+                // Non-setup request arrived (Arena skips SETUP step) — go directly to ready
+                console.log(`[VDBSRV] no SETUP from client, handling reqType=0x${reqType.toString(16)} directly`);
+                phase = 'ready';
+                // Fall through to handle request below
               }
+            } else {
+              return;
             }
+          } else {
+            return;
           }
-          return;
         }
 
         // phase === 'ready': handle artwork & metadata requests
