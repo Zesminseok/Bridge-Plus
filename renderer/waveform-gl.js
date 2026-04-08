@@ -348,16 +348,14 @@ void main() {
   vec3 midCol  = vec3(1.0,  0.651, 0.0);
   vec3 trebCol = vec3(1.0,  1.0,   1.0);
 
-  float AA2 = AA;
-  float inBass = 1.0 - smoothstep(bH - AA2, bH + AA2, yDist);
-  float inMid  = 1.0 - smoothstep(mH - AA2, mH + AA2, yDist);
-  float inTreb = 1.0 - smoothstep(tH - AA2, tH + AA2, yDist);
+  // Sharp color layering: use step-like transitions to avoid blue+amber=brown artifact
+  // treble→mid: smooth 0.5px (white→amber is acceptable)
+  // mid→bass:   sharp step (amber→blue blend = ugly brown)
+  float ftH = smoothstep(tH - 0.5, tH + 0.5, yDist);
+  float fmH = step(mH, yDist);   // hard boundary — no brown
 
-  // Layer: bass base → mid overlay → treble on top
-  // Dominant (tallest) band defines outer edge color, treble (whitest) shows at center
-  vec3 col = bassCol;
-  col = mix(col, midCol,  inMid);
-  col = mix(col, trebCol, inTreb);
+  vec3 col = mix(trebCol, midCol, ftH);
+  col = mix(col, bassCol, fmH);
 
   fragColor = vec4(col * alpha, 1.0);
 }

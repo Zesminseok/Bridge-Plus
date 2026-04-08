@@ -1653,12 +1653,17 @@ async function readID3Tags(file){
           else{while(o+1<fdata.length){if(fdata[o]===0&&fdata[o+1]===0){o+=2;break;}o+=2;}}
           if(o<fdata.length){
             const imgData=fdata.slice(o);
-            if(!mime||mime==='image/') mime=imgData[0]===0x89?'image/png':'image/jpeg';
+            // Detect MIME by magic bytes (more reliable than APIC mime string)
+            if(imgData[0]===0xFF&&imgData[1]===0xD8) mime='image/jpeg';
+            else if(imgData[0]===0x89&&imgData[1]===0x50) mime='image/png';
+            else if(imgData[0]===0x47&&imgData[1]===0x49) mime='image/gif';
+            else if(!mime||!mime.startsWith('image/')) mime='image/jpeg';
+            console.log(`[ID3 APIC] enc=${enc} picType=${picType} mime=${mime} size=${imgData.length} magic=0x${imgData[0].toString(16)}${imgData[1].toString(16)}`);
             const blob=new Blob([imgData],{type:mime});
             tags.art=URL.createObjectURL(blob);
             tags._artRaw=imgData;  // keep raw bytes for virtual dbserver
-          }
-        }catch(_){}
+          }else{console.warn('[ID3 APIC] no image data after header, o='+o+' fdata.length='+fdata.length);}
+        }catch(e){console.warn('[ID3 APIC parse error]',e);}
       }
       pos+=10+fsz;
     }
