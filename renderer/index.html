@@ -59,13 +59,11 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dwz-row{height:56px}
 .deck-row.compact .ddz{padding:14px 10px;min-height:80px}
 .deck-row.compact .dk-body{padding:6px 8px;gap:7px;min-height:90px}
-.deck-row.compact .dk-left{flex:1}
-.deck-row.compact .dk-tc{width:160px}
-.deck-row.compact .dk-transport{width:80px}
-.deck-row.compact .dk-layer{width:60px}
+.deck-row.compact .dk-tc{width:170px}
+.deck-row.compact .dk-transport .dkbtn{width:44px}
+.deck-row.compact .dk-layer{width:68px}
 .deck-row.compact .dk-num{font-size:20px}
-.deck-row.compact .dkbtn{height:26px;font-size:9px}
-.deck-row.compact .dtc{font-size:18px}
+.deck-row.compact .dtc{font-size:24px}
 .dk{background:#0d0f12;border:1px solid rgba(113,255,232,.1);border-radius:10px;overflow:hidden;transition:box-shadow .2s,border-color .2s;min-width:0;box-shadow:0 2px 12px rgba(0,0,0,.4)}
 .dk[data-st="play"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk[data-st="cue"]{box-shadow:0 0 14px rgba(255,209,109,.1),0 2px 12px rgba(0,0,0,.4);border-color:rgba(255,209,109,.18)}.dk[data-st="hw"]{box-shadow:0 0 10px rgba(167,139,250,.08),0 2px 12px rgba(0,0,0,.4);border-color:rgba(167,139,250,.15)}.dk[data-st="hwplay"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk.dov{box-shadow:0 0 14px rgba(164,201,255,.12),0 2px 12px rgba(0,0,0,.4)!important;border-color:rgba(164,201,255,.25)!important}
 .dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--grn),transparent)}
@@ -78,7 +76,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .did{font:400 10px var(--sn);letter-spacing:.05em;transition:color .15s;white-space:nowrap;display:flex;align-items:baseline;gap:2px}
 .did-n{font:700 18px var(--mn);letter-spacing:-.02em;line-height:1}
 .dbadge{font:600 9px var(--mn);padding:2px 5px;border-radius:3px;letter-spacing:.05em}
-.dtc{font:normal 26px var(--seg);color:var(--tx4);letter-spacing:.05em;transition:color .15s;white-space:nowrap}
+.dtc{font:normal 36px var(--seg);color:var(--tx4);letter-spacing:.04em;transition:color .15s;white-space:nowrap}
 .dk[data-st="play"] .dtc,.dk[data-st="hwplay"] .dtc,.dk[data-st="cue"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
 .dwov{height:14px;margin:0 0 3px;background:var(--bg-lowest);border-radius:3px;overflow:hidden;cursor:pointer;position:relative}
@@ -117,18 +115,17 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-wf-col .dwz-row .dwz{border-radius:0;border:none;height:100%;margin:0}
 
 /* SECTION 2 — TC: large display + info row (KEY/BPM/phasor) */
-.dk-tc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:196px;flex-shrink:0}
-.dk-tc-hdrs{display:flex;justify-content:space-around;width:100%;font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em;padding:0 2px;margin-bottom:1px}
-.dk-tc-info-row{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;flex-wrap:nowrap;margin-top:2px}
-.dk-key-blk{display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0}
+.dk-tc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:220px;flex-shrink:0}
+.dk-tc-hdrs{display:flex;justify-content:space-around;width:100%;font:600 8px var(--mn);color:var(--tx4);letter-spacing:.07em;padding:0 4px;margin-bottom:1px}
+.dk-tc-info-row{display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%;flex-wrap:nowrap;margin-top:4px;padding:0 4px}
+.dk-key-blk{display:flex;flex-direction:column;align-items:flex-start;gap:0;flex-shrink:0}
 .dk-key-lbl{font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em}
-.dk-bpm-blk{display:flex;align-items:baseline;gap:4px;flex-shrink:0}
-.dk-tc-time{font:400 9px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center;margin-top:2px}
+.dk-bpm-cur{font:700 14px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.01em;border:1px solid rgba(0,255,200,.35);border-radius:3px;padding:1px 6px;white-space:nowrap}
+.dk-tc-time{font:400 9px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:left;margin-top:3px;padding:0 4px;width:100%}
 
-/* SECTION 3 — Transport: CUE|PLAY top + STOP bottom */
-.dk-transport{display:flex;flex-direction:column;gap:4px;width:96px;flex-shrink:0}
-.dk-tp-top{display:flex;gap:4px;flex:1}
-.dk-tp-top .dkbtn{flex:1;font-size:10px;letter-spacing:.04em}
+/* SECTION 3 — Transport: CUE + PLAY side by side, full height */
+.dk-transport{display:flex;flex-direction:row;gap:5px;flex-shrink:0}
+.dk-transport .dkbtn{width:56px;font-size:12px;letter-spacing:.04em;height:auto;border-radius:8px}
 /* Bigger hardware-style buttons */
 .dkbtn.dkcue{border-color:rgba(212,160,0,.5);color:rgba(255,209,109,.6);font:700 11px var(--mn)}
 .dkbtn.dkcue.ac,.dk[data-st="cue"] .dkbtn.dkcue{background:rgba(220,165,0,.85);border-color:#d4a500;color:#1a1200;text-shadow:none;box-shadow:0 0 12px rgba(220,165,0,.5)}
@@ -136,10 +133,12 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dkbtn.dkstop{border-color:rgba(255,255,255,.12);color:var(--tx4);background:rgba(30,35,40,.8);font-size:14px}
 .dkbtn.dkstop:not(:disabled):hover{border-color:rgba(255,255,255,.3);color:var(--tx2)}
 
-/* SECTION 4 — Layer/SMPTE */
-.dk-layer{display:flex;flex-direction:column;gap:4px;width:72px;flex-shrink:0;align-items:stretch}
+/* SECTION 4 — Layer/SMPTE + STOP */
+.dk-layer{display:flex;flex-direction:column;gap:4px;width:80px;flex-shrink:0;align-items:stretch}
+.dk-layer-top{display:flex;align-items:center;gap:2px;justify-content:flex-end;margin-bottom:1px}
+.dk-layer-top .dhtb{padding:1px 4px;font-size:9px}
 .dk-layer-lbl{font:700 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-align:center;flex-shrink:0}
-.dk-layer-ab{display:flex;gap:4px;flex:1}
+.dk-layer-ab{display:flex;gap:4px}
 .dk-layer-ab .dkbtn{flex:1}
 .dkctrl-btns{display:flex;gap:3px}
 .dkbtn{flex:1;height:30px;min-height:0;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
@@ -1394,9 +1393,9 @@ function deckHTML(slot){
         <span class="dk-player-lbl">PLAYER</span>
         <span class="dbadge ${isHW?'bp':'bm'}" id="dbg${slot}">${isHW?'HW':(isLoaded?'STOP':'STOP')}</span>
         <span class="dbadge br hide" id="dair${slot}">ON AIR</span>
-        <div style="margin-left:auto;display:flex;gap:2px;flex-shrink:0">
-          <button class="dhtb" data-a="expand" data-i="${slot}" style="font-size:10px;padding:2px 4px">⤢</button>
-          ${!isHW?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
+        <div class="dksm" id="dksm${slot}" style="gap:3px;margin-left:4px">
+          <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}" style="padding:1px 5px;font-size:7px;min-width:32px">SYNC</span>
+          <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:1px 5px;font-size:7px;min-width:42px">MASTER</span>
         </div>
       </div>
       <div class="dk-hdr-title">
@@ -1431,40 +1430,38 @@ function deckHTML(slot){
     <div class="dk-tc-info-row">
       <div class="dk-key-blk">
         <span class="dk-key-lbl">KEY</span>
-        <div id="wfkey${slot}" style="display:flex;flex-direction:column;align-items:center;gap:1px"></div>
+        <div id="wfkey${slot}" style="display:flex;flex-direction:column;align-items:flex-start;gap:0"></div>
       </div>
-      <div id="wfbpm${slot}" style="display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0"></div>
+      <div id="wfbpm${slot}" style="display:flex;align-items:baseline;gap:6px;flex-shrink:0"></div>
       <div class="dktn-phs">${phas}</div>
     </div>
     <div class="dk-tc-time" id="dtime${slot}">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
-    <div class="dksm" id="dksm${slot}" style="justify-content:center;margin-top:4px;gap:4px">
-      <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}">SYNC</span>
-      <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}">MASTER</span>
-    </div>
   </div>`;
 
-  /* SECTION 3: transport — CUE|PLAY top, STOP bottom */
+  /* SECTION 3: transport — CUE + PLAY full height side by side */
   const cueAc=isLoaded?`data-a="cue" data-i="${slot}"`:' disabled';
   const playAc=isLoaded?`data-a="play" data-i="${slot}"`:' disabled';
   const stopAc=isLoaded?`data-a="stop" data-i="${slot}"`:' disabled';
   const sec3=`<div class="dk-transport">
-    <div class="dk-tp-top">
-      <button class="dkbtn dkcue" ${cueAc}>CUE</button>
-      <button class="dkbtn dkplay" ${playAc}>${isLoaded&&d.pl?'⏸':'▶'}</button>
-    </div>
-    <button class="dkbtn dkstop" ${stopAc} style="width:100%;flex:none">⏮</button>
+    <button class="dkbtn dkcue" ${cueAc}>CUE</button>
+    <button class="dkbtn dkplay" ${playAc}>${isLoaded&&d.pl?'⏸':'▶'}</button>
   </div>`;
 
-  /* SECTION 4: layer/SMPTE */
+  /* SECTION 4: layer/SMPTE + expand/close + STOP */
   const aAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="A"`:' disabled';
   const bAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="B"`:' disabled';
   const sec4=`<div class="dk-layer">
+    <div class="dk-layer-top">
+      <button class="dhtb" data-a="expand" data-i="${slot}">⤢</button>
+      ${!isHW?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
+    </div>
     <div class="dk-layer-lbl">SMPTE</div>
-    <span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}" style="width:100%;text-align:center;margin-bottom:2px;min-width:0">MASTER</span>
+    <span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}" style="width:100%;text-align:center;min-width:0">MASTER</span>
     <div class="dk-layer-ab">
       <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
       <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
     </div>
+    <button class="dkbtn dkstop" ${stopAc} style="width:100%;flex:none;height:28px;margin-top:auto">⏮</button>
     ${isHW?`<div class="dhw" id="dhw${slot}" style="margin-top:2px;padding-top:2px;border-top:1px solid var(--bg3)"><span class="dhwl" id="dhwl${slot}">${d.model?'⬡ '+d.model:'⬡ HW'}</span></div>`:''}
   </div>`;
 
@@ -2029,7 +2026,7 @@ function loadFile(slot,f){
           }
           // Update BPM display in-place — avoids DOM rebuild / canvas context reset
           const _bpmEl=document.getElementById('wfbpm'+slot);
-          if(_bpmEl&&d.bpm>0){const _b=d.baseBpm||d.bpm;const _bs=_b%1===0?_b.toFixed(0):_b.toFixed(1);const _cs=d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1);_bpmEl.innerHTML=`<span style="font:600 9px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums">${_bs} ±0.00%</span><span style="font:700 13px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums">${_cs} BPM</span>`;}else if(_bpmEl)_bpmEl.innerHTML='';
+          if(_bpmEl&&d.bpm>0){const _b=d.baseBpm||d.bpm;const _bs=_b%1===0?_b.toFixed(0):_b.toFixed(1);const _cs=d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1);_bpmEl.innerHTML=`<span style="font:500 11px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums">${_bs}</span><span style="font:400 8px var(--mn);color:var(--tx4)">±0.00%</span><span class="dk-bpm-cur">${_cs}<sub style="font:400 8px var(--mn);color:var(--tx3);margin-left:1px">BPM</sub></span>`;}else if(_bpmEl)_bpmEl.innerHTML='';
         });
       },100); // 100ms delay — let audio element finish loading
     });
@@ -2404,7 +2401,7 @@ function tick(){
       const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
       const baseStr=(d.baseBpm&&d.baseBpm>0)?(d.baseBpm%1===0?d.baseBpm.toFixed(0):d.baseBpm.toFixed(1)):(d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1));
       const curStr=d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1);
-      wfbEl.innerHTML=`<span style="font:600 9px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr} ${ps}</span><span style="font:700 13px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap">${curStr} BPM</span>`;
+      wfbEl.innerHTML=`<span style="font:500 11px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:400 8px var(--mn);color:var(--tx4);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<sub style="font:400 8px var(--mn);color:var(--tx3);margin-left:1px">BPM</sub></span>`;
     }else if(wfbEl)wfbEl.innerHTML='';
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
