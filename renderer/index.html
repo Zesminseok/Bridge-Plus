@@ -115,22 +115,23 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-wf-col .dwz-row .dwz{border-radius:0;border:none;height:100%;margin:0}
 
 /* SECTION 2 — TC: display + info row (KEY/BPM/phasor) */
-.dk-tc{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;width:200px;flex-shrink:0;padding:0 6px}
+.dk-tc{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;width:200px;flex-shrink:0;padding:0 6px}
 .dk-tc-hdrs{display:flex;justify-content:space-around;width:100%;font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em;margin-bottom:0}
-.dk-tc-info-row{display:flex;align-items:center;gap:6px;width:100%;flex-wrap:nowrap;margin-top:3px}
+.dk-tc-info-row{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;margin-top:3px}
 .dk-key-blk{display:flex;flex-direction:column;align-items:flex-start;gap:0;flex-shrink:0}
 .dk-key-lbl{font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em}
 .dk-bpm-cur{font:700 13px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.01em;border:1px solid rgba(0,255,200,.35);border-radius:3px;padding:1px 5px;white-space:nowrap;display:inline-flex;align-items:baseline}
 .dk-tc-time{font:400 9px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px}
 
-/* SECTION 3 — Transport: CUE + PLAY side by side */
-.dk-transport{display:flex;flex-direction:row;gap:5px;flex-shrink:0;align-items:stretch}
-.dk-transport .dkbtn{width:52px;font-size:11px;letter-spacing:.04em;height:auto;min-height:60px;border-radius:7px;flex:none}
-/* CUE/PLAY button overrides for transport */
+/* SECTION 3 — Transport: CUE|PLAY top row + STOP bottom */
+.dk-transport{display:flex;flex-direction:column;gap:4px;width:108px;flex-shrink:0}
+.dk-tp-top{display:flex;gap:4px;flex:1}
+.dk-tp-top .dkbtn{flex:1;border-radius:7px;font-size:11px}
 .dk-transport .dkbtn.dkcue{font:700 12px var(--mn)}
-.dk-transport .dkbtn.dkplay{font-size:18px}
+.dk-transport .dkbtn.dkplay{font-size:16px}
+.dk-transport .dkbtn.dkstop{height:26px;flex:none;border-radius:6px}
 
-/* SECTION 4 — Layer/SMPTE + STOP */
+/* SECTION 4 — Layer/SMPTE */
 .dk-layer{display:flex;flex-direction:column;gap:3px;width:76px;flex-shrink:0;align-items:stretch}
 .dk-layer-top{display:flex;align-items:center;gap:2px;justify-content:flex-end}
 .dk-layer-top .dhtb{padding:1px 3px;font-size:8px;border-radius:3px}
@@ -1435,13 +1436,16 @@ function deckHTML(slot){
     <div class="dk-tc-time" id="dtime${slot}">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
   </div>`;
 
-  /* SECTION 3: transport — CUE + PLAY full height side by side */
+  /* SECTION 3: transport — CUE|PLAY top + STOP bottom */
   const cueAc=isLoaded?`data-a="cue" data-i="${slot}"`:' disabled';
   const playAc=isLoaded?`data-a="play" data-i="${slot}"`:' disabled';
   const stopAc=isLoaded?`data-a="stop" data-i="${slot}"`:' disabled';
   const sec3=`<div class="dk-transport">
-    <button class="dkbtn dkcue" ${cueAc}>CUE</button>
-    <button class="dkbtn dkplay" ${playAc}>${isLoaded&&d.pl?'⏸':'▶'}</button>
+    <div class="dk-tp-top">
+      <button class="dkbtn dkcue" ${cueAc}>CUE</button>
+      <button class="dkbtn dkplay" ${playAc}>${isLoaded&&d.pl?'⏸':'▶'}</button>
+    </div>
+    <button class="dkbtn dkstop" ${stopAc}>⏮</button>
   </div>`;
 
   /* SECTION 4: layer/SMPTE + expand/close + STOP */
@@ -1458,7 +1462,6 @@ function deckHTML(slot){
       <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
       <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
     </div>
-    <button class="dkbtn dkstop" ${stopAc} style="width:100%;flex:none;height:24px;margin-top:auto">⏮</button>
     ${isHW?`<div class="dhw" id="dhw${slot}" style="margin-top:2px;padding-top:2px;border-top:1px solid var(--bg3)"><span class="dhwl" id="dhwl${slot}">${d.model?'⬡ '+d.model:'⬡ HW'}</span></div>`:''}
   </div>`;
 
