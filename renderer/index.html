@@ -59,7 +59,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dwz-row{height:56px}
 .deck-row.compact .ddz{padding:14px 10px;min-height:80px}
 .deck-row.compact .dk-body{padding:6px 8px;gap:7px;min-height:90px}
-.deck-row.compact .dk-left{max-width:48%}
+.deck-row.compact .dk-left{flex:1}
 .deck-row.compact .dk-tc{width:160px}
 .deck-row.compact .dk-transport{width:80px}
 .deck-row.compact .dk-layer{width:60px}
@@ -97,7 +97,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-body{display:flex;flex-direction:row;align-items:stretch;padding:8px 10px;gap:10px;min-height:128px}
 
 /* SECTION 1 — Left: header text (no border) + waveform panel (cyan bordered) */
-.dk-left{display:flex;flex-direction:column;gap:4px;flex:1.5;min-width:0;max-width:52%}
+.dk-left{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
 
 /* Header text: large number + PLAYER + status + artist-title */
 .dk-hdr-text{display:flex;flex-direction:column;gap:1px;flex-shrink:0}
@@ -1437,9 +1437,9 @@ function deckHTML(slot){
       <div class="dktn-phs">${phas}</div>
     </div>
     <div class="dk-tc-time" id="dtime${slot}">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
-    <span class="dksm-btn dksm-sync hide" id="dsync${slot}">SYNC</span>
-    <div class="dksm" id="dksm${slot}">
-      <span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}">MASTER</span>
+    <div class="dksm" id="dksm${slot}" style="justify-content:center;margin-top:4px;gap:4px">
+      <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}">SYNC</span>
+      <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}">MASTER</span>
     </div>
   </div>`;
 
@@ -1460,6 +1460,7 @@ function deckHTML(slot){
   const bAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="B"`:' disabled';
   const sec4=`<div class="dk-layer">
     <div class="dk-layer-lbl">SMPTE</div>
+    <span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}" style="width:100%;text-align:center;margin-bottom:2px;min-width:0">MASTER</span>
     <div class="dk-layer-ab">
       <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
       <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
@@ -2447,8 +2448,11 @@ function tick(){
     // SYNC / MASTER LED buttons
     const bSync=document.getElementById('dsync'+slot);
     if(bSync)bSync.classList.toggle('on',!!d.sync);
+    // dmst = SMPTE MASTER (sec4), ddmst = deck sync MASTER (sec2)
     const bMst=document.getElementById('dmst'+slot);
     if(bMst)bMst.classList.toggle('on',!!d.master);
+    const bMst2=document.getElementById('ddmst'+slot);
+    if(bMst2)bMst2.classList.toggle('on',!!d.master);
     const did=document.getElementById('did'+slot);
     if(did){
       // USB media color takes priority over default state color
