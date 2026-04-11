@@ -59,9 +59,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dwz-row{height:56px}
 .deck-row.compact .ddz{padding:14px 10px;min-height:80px}
 .deck-row.compact .dk-body{padding:6px 8px;gap:7px;min-height:90px}
-.deck-row.compact .dk-tc{width:160px}
-.deck-row.compact .dk-transport .dkbtn{width:40px;min-height:50px}
-.deck-row.compact .dk-layer{width:64px}
+.deck-row.compact .dk-tp-top .dkbtn{width:38px}
+.deck-row.compact .dk-layer{width:60px}
 .deck-row.compact .dk-num{font-size:20px}
 .deck-row.compact .dtc{font-size:20px}
 .dk{background:#0d0f12;border:1px solid rgba(113,255,232,.1);border-radius:10px;overflow:hidden;transition:box-shadow .2s,border-color .2s;min-width:0;box-shadow:0 2px 12px rgba(0,0,0,.4)}
@@ -95,7 +94,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-body{display:flex;flex-direction:row;align-items:stretch;padding:6px 8px;gap:8px;min-height:110px}
 
 /* SECTION 1 — Left: header text (no border) + waveform panel (cyan bordered) */
-.dk-left{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.dk-left{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;max-width:60%}
 
 /* Header text: large number + PLAYER + status + artist-title */
 .dk-hdr-text{display:flex;flex-direction:column;gap:1px;flex-shrink:0}
@@ -106,7 +105,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-title-sep{color:var(--tx4);flex-shrink:0;font-size:10px}
 
 /* Waveform bordered panel: art | [overview / zoom+VU] */
-.dk-wf-area{display:flex;flex-direction:row;flex:1;min-height:72px;border:1px solid rgba(0,255,200,.2);border-radius:4px;overflow:hidden}
+.dk-wf-area{display:flex;flex-direction:row;flex:1;min-height:68px;border:1px solid rgba(0,255,200,.2);border-radius:4px;overflow:hidden}
 .dk-wf-area .dkart{border-radius:0;border:none;border-right:1px solid rgba(0,255,200,.1);width:56px;height:100%;flex-shrink:0}
 .dk-wf-col{display:flex;flex-direction:column;flex:1;min-width:0}
 .dk-wf-col .dwov{height:16px;margin:0;border-radius:0;border-bottom:1px solid rgba(0,255,200,.1);background:rgba(5,8,12,.8)}
@@ -115,7 +114,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-wf-col .dwz-row .dwz{border-radius:0;border:none;height:100%;margin:0}
 
 /* SECTION 2 — TC: display + info row (KEY/BPM/phasor) */
-.dk-tc{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;width:200px;flex-shrink:0;padding:0 6px}
+.dk-tc{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;flex-shrink:0;padding:0 4px}
 .dk-tc-hdrs{display:flex;justify-content:space-around;width:100%;font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em;margin-bottom:0}
 .dk-tc-info-row{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;margin-top:3px}
 .dk-key-blk{display:flex;flex-direction:column;align-items:flex-start;gap:0;flex-shrink:0}
@@ -123,21 +122,22 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-bpm-cur{font:700 13px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.01em;border:1px solid rgba(0,255,200,.35);border-radius:3px;padding:1px 5px;white-space:nowrap;display:inline-flex;align-items:baseline}
 .dk-tc-time{font:400 9px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px}
 
-/* SECTION 3 — Transport: CUE|PLAY top row + STOP bottom */
-.dk-transport{display:flex;flex-direction:column;gap:4px;width:108px;flex-shrink:0}
+/* SECTION 3 — Transport: CUE|PLAY square + STOP full width */
+.dk-transport{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
 .dk-tp-top{display:flex;gap:4px;flex:1}
-.dk-tp-top .dkbtn{flex:1;border-radius:7px;font-size:11px}
+.dk-tp-top .dkbtn{width:50px;height:auto;border-radius:8px;aspect-ratio:1;flex:none}
 .dk-transport .dkbtn.dkcue{font:700 12px var(--mn)}
-.dk-transport .dkbtn.dkplay{font-size:16px}
-.dk-transport .dkbtn.dkstop{height:26px;flex:none;border-radius:6px}
+.dk-transport .dkbtn.dkplay{font-size:18px}
+.dk-transport .dkbtn.dkstop{height:auto;flex:none;border-radius:6px}
 
-/* SECTION 4 — Layer/SMPTE */
+/* SECTION 4 — Layer/SMPTE — stretch to fill height */
 .dk-layer{display:flex;flex-direction:column;gap:3px;width:76px;flex-shrink:0;align-items:stretch}
 .dk-layer-top{display:flex;align-items:center;gap:2px;justify-content:flex-end}
 .dk-layer-top .dhtb{padding:1px 3px;font-size:8px;border-radius:3px}
 .dk-layer-lbl{font:700 8px var(--lb);color:var(--tx3);letter-spacing:.1em;text-align:center;flex-shrink:0}
-.dk-layer-ab{display:flex;gap:3px}
-.dk-layer-ab .dkbtn{flex:1;height:24px}
+.dk-layer .dksm-btn{flex:none}
+.dk-layer-ab{display:flex;gap:3px;flex:1}
+.dk-layer-ab .dkbtn{flex:1}
 .dkctrl-btns{display:flex;gap:3px}
 .dkbtn{flex:1;height:30px;min-height:0;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
 .dkbtn:disabled{opacity:.25;cursor:not-allowed}
