@@ -59,10 +59,13 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dwz-row{height:56px}
 .deck-row.compact .ddz{padding:14px 10px;min-height:80px}
 .deck-row.compact .dk-body{padding:6px 8px;gap:7px;min-height:90px}
-.deck-row.compact .dk-left{width:170px}
-.deck-row.compact .dk-right{width:114px}
-.deck-row.compact .dk-right .dkbtn{height:26px;font-size:7px}
-.deck-row.compact .dtc{font-size:16px}
+.deck-row.compact .dk-left{max-width:48%}
+.deck-row.compact .dk-tc{width:160px}
+.deck-row.compact .dk-transport{width:80px}
+.deck-row.compact .dk-layer{width:60px}
+.deck-row.compact .dk-num{font-size:20px}
+.deck-row.compact .dkbtn{height:26px;font-size:9px}
+.deck-row.compact .dtc{font-size:18px}
 .dk{background:#0d0f12;border:1px solid rgba(113,255,232,.1);border-radius:10px;overflow:hidden;transition:box-shadow .2s,border-color .2s;min-width:0;box-shadow:0 2px 12px rgba(0,0,0,.4)}
 .dk[data-st="play"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk[data-st="cue"]{box-shadow:0 0 14px rgba(255,209,109,.1),0 2px 12px rgba(0,0,0,.4);border-color:rgba(255,209,109,.18)}.dk[data-st="hw"]{box-shadow:0 0 10px rgba(167,139,250,.08),0 2px 12px rgba(0,0,0,.4);border-color:rgba(167,139,250,.15)}.dk[data-st="hwplay"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk.dov{box-shadow:0 0 14px rgba(164,201,255,.12),0 2px 12px rgba(0,0,0,.4)!important;border-color:rgba(164,201,255,.25)!important}
 .dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--grn),transparent)}
@@ -90,36 +93,53 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .wf-key:empty,.wf-bpm:empty{display:none}
 /* Expanded full-width deck — only widens, no height change */
 .dk.dk-wide{grid-column:1/-1}
-/* ======= 4-SECTION HORIZONTAL STRIP LAYOUT ======= */
-/* Body: waveforms | TC | transport | layer */
-.dk-body{display:flex;flex-direction:row;align-items:stretch;padding:7px 9px 7px;gap:9px;min-height:126px}
-/* SECTION 1 — Waveforms column (flexible, reduced width) */
-.dk-left{display:flex;flex-direction:column;gap:3px;flex:1.2;min-width:0;max-width:54%}
-/* Art + player info + artist-title combined top row */
-.dk-art-title-row{display:flex;gap:7px;align-items:flex-start;flex-shrink:0}
-.dk-art-info{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;overflow:hidden;justify-content:flex-start}
-.dk-art-info-hdr{display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden}
-.dk-art-title-text{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden}
+/* ======= 4-SECTION STRIP — IMAGE REFERENCE REDESIGN ======= */
+.dk-body{display:flex;flex-direction:row;align-items:stretch;padding:8px 10px;gap:10px;min-height:128px}
+
+/* SECTION 1 — Left: header text (no border) + waveform panel (cyan bordered) */
+.dk-left{display:flex;flex-direction:column;gap:4px;flex:1.5;min-width:0;max-width:52%}
+
+/* Header text: large number + PLAYER + status + artist-title */
+.dk-hdr-text{display:flex;flex-direction:column;gap:1px;flex-shrink:0}
+.dk-hdr-player{display:flex;align-items:baseline;gap:5px;overflow:hidden;white-space:nowrap}
+.dk-num{font:800 28px var(--lb);color:var(--tx);line-height:1;flex-shrink:0}
+.dk-player-lbl{font:600 10px var(--lb);color:var(--tx2);letter-spacing:.07em;flex-shrink:0}
+.dk-hdr-title{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden}
 .dk-title-sep{color:var(--tx4);flex-shrink:0;font-size:10px}
-/* BIG waveform (zoom) comes first, SMALL (overview) at bottom */
-.dk-left .dwz-row{height:66px;margin:0;flex-shrink:0}
-/* SECTION 2 — Timecode */
-.dk-tc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:188px;flex-shrink:0}
-.dk-tc-hdrs{display:flex;justify-content:space-around;width:100%;font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em;padding:0 2px}
-/* TC info: 2 rows (key+bpm+phas / time) */
-.dk-tc-info{display:flex;flex-direction:column;gap:3px;width:100%;align-items:center}
-.dk-tc-row1{display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
-.dk-tc-row2{display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
-.dk-tc-key-el{display:flex;flex-direction:column;align-items:center;line-height:1.2;min-width:28px;text-align:center}
-.dk-tc-bpm-el{display:flex;flex-direction:column;align-items:center;line-height:1.2;text-align:center}
-/* SECTION 3 — Transport buttons */
-.dk-transport{display:flex;flex-direction:column;gap:3px;width:88px;flex-shrink:0}
-.dk-transport-row{display:flex;gap:3px;flex:1}
-.dk-transport-row .dkbtn{flex:1}
-/* SECTION 4 — Layer / SMPTE */
-.dk-layer{display:flex;flex-direction:column;gap:3px;width:70px;flex-shrink:0;align-items:stretch}
-.dk-layer-lbl{font:700 8px var(--mn);color:var(--tx4);letter-spacing:.12em;text-align:center;padding:2px 0;flex-shrink:0}
-.dk-layer-ab{display:flex;gap:3px;flex:1}
+
+/* Waveform bordered panel: art | [overview / zoom+VU] */
+.dk-wf-area{display:flex;flex-direction:row;flex:1;min-height:72px;border:1px solid rgba(0,255,200,.2);border-radius:4px;overflow:hidden}
+.dk-wf-area .dkart{border-radius:0;border:none;border-right:1px solid rgba(0,255,200,.1);width:56px;height:100%;flex-shrink:0}
+.dk-wf-col{display:flex;flex-direction:column;flex:1;min-width:0}
+.dk-wf-col .dwov{height:16px;margin:0;border-radius:0;border-bottom:1px solid rgba(0,255,200,.1);background:rgba(5,8,12,.8)}
+.dk-wf-col .dwov canvas{display:block;width:100%;height:100%}
+.dk-wf-col .dwz-row{flex:1;margin:0;height:auto}
+.dk-wf-col .dwz-row .dwz{border-radius:0;border:none;height:100%;margin:0}
+
+/* SECTION 2 — TC: large display + info row (KEY/BPM/phasor) */
+.dk-tc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:196px;flex-shrink:0}
+.dk-tc-hdrs{display:flex;justify-content:space-around;width:100%;font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em;padding:0 2px;margin-bottom:1px}
+.dk-tc-info-row{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;flex-wrap:nowrap;margin-top:2px}
+.dk-key-blk{display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0}
+.dk-key-lbl{font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em}
+.dk-bpm-blk{display:flex;align-items:baseline;gap:4px;flex-shrink:0}
+.dk-tc-time{font:400 9px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center;margin-top:2px}
+
+/* SECTION 3 — Transport: CUE|PLAY top + STOP bottom */
+.dk-transport{display:flex;flex-direction:column;gap:4px;width:96px;flex-shrink:0}
+.dk-tp-top{display:flex;gap:4px;flex:1}
+.dk-tp-top .dkbtn{flex:1;font-size:10px;letter-spacing:.04em}
+/* Bigger hardware-style buttons */
+.dkbtn.dkcue{border-color:rgba(212,160,0,.5);color:rgba(255,209,109,.6);font:700 11px var(--mn)}
+.dkbtn.dkcue.ac,.dk[data-st="cue"] .dkbtn.dkcue{background:rgba(220,165,0,.85);border-color:#d4a500;color:#1a1200;text-shadow:none;box-shadow:0 0 12px rgba(220,165,0,.5)}
+.dkbtn.dkplay.ac,.dk[data-st="play"] .dkbtn.dkplay,.dk[data-st="hwplay"] .dkbtn.dkplay{background:rgba(20,90,75,.9);border-color:var(--grn2);color:var(--grn);box-shadow:0 0 12px rgba(52,211,153,.4)}
+.dkbtn.dkstop{border-color:rgba(255,255,255,.12);color:var(--tx4);background:rgba(30,35,40,.8);font-size:14px}
+.dkbtn.dkstop:not(:disabled):hover{border-color:rgba(255,255,255,.3);color:var(--tx2)}
+
+/* SECTION 4 — Layer/SMPTE */
+.dk-layer{display:flex;flex-direction:column;gap:4px;width:72px;flex-shrink:0;align-items:stretch}
+.dk-layer-lbl{font:700 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-align:center;flex-shrink:0}
+.dk-layer-ab{display:flex;gap:4px;flex:1}
 .dk-layer-ab .dkbtn{flex:1}
 .dkctrl-btns{display:flex;gap:3px}
 .dkbtn{flex:1;height:30px;min-height:0;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
@@ -1350,86 +1370,89 @@ function renderDecks(){
 function deckHTML(slot){
   const d=DECKS[slot];
   const isHW=d.type==='hw';
-  const label=`PLAYER <span class="did-n">${slot+1}</span>`;
   const phas=`<div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>`;
   const vuStrip=`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>`;
 
   /* Empty virtual deck: simple drop zone */
   if(!d.ld && !isHW){
     return`<div class="dk" id="dk${slot}" data-st="empty">
-      <div class="dtop"><div class="dhd"><div class="dhd-l"><span class="did" style="color:var(--tx3)">${label}</span><span class="dbadge bm">EMPTY</span></div><div class="dhd-r"><div class="dht"><button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button></div></div></div></div>
+      <div class="dtop"><div class="dhd"><div class="dhd-l"><span class="did" id="did${slot}" style="color:var(--tx3)">PLAYER <span class="did-n">${slot+1}</span></span><span class="dbadge bm">EMPTY</span></div><div class="dhd-r"><div class="dht"><button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button></div></div></div></div>
       <div class="ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">드래그 또는 클릭하여 열기</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG · M4A</div></div>
     </div>`;
   }
 
-  /* === shared 4-section strip builder === */
   const artSrc=d.ld?(d.art||d.artUrl||''):'';
   const isLoaded=d.ld;
   const tcStr=isLoaded?'00:00:00:00':'--:--:--:--';
   const tcDim=isLoaded?'':'style="color:var(--tx4)"';
 
-  /* SECTION 1: waveform column — art+info at top, zoom WF (big), overview WF (small) */
+  /* SECTION 1: left — floating header + cyan-bordered waveform panel */
   const sec1=`<div class="dk-left">
-    <div class="dk-art-title-row">
+    <div class="dk-hdr-text">
+      <div class="dk-hdr-player">
+        <span class="dk-num" id="did${slot}" ${isHW?'style="color:var(--pur)"':''}>${slot+1}</span>
+        <span class="dk-player-lbl">PLAYER</span>
+        <span class="dbadge ${isHW?'bp':'bm'}" id="dbg${slot}">${isHW?'HW':(isLoaded?'STOP':'STOP')}</span>
+        <span class="dbadge br hide" id="dair${slot}">ON AIR</span>
+        <div style="margin-left:auto;display:flex;gap:2px;flex-shrink:0">
+          <button class="dhtb" data-a="expand" data-i="${slot}" style="font-size:10px;padding:2px 4px">⤢</button>
+          ${!isHW?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
+        </div>
+      </div>
+      <div class="dk-hdr-title">
+        <span id="dta${slot}" style="font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0">${isLoaded?(d.ar||''):''}</span>
+        <span class="dk-title-sep">—</span>
+        <span class="dktn-t" id="dtn${slot}" style="font:500 10px var(--sn);color:${isLoaded?'#cbd5e1':'var(--tx4)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">${isLoaded?(d.tn||'—'):'—'}</span>
+      </div>
+    </div>
+    <div class="dk-wf-area">
       <div class="dkart" id="dart${slot}" ${isLoaded?`data-a="eject" data-i="${slot}"`:''}>${artSrc?`<img src="${artSrc}" alt="">`:'<span class="noart-icon">♪</span>'}</div>
-      <div class="dk-art-info">
-        <div class="dk-art-info-hdr">
-          <span class="did" id="did${slot}" ${isHW?'style="color:var(--pur)"':''}>${label}</span>
-          <span class="dbadge ${isHW?'bp':'bm'}" id="dbg${slot}">${isHW?'HW':(isLoaded?'STOP':'HW')}</span>
-          <span class="dbadge br hide" id="dair${slot}">ON AIR</span>
-          ${(!isHW&&isLoaded)?'<span style="font:600 6px var(--mn);color:var(--tx4);border:1px solid rgba(255,255,255,.07);padding:1px 4px;border-radius:2px;letter-spacing:.03em;flex-shrink:0">VIRT</span>':''}
-          <div style="margin-left:auto;display:flex;gap:2px;flex-shrink:0">
-            <button class="dhtb" data-a="expand" data-i="${slot}" style="font-size:10px;padding:2px 4px">⤢</button>
-            ${(!isHW)?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
+      <div class="dk-wf-col">
+        <div class="dwov" id="dwov${slot}" style="${isLoaded?'':'display:flex;align-items:center;justify-content:center'}">
+          ${isLoaded?`<canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
+        </div>
+        <div class="dwz-row">
+          <div class="dwz" id="dwz${slot}" style="position:relative;${isLoaded?'':'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px'}">
+            ${isLoaded
+              ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div>`
+              :`<span style="font:400 11px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span>`
+            }
           </div>
-        </div>
-        <div class="dk-art-title-text">
-          <span class="dktn-a" id="dta${slot}" style="color:var(--tx3);font:400 11px var(--sn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0">${isLoaded?(d.ar||''):''}</span>
-          <span class="dk-title-sep">—</span>
-          <span class="dktn-t" id="dtn${slot}" ${!isLoaded?'style="color:var(--tx4)"':''}>${isLoaded?(d.tn||'—'):'—'}</span>
+          ${vuStrip}
         </div>
       </div>
-    </div>
-    <div class="dwz-row">
-      <div class="dwz" id="dwz${slot}" style="position:relative;${isLoaded?'':'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px'}">
-        ${isLoaded
-          ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div>`
-          :`<span style="font:400 11px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span>`
-        }
-      </div>
-      ${vuStrip}
-    </div>
-    <div class="dwov" id="dwov${slot}" style="${isLoaded?'':'display:flex;align-items:center;justify-content:center'}">
-      ${isLoaded?`<canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
     </div>
   </div>`;
 
-  /* SECTION 2: timecode — H/M/S/FRAMES + big TC + key/bpm row + time row */
+  /* SECTION 2: timecode — H/M/S/FRAMES + large TC + key/bpm/phasor row + time */
   const sec2=`<div class="dk-tc">
     <div class="dk-tc-hdrs"><span>H</span><span>M</span><span>S</span><span>FRAMES</span></div>
     <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
-    <div class="dk-tc-info">
-      <div class="dk-tc-row1">
-        <div class="dk-tc-key-el" id="wfkey${slot}"></div>
-        <div class="dk-tc-bpm-el" id="wfbpm${slot}"></div>
-        <div class="dktn-phs">${phas}</div>
+    <div class="dk-tc-info-row">
+      <div class="dk-key-blk">
+        <span class="dk-key-lbl">KEY</span>
+        <div id="wfkey${slot}" style="display:flex;flex-direction:column;align-items:center;gap:1px"></div>
       </div>
-      <div class="dk-tc-row2">
-        <div id="dtime${slot}" style="font:500 9px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
-      </div>
+      <div id="wfbpm${slot}" style="display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0"></div>
+      <div class="dktn-phs">${phas}</div>
+    </div>
+    <div class="dk-tc-time" id="dtime${slot}">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
+    <span class="dksm-btn dksm-sync hide" id="dsync${slot}">SYNC</span>
+    <div class="dksm" id="dksm${slot}">
+      <span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}">MASTER</span>
     </div>
   </div>`;
 
-  /* SECTION 3: transport */
+  /* SECTION 3: transport — CUE|PLAY top, STOP bottom */
   const cueAc=isLoaded?`data-a="cue" data-i="${slot}"`:' disabled';
   const playAc=isLoaded?`data-a="play" data-i="${slot}"`:' disabled';
   const stopAc=isLoaded?`data-a="stop" data-i="${slot}"`:' disabled';
   const sec3=`<div class="dk-transport">
-    <div class="dk-transport-row">
+    <div class="dk-tp-top">
       <button class="dkbtn dkcue" ${cueAc}>CUE</button>
       <button class="dkbtn dkplay" ${playAc}>${isLoaded&&d.pl?'⏸':'▶'}</button>
     </div>
-    <button class="dkbtn dkstop" ${stopAc} style="width:100%;flex:none;margin-top:0">⏮</button>
+    <button class="dkbtn dkstop" ${stopAc} style="width:100%;flex:none">⏮</button>
   </div>`;
 
   /* SECTION 4: layer/SMPTE */
@@ -1437,12 +1460,6 @@ function deckHTML(slot){
   const bAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="B"`:' disabled';
   const sec4=`<div class="dk-layer">
     <div class="dk-layer-lbl">SMPTE</div>
-    <div style="display:flex;flex-direction:column;gap:3px;flex:1">
-      <span class="dksm-btn dksm-sync hide" id="dsync${slot}">SYNC</span>
-      <div class="dksm" id="dksm${slot}" style="flex-direction:column;align-items:stretch;gap:3px">
-        <span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}" style="min-width:0;text-align:center">MASTER</span>
-      </div>
-    </div>
     <div class="dk-layer-ab">
       <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
       <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
@@ -2011,7 +2028,7 @@ function loadFile(slot,f){
           }
           // Update BPM display in-place — avoids DOM rebuild / canvas context reset
           const _bpmEl=document.getElementById('wfbpm'+slot);
-          if(_bpmEl)_bpmEl.textContent=d.bpm>0?`${d.baseBpm||d.bpm} / ${d.bpm} ±0.00%`:'';
+          if(_bpmEl&&d.bpm>0){const _b=d.baseBpm||d.bpm;const _bs=_b%1===0?_b.toFixed(0):_b.toFixed(1);const _cs=d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1);_bpmEl.innerHTML=`<span style="font:600 9px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums">${_bs} ±0.00%</span><span style="font:700 13px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums">${_cs} BPM</span>`;}else if(_bpmEl)_bpmEl.innerHTML='';
         });
       },100); // 100ms delay — let audio element finish loading
     });
@@ -2384,8 +2401,9 @@ function tick(){
     if(wfbEl&&d.bpm>0){
       const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
       const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
+      const baseStr=(d.baseBpm&&d.baseBpm>0)?(d.baseBpm%1===0?d.baseBpm.toFixed(0):d.baseBpm.toFixed(1)):(d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1));
       const curStr=d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1);
-      wfbEl.innerHTML=`<b style="font:700 16px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;letter-spacing:-.01em">${curStr}</b><span style="font:400 8px var(--mn);color:var(--tx3);margin-top:1px">${ps}</span>`;
+      wfbEl.innerHTML=`<span style="font:600 9px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr} ${ps}</span><span style="font:700 13px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap">${curStr} BPM</span>`;
     }else if(wfbEl)wfbEl.innerHTML='';
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
