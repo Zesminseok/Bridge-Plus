@@ -92,22 +92,26 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk.dk-wide{grid-column:1/-1}
 /* ======= 4-SECTION HORIZONTAL STRIP LAYOUT ======= */
 /* Body: waveforms | TC | transport | layer */
-.dk-body{display:flex;flex-direction:row;align-items:stretch;padding:7px 9px 7px;gap:9px;min-height:118px}
-/* SECTION 1 — Waveforms column (flexible) */
-.dk-left{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
-.dk-left-hdr{display:flex;align-items:center;justify-content:space-between;gap:4px;flex-shrink:0;height:20px}
-.dk-left-hdr-l{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden}
-.dk-left-hdr-r{display:flex;align-items:center;gap:2px;flex-shrink:0}
-.dk-left-title{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;height:16px;flex-shrink:0}
-.dk-title-sep{color:var(--tx4);flex-shrink:0;font-size:10px;line-height:1}
-.dk-art-wave-row{display:flex;flex-direction:row;gap:4px;height:48px;flex-shrink:0}
-.dk-art-wave-row .dwov{flex:1;min-width:0;height:100%;margin:0;border-radius:4px}
-.dk-art-wave-row .dwov canvas{width:100%;height:100%;display:block}
-.dk-left .dwz-row{flex:1;margin:0;min-height:38px;height:auto}
+.dk-body{display:flex;flex-direction:row;align-items:stretch;padding:7px 9px 7px;gap:9px;min-height:126px}
+/* SECTION 1 — Waveforms column (flexible, reduced width) */
+.dk-left{display:flex;flex-direction:column;gap:3px;flex:1.2;min-width:0;max-width:54%}
+/* Art + player info + artist-title combined top row */
+.dk-art-title-row{display:flex;gap:7px;align-items:flex-start;flex-shrink:0}
+.dk-art-info{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;overflow:hidden;justify-content:flex-start}
+.dk-art-info-hdr{display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow:hidden}
+.dk-art-title-text{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden}
+.dk-title-sep{color:var(--tx4);flex-shrink:0;font-size:10px}
+/* BIG waveform (zoom) comes first, SMALL (overview) at bottom */
+.dk-left .dwz-row{height:66px;margin:0;flex-shrink:0}
 /* SECTION 2 — Timecode */
-.dk-tc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:194px;flex-shrink:0}
-.dk-tc-hdrs{display:flex;justify-content:space-around;width:100%;font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em;padding:0 2px;margin-bottom:1px}
-.dk-tc-info{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;flex-wrap:nowrap}
+.dk-tc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:188px;flex-shrink:0}
+.dk-tc-hdrs{display:flex;justify-content:space-around;width:100%;font:600 7px var(--mn);color:var(--tx4);letter-spacing:.07em;padding:0 2px}
+/* TC info: 2 rows (key+bpm+phas / time) */
+.dk-tc-info{display:flex;flex-direction:column;gap:3px;width:100%;align-items:center}
+.dk-tc-row1{display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
+.dk-tc-row2{display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.dk-tc-key-el{display:flex;flex-direction:column;align-items:center;line-height:1.2;min-width:28px;text-align:center}
+.dk-tc-bpm-el{display:flex;flex-direction:column;align-items:center;line-height:1.2;text-align:center}
 /* SECTION 3 — Transport buttons */
 .dk-transport{display:flex;flex-direction:column;gap:3px;width:88px;flex-shrink:0}
 .dk-transport-row{display:flex;gap:3px;flex:1}
@@ -242,20 +246,20 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .btn{padding:6px 18px;border-radius:8px;font:700 11px var(--sn);cursor:pointer;border:none;transition:all .12s}.btn:active{transform:scale(.95)}
 .btng{background:linear-gradient(180deg,var(--grn),var(--grn2));color:#003825;box-shadow:0 0 15px rgba(52,211,153,.3)}.btng:hover{brightness:1.1}
 .btnr{background:rgba(255,180,171,.1);color:var(--red);border:1px solid rgba(255,180,171,.2)}.btnr:hover{background:rgba(255,180,171,.2)}
-/* Album art — left section of horizontal strip */
-.dkart{width:48px;height:48px;border-radius:5px;flex-shrink:0;overflow:hidden;background:var(--bg-lowest);border:1px solid var(--bdr);cursor:pointer;position:relative;transition:filter .15s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+/* Album art — far-left of art-title-row */
+.dkart{width:52px;height:52px;border-radius:5px;flex-shrink:0;overflow:hidden;background:var(--bg-lowest);border:1px solid var(--bdr);cursor:pointer;position:relative;transition:filter .15s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .dkart:hover{filter:brightness(.6)}
 .dkart::after{content:'⏏';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;background:rgba(0,0,0,0);border-radius:7px;transition:opacity .15s,background .15s;pointer-events:none;opacity:0}
 .dkart:hover::after{background:rgba(0,0,0,.5);opacity:1}
 .dkart img{width:100%;height:100%;object-fit:cover;display:block}
 .noart-icon{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--tx4);font-size:18px}
-.deck-row.compact .dkart{width:36px;height:36px}
-.deck-row.compact .dk-art-wave-row{height:36px}
-.deck-row.compact .dk-tc{width:156px}
+.deck-row.compact .dkart{width:40px;height:40px}
+.deck-row.compact .dk-tc{width:158px}
 .deck-row.compact .dtc{font-size:20px}
 .deck-row.compact .dk-transport{width:72px}
 .deck-row.compact .dk-layer{width:58px}
-.deck-row.compact .dk-body{min-height:96px;gap:6px;padding:5px 7px}
+.deck-row.compact .dk-body{min-height:100px;gap:6px;padding:5px 7px}
+.deck-row.compact .dk-left .dwz-row{height:50px}
 .dktn{padding:0 0 2px;min-width:0;overflow:hidden}
 .dktn-row{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden}
 .dktn-t{font:600 13px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 auto;min-width:0;position:relative;text-overflow:ellipsis}
@@ -1362,31 +1366,28 @@ function deckHTML(slot){
   const artSrc=d.ld?(d.art||d.artUrl||''):'';
   const isLoaded=d.ld;
   const tcStr=isLoaded?'00:00:00:00':'--:--:--:--';
-  const tcColor=isLoaded?'':'color:var(--tx4)';
+  const tcDim=isLoaded?'':'style="color:var(--tx4)"';
 
-  /* SECTION 1: waveform column */
+  /* SECTION 1: waveform column — art+info at top, zoom WF (big), overview WF (small) */
   const sec1=`<div class="dk-left">
-    <div class="dk-left-hdr">
-      <div class="dk-left-hdr-l">
-        <span class="did" id="did${slot}" ${isHW?'style="color:var(--pur)"':''}>${label}</span>
-        <span class="dbadge ${isHW?'bp':'bm'}" id="dbg${slot}">${isHW?'HW':(isLoaded?'STOP':'HW')}</span>
-        <span class="dbadge br hide" id="dair${slot}">ON AIR</span>
-        ${(!isHW&&isLoaded)?'<span style="font:600 7px var(--mn);color:var(--tx4);border:1px solid rgba(255,255,255,.07);padding:1px 4px;border-radius:2px;letter-spacing:.03em;flex-shrink:0">VIRT</span>':''}
-      </div>
-      <div class="dk-left-hdr-r">
-        <button class="dhtb" data-a="expand" data-i="${slot}" style="font-size:10px;padding:2px 4px">⤢</button>
-        ${(!isHW)?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
-      </div>
-    </div>
-    <div class="dk-left-title">
-      <span class="dktn-a" id="dta${slot}" style="color:var(--tx3);font:400 11px var(--sn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0">${isLoaded?(d.ar||''):''}${isHW&&!isLoaded?'':''}</span>
-      <span class="dk-title-sep" style="${isLoaded&&d.ar?'':'opacity:0;pointer-events:none'}">—</span>
-      <span class="dktn-t" id="dtn${slot}" style="${isLoaded?'':'color:var(--tx4)'}">${isLoaded?(d.tn||'—'):'—'}</span>
-    </div>
-    <div class="dk-art-wave-row">
+    <div class="dk-art-title-row">
       <div class="dkart" id="dart${slot}" ${isLoaded?`data-a="eject" data-i="${slot}"`:''}>${artSrc?`<img src="${artSrc}" alt="">`:'<span class="noart-icon">♪</span>'}</div>
-      <div class="dwov" id="dwov${slot}" style="${isLoaded?'':'display:flex;align-items:center;justify-content:center'}">
-        ${isLoaded?`<canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
+      <div class="dk-art-info">
+        <div class="dk-art-info-hdr">
+          <span class="did" id="did${slot}" ${isHW?'style="color:var(--pur)"':''}>${label}</span>
+          <span class="dbadge ${isHW?'bp':'bm'}" id="dbg${slot}">${isHW?'HW':(isLoaded?'STOP':'HW')}</span>
+          <span class="dbadge br hide" id="dair${slot}">ON AIR</span>
+          ${(!isHW&&isLoaded)?'<span style="font:600 6px var(--mn);color:var(--tx4);border:1px solid rgba(255,255,255,.07);padding:1px 4px;border-radius:2px;letter-spacing:.03em;flex-shrink:0">VIRT</span>':''}
+          <div style="margin-left:auto;display:flex;gap:2px;flex-shrink:0">
+            <button class="dhtb" data-a="expand" data-i="${slot}" style="font-size:10px;padding:2px 4px">⤢</button>
+            ${(!isHW)?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
+          </div>
+        </div>
+        <div class="dk-art-title-text">
+          <span class="dktn-a" id="dta${slot}" style="color:var(--tx3);font:400 11px var(--sn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0">${isLoaded?(d.ar||''):''}</span>
+          <span class="dk-title-sep">—</span>
+          <span class="dktn-t" id="dtn${slot}" ${!isLoaded?'style="color:var(--tx4)"':''}>${isLoaded?(d.tn||'—'):'—'}</span>
+        </div>
       </div>
     </div>
     <div class="dwz-row">
@@ -1398,17 +1399,24 @@ function deckHTML(slot){
       </div>
       ${vuStrip}
     </div>
+    <div class="dwov" id="dwov${slot}" style="${isLoaded?'':'display:flex;align-items:center;justify-content:center'}">
+      ${isLoaded?`<canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
+    </div>
   </div>`;
 
-  /* SECTION 2: timecode */
+  /* SECTION 2: timecode — H/M/S/FRAMES + big TC + key/bpm row + time row */
   const sec2=`<div class="dk-tc">
     <div class="dk-tc-hdrs"><span>H</span><span>M</span><span>S</span><span>FRAMES</span></div>
-    <span class="dtc" id="dtc${slot}" ${tcColor?`style="${tcColor}"`:''}>${tcStr}</span>
+    <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
     <div class="dk-tc-info">
-      <span id="wfkey${slot}" style="font:700 11px var(--mn);color:var(--grn);min-width:18px;text-align:center"></span>
-      <span id="wfbpm${slot}" style="font:700 15px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums"></span>
-      <div id="dtime${slot}" style="font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap">${isLoaded?'0:00.00':'--:--.---'}</div>
-      ${phas}
+      <div class="dk-tc-row1">
+        <div class="dk-tc-key-el" id="wfkey${slot}"></div>
+        <div class="dk-tc-bpm-el" id="wfbpm${slot}"></div>
+        <div class="dktn-phs">${phas}</div>
+      </div>
+      <div class="dk-tc-row2">
+        <div id="dtime${slot}" style="font:500 9px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
+      </div>
     </div>
   </div>`;
 
@@ -2357,17 +2365,27 @@ function tick(){
       }
     }
     const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar||'';
-    // Waveform key + BPM overlay
+    // Waveform key + BPM — 2-line display in TC info section
     const wfkEl=document.getElementById('wfkey'+slot);
-    if(wfkEl)wfkEl.textContent=d.key||'';
+    if(wfkEl){
+      const raw=d.key||'';
+      const parts=raw.split(' / ');
+      const cam=parts[0]||''; // Camelot notation e.g. "7A"
+      const kname=parts[1]||parts[0]||''; // key name e.g. "Dm" (fallback to cam if no slash)
+      if(cam&&cam!==kname){
+        wfkEl.innerHTML=`<b style="font:700 13px var(--mn);color:var(--grn);letter-spacing:.04em">${cam}</b><span style="font:400 9px var(--sn);color:var(--tx3);margin-top:1px">${kname}</span>`;
+      }else if(cam){
+        wfkEl.innerHTML=`<b style="font:700 13px var(--mn);color:var(--grn);letter-spacing:.04em">${cam}</b>`;
+      }else{
+        wfkEl.innerHTML='';
+      }
+    }
     const wfbEl=document.getElementById('wfbpm'+slot);
     if(wfbEl&&d.bpm>0){
-      const baseBpm=d.baseBpm||d.bpm;
       const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
       const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
-      const baseStr=baseBpm%1===0?baseBpm.toFixed(0):baseBpm.toFixed(1);
       const curStr=d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1);
-      wfbEl.innerHTML=baseStr+' / <strong style="color:var(--tx)">'+curStr+'</strong> '+ps;
+      wfbEl.innerHTML=`<b style="font:700 16px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;letter-spacing:-.01em">${curStr}</b><span style="font:400 8px var(--mn);color:var(--tx3);margin-top:1px">${ps}</span>`;
     }else if(wfbEl)wfbEl.innerHTML='';
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
