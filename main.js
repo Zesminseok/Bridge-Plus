@@ -109,17 +109,18 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
       await new Promise(r=>setTimeout(r,300));
     }
     bridge=new BridgeCore(opts||{});
-    bridge.onNodeDiscovered=n=>win?.webContents.send('tcnet:node',n);
-    bridge.onCDJStatus=(li,s)=>win?.webContents.send('bridge:cdj',{layerIndex:li,status:s});
-    bridge.onDJMStatus=f=>win?.webContents.send('bridge:djm',{faders:f});
-    bridge.onDJMMeter=ch=>win?.webContents.send('bridge:djmmeter',ch);
-    bridge.onDeviceList=devs=>win?.webContents.send('pdjl:devices',Object.values(devs));
-    bridge.onWaveformPreview=(pn,wf)=>win?.webContents.send('bridge:wfpreview',{playerNum:pn,...wf});
-    bridge.onWaveformDetail=(pn,wf)=>win?.webContents.send('bridge:wfdetail',{playerNum:pn,...wf});
-    bridge.onCuePoints=(pn,cues)=>win?.webContents.send('bridge:cuepoints',{playerNum:pn,cues});
-    bridge.onBeatGrid=(pn,bg)=>win?.webContents.send('bridge:beatgrid',{playerNum:pn,...bg});
-    bridge.onAlbumArt=(pn,b64)=>win?.webContents.send('bridge:albumart',{playerNum:pn,art:b64});
-    bridge.onTrackMetadata=(pn,meta)=>win?.webContents.send('bridge:trackmeta',{playerNum:pn,...meta});
+    const _send=(ch,d)=>{try{if(win&&!win.isDestroyed())win.webContents.send(ch,d);}catch(_){}};
+    bridge.onNodeDiscovered=n=>_send('tcnet:node',n);
+    bridge.onCDJStatus=(li,s)=>_send('bridge:cdj',{layerIndex:li,status:s});
+    bridge.onDJMStatus=f=>_send('bridge:djm',{faders:f});
+    bridge.onDJMMeter=ch=>_send('bridge:djmmeter',ch);
+    bridge.onDeviceList=devs=>_send('pdjl:devices',Object.values(devs));
+    bridge.onWaveformPreview=(pn,wf)=>_send('bridge:wfpreview',{playerNum:pn,...wf});
+    bridge.onWaveformDetail=(pn,wf)=>_send('bridge:wfdetail',{playerNum:pn,...wf});
+    bridge.onCuePoints=(pn,cues)=>_send('bridge:cuepoints',{playerNum:pn,cues});
+    bridge.onBeatGrid=(pn,bg)=>_send('bridge:beatgrid',{playerNum:pn,...bg});
+    bridge.onAlbumArt=(pn,b64)=>_send('bridge:albumart',{playerNum:pn,art:b64});
+    bridge.onTrackMetadata=(pn,meta)=>_send('bridge:trackmeta',{playerNum:pn,...meta});
     await bridge.start();push();
     // Re-request metadata for already-loaded tracks — retry at 3s, 8s, 20s
     setTimeout(()=>bridge?.refreshAllMetadata(), 3000);
