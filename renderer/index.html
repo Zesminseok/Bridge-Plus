@@ -3,6 +3,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap');
 @font-face{font-family:'Noto Sans KR';src:url('./fonts/NotoSansKR-VariableFont_wght.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:'DSEG7';src:url('./fonts/DSEG7Classic-Regular.woff2') format('woff2');font-display:swap}
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg:#111318;--bg2:#1a1c20;--bg3:#1e2024;--bg4:#282a2e;
@@ -10,7 +11,7 @@
   --bdr:rgba(60,74,66,.15);--bdr2:rgba(60,74,66,.3);
   --tx:#e2e2e8;--tx2:#bbcac0;--tx3:#85948b;--tx4:#3c4a42;
   --grn:#5af0b3;--grn2:#34d399;--grn-dim:#45dfa4;--blu:#a4c9ff;--blu2:#0267b8;--ylw:#ffd16d;--ylw2:#ecb210;--red:#ffb4ab;--pur:#a78bfa;--org:#fb923c;
-  --mn:'DM Mono',monospace;--sn:'Noto Sans KR',-apple-system,sans-serif;--lb:'Space Grotesk','Noto Sans KR',sans-serif
+  --mn:'DM Mono',monospace;--sn:'Noto Sans KR',-apple-system,sans-serif;--lb:'Space Grotesk','Noto Sans KR',sans-serif;--seg:'DSEG7',monospace
 }
 .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
 .active-glow{box-shadow:0 0 20px rgba(52,211,153,.15)}
@@ -73,7 +74,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .did{font:400 10px var(--sn);letter-spacing:.05em;transition:color .15s;white-space:nowrap;display:flex;align-items:baseline;gap:2px}
 .did-n{font:700 18px var(--mn);letter-spacing:-.02em;line-height:1}
 .dbadge{font:600 9px var(--mn);padding:2px 5px;border-radius:3px;letter-spacing:.05em}
-.dtc{font:600 14px var(--mn);color:var(--tx4);letter-spacing:-.01em;font-variant-numeric:tabular-nums;transition:color .15s;white-space:nowrap}
+.dtc{font:normal 18px var(--seg);color:var(--tx4);letter-spacing:.06em;transition:color .15s;white-space:nowrap}
 .dk[data-st="play"] .dtc,.dk[data-st="hwplay"] .dtc,.dk[data-st="cue"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
 .dwov{height:14px;margin:0 0 3px;background:var(--bg-lowest);border-radius:3px;overflow:hidden;cursor:pointer;position:relative}
@@ -91,7 +92,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* Left control column: album art on top, CUE+PLAY row below */
 .dtbody{display:flex;gap:4px;padding:0;min-height:108px;align-items:stretch;margin-top:4px}
 .dkctrl{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;width:68px;flex-shrink:0;padding-bottom:4px}
-.dkctrl-btns{display:flex;gap:4px;width:100%;margin-top:auto}
+.dkctrl-btns{display:flex;gap:3px;width:100%;margin-top:auto}
 .dkwaves{flex:1;min-width:0}
 .dkbtn{flex:1;height:36px;min-height:0;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
 .dkbtn:disabled{opacity:.25;cursor:not-allowed}
@@ -105,7 +106,19 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dkbtn.dkplay.ac{border-color:var(--grn2);color:var(--grn);background:linear-gradient(180deg,rgba(52,211,153,.15),rgba(52,211,153,.25));box-shadow:0 0 20px rgba(52,211,153,.5),inset 0 0 10px rgba(90,240,179,.15);text-shadow:0 0 8px rgba(90,240,179,.6)}
 .dkbtn.dkplay.blink{animation:play-blink 1s ease-in-out infinite}
 @keyframes play-blink{0%,100%{border-color:rgba(52,211,153,.25);color:rgba(52,211,153,.35);background:transparent;box-shadow:none}50%{border-color:var(--grn);color:var(--grn);background:rgba(52,211,153,.15);box-shadow:0 0 8px rgba(52,211,153,.3)}}
-.deck-row.compact .dkbtn{height:26px;font-size:7px}
+/* STOP (return to start) button */
+.dkbtn.dkstop{border-color:rgba(255,180,171,.18);color:rgba(255,180,171,.45);font-size:12px}
+.dkbtn.dkstop:not(:disabled):hover{border-color:rgba(255,180,171,.5);color:var(--red)}
+/* Full-width stop below CUE/PLAY */
+.dkctrl-stop{width:100%;margin-top:3px;height:20px;border-radius:4px;font:600 8px var(--mn);letter-spacing:.06em;flex:none}
+/* Layer A/B assign buttons */
+.dklyr-btns{display:flex;gap:3px;width:100%;margin-top:3px}
+.dkbtn.dklyr{height:18px;font-size:7px;letter-spacing:.06em;border-radius:4px}
+.dkbtn.dklyr-a{border-color:rgba(90,240,179,.2);color:rgba(90,240,179,.4)}
+.dkbtn.dklyr-a.ac{border-color:var(--grn2);color:var(--grn);background:rgba(52,211,153,.18);box-shadow:0 0 6px rgba(52,211,153,.3)}
+.dkbtn.dklyr-b{border-color:rgba(164,201,255,.2);color:rgba(164,201,255,.4)}
+.dkbtn.dklyr-b.ac{border-color:var(--blu);color:var(--blu);background:rgba(164,201,255,.12);box-shadow:0 0 6px rgba(164,201,255,.25)}
+.deck-row.compact .dkbtn{height:22px;font-size:7px}
 .deck-row.compact .dkctrl{width:52px}
 .deck-row.compact .dwov{height:10px;margin-bottom:1px}
 .deck-row.compact .dwz-row{height:52px;margin-bottom:3px}
@@ -1348,6 +1361,11 @@ function deckHTML(slot){
               <button class="dkbtn dkcue" disabled>CUE</button>
               <button class="dkbtn dkplay" disabled>▶</button>
             </div>
+            <button class="dkbtn dkstop dkctrl-stop" disabled>⏮</button>
+            <div class="dklyr-btns">
+              <button class="dkbtn dklyr dklyr-a" disabled>A</button>
+              <button class="dkbtn dklyr dklyr-b" disabled>B</button>
+            </div>
           </div>
           <div class="dkwaves">
             <div class="dwov" id="dwov${slot}" style="display:flex;align-items:center;justify-content:center"><span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span></div>
@@ -1397,6 +1415,11 @@ function deckHTML(slot){
           <div class="dkctrl-btns">
             <button class="dkbtn dkcue" data-a="cue" data-i="${slot}">CUE</button>
             <button class="dkbtn dkplay" data-a="play" data-i="${slot}">${d.pl?'⏸':'▶'}</button>
+          </div>
+          <button class="dkbtn dkstop dkctrl-stop" data-a="stop" data-i="${slot}">⏮</button>
+          <div class="dklyr-btns">
+            <button class="dkbtn dklyr dklyr-a${_deckLayerAssigned(slot,'A')?' ac':''}" data-a="layer" data-i="${slot}" data-lyr="A">A</button>
+            <button class="dkbtn dklyr dklyr-b${_deckLayerAssigned(slot,'B')?' ac':''}" data-a="layer" data-i="${slot}" data-lyr="B">B</button>
           </div>
         </div>
         <div class="dkwaves">
@@ -2092,6 +2115,16 @@ function doCueUp(slot){
   _sendTCState(slot);
 }
 
+function doReturnToStart(slot){
+  const d=DECKS[slot];if(!d?.ld||!d.au||d.type==='hw')return;
+  d.au.pause();d.au.currentTime=0;d.pl=false;d.cu=false;d.cp=0;
+  _sendTCState(slot);
+}
+
+function _deckLayerAssigned(slot,lyr){
+  return OUT[lyr]&&OUT[lyr].src===slot;
+}
+
 let _expandedSlot=null;
 function _resizeDeckCanvases(s){
   const d2=DECKS[s];if(!d2)return;
@@ -2192,6 +2225,12 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;
   const act=b.dataset.a,slot=parseInt(b.dataset.i);
   if(act==='play')doPlay(slot);
+  else if(act==='stop')doReturnToStart(slot);
+  else if(act==='layer'){
+    const lyr=b.dataset.lyr;
+    OUT[lyr].src=_deckLayerAssigned(slot,lyr)?null:slot;
+    renderOutLayers();renderDecks();
+  }
   else if(act==='eject')doEject(slot);
   else if(act==='hw')doToggleHW(slot);
   else if(act==='remove')removeVirtualDeck(slot);
