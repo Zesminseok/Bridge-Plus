@@ -168,6 +168,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dwz-row .dwz{flex:1;min-width:0;margin:0;height:100%;border-radius:6px 0 0 6px}
 /* VU strip: right side of waveform, channels side-by-side, bars vertical */
 .dvu-strip{display:flex;flex-direction:row;gap:2px;align-items:stretch;width:28px;flex-shrink:0;background:var(--bg-lowest);border:1px solid rgba(0,255,200,.2);border-left:none;border-radius:0 4px 4px 0;padding:3px 3px 3px 2px}
+.dfader-strip{width:18px;padding:3px 2px 3px 1px}
 .dvu-ch{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;height:100%}
 .dvu-lbl{font:700 6px var(--mn);color:var(--tx4);height:7px;line-height:7px;flex-shrink:0}
 .dvu-hbar{flex:1;width:100%;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;position:relative}
@@ -436,7 +437,7 @@ function createDeck(slot,type='virtual'){
     wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,
     _wfCache:null,_wfCacheH:0,_wfCacheKey:'',
     key:'',vu:0,vuSrc:null,vuAn:null,vuBuf:null,artUrl:null,hwVu:0,beatInBar:1,
-    zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null};
+    zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,mtcMaster:false};
 }
 
 async function getAudioDevs(){try{audioDevs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput');}catch(e){audioDevs=[];}}
@@ -938,7 +939,7 @@ function drawOverview(slot,prog){
   const pos=Math.max(0,Math.min(1,prog||0));
   if(d.ovgl&&(d.rgbWfDetail||d.rgbWf)){
     const modeMap={'rgb':0,'3band':1,'blue':2};
-    d.ovgl.draw(pos, modeMap[cfg.wfColor]??0);
+    d.ovgl.draw(pos, d.type==='hw'?3:(modeMap[cfg.wfColor]??0));
     return;
   }
   if(!d.wovCtx)return;
@@ -1049,7 +1050,7 @@ function drawZoomWaveform(slot,prog){
     }
     if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;} // no data yet
     const modeMap={'rgb':0,'3band':1,'blue':2};
-    const mode=modeMap[cfg.wfColor]??0;
+    const mode=d.type==='hw'?3:(modeMap[cfg.wfColor]??0);
     const cX=cfg.wfCenter==='left'?0.25:0.5;
     d.wgl.draw(pos*d.dur, d.zoomMs||8000, cX, mode);
     drawZoomOverlay(slot,prog);
@@ -1403,7 +1404,9 @@ function deckHTML(slot){
   const d=DECKS[slot];
   const isHW=d.type==='hw';
   const phas=`<div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>`;
-  const vuStrip=`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>`;
+  const vuStrip=isHW
+    ?`<div class="dvu-strip dfader-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dfader${slot}" style="background:var(--grn)"></div></div></div></div>`
+    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>`;
 
   /* Empty virtual deck: simple drop zone */
   if(!d.ld && !isHW){
@@ -1489,7 +1492,7 @@ function deckHTML(slot){
   const bAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="B"`:' disabled';
   const sec4=`<div class="dk-layer">
     <div class="dk-layer-lbl">SMPTE</div>
-    <span class="dksm-btn dksm-master${d.master?' on':''}" id="dmst${slot}" style="width:100%;text-align:center;min-width:0">MASTER</span>
+    <span class="dksm-btn dksm-master${d.mtcMaster?' on':''}" id="dmst${slot}" style="width:100%;text-align:center;min-width:0" data-a="mtc-master" data-i="${slot}">MASTER</span>
     <div class="dk-layer-ab">
       <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
       <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
@@ -2315,6 +2318,11 @@ document.addEventListener('click',e=>{
   else if(act==='zoom-in'){const d2=DECKS[slot];if(d2)d2.zoomMs=Math.max(2000,(d2.zoomMs||8000)/2);}
   else if(act==='zoom-out'){const d2=DECKS[slot];if(d2)d2.zoomMs=Math.min(32000,(d2.zoomMs||8000)*2);}
   else if(act==='zoom-rst'){const d2=DECKS[slot];if(d2)d2.zoomMs=8000;}
+  else if(act==='mtc-master'){
+    // MTC Master Out: toggle which deck drives MTC/SMPTE output
+    Object.values(DECKS).forEach(dk=>dk.mtcMaster=false);
+    const d2=DECKS[slot];if(d2)d2.mtcMaster=true;
+  }
 });
 document.getElementById('addDeckBtn').addEventListener('click',addVirtualDeck);
 
@@ -2478,11 +2486,21 @@ function tick(){
     // SYNC / MASTER LED buttons
     const bSync=document.getElementById('dsync'+slot);
     if(bSync)bSync.classList.toggle('on',!!d.sync);
-    // dmst = SMPTE MASTER (sec4), ddmst = deck sync MASTER (sec2)
-    const bMst=document.getElementById('dmst'+slot);
-    if(bMst)bMst.classList.toggle('on',!!d.master);
+    // ddmst = deck sync MASTER (sec2), dmst = MTC MASTER out (sec4)
     const bMst2=document.getElementById('ddmst'+slot);
     if(bMst2)bMst2.classList.toggle('on',!!d.master);
+    const bMst=document.getElementById('dmst'+slot);
+    if(bMst)bMst.classList.toggle('on',!!d.mtcMaster);
+    // Fader meter for HW decks (from DJM fader value)
+    if(d.type==='hw'){
+      const fEl=document.getElementById('dfader'+slot);
+      if(fEl){
+        const fv=faders[slot]||0;
+        const pct=Math.round(fv/255*100);
+        fEl.style.height=pct+'%';
+        fEl.style.background=pct>90?'var(--red)':pct>70?'var(--ylw)':'var(--grn)';
+      }
+    }
     const did=document.getElementById('did'+slot);
     if(did){
       // USB media color takes priority over default state color

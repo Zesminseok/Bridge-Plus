@@ -332,11 +332,19 @@ void main() {
   // Wavypy 3-band: perceptual gain correction applied per band
   // Raw analysis yields T > M > B (treble-heavy); compensate so bass dominates visually
   // Bass: sqrt expansion + 1.4x boost | Mid: linear 1.0x | Treble: 0.5x reduction
+  // mode==3: raw (HW mode) — no gain correction, show CDJ data as-is
   float B = bass, M = midf, T = treble;
 
-  float bH = sqrt(max(B, 0.0)) * scale * 1.4;
-  float mH = max(M, 0.0) * scale * 1.0;
-  float tH = max(T, 0.0) * scale * 0.5;
+  float bH, mH, tH;
+  if (u_mode == 3) {
+    bH = max(B, 0.0) * scale;
+    mH = max(M, 0.0) * scale;
+    tH = max(T, 0.0) * scale;
+  } else {
+    bH = sqrt(max(B, 0.0)) * scale * 1.4;
+    mH = max(M, 0.0) * scale * 1.0;
+    tH = max(T, 0.0) * scale * 0.5;
+  }
 
   // Use max of all three as the outer boundary — avoids cutting off treble/mid when bass is quiet
   float AA = 1.0;
@@ -403,10 +411,17 @@ void main() {
 
   float B = bass, M = midf, T = treble;
 
-  // Same perceptual gain correction as zoom shader
-  float bH = sqrt(max(B, 0.0)) * scale * 1.4;
-  float mH = max(M, 0.0) * scale * 1.0;
-  float tH = max(T, 0.0) * scale * 0.5;
+  // Same perceptual gain correction as zoom shader (mode==3: raw for HW)
+  float bH, mH, tH;
+  if (u_mode == 3) {
+    bH = max(B, 0.0) * scale;
+    mH = max(M, 0.0) * scale;
+    tH = max(T, 0.0) * scale;
+  } else {
+    bH = sqrt(max(B, 0.0)) * scale * 1.4;
+    mH = max(M, 0.0) * scale * 1.0;
+    tH = max(T, 0.0) * scale * 0.5;
+  }
 
   float outerH = max(bH, max(mH, tH));
   float AA2 = 0.6;

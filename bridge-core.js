@@ -665,7 +665,9 @@ class BridgeCore {
     if(this.tcnetBindAddr && this.tcnetBindAddr!=='auto' && this.tcnetBindAddr!=='0.0.0.0'){
       this.localAddr = this.tcnetBindAddr;
     }
-    return detectBroadcastFor(this.tcnetBindAddr);
+    const bc = detectBroadcastFor(this.tcnetBindAddr);
+    console.log(`[TCNet] resolve: bindAddr=${this.tcnetBindAddr||'auto'} localAddr=${this.localAddr} bc=${bc}`);
+    return bc;
   }
 
   async start(){
@@ -922,8 +924,16 @@ class BridgeCore {
     if(!this.running||!this.txSocket) return;
     try{ this.txSocket.send(buf, 0, buf.length, port, this.broadcastAddr); }catch(_){}
     if(!this.isLocalMode){
-      // Also send to 255.255.255.255 if broadcastAddr is subnet-specific
-      if(this.broadcastAddr!=='255.255.255.255'){
+      // Auto mode: send to ALL subnet broadcasts so TCNet reaches every network
+      if(!this.tcnetBindAddr || this.tcnetBindAddr==='auto' || this.tcnetBindAddr==='0.0.0.0'){
+        const sent=new Set([this.broadcastAddr]);
+        for(const iface of getAllInterfaces()){
+          if(!iface.internal && iface.broadcast && !sent.has(iface.broadcast)){
+            sent.add(iface.broadcast);
+            try{ this.txSocket.send(buf, 0, buf.length, port, iface.broadcast); }catch(_){}
+          }
+        }
+      } else if(this.broadcastAddr!=='255.255.255.255'){
         try{ this.txSocket.send(buf, 0, buf.length, port, '255.255.255.255'); }catch(_){}
       }
       if(this.localAddr){
