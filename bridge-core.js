@@ -194,7 +194,7 @@ function mkStatus(port, devices, layers, faders, hwMode){
   // layerStatus[0-7] at body[18-25] — raw TCNetLayerStatus (0=IDLE,3=PLAYING,5=PAUSED,6=STOPPED)
   for(let n=0;n<8;n++){
     const layerData = layers && layers[n];
-    d[18+n] = layerData ? (layerData.state||0) : 0;
+    d[18+n] = layerData ? toTCNetState(layerData.state||0) : 0;
   }
 
   // trackID[0-7] at body[26-57] (LE u32 × 8)
@@ -265,10 +265,10 @@ function mkTime(layers, uptimeMs){
     if(ld) d[64+n] = ld.beatPhase || 0;
   }
 
-  // layerState[0-7] at body[72-79] — raw TCNetLayerStatus (3=PLAYING,5=PAUSED...)
+  // layerState[0-7] at body[72-79] — TCNet state (0=Idle,1=Playing,2=Paused,3=Stopped)
   for(let n=0;n<8;n++){
     const ld = layers && layers[n];
-    if(ld) d[72+n] = ld.state||0;
+    if(ld) d[72+n] = toTCNetState(ld.state||0);
   }
 
   // generalSMPTEMode at body[81]
@@ -345,7 +345,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
 
   if(layerData){
     // TCNet v3.5.1B spec offsets (body-relative, i.e. subtract 24 from absolute byte#)
-    d[3] = layerData.state||0;   // byte 27: Layer State
+    d[3] = toTCNetState(layerData.state||0);   // byte 27: Layer State (TCNet: 0=Idle,1=Playing,2=Paused,3=Stopped)
     d[5] = 0x01;                 // byte 29: Sync Master (1=Master)
     d[7] = layerData.beatPhase || 0; // byte 31: Beat Marker (0-4)
     d.writeUInt32LE(layerData.totalLength || 0, 8);   // byte 32: Track Length (ms)
