@@ -55,13 +55,17 @@ function toTCNetState(s){
 const P1_TO_STATE = {
   0x00: STATE.IDLE,       0x02: STATE.STOPPED,  0x03: STATE.PLAYING,
   0x04: STATE.LOOPING,    0x05: STATE.PAUSED,   0x06: STATE.CUEDOWN,
-  0x07: STATE.CUEDOWN,    0x08: STATE.CUEDOWN,  0x09: STATE.STOPPED,
-  0x0D: STATE.STOPPED,    0x11: STATE.PLAYING,  0x13: STATE.CUEDOWN,
+  0x07: STATE.CUEDOWN,    0x08: STATE.CUEDOWN,
+  // ROLLBACK: 0x09 was STATE.STOPPED — prolink-connect: 0x09=Searching (not stopped)
+  0x09: STATE.PAUSED,     // Searching = 일시정지 상태로 취급 (트랙 유지)
+  0x0D: STATE.STOPPED,
+  0x0E: STATE.STOPPED,    // SpunDown — prolink-connect에서 추가 확인
+  0x11: STATE.PLAYING,    0x13: STATE.CUEDOWN,
 };
 const P1_NAME = {
   0x00:'no track',0x02:'loading',0x03:'playing',0x04:'loop',
   0x05:'paused',0x06:'paused@cue',0x07:'cue play',0x08:'cue scratch',
-  0x09:'searching',0x0D:'end',0x11:'reverse',0x13:'vinyl scratch',
+  0x09:'searching',0x0D:'end',0x0E:'spun down',0x11:'reverse',0x13:'vinyl scratch',
 };
 
 const PDJL = {
@@ -535,8 +539,11 @@ function parsePDJL(msg){
     // Neutral = 0x100000, range: 0x000000(-100%) ~ 0x200000(+100%)
     const pitchRaw = msg.length>0x8F ? (msg[0x8D]*65536 + msg[0x8E]*256 + msg[0x8F]) : 0x100000;
     const pitch = (pitchRaw-0x100000)/0x100000*100;
-    // Effective BPM = trackBpm × (1 + pitch/100), clamped to sane range
-    let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+pitch/100)*100)/100 : 0;
+    // effectivePitch at 0x99 (3B) — includes jog wheel nudge (prolink-connect confirmed)
+    const effPitchRaw = msg.length>0x9B ? (msg[0x99]*65536 + msg[0x9A]*256 + msg[0x9B]) : pitchRaw;
+    const effPitch = (effPitchRaw-0x100000)/0x100000*100;
+    // Effective BPM: use effectivePitch when available (jog wheel 반영)
+    let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+effPitch/100)*100)/100 : 0;
     if(bpmEff > 500) bpmEff = 0;  // sanity: no track exceeds 500 BPM
     const baseBpm = trackBpm;
     const beatNum   = msg.length>0xA3 ? msg.readUInt32BE(0xA0) : 0;
@@ -567,7 +574,7 @@ function parsePDJL(msg){
       isPlaying: state===STATE.PLAYING,
       isLooping: state===STATE.LOOPING,
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
-      pitch, pitchMultiplier,
+      pitch, effectivePitch:effPitch, pitchMultiplier,
       trackId: msg.readUInt32BE(0x2C),
       trackDeviceId: msg[0x28],
       slot:     msg[0x29],
@@ -2103,6 +2110,11 @@ class BridgeCore {
       pkt[0x2B] = 0x00;
       pkt.writeUInt32BE(trackId >>> 0, 0x2C);  // trackId (big-endian)
 
+      // prolink-connect: bytes 0x68 and 0x75 MUST be 1 for mp3 metadata delivery
+      // ROLLBACK: was 0x00 (unset)
+      pkt[0x68] = 0x01;
+      pkt[0x75] = 0x01;
+
       // Playing state: P1 byte (0x7B) and flags (0x89)
       // ROLLBACK: was pkt[0x7B]=0x09 (0x09=searching per Deep Symmetry spec)
       pkt[0x7B] = 0x03;   // P1 = 0x03 = playing (Deep Symmetry: 0x03=playing, 0x09=search)
@@ -2110,8 +2122,13 @@ class BridgeCore {
       // BPM × 100 as uint16BE at 0x92
       const bpmVal = Math.round((bpm||128)*100);
       pkt.writeUInt16BE(bpmVal, 0x92);
-      // Pitch = 0x100000 (no pitch shift) at 0x8C
-      pkt.writeUInt32BE(0x100000, 0x8C);
+      // Pitch: slider at 0x8D (3B), effective at 0x99 (3B) — neutral = 0x100000
+      // prolink-connect writes neutral pitch at both locations
+      pkt[0x8D] = 0x10; pkt[0x8E] = 0x00; pkt[0x8F] = 0x00; // sliderPitch = 0x100000
+      pkt[0x99] = 0x10; pkt[0x9A] = 0x00; pkt[0x9B] = 0x00; // effectivePitch = 0x100000
+      // ROLLBACK: was pkt.writeUInt32BE(0x100000, 0x8C) — wrote 4B starting at 0x8C
+      // prolink-connect: 0xB6 MUST be 1 (firmware version check bypass)
+      if(pkt.length > 0xB6) pkt[0xB6] = 0x01;
 
       const allBCs = [...new Set(
         getAllInterfaces()
