@@ -18,6 +18,7 @@ const TC = {
   VER   : Buffer.from([0x03, 0x05]),
   OPTIN : 0x02, OPTOUT: 0x03, STATUS: 0x05,
   DATA  : 0xC8, TIME  : 0xFE,  APP   : 0x1E,
+  ARTWORK: 0xCC, // MessageType 204 = LowResArtwork (JPEG)
   NOTIFY: 0x0D,
   P_BC  : 60000, P_TIME: 60001, P_DATA: 60002,
   NID   : Buffer.from([Math.floor(Math.random()*256), 0xFE]), // random per instance
@@ -32,6 +33,7 @@ const TC = {
   LPORT : 0,  // dynamically assigned each run
   DT_METRICS: 0x02,  // MetricsData: fader, gain, pitch, BPM, status per layer
   DT_META:    0x04,  // MetaData: track name, artist, waveform, artwork per layer
+  DT_ARTWORK: 0x80,  // LowResArtworkFile (128) — JPEG artwork per layer
 };
 
 // TCNet LayerStatus values (node-tcnet spec)
@@ -464,6 +466,35 @@ function mkNotification(){
   const d = b.slice(TC.H);
   d[0]=0xFF; d[1]=0xFF; d[2]=0xFF; d[3]=0x00; d[4]=0x1E; d[5]=0x00;
   return b;
+}
+
+/**
+ * LowResArtwork (MessageType 0xCC = 204)
+ * TCNet artwork packet: header(24B) + dataType(1B) + layerID(1B) +
+ * dataSize(4B BE) + totalPackets(4B BE) + packetNumber(4B BE) + dataClusterSize(4B BE) + JPEG data
+ * Large images are split into multiple packets (MTU-safe chunks)
+ */
+function mkLowResArtwork(layerIdx, jpegBuf){
+  const MAX_CHUNK = 1400;  // MTU-safe payload per packet
+  const totalPackets = Math.ceil(jpegBuf.length / MAX_CHUNK);
+  const packets = [];
+
+  for(let i = 0; i < totalPackets; i++){
+    const chunkStart = i * MAX_CHUNK;
+    const chunk = jpegBuf.slice(chunkStart, chunkStart + MAX_CHUNK);
+    // header(24) + dataType(1) + layerID(1) + dataSize(4) + totalPackets(4) + packetNumber(4) + clusterSize(4) + chunk
+    const b = Buffer.alloc(TC.H + 2 + 16 + chunk.length);
+    buildHdr(TC.ARTWORK).copy(b, 0);
+    b[TC.H]     = TC.DT_ARTWORK;  // 128 = LowResArtworkFile
+    b[TC.H + 1] = layerIdx;       // 1-based layer
+    b.writeUInt32BE(jpegBuf.length, TC.H + 2);   // total dataSize
+    b.writeUInt32BE(totalPackets,   TC.H + 6);   // totalPackets
+    b.writeUInt32BE(i,              TC.H + 10);   // packetNumber (0-based)
+    b.writeUInt32BE(chunk.length,   TC.H + 14);   // dataClusterSize
+    chunk.copy(b, TC.H + 18);
+    packets.push(b);
+  }
+  return packets;
 }
 
 // ─────────────────────────────────────────────
@@ -1138,6 +1169,16 @@ class BridgeCore {
     try{ sock.send(buf, 0, buf.length, TC.P_DATA, this.broadcastAddr); }catch(_){}
   }
 
+  /** Send LowResArtwork (0xCC) packets for a layer. Splits JPEG into MTU-safe chunks. */
+  _sendArtwork(layerIdx, jpegBuf){
+    if(!jpegBuf || !this.running) return;
+    const packets = mkLowResArtwork(layerIdx, jpegBuf);
+    console.log(`[TCNET-ART] L${layerIdx} sending ${packets.length} artwork packets (${jpegBuf.length}B JPEG)`);
+    for(const pkt of packets){
+      this._sendDataToArenas(pkt);
+    }
+  }
+
   /**
    * DATA cycle (24 packets): Phase 1 (0-7) MetricsData per layer,
    * Phase 2 (8-15) MetaData per layer, Phase 3 (16-23) MetricsData again.
@@ -1679,7 +1720,7 @@ class BridgeCore {
             if(this._metaCache?.[li]) this._metaCache[li] = null;
           }
           this.onAlbumArt?.(p.playerNum, null);
-          this._pushArtToResolume(li, BLANK_JPEG).catch(()=>{});
+          this._sendArtwork(li + 1, BLANK_JPEG);  // TCNet LowResArtwork clear
           // Auto-request metadata — must query the SOURCE device's dbserver (Link Export)
           if(p.trackId>0 && p.hasTrack){
             this._tcAcc[li].metaRequested = true;
@@ -1963,13 +2004,13 @@ class BridgeCore {
     if(slot<0||slot>7) return;
     this._virtualArt[slot] = jpegBuf;
     console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B`);
+    // Primary: send artwork via TCNet LowResArtwork (MessageType 0xCC)
+    this._sendArtwork(slot + 1, jpegBuf);
     // Trigger Arena to query our dbserver: send CDJ status with track loaded
     const layer = this.layers[slot];
     if(layer && layer.trackId){
       this._sendVirtualCDJStatus(slot+1, layer.trackId, layer.bpm||128);
     }
-    // REST fallback: set thumbnail on corresponding clip
-    this._pushArtToResolume(slot, jpegBuf).catch(()=>{});
   }
 
   /** Send a virtual CDJ status packet (type 0x0A) so Resolume Arena sees
@@ -3010,7 +3051,7 @@ class BridgeCore {
 module.exports = {
   BridgeCore, getAllInterfaces,
   mkOptIn, mkStatus, mkTime, mkAppResp, mkMetadataResp,
-  mkDataMetrics, mkDataMeta, mkNotification,
+  mkDataMetrics, mkDataMeta, mkNotification, mkLowResArtwork,
   parsePDJL,
   TC, PDJL, STATE, P1_TO_STATE, P1_NAME,
 };
