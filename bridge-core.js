@@ -76,6 +76,19 @@ let _seq = 0;
 const u32 = n => (Math.max(0,n)&0xFFFFFFFF)>>>0;
 const clamp8 = n => Math.max(0,Math.min(255,Math.round(n)))&0xFF;
 
+// UTF-32LE writer — matches official Bridge TCNetOutput.h writeUtf32LE()
+function _writeUtf32LE(buf, offset, str, maxChars){
+  for(let i=0;i<str.length&&i<maxChars;i++){
+    const cp=str.codePointAt(i);
+    const off=offset+i*4;
+    buf[off]  = cp&0xFF;
+    buf[off+1]=(cp>>8)&0xFF;
+    buf[off+2]=(cp>>16)&0xFF;
+    buf[off+3]=(cp>>24)&0xFF;
+    if(cp>0xFFFF) i++; // surrogate pair
+  }
+}
+
 function buildHdr(type){
   const b = Buffer.alloc(TC.H);
   TC.NID.copy(b,0); TC.VER.copy(b,2); TC.MAGIC.copy(b,4);
@@ -421,18 +434,12 @@ function mkDataMeta(layerIdx, layerData){
   d[1] = layerIdx;     // 1-based layer index
 
   if(layerData){
-    // TCNet v3.5.0+ requires UTF-16LE encoding (256 bytes = 128 UTF-16 chars max)
+    // Official Bridge uses UTF-32LE (4 bytes/char, 64 chars max = 256 bytes)
     const artist = layerData.artistName || '';
-    if(artist){
-      const artistBuf = Buffer.from(artist, 'utf16le');
-      artistBuf.copy(d, 5, 0, Math.min(artistBuf.length, 256));
-    }
+    if(artist) _writeUtf32LE(d, 5, artist, 64);
 
     const track = layerData.trackName || '';
-    if(track){
-      const trackBuf = Buffer.from(track, 'utf16le');
-      trackBuf.copy(d, 261, 0, Math.min(trackBuf.length, 256));
-    }
+    if(track) _writeUtf32LE(d, 261, track, 64);
 
     d.writeUInt16LE(0, 517);  // trackKey
     d.writeUInt32LE(layerData.trackId || 0, 519);
@@ -1574,7 +1581,7 @@ class BridgeCore {
       if(this.hwMode[li]){
         const beatPhase = Math.max(0, (p.beatInBar - 1)) * 64;
 
-        const acc = this._tcAcc[li];
+        let acc = this._tcAcc[li];
         const trackChanged = !acc || acc.trackId !== p.trackId;
         let timecodeMs = 0;
 
@@ -1599,44 +1606,62 @@ class BridgeCore {
           try{console.log(`[TC] P${p.playerNum} metadata retry → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
-        // CDJ-3000: use Precise Position if available (direct ms, most accurate)
+        // ── Model-specific position tracking ──
+        // CDJ-3000: Precise Position (0x0b) — direct ms, highest accuracy
+        // CDJ-2000NXS2: Beat + BeatGrid + interpolation (beat-link method)
         const pp = this._precisePos?.[p.playerNum];
-        if(pp && (Date.now()-pp.time)<500){
+        const hasPrecise = pp && (Date.now()-pp.time)<500;
+
+        if(hasPrecise){
+          // CDJ-3000: direct ms from 0x0b packet
           timecodeMs = pp.playbackMs;
-        } else if(acc && p.beatNum > 0 && p.bpm > 0){
-          // Beat grid lookup (Rekordbox-accurate ms positions)
-          const bg = this._beatGrids[p.playerNum];
-          const beatIdx = p.beatNum - 1; // 0-based index
-          if(bg && beatIdx >= 0 && beatIdx < bg.length){
-            timecodeMs = bg[beatIdx].timeMs;
-          } else {
-            // Fallback: calculate from baseBpm
+        } else if(p.isPlaying || p.isLooping){
+          // NXS2 (or CDJ-3000 without recent 0x0b): beat-link style interpolation
+          if(!acc) this._tcAcc[li] = acc = { prevBn:0, elapsedMs:0, trackId:p.trackId, dbgCount:0, metaRequested:false };
+          const bg = this._beatGrids?.[p.playerNum];
+          const beatIdx = p.beatNum - 1;
+
+          if(p.beatNum > 0 && acc.prevBn !== p.beatNum){
+            // New beat arrived — definitive position anchor
+            if(bg && beatIdx >= 0 && beatIdx < bg.length){
+              timecodeMs = bg[beatIdx].timeMs;
+            } else {
+              const baseBpm = p.bpmTrack || p.bpm;
+              timecodeMs = baseBpm > 0 ? Math.round((p.beatNum - 1) * 60000 / baseBpm) : 0;
+            }
+            acc._anchorMs = timecodeMs;
+            acc._anchorTime = Date.now();
+            acc.prevBn = p.beatNum;
+            if(acc.dbgCount < 20){
+              acc.dbgCount++;
+              try{console.log(`[TC] P${p.playerNum} beat=${p.beatNum} ms=${timecodeMs} bpm=${p.bpm} ${bg?'(grid)':'(calc)'}`);}catch(_){}
+            }
+          } else if(acc._anchorMs != null){
+            // Between beats — interpolate from last anchor using pitch-corrected speed
+            const speed = p.actualSpeed > 0 ? p.actualSpeed / 0x100000 : 1.0;
+            const elapsed = Date.now() - acc._anchorTime;
+            timecodeMs = Math.round(acc._anchorMs + elapsed * speed);
+          } else if(p.beatNum > 0 && p.bpm > 0){
+            // First status with no anchor yet
             const baseBpm = p.bpmTrack || p.bpm;
-            const msPerBeat = 60000 / baseBpm;
-            timecodeMs = Math.round((p.beatNum - 1) * msPerBeat);
+            timecodeMs = baseBpm > 0 ? Math.round((p.beatNum - 1) * 60000 / baseBpm) : 0;
+            acc._anchorMs = timecodeMs;
+            acc._anchorTime = Date.now();
+            acc.prevBn = p.beatNum;
+          } else {
+            // No BPM/no beat: wall-clock fallback
+            const speed = p.actualSpeed > 0 ? p.actualSpeed / 0x100000 : 1.0;
+            if(!acc._playStart){
+              acc._playStart = Date.now();
+              acc._playMs = this.layers[li]?.timecodeMs || 0;
+            }
+            timecodeMs = acc._playMs + Math.round((Date.now() - acc._playStart) * speed);
           }
-          const deltaBn = p.beatNum - acc.prevBn;
-          if(deltaBn > 0 && acc.dbgCount < 20){
-            acc.dbgCount++;
-            try{console.log(`[TC] P${p.playerNum} beat=${p.beatNum} delta=${deltaBn} ms=${timecodeMs} bpm=${p.bpm} ${bg?'(grid)':'(calc)'}`);}catch(_){}
-          }
-          acc.prevBn = p.beatNum;
-        } else if(acc && (p.isPlaying||p.isLooping) && (p.bpm<=0||p.beatNum<=0)){
-          // Short samples / no BPM / no beats: use actualSpeed-based wall-clock
-          const speed = p.actualSpeed>0 ? p.actualSpeed/0x100000 : 1.0;
-          if(!acc._playStart){
-            acc._playStart = Date.now();
-            acc._playMs = this.layers[li]?.timecodeMs || 0; // start from current position
-          }
-          timecodeMs = acc._playMs + Math.round((Date.now() - acc._playStart) * speed);
-        } else if(!p.isPlaying && !p.isLooping){
-          // Stopped/paused: preserve previous position (don't reset to 0)
+        } else {
+          // Stopped/paused: preserve previous position
           const prevLayer = this.layers[li];
           if(prevLayer && prevLayer.timecodeMs > 0) timecodeMs = prevLayer.timecodeMs;
-        }
-        if(!p.isPlaying && !p.isLooping && acc){
-          if(acc._playStart) acc._playMs = timecodeMs; // save position on stop
-          acc._playStart = 0;
+          if(acc){ acc._playStart = 0; acc._anchorMs = null; acc._anchorTime = null; }
         }
 
         const prev = this.layers[li];
