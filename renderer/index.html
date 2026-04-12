@@ -94,14 +94,14 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk.dk-wide{grid-column:1/-1}
 /* ======= DECK STRIP — HEADER + TITLE + BODY ======= */
 /* Header row 1: player number + state + SYNC/MASTER + delete */
-.dk-hdr{display:flex;align-items:baseline;gap:6px;padding:5px 8px 1px;overflow:hidden;white-space:nowrap}
+.dk-hdr{display:flex;align-items:baseline;gap:6px;padding:5px 8px 2px;overflow:hidden;white-space:nowrap}
 .dk-num{font:800 26px var(--lb);color:var(--tx);line-height:1;flex-shrink:0}
 .dk-player-lbl{font:600 10px var(--lb);color:var(--tx2);letter-spacing:.07em;flex-shrink:0}
 .dk-hdr-r{display:flex;align-items:center;gap:3px;flex-shrink:0;margin-left:auto}
 .dk-hdr-r .dhtb{padding:3px 8px;font-size:11px;border-radius:4px}
 /* Header row 2: artist — title */
-.dk-title-row{display:flex;align-items:center;gap:5px;padding:0 8px 3px;overflow:hidden;white-space:nowrap;min-width:0}
-.dk-title-sep{color:var(--tx3);flex-shrink:0;font-size:10px}
+.dk-title-row{display:flex;align-items:center;gap:5px;padding:2px 8px 4px;overflow:hidden;white-space:nowrap;min-width:0}
+.dk-title-sep{color:var(--tx3);flex-shrink:0;font-size:12px}
 
 /* Body: WF+VU | TC | Transport | SMPTE — all top-aligned */
 .dk-body{display:flex;flex-direction:row;align-items:stretch;padding:0 8px 6px;gap:6px}
@@ -118,11 +118,11 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 
 /* SECTION 2 — TC: display + BPM/KEY/phasor + time */
 .dk-tc{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;gap:2px;flex-shrink:0;padding:0 2px}
-.dk-tc-hdrs{display:flex;justify-content:space-around;width:100%;font:600 8px var(--mn);color:var(--tx3);letter-spacing:.07em}
-.dk-tc-info-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;margin-top:3px}
-.dk-bpm-cur{font:700 15px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.01em;border:1px solid rgba(0,255,200,.35);border-radius:3px;padding:2px 6px;white-space:nowrap;display:inline-flex;align-items:baseline}
-.dk-key-box{font:700 15px var(--mn);color:var(--grn);letter-spacing:.04em;border:1px solid rgba(52,211,153,.35);border-radius:3px;padding:2px 6px;white-space:nowrap}
-.dk-tc-time{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:3px}
+.dk-tc-hdrs{display:grid;grid-template-columns:2fr .5fr 2fr .5fr 2fr .5fr 2fr;width:100%;font:600 8px var(--mn);color:var(--tx3);letter-spacing:.07em;text-align:center}
+.dk-tc-info-row{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;margin-top:auto}
+.dk-bpm-cur{font:700 15px/1 var(--mn);color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.01em;border:1px solid rgba(0,255,200,.35);border-radius:3px;padding:3px 6px;white-space:nowrap;display:inline-flex;align-items:baseline;height:24px;box-sizing:border-box}
+.dk-key-box{font:700 15px/1 var(--mn);color:var(--grn);letter-spacing:.04em;border:1px solid rgba(52,211,153,.35);border-radius:3px;padding:3px 6px;white-space:nowrap;display:inline-flex;align-items:baseline;height:24px;box-sizing:border-box}
+.dk-tc-time{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px}
 
 /* SECTION 3 — Transport: CUE|PLAY square + STOP full width */
 .dk-transport{display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:112px}
@@ -132,12 +132,12 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-transport .dkbtn.dkplay{font-size:20px}
 .dk-transport .dkbtn.dkstop{flex:none;border-radius:6px;height:26px}
 
-/* SECTION 4 — Layer/SMPTE — stretch full height */
-.dk-layer{display:flex;flex-direction:column;gap:3px;width:80px;flex-shrink:0;align-items:stretch}
+/* SECTION 4 — Layer/SMPTE — CUE/PLAY 행에 맞춤 */
+.dk-layer{display:flex;flex-direction:column;gap:4px;width:80px;flex-shrink:0;align-items:stretch}
 .dk-layer-lbl{font:700 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-align:center;flex-shrink:0}
-.dk-layer .dksm-btn{flex:1;display:flex;align-items:center;justify-content:center}
-.dk-layer-ab{display:flex;gap:3px;flex:1}
-.dk-layer-ab .dkbtn{flex:1}
+.dk-layer .dksm-btn{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.dk-layer-ab{display:flex;gap:4px;flex:none;height:26px}
+.dk-layer-ab .dkbtn{flex:1;height:100%}
 .dkctrl-btns{display:flex;gap:3px}
 .dkbtn{flex:1;height:30px;min-height:0;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
 .dkbtn:disabled{opacity:.25;cursor:not-allowed}
@@ -173,7 +173,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dvu-hbar{flex:1;width:100%;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;position:relative}
 .dvu-hfill{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:2px;transition:height .05s}
 /* Beat phasor: 2×2 square grid — row-major = TL→TR→BL→BR (clockwise) */
-.dphs{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);grid-auto-flow:row;gap:3px;width:28px;height:28px;flex-shrink:0}
+.dphs{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);grid-auto-flow:row;gap:2px;width:22px;height:22px;flex-shrink:0}
 .dphs-seg{border-radius:3px;background:rgba(255,255,255,.1);position:relative;overflow:hidden}
 .dphs-seg.on{background:rgba(255,255,255,.18)}
 .dphs-fill{position:absolute;inset:0;border-radius:3px;background:rgba(90,240,179,.7);opacity:0;transition:opacity .05s}
@@ -1399,9 +1399,9 @@ function deckHTML(slot){
     </div>
   </div>
   <div class="dk-title-row">
-    <span id="dta${slot}" style="font:500 11px var(--sn);color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0">${isLoaded?(d.ar||''):''}</span>
+    <span id="dta${slot}" style="font:500 13px var(--sn);color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0">${isLoaded?(d.ar||''):''}</span>
     <span class="dk-title-sep">—</span>
-    <span class="dktn-t" id="dtn${slot}" style="font:500 11px var(--sn);color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">${isLoaded?(d.tn||'—'):'—'}</span>
+    <span class="dktn-t" id="dtn${slot}" style="font:500 13px var(--sn);color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">${isLoaded?(d.tn||'—'):'—'}</span>
   </div>`;
 
   /* SECTION 1: waveform panel + VU strip (right side, full height) */
@@ -1427,7 +1427,7 @@ function deckHTML(slot){
 
   /* SECTION 2: timecode — H/M/S/FRAMES + large TC + key/bpm/phasor row + time */
   const sec2=`<div class="dk-tc">
-    <div class="dk-tc-hdrs"><span>H</span><span>M</span><span>S</span><span>FRAMES</span></div>
+    <div class="dk-tc-hdrs"><span class="h-h">H</span><span class="h-sep"></span><span class="h-m">M</span><span class="h-sep"></span><span class="h-s">S</span><span class="h-sep"></span><span class="h-f">FRAMES</span></div>
     <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
     <div class="dk-tc-info-row">
       <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:6px;flex-shrink:0"></div>
