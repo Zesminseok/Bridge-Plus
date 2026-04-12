@@ -627,10 +627,11 @@ function parsePDJL(msg){
           console.log(`[DJM] on-air packet len=${msg.length}: ${hex}`);
         }catch(_){}
       }
-      // On-air flags at byte 0x24+channel (1-based skipping 0x28 which is cross-fader assign)
-      // On-air flags at 2-byte intervals: 0x25, 0x27, 0x29, 0x2B
+      // On-air flags at consecutive bytes: CH1=0x24, CH2=0x25, CH3=0x26, CH4=0x27
+      // Confirmed via beat-link source: data[0x23 + channel] for channel 1-4
+      // DJM-V10 (6ch): additionally CH5=0x2D, CH6=0x2E (packet length 0x35)
       return{kind:'djm_onair',name:name2,
-        onAir:[msg[0x25]?1:0, msg[0x27]?1:0, msg[0x29]?1:0, msg[0x2B]?1:0]};
+        onAir:[msg[0x24]?1:0, msg[0x25]?1:0, msg[0x26]?1:0, msg[0x27]?1:0]};
     }
   }
   // Type 0x28 = Beat packet (96B on port 50001) — beat timing + position data
@@ -1862,6 +1863,7 @@ class BridgeCore {
       }
     }
     if(p.kind==='djm'){
+      this._hasRealFaders=true;  // Got actual fader data from 0x29/0x39 mixer status
       this.faders=p.channel;
       if(!this.devices['djm']){
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
@@ -1875,6 +1877,15 @@ class BridgeCore {
     // DJM Channels-On-Air (type 0x03 on port 50001)
     if(p.kind==='djm_onair'){
       this.onAir = p.onAir;
+      // DJM-900NXS2 does not send type 0x29/0x39 mixer status with fader positions.
+      // Use on-air flags as binary fader proxy (0→0, 1→255) when no real fader data.
+      if(!this._hasRealFaders){
+        const onAirFaders = p.onAir.map(v => v ? 255 : 0);
+        if(this.faders.some((v,i) => v !== onAirFaders[i])){
+          this.faders = onAirFaders;
+          this.onDJMStatus?.(onAirFaders);
+        }
+      }
       if(!this.devices['djm']){
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);

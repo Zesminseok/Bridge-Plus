@@ -154,6 +154,9 @@ ipcMain.handle('bridge:rebindPDJL',async(_,{addr})=>{
 ipcMain.handle('bridge:setTCNetMode',(_,{mode})=>{
   bridge?.setTCNetMode(mode);return{ok:true};
 });
+ipcMain.handle('bridge:setTCNetUnicast',(_,{unicast,allIfaces})=>{
+  bridge?.setTCNetUnicast(unicast,allIfaces);return{ok:true};
+});
 
 // ═══ Rekordbox ANLZ PWV7 reader ═══
 // Reads 3-band waveform data from .2EX files for pixel-perfect Rekordbox rendering

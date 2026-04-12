@@ -30,5 +30,6 @@ contextBridge.exposeInMainWorld('bridge',{
   rebindTCNet:(addr)=>ipcRenderer.invoke('bridge:rebindTCNet',{addr}),
   rebindPDJL:(addr)=>ipcRenderer.invoke('bridge:rebindPDJL',{addr}),
   setTCNetMode:(mode)=>ipcRenderer.invoke('bridge:setTCNetMode',{mode}),
+  setTCNetUnicast:(unicast,allIfaces)=>ipcRenderer.invoke('bridge:setTCNetUnicast',{unicast,allIfaces}),
   onQuitting:(cb)=>ipcRenderer.on('app:quitting',()=>cb()),
 });

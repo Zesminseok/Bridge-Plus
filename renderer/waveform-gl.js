@@ -329,24 +329,35 @@ void main() {
     return;
   }
 
-  // CDJ-style 3-band waveform: single bar height with ratio-based coloring
-  // Height = max of all bands, color = weighted blend by band dominance
+  // ── Mode 4: HW Native RGB — CDJ colors displayed as-is ──
+  if (u_mode == 4) {
+    float h = wf.a;  // alpha channel = pre-computed height
+    float outerH = h * scale;
+    float AA = 1.0;
+    float inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
+    if (inside < 0.005) { fragColor = vec4(0.0,0.0,0.0,1.0); return; }
+    // Normalize brightness: max channel → full brightness
+    float mx = max(bass, max(midf, treble));
+    vec3 col = mx > 0.001 ? vec3(bass, midf, treble) / mx : vec3(0.3);
+    fragColor = vec4(col * inside, 1.0);
+    return;
+  }
+
+  // ── Mode 0/1/3: 3-band waveform with ratio-based coloring ──
   float B = bass, M = midf, T = treble;
 
-  // Perceptual gain correction: bass boost, treble reduction
-  // mode==3: raw HW data with minimal correction
+  // Perceptual gain correction
   float bV, mV, tV;
   if (u_mode == 3) {
     bV = sqrt(max(B, 0.0)) * 1.2;
     mV = max(M, 0.0);
     tV = max(T, 0.0) * 0.6;
   } else {
-    bV = sqrt(max(B, 0.0)) * 1.4;
+    bV = sqrt(max(B, 0.0)) * 1.3;
     mV = max(M, 0.0) * 1.0;
-    tV = max(T, 0.0) * 0.5;
+    tV = max(T, 0.0) * 0.7;
   }
 
-  // Bar height = max corrected band
   float outerH = max(bV, max(mV, tV)) * scale;
   float AA = 1.0;
   float inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
@@ -355,18 +366,34 @@ void main() {
     fragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
   }
 
-  // Rekordbox 3-band palette: bass=#0055E1 (deep blue), mid=#FFA600 (amber), treble=#FFFFFF (white)
-  vec3 bassCol = vec3(0.0,  0.333, 0.882);
-  vec3 midCol  = vec3(1.0,  0.651, 0.0);
-  vec3 trebCol = vec3(1.0,  1.0,   1.0);
-
-  // Color from band ratios — CDJ style: dominant frequency determines color
-  float total = bV + mV + tV;
-  vec3 col;
-  if (total < 0.001) {
-    col = bassCol;
+  vec3 bassCol, midCol, trebCol;
+  if (u_mode == 0) {
+    bassCol = vec3(1.0, 0.1, 0.1);
+    midCol  = vec3(0.1, 1.0, 0.1);
+    trebCol = vec3(0.2, 0.35, 1.0);
   } else {
-    col = bassCol * (bV / total) + midCol * (mV / total) + trebCol * (tV / total);
+    bassCol = vec3(0.2,  0.53, 1.0);     // #3388FF — brighter blue
+    midCol  = vec3(1.0,  0.72, 0.0);    // #FFB800 — warm amber
+    trebCol = vec3(1.0,  1.0,   1.0);    // #FFFFFF
+  }
+
+  // Rekordbox-style: dominant band picks the color, slight lerp to 2nd for smooth transitions
+  vec3 col;
+  if (bV >= mV && bV >= tV) {
+    float t2 = mV >= tV ? mV : tV;
+    vec3 c2 = mV >= tV ? midCol : trebCol;
+    float blend = (bV > 0.001) ? clamp(t2 / bV, 0.0, 1.0) * 0.3 : 0.0;
+    col = mix(bassCol, c2, blend);
+  } else if (mV >= tV) {
+    float t2 = bV >= tV ? bV : tV;
+    vec3 c2 = bV >= tV ? bassCol : trebCol;
+    float blend = (mV > 0.001) ? clamp(t2 / mV, 0.0, 1.0) * 0.3 : 0.0;
+    col = mix(midCol, c2, blend);
+  } else {
+    float t2 = bV >= mV ? bV : mV;
+    vec3 c2 = bV >= mV ? bassCol : midCol;
+    float blend = (tV > 0.001) ? clamp(t2 / tV, 0.0, 1.0) * 0.3 : 0.0;
+    col = mix(trebCol, c2, blend);
   }
 
   fragColor = vec4(col * inside, 1.0);
@@ -412,7 +439,23 @@ void main() {
     return;
   }
 
-  // CDJ-style 3-band: single bar height, ratio-based color (same as zoom shader)
+  // ── Mode 4: HW Native RGB — CDJ colors as-is ──
+  if (u_mode == 4) {
+    float h = wf.a;
+    float outerH = h * scale;
+    float AA2 = 0.6;
+    float inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
+    if (inside < 0.005) {
+      fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0); return;
+    }
+    float mx = max(bass, max(midf, treble));
+    vec3 col = mx > 0.001 ? vec3(bass, midf, treble) / mx : vec3(0.3);
+    float dim = played ? 0.38 : 1.0;
+    fragColor = vec4(col * inside * dim, 1.0);
+    return;
+  }
+
+  // ── Mode 0/1/3: 3-band ratio-based color ──
   float B = bass, M = midf, T = treble;
 
   float bV, mV, tV;
@@ -421,9 +464,9 @@ void main() {
     mV = max(M, 0.0);
     tV = max(T, 0.0) * 0.6;
   } else {
-    bV = sqrt(max(B, 0.0)) * 1.4;
+    bV = sqrt(max(B, 0.0)) * 1.3;
     mV = max(M, 0.0) * 1.0;
-    tV = max(T, 0.0) * 0.5;
+    tV = max(T, 0.0) * 0.7;
   }
 
   float outerH = max(bV, max(mV, tV)) * scale;
@@ -435,16 +478,33 @@ void main() {
     return;
   }
 
-  vec3 bassCol = vec3(0.0, 0.333, 0.882);
-  vec3 midCol  = vec3(1.0, 0.651, 0.0);
-  vec3 trebCol = vec3(1.0, 1.0,   1.0);
-
-  float total = bV + mV + tV;
-  vec3 col;
-  if (total < 0.001) {
-    col = bassCol;
+  vec3 bassCol, midCol, trebCol;
+  if (u_mode == 0) {
+    bassCol = vec3(1.0, 0.1, 0.1);
+    midCol  = vec3(0.1, 1.0, 0.1);
+    trebCol = vec3(0.2, 0.35, 1.0);
   } else {
-    col = bassCol * (bV / total) + midCol * (mV / total) + trebCol * (tV / total);
+    bassCol = vec3(0.0, 0.333, 0.882);
+    midCol  = vec3(1.0, 0.651, 0.0);
+    trebCol = vec3(1.0, 1.0,   1.0);
+  }
+
+  vec3 col;
+  if (bV >= mV && bV >= tV) {
+    float t2 = mV >= tV ? mV : tV;
+    vec3 c2 = mV >= tV ? midCol : trebCol;
+    float blend = (bV > 0.001) ? clamp(t2 / bV, 0.0, 1.0) * 0.3 : 0.0;
+    col = mix(bassCol, c2, blend);
+  } else if (mV >= tV) {
+    float t2 = bV >= tV ? bV : tV;
+    vec3 c2 = bV >= tV ? bassCol : trebCol;
+    float blend = (mV > 0.001) ? clamp(t2 / mV, 0.0, 1.0) * 0.3 : 0.0;
+    col = mix(midCol, c2, blend);
+  } else {
+    float t2 = bV >= mV ? bV : mV;
+    vec3 c2 = bV >= mV ? bassCol : midCol;
+    float blend = (tV > 0.001) ? clamp(t2 / tV, 0.0, 1.0) * 0.3 : 0.0;
+    col = mix(trebCol, c2, blend);
   }
 
   float dim = played ? 0.38 : 1.0;
