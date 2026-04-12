@@ -530,9 +530,10 @@ function parsePDJL(msg){
     // Ref: https://djl-analysis.deepsymmetry.org/djl-analysis/vcdj.html
     const bpmRaw16 = msg.length>0x93 ? msg.readUInt16BE(0x92) : 0;
     const trackBpm = (bpmRaw16>0 && bpmRaw16!==0xFFFF) ? bpmRaw16/100 : 0;
-    // Pitch: 4 bytes uint32BE at 0x8C (Deep Symmetry: 0x8C-0x8F, neutral=0x100000)
-    // ROLLBACK: was 3-byte read from 0x8D (msg[0x8D]*65536+msg[0x8E]*256+msg[0x8F])
-    const pitchRaw = msg.length>0x8F ? msg.readUInt32BE(0x8C) : 0x100000;
+    // Pitch: 3 bytes uint24 at 0x8D (prolink-connect + beat-link confirmed: 0x8D, NOT 0x8C)
+    // Deep Symmetry docs say 4B at 0x8C but actual implementations read 3B at 0x8D
+    // Neutral = 0x100000, range: 0x000000(-100%) ~ 0x200000(+100%)
+    const pitchRaw = msg.length>0x8F ? (msg[0x8D]*65536 + msg[0x8E]*256 + msg[0x8F]) : 0x100000;
     const pitch = (pitchRaw-0x100000)/0x100000*100;
     // Effective BPM = trackBpm × (1 + pitch/100), clamped to sane range
     let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+pitch/100)*100)/100 : 0;
@@ -1617,7 +1618,9 @@ class BridgeCore {
       pkt[0x25]=0x00;
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
       for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
-      pkt[0x30]=0x03; pkt[0x34]=0x05; pkt[0x35]=0x20;
+      // ROLLBACK: was pkt[0x35]=0x20
+      // prolink-connect: CDJ-3000 requires 0x35=0x64 (incorrect values cause network kicks)
+      pkt[0x30]=0x03; pkt[0x34]=0x05; pkt[0x35]=0x64;
       // Send to all broadcast addresses
       for(const bc of allBCs){
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
@@ -1640,7 +1643,8 @@ class BridgeCore {
       pkt[0x24]=spoofPlayer; // player=7
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
       for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
-      pkt[0x35]=0x20;
+      // ROLLBACK: was pkt[0x35]=0x20
+      pkt[0x35]=0x64; // CDJ-3000 requires 0x64 (prolink-connect confirmed)
       // Pioneer identification strings (required for CDJ-3000 dbserver access)
       Buffer.from('PIONEER DJ CORP','ascii').copy(pkt,54,0,15);
       Buffer.from('PRODJLINK BRIDGE','ascii').copy(pkt,74,0,16);
