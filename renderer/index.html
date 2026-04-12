@@ -78,7 +78,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .did-n{font:700 18px var(--mn);letter-spacing:-.02em;line-height:1}
 .dbadge{font:600 9px var(--mn);padding:2px 5px;border-radius:3px;letter-spacing:.05em}
 .dtc{font:normal 28px var(--seg);color:var(--tx4);letter-spacing:.04em;transition:color .15s;white-space:nowrap}
-.dk[data-st="play"] .dtc,.dk[data-st="hwplay"] .dtc,.dk[data-st="cue"] .dtc{color:var(--tx)}
+.dk[data-st="play"] .dtc,.dk[data-st="hwplay"] .dtc,.dk[data-st="scratch"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
 .dwov{height:14px;margin:0 0 3px;background:var(--bg-lowest);border-radius:3px;overflow:hidden;cursor:pointer;position:relative}
 .dwov canvas{width:100%;height:100%;display:block}
@@ -1106,8 +1106,13 @@ function drawZoomWaveform(slot,prog){
         const bt=bg[i];if(bt.timeMs>viewR)break;
         const bpx=Math.round((bt.timeMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
-        if(bt.beatInBar===1){ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.7)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
-        else{ctx.fillStyle='rgba(0,191,255,.18)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
+        if(bt.beatInBar===1){
+          ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(bpx-1,0,3,5);ctx.fillRect(bpx-1,H-5,3,5);
+        }else{
+          ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);
+        }
       }
     }else{
       const beatMs=60000/(d.baseBpm||d.bpm);const anchor=d._barAnchorMs||0;
@@ -1116,8 +1121,13 @@ function drawZoomWaveform(slot,prog){
         const bMs=anchor+b*beatMs;const bpx=Math.round((bMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
         const barNum=((b%4)+4)%4+1;
-        if(barNum===1){ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.7)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
-        else{ctx.fillStyle='rgba(0,191,255,.18)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
+        if(barNum===1){
+          ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(bpx-1,0,3,5);ctx.fillRect(bpx-1,H-5,3,5);
+        }else{
+          ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);
+        }
       }
     }
   }
@@ -1171,8 +1181,14 @@ function drawZoomOverlay(slot, prog){
         const bt=bg[i];if(bt.timeMs>viewR)break;
         const bpx=Math.round((bt.timeMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
-        if(bt.beatInBar===1){ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.7)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
-        else{ctx.fillStyle='rgba(0,191,255,.18)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
+        if(bt.beatInBar===1){
+          // CDJ-3000 style: red downbeat line
+          ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(bpx-1,0,3,5);ctx.fillRect(bpx-1,H-5,3,5);
+        }else{
+          ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);
+        }
       }
     }else if(d.bpm>0){
       const beatMs=60000/(d.baseBpm||d.bpm);
@@ -1184,8 +1200,13 @@ function drawZoomOverlay(slot, prog){
         const bpx=Math.round((bMs-posMs)/msPerPx+cX);
         if(bpx<1||bpx>=W-1)continue;
         const barNum=((b%4)+4)%4+1;
-        if(barNum===1){ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.7)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
-        else{ctx.fillStyle='rgba(0,191,255,.18)';ctx.fillRect(bpx-.5,0,1,H);ctx.fillStyle='rgba(0,191,255,.45)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);}
+        if(barNum===1){
+          ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(bpx-1,0,3,5);ctx.fillRect(bpx-1,H-5,3,5);
+        }else{
+          ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(bpx-.5,0,1,H);
+          ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);
+        }
       }
     }
   }
@@ -1198,12 +1219,26 @@ function drawZoomOverlay(slot, prog){
       const cpx=Math.round((cue.timeMs-posMs)/msPerPx+cX);
       if(cpx<0||cpx>=W)continue;
       const col=cue.type==='hot'?(_cueColorsZ[cue.colorId]||'#00e676'):'#fff';
+      // Loop body overlay
+      if(cue.type==='loop'&&cue.loopEndMs>0){
+        const epx=Math.round((cue.loopEndMs-posMs)/msPerPx+cX);
+        if(epx>cpx){ctx.fillStyle=col+'1F';ctx.fillRect(cpx,0,epx-cpx,H);}
+      }
+      // Vertical line
       ctx.fillStyle=col+'99';ctx.fillRect(cpx-.5,0,1,H);
-      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx-3,0);ctx.lineTo(cpx+3,0);ctx.lineTo(cpx,5);ctx.closePath();ctx.fill();
-      if(cue.type==='hot'&&cue.hotCueNum>0){
-        const lbl=String.fromCharCode(64+cue.hotCueNum);
-        ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cpx+1,0,9,10);
-        ctx.fillStyle=col;ctx.fillText(lbl,cpx+2,9);
+      if(cue.type==='hot'){
+        // Hot cue: triangle marker + letter label
+        ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx-4,0);ctx.lineTo(cpx+4,0);ctx.lineTo(cpx,5);ctx.closePath();ctx.fill();
+        if(cue.hotCueNum>0){
+          const lbl=String.fromCharCode(64+cue.hotCueNum);
+          ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cpx+2,0,10,11);
+          ctx.fillStyle=col;ctx.fillText(lbl,cpx+3,9);
+        }
+      }else{
+        // Memory cue: diamond marker + 'M' label
+        ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx,0);ctx.lineTo(cpx+3,3);ctx.lineTo(cpx,6);ctx.lineTo(cpx-3,3);ctx.closePath();ctx.fill();
+        ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cpx+2,0,10,11);
+        ctx.fillStyle=col;ctx.fillText('M',cpx+3,9);
       }
     }
   }
@@ -2183,6 +2218,15 @@ function _resizeDeckCanvases(s){
     }
   }
 }
+
+// Window resize → update all deck canvas pixel buffers so waveform doesn't stretch
+let _resizeTmr;
+window.addEventListener('resize',()=>{
+  clearTimeout(_resizeTmr);
+  _resizeTmr=setTimeout(()=>{
+    for(const s of getUsedSlots()) _resizeDeckCanvases(s);
+  },150);
+});
 
 function doExpandDeck(slot){
   const el=document.getElementById('dk'+slot);if(!el)return;
