@@ -127,7 +127,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* SECTION 4 — Layer/SMPTE — CUE/PLAY 행에 맞춤 */
 .dk-layer{display:flex;flex-direction:column;gap:4px;width:80px;flex-shrink:0;align-items:stretch}
 .dk-layer-lbl{font:700 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-align:center;flex-shrink:0}
-.dk-layer .dksm-btn{flex:none;height:26px;display:flex;align-items:center;justify-content:center;min-height:0}
+.dk-layer .dksm-btn{flex:none;height:28px;display:flex;align-items:center;justify-content:center;min-height:0}
 .dk-layer-ab{display:flex;gap:4px;flex:1}
 .dk-layer-ab .dkbtn{flex:1;height:auto;border-radius:8px;font-size:11px;letter-spacing:.08em}
 .dkctrl-btns{display:flex;gap:3px}
@@ -1595,11 +1595,11 @@ function deckHTML(slot){
   const bAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="B"`:' disabled';
   const sec4=`<div class="dk-layer">
     <div class="dk-layer-lbl">SMPTE</div>
-    <span class="dksm-btn dksm-master${d.mtcMaster?' on':''}" id="dmst${slot}" style="width:100%;text-align:center;min-width:0" data-a="mtc-master" data-i="${slot}">MASTER</span>
     <div class="dk-layer-ab">
       <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
       <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
     </div>
+    <span class="dksm-btn dksm-master${d.mtcMaster?' on':''}" id="dmst${slot}" style="width:100%;text-align:center;min-width:0" data-a="mtc-master" data-i="${slot}">MASTER</span>
   </div>`;
 
   return`<div class="dk" id="dk${slot}" data-st="stop" data-type="${isHW?'hw':'virtual'}">
@@ -3113,6 +3113,8 @@ if(E){
         // Update title/artist DOM
         const _tnEl=document.getElementById('dtn'+layerIndex);if(_tnEl)_tnEl.textContent='—';
         const _taEl=document.getElementById('dta'+layerIndex);if(_taEl)_taEl.textContent='';
+        // Re-request metadata — bridge-core may have already fetched it before this reset
+        setTimeout(()=>window.bridge.refreshMeta(),200);
       }
     } else {
       dk._tidChangeCount=0;

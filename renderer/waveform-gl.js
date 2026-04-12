@@ -346,32 +346,24 @@ void main() {
   // ── Mode 0/1/3: 3-band waveform ──
   float B = bass, M = midf, T = treble;
 
-  vec3 bassCol, midCol, trebCol;
-  if (u_mode == 0) {
-    bassCol = vec3(1.0, 0.1, 0.1);
-    midCol  = vec3(0.1, 1.0, 0.1);
-    trebCol = vec3(0.2, 0.35, 1.0);
-  } else {
-    bassCol = vec3(0.2,  0.53, 1.0);     // #3388FF — blue
-    midCol  = vec3(1.0,  0.72, 0.0);     // #FFB800 — warm amber
-    trebCol = vec3(1.0,  1.0,   1.0);     // #FFFFFF
-  }
+  // beat-link standard: Bass=Blue(#2053D9), Mid=Amber(#F2AA3C), Treble=White
+  vec3 bassCol = vec3(0.125, 0.325, 0.85);   // #2053D9
+  vec3 midCol  = vec3(0.95,  0.667, 0.235);  // #F2AA3C
+  vec3 trebCol = vec3(1.0,   1.0,   1.0);    // #FFFFFF
 
   float outerH, inside;
   vec3 col;
 
   if (u_mode == 3) {
     // HW mode: height from original data (wf.a), color from band ratios
-    float h = wf.a;  // original CDJ height preserved
+    float h = wf.a;
     outerH = h * scale;
     float AA = 1.0;
     inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
     if (inside < 0.005) { fragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
-    // Color from band ratio only (not height)
     float total = B + M + T + 0.001;
     col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
-    // Virtual mode: height derived from band values
     float bV = sqrt(max(B, 0.0)) * 1.3;
     float mV = max(M, 0.0) * 1.0;
     float tV = max(T, 0.0) * 0.7;
@@ -383,9 +375,9 @@ void main() {
     col = (bassCol * bV + midCol * mV + trebCol * tV) / total;
   }
 
-  // Boost saturation to avoid muddy gray
+  // Slight saturation boost
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(vec3(lum), col, 1.3);
+  col = mix(vec3(lum), col, 1.2);
 
   fragColor = vec4(clamp(col, 0.0, 1.0) * inside, 1.0);
 }
@@ -449,22 +441,15 @@ void main() {
   // ── Mode 0/1/3: 3-band ──
   float B = bass, M = midf, T = treble;
 
-  vec3 bassCol, midCol, trebCol;
-  if (u_mode == 0) {
-    bassCol = vec3(1.0, 0.1, 0.1);
-    midCol  = vec3(0.1, 1.0, 0.1);
-    trebCol = vec3(0.2, 0.35, 1.0);
-  } else {
-    bassCol = vec3(0.0, 0.333, 0.882);
-    midCol  = vec3(1.0, 0.651, 0.0);
-    trebCol = vec3(1.0, 1.0,   1.0);
-  }
+  // beat-link standard colors
+  vec3 bassCol = vec3(0.125, 0.325, 0.85);
+  vec3 midCol  = vec3(0.95,  0.667, 0.235);
+  vec3 trebCol = vec3(1.0,   1.0,   1.0);
 
   float outerH, inside;
   vec3 col;
 
   if (u_mode == 3) {
-    // HW mode: height from original data, color from band ratios
     float h = wf.a;
     outerH = h * scale;
     float AA2 = 0.6;
@@ -485,7 +470,7 @@ void main() {
   }
 
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(vec3(lum), col, 1.3);
+  col = mix(vec3(lum), col, 1.2);
 
   float dim = played ? 0.38 : 1.0;
   fragColor = vec4(clamp(col, 0.0, 1.0) * inside * dim, 1.0);
