@@ -1430,7 +1430,7 @@ function deckHTML(slot){
       <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:1px 5px;font-size:7px;min-width:42px">MASTER</span>
     </div>
     <div class="dk-hdr-r">
-      ${!isHW?`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`:''}
+      ${isHW?`<span class="dhwl" id="dhwl${slot}">${d.model?'⬡ '+d.model:'⬡ HW'}</span>`:`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`}
     </div>
   </div>
   <div class="dk-title-row">
@@ -1494,7 +1494,6 @@ function deckHTML(slot){
       <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
       <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
     </div>
-    ${isHW?`<div class="dhw" id="dhw${slot}" style="margin-top:2px;padding-top:2px;border-top:1px solid var(--bg3)"><span class="dhwl" id="dhwl${slot}">${d.model?'⬡ '+d.model:'⬡ HW'}</span></div>`:''}
   </div>`;
 
   return`<div class="dk" id="dk${slot}" data-st="${isHW?'hw':'stop'}">
