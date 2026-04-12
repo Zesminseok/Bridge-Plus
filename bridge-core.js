@@ -864,10 +864,9 @@ class BridgeCore {
     this._timers = [t1, t2, t3, t4, t5];
     this._startTCNetRx();
 
-    if(!this.isLocalMode){
-      await this._startPDJLRx();
-      this._startPDJLAnnounce();
-    }
+    // Start PDJL receiver in all modes (local mode uses pcap-replay simulation)
+    await this._startPDJLRx();
+    if(!this.isLocalMode) this._startPDJLAnnounce();
     this._startVirtualDbServer();
 
     const nid = TC.NID[1].toString(16)+TC.NID[0].toString(16);
@@ -1004,10 +1003,8 @@ class BridgeCore {
     // Clear PDJL announce timer
     if(this._pdjlAnnTimer){ clearInterval(this._pdjlAnnTimer); this._pdjlAnnTimer=null; }
 
-    if(!this.isLocalMode){
-      await this._startPDJLRx();
-      this._startPDJLAnnounce();
-    }
+    await this._startPDJLRx();
+    if(!this.isLocalMode) this._startPDJLAnnounce();
     console.log(`[PDJL] rebind complete — port=${this.pdjlPort}`);
   }
 
