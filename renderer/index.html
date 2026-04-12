@@ -102,7 +102,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-wf-area{display:flex;flex-direction:row;flex:1;min-width:0;border:1px solid rgba(0,255,200,.2);border-radius:4px 0 0 4px;overflow:hidden;border-right:none}
 .dk-wf-area .dkart{border-radius:0;border:none;border-right:1px solid rgba(0,255,200,.1);width:96px;min-height:96px;aspect-ratio:1;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-lowest)}
 .dk-wf-col{display:flex;flex-direction:column;flex:1;min-width:0}
-.dk-wf-col .dwov{height:16px;margin:0;border-radius:0;border-bottom:1px solid rgba(0,255,200,.1);background:rgba(5,8,12,.8)}
+.dk-wf-col .dwov{height:16px;margin:0;border-radius:0;border-bottom:1px solid rgba(0,255,200,.1);background:rgba(5,8,12,.8);position:relative}
 .dk-wf-col .dwov canvas{display:block;width:100%;height:100%}
 .dk-wf-col .dwz-row{flex:1;margin:0;height:auto}
 .dk-wf-col .dwz-row .dwz{border-radius:0;border:none;height:100%;margin:0}
@@ -956,42 +956,63 @@ function drawOverview(slot,prog){
   if(d.ovgl&&(d.rgbWfDetail||d.rgbWf)){
     const modeMap={'rgb':0,'3band':1,'blue':2};
     d.ovgl.draw(pos, d.type==='hw'?3:(modeMap[cfg.wfColor]??0));
-    return;
-  }
-  if(!d.wovCtx)return;
-  // Prefer detail waveform (richer color data) for overview, fallback to preview
-  const wfOv=d.rgbWfDetail||d.rgbWf;
-  if(!wfOv)return;
-  const cv=document.getElementById('wov'+slot);if(!cv||!cv.width)return;
-  const W=cv.width,H=cv.height,ctx=d.wovCtx;
-  const pts=wfOv.length,mid=H/2;
-  // Gradient overview — ImageData pixel control
-  const ovImg=ctx.createImageData(W,H);
-  const ovBuf=ovImg.data;
-  for(let px=0;px<W;px++){
-    const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
-    let r=0,g=0,b=0,pk=0;const cnt=Math.max(1,i1-i0+1);
-    for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;if(p.h>pk)pk=p.h;}
-    r/=cnt;g/=cnt;b/=cnt;
-    const h=Math.max(1,Math.round(pk*mid*0.95));
-    if(h<1)continue;
-    let R,G,B;
-    if(d.type==='hw'&&!d._pwv7){
-      const mx2=Math.max(r,g,b,0.001);const sc2=255/mx2;
-      R=Math.min(255,r*sc2)|0; G=Math.min(255,g*sc2)|0; B=Math.min(255,b*sc2)|0;
-    }else{
-      [R,G,B]=_wfBlend(r,g,b,1);
+    // Continue to draw overlay markers on separate canvas
+  } else {
+    if(!d.wovCtx)return;
+    const wfOv=d.rgbWfDetail||d.rgbWf;
+    if(!wfOv)return;
+    const cv=document.getElementById('wov'+slot);if(!cv||!cv.width)return;
+    const W=cv.width,H=cv.height,ctx=d.wovCtx;
+    const pts=wfOv.length,mid=H/2;
+    const ovImg=ctx.createImageData(W,H);
+    const ovBuf=ovImg.data;
+    for(let px=0;px<W;px++){
+      const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
+      let r=0,g=0,b=0,pk=0;const cnt=Math.max(1,i1-i0+1);
+      for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;if(p.h>pk)pk=p.h;}
+      r/=cnt;g/=cnt;b/=cnt;
+      const h=Math.max(1,Math.round(pk*mid*0.95));
+      if(h<1)continue;
+      let R,G,B;
+      if(d.type==='hw'&&!d._pwv7){
+        const mx2=Math.max(r,g,b,0.001);const sc2=255/mx2;
+        R=Math.min(255,r*sc2)|0; G=Math.min(255,g*sc2)|0; B=Math.min(255,b*sc2)|0;
+      }else{
+        [R,G,B]=_wfBlend(r,g,b,1);
+      }
+      const invH=1/h;
+      for(let dy=-h;dy<=h;dy++){
+        const y=mid+dy;if(y<0||y>=H)continue;
+        const br=1.0-Math.abs(dy)*invH*0.75;
+        const off=(y*W+px)<<2;
+        ovBuf[off]=R*br|0;ovBuf[off+1]=G*br|0;ovBuf[off+2]=B*br|0;ovBuf[off+3]=255;
+      }
     }
-    const invH=1/h;
-    for(let dy=-h;dy<=h;dy++){
-      const y=mid+dy;if(y<0||y>=H)continue;
-      const br=1.0-Math.abs(dy)*invH*0.75;
-      const off=(y*W+px)<<2;
-      ovBuf[off]=R*br|0;ovBuf[off+1]=G*br|0;ovBuf[off+2]=B*br|0;ovBuf[off+3]=255;
-    }
+    ctx.putImageData(ovImg,0,0);
   }
-  ctx.putImageData(ovImg,0,0);
-  // Draw cue points on overview (memory=white, hot=colored, loop=orange bracket)
+
+  // Overview overlay — cue points, loops, playhead (works for both WebGL and 2D modes)
+  const olCv=document.getElementById('wovol'+slot)||document.getElementById('wov'+slot);
+  if(!olCv)return;
+  // For WebGL mode: use separate overlay canvas; for 2D mode: draw on same canvas
+  let olCtx;
+  if(d.ovgl){
+    if(!d._wovOlCtx){
+      const olEl=document.getElementById('wovol'+slot);
+      if(!olEl)return;
+      olEl.width=olCv.width||olEl.parentElement.clientWidth;
+      olEl.height=olCv.height||olEl.parentElement.clientHeight;
+      d._wovOlCtx=olEl.getContext('2d');
+    }
+    olCtx=d._wovOlCtx;
+  } else {
+    olCtx=d.wovCtx;
+  }
+  if(!olCtx)return;
+  const W2=olCtx.canvas.width,H2=olCtx.canvas.height;
+  if(W2<2||H2<2)return;
+  if(d.ovgl) olCtx.clearRect(0,0,W2,H2); // clear overlay for WebGL mode
+
   const _cueColors={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
   function _ovCueCol(cue){
     if(cue.colorR||cue.colorG||cue.colorB) return`rgb(${cue.colorR},${cue.colorG},${cue.colorB})`;
@@ -1000,48 +1021,48 @@ function drawOverview(slot,prog){
     return '#fff';
   }
   if(d.cuePoints&&d.dur>0){
-    ctx.font='bold 8px "DM Mono",monospace';
+    olCtx.font='bold 8px "DM Mono",monospace';
     for(const cue of d.cuePoints){
-      const cx=Math.round(cue.timeMs/d.dur*W);
-      if(cx<0||cx>=W)continue;
+      const cx=Math.round(cue.timeMs/d.dur*W2);
+      if(cx<0||cx>=W2)continue;
       const col=_ovCueCol(cue);
-      // Loop range on overview
+      // Loop range — yellow overlay
       if(cue.type==='loop'&&cue.loopEndMs>0){
-        const ex=Math.round(cue.loopEndMs/d.dur*W);
+        const ex=Math.round(cue.loopEndMs/d.dur*W2);
         if(ex>cx){
           const isActive=d._isLooping&&d.pos>=cue.timeMs-50&&d.pos<=cue.loopEndMs+50;
-          ctx.fillStyle=isActive?'rgba(0,255,100,.2)':'rgba(255,136,0,.12)';
-          ctx.fillRect(cx,0,ex-cx,H);
+          olCtx.fillStyle=isActive?'rgba(255,200,0,.25)':'rgba(255,180,0,.12)';
+          olCtx.fillRect(cx,0,ex-cx,H2);
         }
       }
       // Vertical line
-      ctx.strokeStyle=col;ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+      olCtx.strokeStyle=col;olCtx.lineWidth=1;
+      olCtx.beginPath();olCtx.moveTo(cx,0);olCtx.lineTo(cx,H2);olCtx.stroke();
       // Triangle marker at top
-      ctx.fillStyle=col;
-      ctx.beginPath();ctx.moveTo(cx-4,0);ctx.lineTo(cx+4,0);ctx.lineTo(cx,6);ctx.closePath();ctx.fill();
+      olCtx.fillStyle=col;
+      olCtx.beginPath();olCtx.moveTo(cx-4,0);olCtx.lineTo(cx+4,0);olCtx.lineTo(cx,6);olCtx.closePath();olCtx.fill();
       // Label
       if(cue.type==='hot'&&cue.hotCueNum>0){
         const label=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
-        ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cx+1,0,9,10);
-        ctx.fillStyle=col;ctx.fillText(label,cx+2,9);
+        olCtx.fillStyle='rgba(0,0,0,.7)';olCtx.fillRect(cx+1,0,9,10);
+        olCtx.fillStyle=col;olCtx.fillText(label,cx+2,9);
       }else if(cue.type==='loop'){
         const label=cue.hotCueNum>0?String.fromCharCode(64+cue.hotCueNum):'L';
-        ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cx+1,0,9,10);
-        ctx.fillStyle=col;ctx.fillText(label,cx+2,9);
+        olCtx.fillStyle='rgba(0,0,0,.7)';olCtx.fillRect(cx+1,0,9,10);
+        olCtx.fillStyle=col;olCtx.fillText(label,cx+2,9);
       }else if(cue.type==='memory'){
-        ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(cx+1,0,9,10);
-        ctx.fillStyle='rgba(255,255,255,.8)';ctx.fillText('M',cx+2,9);
+        olCtx.fillStyle='rgba(0,0,0,.5)';olCtx.fillRect(cx+1,0,9,10);
+        olCtx.fillStyle='rgba(255,255,255,.8)';olCtx.fillText('M',cx+2,9);
       }
     }
   }
   if(d.cp>0&&d.dur>0){
-    const cx=Math.round(d.cp*1000/d.dur*W);
-    ctx.fillStyle='rgba(251,191,36,.9)';ctx.fillRect(cx-.5,0,1,H);
-    ctx.beginPath();ctx.moveTo(cx-3,0);ctx.lineTo(cx+3,0);ctx.lineTo(cx,4);ctx.closePath();
-    ctx.fillStyle='rgba(251,191,36,1)';ctx.fill();
+    const cx=Math.round(d.cp*1000/d.dur*W2);
+    olCtx.fillStyle='rgba(251,191,36,.9)';olCtx.fillRect(cx-.5,0,1,H2);
+    olCtx.beginPath();olCtx.moveTo(cx-3,0);olCtx.lineTo(cx+3,0);olCtx.lineTo(cx,4);olCtx.closePath();
+    olCtx.fillStyle='rgba(251,191,36,1)';olCtx.fill();
   }
-  ctx.fillStyle='rgba(255,255,255,.92)';ctx.fillRect(Math.round(pos*W)-.5,0,1,H);
+  olCtx.fillStyle='rgba(255,255,255,.92)';olCtx.fillRect(Math.round(pos*W2)-.5,0,1,H2);
 }
 
 // Zoom waveform — GPU path (WebGL) + CPU fallback (2D Canvas)
@@ -1297,10 +1318,10 @@ function drawZoomOverlay(slot, prog){
         if(epx>Math.max(cpx,0)&&cpx<W){
           const lx=Math.max(0,cpx),rx=Math.min(W,epx);
           if(isActive){
-            // Active loop: bright green overlay with pulsing border
-            ctx.fillStyle='rgba(0,255,100,.12)';ctx.fillRect(lx,0,rx-lx,H);
-            ctx.fillStyle='rgba(0,255,100,.5)';ctx.fillRect(lx,0,1,H);ctx.fillRect(rx-1,0,1,H);
-            ctx.fillStyle='rgba(0,255,100,.35)';ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
+            // Active loop: yellow overlay (Rekordbox style)
+            ctx.fillStyle='rgba(255,200,0,.15)';ctx.fillRect(lx,0,rx-lx,H);
+            ctx.fillStyle='rgba(255,200,0,.6)';ctx.fillRect(lx,0,1,H);ctx.fillRect(rx-1,0,1,H);
+            ctx.fillStyle='rgba(255,200,0,.35)';ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
           }else{
             // Inactive loop: subtle overlay
             ctx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.08)').replace('rgb(','rgba('):col+'14';
@@ -1549,7 +1570,7 @@ function deckHTML(slot){
       <div class="dkart" id="dart${slot}" ${isLoaded?`data-a="eject" data-i="${slot}"`:''}>${artSrc?`<img src="${artSrc}" alt="">`:'<span class="noart-icon">♪</span>'}</div>
       <div class="dk-wf-col">
         <div class="dwov" id="dwov${slot}" style="${isLoaded?'':'display:flex;align-items:center;justify-content:center'}">
-          ${isLoaded?`<canvas id="wov${slot}"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
+          ${isLoaded?`<canvas id="wov${slot}"></canvas><canvas id="wovol${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
         </div>
         <div class="dwz-row">
           <div class="dwz" id="dwz${slot}" style="position:relative;${isLoaded?'':'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px'}">
@@ -1617,6 +1638,7 @@ function patchDeck(slot){
   // Destroy only THIS deck's GL contexts
   if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
   if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
+  d._wovOlCtx=null;
   // Replace just this deck's HTML
   const tmp=document.createElement('div');
   tmp.innerHTML=deckHTML(slot);
@@ -1757,6 +1779,11 @@ function bindDeck(slot){
           const _wfD=d.rgbWfDetail||d.rgbWf;
           if(_wfD){d.ovgl.setData(_wfD);drawOverview(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
         }catch(e){console.warn('[WGL] fallback 2D overview:',e);d.wovCtx=wov.getContext('2d');}
+      }
+      // Init overview overlay canvas for cue/loop markers
+      const wovol=document.getElementById('wovol'+slot);
+      if(wovol&&(wovol.width!==w||wovol.height!==h)){
+        wovol.width=w;wovol.height=h;d._wovOlCtx=wovol.getContext('2d');
       }
     },0);
   }
@@ -2095,6 +2122,8 @@ function loadFile(slot,f){
             wov.width=w; wov.height=h;
           }
           if(!d.ovgl){try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}}
+          const wovol=document.getElementById('wovol'+slot);
+          if(wovol){wovol.width=w;wovol.height=h;d._wovOlCtx=wovol.getContext('2d');}
         }
         const wzc=document.getElementById('wzc'+slot);
         if(wzc){
@@ -2327,6 +2356,8 @@ function _resizeDeckCanvases(s){
       wov.width=w; wov.height=h;
       try{d2.ovgl=new OverviewGL(wov);d2.wovCtx=null;}catch(e){d2.wovCtx=wov.getContext('2d');}
       if(d2.ovgl){const wfD=d2.rgbWfDetail||d2.rgbWf;if(wfD)d2.ovgl.setData(wfD);drawOverview(s,d2.dur>0&&d2.pos>0?d2.pos/d2.dur:0);}
+      const wovol=document.getElementById('wovol'+s);
+      if(wovol){wovol.width=w;wovol.height=h;d2._wovOlCtx=wovol.getContext('2d');}
     }
   }
   const wzc=document.getElementById('wzc'+s);
