@@ -55,9 +55,6 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-area{display:flex;flex-direction:column;gap:8px}
 .deck-row{display:flex;flex-direction:column;gap:6px}
 .deck-row.compact{gap:4px}
-.deck-row.compact .dk-body{gap:5px}
-.deck-row.compact .dk-transport{width:88px}
-.deck-row.compact .dk-layer{width:60px}
 .deck-row.compact .dk-hdr{padding:3px 8px 2px}
 .dk{background:#0d0f12;border:1px solid rgba(113,255,232,.1);border-radius:10px;overflow:hidden;transition:box-shadow .2s,border-color .2s;min-width:0;box-shadow:0 2px 12px rgba(0,0,0,.4)}
 .dk[data-st="play"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk[data-st="cue"]{box-shadow:0 0 14px rgba(255,209,109,.1),0 2px 12px rgba(0,0,0,.4);border-color:rgba(255,209,109,.18)}.dk.dov{box-shadow:0 0 14px rgba(164,201,255,.12),0 2px 12px rgba(0,0,0,.4)!important;border-color:rgba(164,201,255,.25)!important}
@@ -264,13 +261,8 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 .dkart:hover::after{background:rgba(0,0,0,.5);opacity:1}
 .dkart img{width:100%;height:100%;object-fit:cover;display:block}
 .noart-icon{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--tx4);font-size:18px}
-.deck-row.compact .dkart{width:40px;height:40px}
-.deck-row.compact .dk-tc{width:158px}
-.deck-row.compact .dtc{font-size:20px}
-.deck-row.compact .dk-transport{width:72px}
-.deck-row.compact .dk-layer{width:58px}
-.deck-row.compact .dk-body{min-height:100px;gap:6px;padding:5px 7px}
-.deck-row.compact .dk-left .dwz-row{height:50px}
+/* compact: 4+ decks — only reduce gaps/padding, NEVER reduce font sizes or element heights */
+.deck-row.compact .dk-body{gap:5px;padding:4px 7px}
 .dktn{padding:0 0 2px;min-width:0;overflow:hidden}
 .dktn-row{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden}
 .dktn-t{font:600 13px var(--sn);color:#cbd5e1;white-space:nowrap;overflow:hidden;flex:1 1 auto;min-width:0;position:relative;text-overflow:ellipsis}
@@ -2432,41 +2424,42 @@ function tick(){
     }
 
     // Smooth interpolated position for HW decks
+    // Strategy: linear extrapolation from last known position + elapsed time
+    // CDJ-3000: frequent 0x0b updates (~30Hz) keep position accurate
+    // NXS2: status ~5Hz — linear extrapolation between updates, snap on new data
     let displayPos=d.pos||0;
     if(d.type==='hw'&&d._posTime){
-      const elapsed=Date.now()-d._posTime;
-      const isFresh=elapsed<200; // Precise Position: ~30ms interval, beat: ~500ms
+      const now=Date.now();
+      const elapsed=now-d._posTime;
       if(d.pl){
-        if(isFresh&&d._hasPrecisePos){
-          // CDJ-3000 with frequent updates: minimal interpolation
-          const target=d.pos+elapsed;
-          if(d._stateChanged){d._smoothPos=d.pos;d._stateChanged=false;}
-          else if(d._smoothPos==null){d._smoothPos=target;}
-          else{d._smoothPos+=(target-d._smoothPos)*0.7;} // fast track
-          displayPos=d._smoothPos;
-        }else if(d.bpm>0){
-          // CDJ-2000: beat-based, need more interpolation (only when BPM is known)
-          const target=d.pos+elapsed;
-          if(d._stateChanged){d._smoothPos=d.pos;d._stateChanged=false;}
-          else if(d._smoothPos==null){d._smoothPos=target;}
-          else{
-            const diff=target-d._smoothPos;
-            if(Math.abs(diff)>2000){d._smoothPos=target;}
-            else{d._smoothPos+=diff*0.5;}
-          }
-          displayPos=d._smoothPos;
+        // Playing: linear extrapolation from last known position
+        // pitch-corrected speed (pitch is percentage: +6% = 1.06x)
+        const speed=d.pitch!=null?(1+d.pitch/100):1.0;
+        const target=d.pos+elapsed*speed;
+        if(d._stateChanged){
+          d._smoothPos=d.pos;d._stateChanged=false;
+        }else if(d._smoothPos==null){
+          d._smoothPos=target;
         }else{
-          // BPM=0 without Precise Position: show exact pos, no interpolation
-          displayPos=d.pos;
-          d._smoothPos=null;
+          const diff=target-d._smoothPos;
+          if(Math.abs(diff)>3000){
+            // Large jump (seek/track change): snap immediately
+            d._smoothPos=target;
+          }else if(d._hasPrecisePos&&elapsed<200){
+            // CDJ-3000: fast convergence
+            d._smoothPos+=(target-d._smoothPos)*0.7;
+          }else{
+            // NXS2/other: smooth linear tracking
+            d._smoothPos+=(target-d._smoothPos)*0.3;
+          }
         }
+        displayPos=d._smoothPos;
       }else{
-        // Not playing: show exact pos from CDJ, no interpolation
+        // Not playing: show exact position, no interpolation
         displayPos=d.pos;
         d._smoothPos=null;
         d._stateChanged=false;
       }
-      // Clamp to track duration
       if(d.dur>0&&displayPos>d.dur) displayPos=d.dur;
     }else if(d.type==='hw'){
       d._smoothPos=null;

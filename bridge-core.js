@@ -344,23 +344,67 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
   d[1] = layerIdx;        // 1-based layer index
 
   if(layerData){
-    d[3] = layerData.state||0;  // raw TCNetLayerStatus (3=PLAYING,5=PAUSED,6=STOPPED)
-    d[5] = 0x01;  // syncMaster = Master
-    d[7] = layerData.beatPhase || 0;
-    d.writeUInt32LE(layerData.totalLength || 0, 8);   // trackLength ms
+    // TCNet v3.5.1B spec offsets (body-relative, i.e. subtract 24 from absolute byte#)
+    d[3] = layerData.state||0;   // byte 27: Layer State
+    d[5] = 0x01;                 // byte 29: Sync Master (1=Master)
+    d[7] = layerData.beatPhase || 0; // byte 31: Beat Marker (0-4)
+    d.writeUInt32LE(layerData.totalLength || 0, 8);   // byte 32: Track Length (ms)
     let curMs = layerData.timecodeMs || 0;
     const isPlaying = layerData.state === STATE.PLAYING || layerData.state === STATE.LOOPING;
     if(isPlaying && layerData._updateTime && layerData.bpm > 0) curMs += (Date.now() - layerData._updateTime);
-    d.writeUInt32LE(u32(curMs), 12);    // currentPosition ms (interpolated)
-    d.writeUInt32LE(isPlaying ? 0x100000 : 0, 16);  // speed (0x100000=100% per TCNet spec, 0=stopped)
-    d.writeUInt16LE(Math.min(65535, Math.round((faderVal||0)*257)), 20); // fader 0-255 → 0-65535
-    d.writeUInt32LE(0, 33);                             // beatNumber
+    d.writeUInt32LE(u32(curMs), 12);    // byte 36: Current Position (ms)
+    // byte 40: Speed — TCNet spec: 32768=100%, 0=0%, 65536=200%
+    const pitch = layerData._pitch || 0;
+    const speedVal = isPlaying ? Math.round(32768 * (1 + pitch / 100)) : 0;
+    d.writeUInt32LE(u32(Math.max(0, Math.min(65536, speedVal))), 16);
+    d.writeUInt32LE(0, 33);              // byte 57: Beat Number
     const bpm = layerData.bpm || 0;
-    d.writeUInt32LE(Math.round(bpm * 100), 88);        // bpm ×100
-    d.writeUInt16LE(0x4000, 92);                        // pitchBend (중앙값)
-    d.writeUInt32LE(layerData.trackId || 0, 94);       // trackID
+    d.writeUInt32LE(Math.round(bpm * 100), 88);  // byte 112: BPM ×100
+    // byte 116: Pitch Bend — 32768=100%, scale from pitch%
+    const pbVal = Math.round(32768 * (1 + pitch / 100));
+    d.writeUInt16LE(Math.max(0, Math.min(65535, pbVal)), 92);
+    d.writeUInt32LE(layerData.trackId || 0, 94);  // byte 118: Track ID
+    // Debug first MetricsData per layer
+    if(!mkDataMetrics._dbg) mkDataMetrics._dbg={};
+    if(!mkDataMetrics._dbg[layerIdx]){
+      mkDataMetrics._dbg[layerIdx]=true;
+      console.log(`[METRICS] L${layerIdx} state=${d[3]} speed=${speedVal} bpm=${bpm} pos=${Math.round(curMs)}ms dur=${layerData.totalLength}ms track="${layerData.trackName||''}" artist="${layerData.artistName||''}"`);
+    }
   }
 
+  return b;
+}
+
+/**
+ * DATA MixerData (0xC8, sub-type 150) — 270B
+ * TCNet v3.5.1B spec: per-channel fader, EQ, filter, crossfader, master
+ */
+function mkMixerData(faders, mixerName){
+  const b = Buffer.alloc(270);
+  buildHdr(TC.DATA).copy(b, 0);
+  const d = b.slice(TC.H);  // body 246B
+
+  d[0] = 150;  // DataType = Mixer Data
+  d[1] = 1;    // Mixer ID
+  d[2] = 0;    // Mixer Type
+  // Mixer Name at body offset 5 (byte 29), 16 chars
+  const nm = (mixerName || 'DJM-900NXS2').padEnd(16, '\0');
+  Buffer.from(nm, 'ascii').copy(d, 5, 0, 16);
+  // Master Audio Level (byte 61)
+  d[37] = 255;
+  // Master Fader Level (byte 62)
+  d[38] = 255;
+  // Cross Fader (byte 99) — center
+  d[75] = 127;
+  // Per-channel data: each channel block starts at byte 125 + (ch * 24)
+  // Channel N block: [+0]=SourceSelect, [+1]=AudioLevel, [+2]=FaderLevel, [+3]=TrimLevel
+  for(let ch=0; ch<4; ch++){
+    const off = 101 + ch * 24;  // body offset for channel block (byte 125 = body 101)
+    d[off]   = ch + 1;          // Source Select (1-4)
+    d[off+1] = faders?.[ch] || 0; // Audio Level (0-255)
+    d[off+2] = faders?.[ch] || 0; // Fader Level (0-255)
+    d[off+3] = 200;             // Trim Level (default 200/255)
+  }
   return b;
 }
 
@@ -377,16 +421,17 @@ function mkDataMeta(layerIdx, layerData){
   d[1] = layerIdx;     // 1-based layer index
 
   if(layerData){
+    // TCNet v3.5.0+ requires UTF-16LE encoding (256 bytes = 128 UTF-16 chars max)
     const artist = layerData.artistName || '';
     if(artist){
-      const artistBuf = Buffer.from(artist, 'utf8');
-      artistBuf.copy(d, 5, 0, Math.min(artistBuf.length, 255));
+      const artistBuf = Buffer.from(artist, 'utf16le');
+      artistBuf.copy(d, 5, 0, Math.min(artistBuf.length, 256));
     }
 
     const track = layerData.trackName || '';
     if(track){
-      const trackBuf = Buffer.from(track, 'utf8');
-      trackBuf.copy(d, 261, 0, Math.min(trackBuf.length, 255));
+      const trackBuf = Buffer.from(track, 'utf16le');
+      trackBuf.copy(d, 261, 0, Math.min(trackBuf.length, 256));
     }
 
     d.writeUInt16LE(0, 517);  // trackKey
@@ -594,20 +639,31 @@ function parsePDJL(msg){
     }
     return{kind:'announce',name,playerNum:msg.length>0x24?msg[0x24]:0};
   }
-  // CDJ-3000 Precise Position (type 0x0b, port 50001, ~60B)
-  // subtype 0x02 at byte 0x20: contains direct ms playback position
-  if(type===0x0b && msg.length>=0x3C){
-    const sub = msg[0x20];
-    if(sub===0x02){
-      const pNum = msg[0x21];
-      const trackLenSec = msg.readUInt32BE(0x24);
-      const playbackMs = msg.readUInt32BE(0x28);
-      const pitchRaw2 = msg.readInt32BE(0x2C);
-      const bpmRaw10 = msg.readUInt32BE(0x38);
+  // CDJ-3000 Absolute Position (type 0x0b, port 50001, ~60B, ~30Hz pairs)
+  // CDJ-3000 sends PAIRS: 1) real data (byte[33]=player 1-6), 2) garbage (byte[33]>=0x80)
+  // Filter by player number range (no sub-type byte — STC confirmed)
+  // Offsets: [38-39] trackLen(s) uint16BE, [40-43] playhead(ms), [44-47] pitch, [56-59] bpm*10
+  // Note: bytes[36-37] are separate fields (not part of trackLength).
+  // Only bytes[38-39] as uint16BE give correct duration across all CDJ-3000 units.
+  if(type===0x0b && msg.length>=60){
+    const pNum = msg[33];
+    if(pNum>=1 && pNum<=6){
+      const trackLenSec = msg.readUInt16BE(38);
+      const playheadRaw = msg.readUInt32BE(40);
+      const pitchRaw2 = msg.readInt32BE(44);
+      const bpmRaw10 = msg.readUInt32BE(56);
+      // Debug: hex dump first 0x0b packet per player
+      if(!parsePDJL._0bDumped) parsePDJL._0bDumped={};
+      if(!parsePDJL._0bDumped[pNum]){
+        parsePDJL._0bDumped[pNum]=true;
+        const hex=msg.slice(32,60).toString('hex').match(/.{2}/g).join(' ');
+        console.log(`[0x0b] P${pNum} raw bytes[32-59]: ${hex}`);
+        console.log(`[0x0b] P${pNum} trackLenSec=${trackLenSec} playheadMs=${playheadRaw} bpmRaw=${bpmRaw10} pitch=${pitchRaw2}`);
+      }
       return{
         kind:'precise_pos', playerNum:pNum, name,
         trackLengthSec: trackLenSec,
-        playbackMs,
+        playbackMs: playheadRaw,
         pitch: pitchRaw2/100,
         bpmEffective: bpmRaw10/10,
       };
@@ -781,8 +837,18 @@ class BridgeCore {
     }, 33);
     // DATA packets cycle through layers: MetricsData + MetaData per layer
     const t4 = setInterval(()=>this._sendDataCycle(), 170);
+    // Mixer Data (Type 150) — fader levels to Arena, every 200ms
+    const t5 = setInterval(()=>{
+      if(!this.running) return;
+      // Find DJM name from devices
+      const djm = Object.values(this.devices).find(d=>d.type==='DJM');
+      const pkt = mkMixerData(this.faders, djm?.name);
+      const hasArenas = Object.values(this.nodes).some(n=>Date.now()-n.lastSeen<15000);
+      if(hasArenas){this._sendToArenasLPort(pkt);this._sendToArenasSourcePort(pkt);}
+      this._send(pkt, TC.P_DATA);
+    }, 200);
 
-    this._timers = [t1, t2, t3, t4];
+    this._timers = [t1, t2, t3, t4, t5];
     this._startTCNetRx();
 
     if(!this.isLocalMode){
