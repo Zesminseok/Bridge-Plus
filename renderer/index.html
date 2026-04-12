@@ -111,8 +111,9 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-tc{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;gap:2px;flex-shrink:0;padding:0 2px}
 .dk-tc-hdrs{display:grid;grid-template-columns:2fr .5fr 2fr .5fr 2fr .5fr 2fr;width:100%;font:600 8px var(--mn);color:var(--tx3);letter-spacing:.07em;text-align:center}
 .dk-tc-info-row{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;margin-top:auto}
-.dk-bpm-cur{font:700 15px/1 var(--mn);color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.01em;border:1px solid rgba(0,255,200,.35);border-radius:3px;padding:3px 6px;white-space:nowrap;display:inline-flex;align-items:center;height:24px;box-sizing:border-box}
-.dk-key-box{font:700 15px/1 var(--mn);color:var(--grn);letter-spacing:.04em;border:1px solid rgba(52,211,153,.35);border-radius:3px;padding:3px 6px;white-space:nowrap;display:inline-flex;align-items:center;height:24px;box-sizing:border-box}
+.dk-bpm-cur,.dk-key-box{font:700 15px/1 var(--mn);border-radius:3px;padding:2px 6px;white-space:nowrap;display:inline-flex;align-items:center;height:24px;box-sizing:border-box;vertical-align:middle}
+.dk-bpm-cur{color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.01em;border:1px solid rgba(0,255,200,.35)}
+.dk-key-box{color:var(--grn);letter-spacing:.04em;border:1px solid rgba(52,211,153,.35)}
 .dk-tc-time{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px}
 
 /* SECTION 3 — Transport: CUE|PLAY square + STOP full width */
@@ -413,7 +414,8 @@ let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
 const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
   tcFps:'25',wfColor:'3band',wfCenter:'left',
   tcLtcA:'',tcLtcB:'',tcLtcM:'',tcMidiOutId:'',
-  tcArtnetIp:'255.255.255.255',tcArtnetPort:'6454'};
+  tcArtnetIp:'255.255.255.255',tcArtnetPort:'6454',
+  tcnetUnicast:false,tcnetAllIfaces:false};
 // Load persisted settings
 let cfg=Object.assign({},_CFG_DEF);
 try{const _s=localStorage.getItem('bridge_cfg');if(_s){const _p=JSON.parse(_s);Object.assign(cfg,_p);}}catch(_){}
@@ -833,6 +835,22 @@ function _cdjColorToRGB(c){
   ];
   return map[c&0xF]||[0,0,0];
 }
+// CDJ color index → pseudo bass/mid/treble (approximate frequency mapping)
+// Used to render all HW waveforms with Rekordbox 3-band style
+function _cdjColorTo3Band(c){
+  // [bass, mid, treble] — maps CDJ's 8 discrete colors to frequency bands
+  const map=[
+    [.25,.25,.25], // 0: gray (low energy)
+    [1.0,.15,.0],  // 1: red (deep bass)
+    [.7, .5, .1],  // 2: orange (bass-heavy mix)
+    [.3, 1.0,.15], // 3: yellow-green (mid dominant)
+    [.1, .85,.4],  // 4: green (upper mid)
+    [.05,.45,.9],  // 5: cyan (high-mid/treble)
+    [.0, .15,1.0], // 6: blue (treble)
+    [.25,.1, .8],  // 7: purple (treble + sub bass)
+  ];
+  return map[c&7]||[.25,.25,.25];
+}
 
 // Waveform color: 3 presets — 'blue', 'rgb', '3band'
 // Source: Rekordbox ANLZ PWV4/PWV5/PWV6 + Deep-Symmetry/dysentery #9/#33
@@ -900,10 +918,15 @@ function buildWaveformCache(slot){
     const p=wfData[x];
     if(p.h<0.01)continue;
     const h=Math.max(1,Math.round(p.h*mid*0.95));
-    // Raw RGB values — no normalization, matches CDJ original display
-    const R=Math.min(255,Math.round(p.r*255))|0;
-    const G=Math.min(255,Math.round(p.g*255))|0;
-    const B=Math.min(255,Math.round(p.b*255))|0;
+    let R,G,B;
+    if(d.type==='hw'&&!d._pwv7){
+      // HW native CDJ colors — display as-is, normalize brightness
+      const mx=Math.max(p.r,p.g,p.b,0.001);const sc=255/mx;
+      R=Math.min(255,Math.round(p.r*sc))|0; G=Math.min(255,Math.round(p.g*sc))|0; B=Math.min(255,Math.round(p.b*sc))|0;
+    }else{
+      // Virtual or HW PWV7 — apply color mode blend
+      [R,G,B]=_wfBlend(p.r,p.g,p.b,1);
+    }
     // Vertical gradient: center=100% bright → edge=25% bright
     const invH=1/h;
     for(let dy=-h;dy<=h;dy++){
@@ -950,9 +973,13 @@ function drawOverview(slot,prog){
     r/=cnt;g/=cnt;b/=cnt;
     const h=Math.max(1,Math.round(pk*mid*0.95));
     if(h<1)continue;
-    const mx=Math.max(r,g,b,0.001);
-    const sc=255/mx;
-    const R=Math.min(255,r*sc)|0,G=Math.min(255,g*sc)|0,B=Math.min(255,b*sc)|0;
+    let R,G,B;
+    if(d.type==='hw'&&!d._pwv7){
+      const mx2=Math.max(r,g,b,0.001);const sc2=255/mx2;
+      R=Math.min(255,r*sc2)|0; G=Math.min(255,g*sc2)|0; B=Math.min(255,b*sc2)|0;
+    }else{
+      [R,G,B]=_wfBlend(r,g,b,1);
+    }
     const invH=1/h;
     for(let dy=-h;dy<=h;dy++){
       const y=mid+dy;if(y<0||y>=H)continue;
@@ -1101,9 +1128,16 @@ function drawZoomWaveform(slot,prog){
       const r=p0.r+((p1?.r||0)-p0.r)*f;
       const g=p0.g+((p1?.g||0)-p0.g)*f;
       const b=p0.b+((p1?.b||0)-p0.b)*f;
-      const mx=Math.max(r,g,b,0.001);
-      const sc=255/mx;
-      _gc.push({t:px/(W-1),c:`rgb(${Math.min(255,r*sc)|0},${Math.min(255,g*sc)|0},${Math.min(255,b*sc)|0})`});
+      let R,G,B;
+      if(d.type==='hw'&&!d._pwv7){
+        // HW native CDJ colors — display as-is
+        const mx2=Math.max(r,g,b,0.001); const sc2=255/mx2;
+        R=Math.min(255,r*sc2)|0; G=Math.min(255,g*sc2)|0; B=Math.min(255,b*sc2)|0;
+      }else{
+        // Virtual or HW PWV7 — use _wfBlend with user color mode
+        [R,G,B]=d.type==='hw'?_wfBlend(r,g,b,1):_wfBlend(r,g,b,1);
+      }
+      _gc.push({t:px/(W-1),c:`rgb(${R},${G},${B})`});
     }
   }
   ctx.beginPath();ctx.moveTo(0,mid-hs[0]);
@@ -1534,7 +1568,7 @@ function deckHTML(slot){
     <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
     <div class="dk-tc-info-row">
       <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:6px;flex-shrink:0"></div>
-      <div id="wfkey${slot}" style="flex-shrink:0"></div>
+      <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
       <div class="dktn-phs">${phas}</div>
     </div>
     <div class="dk-tc-time" id="dtime${slot}">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
@@ -1545,6 +1579,7 @@ function deckHTML(slot){
   const playAc=isLoaded?`data-a="play" data-i="${slot}"`:' disabled';
   const stopAc=isLoaded?`data-a="stop" data-i="${slot}"`:' disabled';
   const sec3=`<div class="dk-transport">
+    <div class="dk-layer-lbl">&nbsp;</div>
     <div class="dk-tp-top">
       <button class="dkbtn dkcue" ${cueAc}>CUE</button>
       <button class="dkbtn dkplay" ${playAc}>${isLoaded&&d.pl?'⏸':'▶'}</button>
@@ -2126,7 +2161,7 @@ function loadFile(slot,f){
           }
           // Update BPM display in-place — avoids DOM rebuild / canvas context reset
           const _bpmEl=document.getElementById('wfbpm'+slot);
-          if(_bpmEl&&d.bpm>0){const _b=d.baseBpm||d.bpm;const _bf=(v)=>{const int=Math.floor(v),dec=((v-int)*10+0.5|0)%10;return`${int}<span style="font-size:0.7em;opacity:0.7">.${dec}</span>`;};_bpmEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums">${_bf(_b)}</span><span style="font:500 11px var(--mn);color:var(--tx3)">±0.00%</span><span class="dk-bpm-cur">${_bf(d.bpm)}<sub style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</sub></span>`;}else if(_bpmEl)_bpmEl.innerHTML='';
+          if(_bpmEl&&d.bpm>0){const _b=d.baseBpm||d.bpm;const _bf=(v)=>{const int=Math.floor(v),dec=((v-int)*10+0.5|0)%10;return`${int}<span style="font-size:0.7em;opacity:0.7">.${dec}</span>`;};_bpmEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums">${_bf(_b)}</span><span style="font:500 11px var(--mn);color:var(--tx3)">±0.00%</span><span class="dk-bpm-cur">${_bf(d.bpm)}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;}else if(_bpmEl)_bpmEl.innerHTML='';
         });
       },100); // 100ms delay — let audio element finish loading
     });
@@ -2384,19 +2419,18 @@ document.addEventListener('click',e=>{
   else if(act==='zoom-out'){const d2=DECKS[slot];if(d2)d2.zoomMs=Math.min(32000,(d2.zoomMs||8000)*2);}
   else if(act==='zoom-rst'){const d2=DECKS[slot];if(d2)d2.zoomMs=8000;}
   else if(act==='mtc-master'){
-    // MTC Master Out: toggle which deck drives SMPTE/MTC/LTC/Art-Net output
+    // MTC Master: toggle — binds only to M output layer (not A/B)
     const d2=DECKS[slot];if(!d2)return;
     const wasOn=d2.mtcMaster;
     Object.values(DECKS).forEach(dk=>dk.mtcMaster=false);
     if(!wasOn){
       d2.mtcMaster=true;
-      // Bind this deck to ALL output layers (A, B, M) so its timecode drives all SMPTE outputs
-      OUT.A.src=slot; OUT.B.src=slot; OUT.M.src=slot;
+      OUT.M.src=slot;
     }else{
-      // Toggle off — unbind
-      OUT.A.src=null; OUT.B.src=null; OUT.M.src=null;
+      OUT.M.src=null;
     }
     renderOutLayers();
+    renderDecks();
   }
 });
 document.getElementById('addDeckBtn').addEventListener('click',addVirtualDeck);
@@ -2427,6 +2461,13 @@ function tick(){
     // Skip during scratch/drag: pos is controlled by pointermove, not audio element
     if(d.type!=='hw'&&d.au&&d.ld&&!d.scratch){
       d.pos=d.au.currentTime*1000;
+      // Virtual loop: seek back to loop start when reaching loop end
+      if(d._isLooping&&d._loopStartMs!=null&&d._loopEndMs!=null&&d.pl){
+        if(d.pos>=d._loopEndMs){
+          d.au.currentTime=d._loopStartMs/1000;
+          d.pos=d._loopStartMs;
+        }
+      }
     }
 
     // Smooth interpolated position for HW decks
@@ -2518,7 +2559,8 @@ function tick(){
     if(wfkEl){
       const raw=d.key||'';
       const cam=raw.split(' / ')[0]||'';
-      wfkEl.innerHTML=cam?`<span class="dk-key-box">${cam}</span>`:'';
+      if(cam){wfkEl.textContent=cam;wfkEl.style.display='';}
+      else{wfkEl.textContent='';wfkEl.style.display='none';}
     }
     const wfbEl=document.getElementById('wfbpm'+slot);
     if(wfbEl&&d.bpm>0){
@@ -2528,7 +2570,7 @@ function tick(){
       const baseVal=(d.baseBpm&&d.baseBpm>0)?d.baseBpm:d.bpm;
       const baseStr=_bpmFmt(baseVal);
       const curStr=_bpmFmt(d.bpm);
-      wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<sub style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</sub></span>`;
+      wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;
     }else if(wfbEl)wfbEl.innerHTML='';
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
@@ -2825,6 +2867,8 @@ function renderSettings(){
       <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
       <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">유니캐스트 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcUnicast" ${cfg.tcnetUnicast?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">브로드캐스트 대신 발견된 노드에만 전송</span></label></div>
+      <div class="srw" id="rowTcAllIfaces" style="${cfg.tcnetUnicast?'':'display:none'}"><span class="srl">모든 인터페이스 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcAllIfaces" ${cfg.tcnetAllIfaces?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">모든 NIC 서브넷으로 유니캐스트</span></label></div>
     </div>
     <div class="sl">Pro DJ Link 설정</div>
     <div class="sgr">
@@ -2902,6 +2946,19 @@ function renderSettings(){
   el.querySelector('[data-cfg="tcnetIface"]').value=cfg.tcnetIface||'';
   el.querySelector('[data-cfg="pdjlIface"]').value=cfg.pdjlIface||'';
   el.querySelector('[data-cfg="tcnetMode"]').value=cfg.tcnetMode||'auto';
+  // TCNet unicast checkbox handlers
+  const chkUni=el.querySelector('#chkTcUnicast');
+  const chkAll=el.querySelector('#chkTcAllIfaces');
+  const rowAll=el.querySelector('#rowTcAllIfaces');
+  if(chkUni){chkUni.onchange=e=>{
+    cfg.tcnetUnicast=e.target.checked;_saveCfg();
+    if(rowAll)rowAll.style.display=e.target.checked?'':'none';
+    if(E&&run)window.bridge.setTCNetUnicast(e.target.checked,cfg.tcnetAllIfaces);
+  };}
+  if(chkAll){chkAll.onchange=e=>{
+    cfg.tcnetAllIfaces=e.target.checked;_saveCfg();
+    if(E&&run)window.bridge.setTCNetUnicast(cfg.tcnetUnicast,e.target.checked);
+  };}
 }
 
 // ════ Tab switching ════════════════════════════════════
@@ -2933,6 +2990,8 @@ async function doStart(){
       pdjlIface:cfg.pdjlIface||null,
       tcnetMode:cfg.tcnetMode||'auto',
       nodeName:cfg.nm||'BRIDGE29',
+      tcnetUnicast:!!cfg.tcnetUnicast,
+      tcnetAllIfaces:!!cfg.tcnetAllIfaces,
     });
     if(!r.ok){alert('시작 실패: '+r.err);return;}
     pdjlPort=r.pdjlPort||null;
@@ -3036,8 +3095,14 @@ if(E){
     dk._isLooping=!!status.isLooping; // CDJ active loop state
     if(dk.pl!==wasPl||dk.cu!==wasCu){dk._stateChanged=true;dk._smoothPos=null;}
     if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
-    if(status.bpmEffective)dk.bpm=Math.round(status.bpmEffective*100)/100;
-    else if(status.bpm)dk.bpm=Math.round(status.bpm*100)/100;
+    // NXS2 debug: log state/timecode for non-precise decks
+    if(!dk._hasPrecisePos){
+      if(!dk._nxDbg)dk._nxDbg=0;
+      if(dk._nxDbg++<40||dk._nxDbg%100===0)
+        console.log(`[NX2-UI] P${status.playerNum} st=${status.state} pl=${dk.pl} tc=${status.timecodeMs} pos=${dk.pos} pm=${status.pitchMultiplier?.toFixed(3)} bpm=${status.bpm||status.bpmEffective}`);
+    }
+    if(status.bpmEffective&&status.bpmEffective<500)dk.bpm=Math.round(status.bpmEffective*100)/100;
+    else if(status.bpm&&status.bpm<500)dk.bpm=Math.round(status.bpm*100)/100;
     // Use calculated baseBpm only if metadata hasn't provided authoritative value
     if(status.bpmTrack&&!dk._metaBaseBpm)dk.baseBpm=Math.round(status.bpmTrack*100)/100;
     if(status.key)dk.key=_toCamelot(status.key);
@@ -3084,25 +3149,23 @@ if(E){
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
     if(d.pts&&d.pts.length>0){
       if(d.wfType==='color'){
-        // CDJ-3000 color waveform: accumulate segments
+        // CDJ-3000 color waveform: accumulate segments → 3-band pseudo-mapping
         if(!dk._hwWfSegs)dk._hwWfSegs={};
         dk._hwWfSegs[d.seg]=d.pts;
         const segs=Object.keys(dk._hwWfSegs).map(Number).sort((a,b)=>a-b);
         const allPts=[];
         for(const s of segs) allPts.push(...dk._hwWfSegs[s]);
         dk.rgbWf=allPts.map(p=>{
-          const [r,g,b]=_cdjColorToRGB(p.color);
+          const [bass,mid,treble]=_cdjColorTo3Band(p.color);
           const h=p.height/255;
-          return{r,g,b,mn:-h,mx:h};
+          return{r:bass*h,g:mid*h,b:treble*h,h,mn:-h,mx:h};
         });
       } else {
-        // dbserver preview waveform: {height:0-31, color:0-7}
-        // Color at full brightness, height stored separately in mn/mx for shape
-        const cmap=[[.35,.35,.35],[1,.1,.1],[1,.5,.05],[1,.85,.1],[.1,.9,.1],[.1,.9,.9],[.2,.35,1],[.75,.15,1]];
+        // dbserver preview waveform: {height:0-31, color:0-7} → 3-band pseudo-mapping
         dk.rgbWf=d.pts.map(p=>{
-          const [r,g,b]=cmap[p.color&7]||cmap[0];
+          const [bass,mid,treble]=_cdjColorTo3Band(p.color);
           const h=p.height/31;
-          return{r,g,b,mn:-h,mx:h};
+          return{r:bass*h,g:mid*h,b:treble*h,h,mn:-h,mx:h};
         });
       }
       // Don't override duration if we have a real value from metadata

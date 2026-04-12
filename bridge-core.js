@@ -262,7 +262,7 @@ function mkTime(layers, uptimeMs, faders){
     if(ld){
       let ms = ld.timecodeMs || 0;
       // Interpolate: if playing, add elapsed time since last beat update (pitch-corrected)
-      if((ld.state === STATE.PLAYING || ld.state === STATE.LOOPING) && ld._updateTime && ld.bpm > 0){
+      if((ld.state === STATE.PLAYING || ld.state === STATE.LOOPING) && ld._updateTime){
         const pitch = ld._pitch || 0;
         ms += (now - ld._updateTime) * (1 + pitch / 100);
       }
@@ -297,7 +297,7 @@ function mkTime(layers, uptimeMs, faders){
     if(ld){
       let ms = ld.timecodeMs || 0;
       const isPlaying = ld.state === STATE.PLAYING || ld.state === STATE.LOOPING;
-      if(isPlaying && ld._updateTime && ld.bpm > 0) ms += (now - ld._updateTime);
+      if(isPlaying && ld._updateTime) ms += (now - ld._updateTime);
       const totalSec = Math.floor(ms / 1000);
       const h = Math.floor(totalSec / 3600);
       const m = Math.floor((totalSec % 3600) / 60);
@@ -373,7 +373,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
     d.writeUInt32LE(layerData.totalLength || 0, 8);   // byte 32: Track Length (ms)
     let curMs = layerData.timecodeMs || 0;
     const isPlaying = layerData.state === STATE.PLAYING || layerData.state === STATE.LOOPING;
-    if(isPlaying && layerData._updateTime && layerData.bpm > 0) curMs += (Date.now() - layerData._updateTime);
+    if(isPlaying && layerData._updateTime) curMs += (Date.now() - layerData._updateTime);
     d.writeUInt32LE(u32(curMs), 12);    // byte 36: Current Position (ms)
     // byte 40: Speed — TCNet spec: 32768=100%, 0=0%, 65536=200%
     const pitch = layerData._pitch || 0;
@@ -381,7 +381,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
     d.writeUInt32LE(u32(Math.max(0, Math.min(65536, speedVal))), 16);
     d.writeUInt32LE(0, 33);              // byte 57: Beat Number
     const bpm = layerData.bpm || 0;
-    d.writeUInt32LE(Math.round(bpm * 100), 88);  // byte 112: BPM ×100
+    d.writeUInt32LE(u32(Math.round(bpm * 100)), 88);  // byte 112: BPM ×100
     // byte 116: Pitch Bend — 32768=100%, scale from pitch%
     const pbVal = Math.round(32768 * (1 + pitch / 100));
     d.writeUInt16LE(Math.max(0, Math.min(65535, pbVal)), 92);
@@ -487,10 +487,10 @@ function mkLowResArtwork(layerIdx, jpegBuf){
     buildHdr(TC.ARTWORK).copy(b, 0);
     b[TC.H]     = TC.DT_ARTWORK;  // 128 = LowResArtworkFile
     b[TC.H + 1] = layerIdx;       // 1-based layer
-    b.writeUInt32BE(jpegBuf.length, TC.H + 2);   // total dataSize
-    b.writeUInt32BE(totalPackets,   TC.H + 6);   // totalPackets
-    b.writeUInt32BE(i,              TC.H + 10);   // packetNumber (0-based)
-    b.writeUInt32BE(chunk.length,   TC.H + 14);   // dataClusterSize
+    b.writeUInt32LE(jpegBuf.length, TC.H + 2);   // total dataSize
+    b.writeUInt32LE(totalPackets,   TC.H + 6);   // totalPackets
+    b.writeUInt32LE(i,              TC.H + 10);   // packetNumber (0-based)
+    b.writeUInt32LE(chunk.length,   TC.H + 14);   // dataClusterSize
     chunk.copy(b, TC.H + 18);
     packets.push(b);
   }
@@ -526,11 +526,13 @@ function parsePDJL(msg){
     // Ref: https://djl-analysis.deepsymmetry.org/djl-analysis/vcdj.html
     const bpmRaw16 = msg.length>0x93 ? msg.readUInt16BE(0x92) : 0;
     const trackBpm = (bpmRaw16>0 && bpmRaw16!==0xFFFF) ? bpmRaw16/100 : 0;
-    // Pitch: signed offset from 0x100000 at 0x8C–0x8F
-    const pitchRaw = msg.length>0x8F ? msg.readUInt32BE(0x8C) : 0x100000;
+    // Pitch: 3 bytes at 0x8D–0x8F (Pitch 1 — effective pitch including master tempo)
+    // Reference: beat-link CdjStatus.java reads 3 bytes at 0x8D, neutral=0x100000
+    const pitchRaw = msg.length>0x8F ? (msg[0x8D]*65536 + msg[0x8E]*256 + msg[0x8F]) : 0x100000;
     const pitch = (pitchRaw-0x100000)/0x100000*100;
-    // Effective BPM = trackBpm × (1 + pitch/100)
-    const bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+pitch/100)*100)/100 : 0;
+    // Effective BPM = trackBpm × (1 + pitch/100), clamped to sane range
+    let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+pitch/100)*100)/100 : 0;
+    if(bpmEff > 500) bpmEff = 0;  // sanity: no track exceeds 500 BPM
     const baseBpm = trackBpm;
     const beatNum   = msg.length>0xA3 ? msg.readUInt32BE(0xA0) : 0;
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
@@ -551,16 +553,16 @@ function parsePDJL(msg){
       parsePDJL._syncDbg[pNum]=(parsePDJL._syncDbg[pNum]||0)+1;
       console.log(`[CDJ] P${pNum} flags@89=0x${flags.toString(16)} sync=${isSync} master=${isMaster} onAir=${isOnAir} trackBpm=${trackBpm} bpmEff=${bpmEff} pitch=${pitch.toFixed(3)} p3=0x${p3.toString(16)} vinyl=${isVinylMode}`);
     }
-    // Actual playback speed at offset 0x98 (152): 0=stopped, 0x100000=1.0x
-    // STC reference: used for PLL interpolation between status packets
-    const actualSpeed = msg.length>0x9B ? msg.readUInt32BE(0x98) : 0;
+    // Speed multiplier from Pitch 1: pitchRaw/0x100000 (beat-link method)
+    // Note: pitchRaw stays non-zero even when paused — use state for play/stop detection
+    const pitchMultiplier = pitchRaw / 0x100000;  // 1.0 = normal speed
     return{
       kind:'cdj', playerNum:pNum, name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
       isPlaying: state===STATE.PLAYING,
       isLooping: state===STATE.LOOPING,
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
-      pitch, actualSpeed,
+      pitch, pitchMultiplier,
       trackId: msg.readUInt32BE(0x2C),
       trackDeviceId: msg[0x28],
       slot:     msg[0x29],
@@ -690,6 +692,8 @@ function parsePDJL(msg){
   // Offsets: [38-39] trackLen(s) uint16BE, [40-43] playhead(ms), [44-47] pitch, [56-59] bpm*10
   // Note: bytes[36-37] are separate fields (not part of trackLength).
   // Only bytes[38-39] as uint16BE give correct duration across all CDJ-3000 units.
+  // CDJ-3000 Precise Position (type 0x0b, exactly 60B, port 50001)
+  // IMPORTANT: NXS2 also sends type 0x0b packets with different structure — validate parsed values
   if(type===0x0b && msg.length>=60){
     const pNum = msg[33];
     if(pNum>=1 && pNum<=6){
@@ -697,7 +701,23 @@ function parsePDJL(msg){
       const playheadRaw = msg.readUInt32BE(40);
       const pitchRaw2 = msg.readInt32BE(44);
       const bpmRaw10 = msg.readUInt32BE(56);
-      // Debug: hex dump first 0x0b packet per player
+      // Sanity check: reject garbage from non-CDJ-3000 models
+      // Valid: trackLen < 24h, playhead < trackLen, BPM 20-500, pitch ±50%
+      const bpmCheck = bpmRaw10/10;
+      const sane = trackLenSec > 0 && trackLenSec < 86400
+                && playheadRaw <= trackLenSec * 1000
+                && bpmCheck > 20 && bpmCheck < 500
+                && Math.abs(pitchRaw2) < 5000;
+      if(!sane){
+        // Not a valid CDJ-3000 precise_pos — skip silently
+        if(!parsePDJL._0bReject) parsePDJL._0bReject={};
+        if(!parsePDJL._0bReject[pNum]){
+          parsePDJL._0bReject[pNum]=true;
+          console.log(`[0x0b] P${pNum} REJECTED (not CDJ-3000): len=${trackLenSec}s head=${playheadRaw} bpm=${bpmCheck} pitch=${pitchRaw2}`);
+        }
+        return null;
+      }
+      // Debug: hex dump first valid 0x0b packet per player
       if(!parsePDJL._0bDumped) parsePDJL._0bDumped={};
       if(!parsePDJL._0bDumped[pNum]){
         parsePDJL._0bDumped[pNum]=true;
@@ -1459,14 +1479,13 @@ class BridgeCore {
    */
   async _startPDJLRx(){
     this._pdjlSockets = [];
-    // macOS: keepalive(50000) and beat(50001) MUST bind to INADDR_ANY (0.0.0.0)
-    // to receive broadcast packets. Binding to a specific IP blocks broadcast delivery.
-    // status(50002) can bind to specific IP for unicast CDJ status packets.
+    // macOS: ALL PDJL ports bind to INADDR_ANY (0.0.0.0)
+    // to receive both broadcast and unicast packets from CDJs and DJMs.
+    // Binding 50002 to specific IP blocks DJM mixer status packets from other interfaces.
     for(const port of [50000, 50001, 50002]){
       try{
         const sock = dgram.createSocket({type:'udp4', reuseAddr:true});
-        // 50000/50001: always INADDR_ANY for broadcast. 50002: try specific IP first.
-        const bindAddr = (port===50002) ? (this.pdjlBindAddr||undefined) : undefined;
+        const bindAddr = undefined; // always INADDR_ANY for all ports
         await new Promise((res,rej)=>{
           sock.on('error',rej);
           sock.bind(port, bindAddr, ()=>{ sock.setBroadcast(true); res(); });
@@ -1546,7 +1565,7 @@ class BridgeCore {
           const p=Buffer.alloc(37);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
-          Buffer.from('BRIDGE-PLUS','ascii').copy(p,0x0C,0,11);
+          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
           for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
           console.log(`[PDJL] bridge hello #${h+1}`);
         }, h*300);
@@ -1557,7 +1576,7 @@ class BridgeCore {
           const p=Buffer.alloc(50);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x02; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x32;
-          Buffer.from('BRIDGE-PLUS','ascii').copy(p,0x0C,0,11);
+          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
           for(let i=0;i<4;i++) p[0x24+i]=ipParts[i];
           for(let i=0;i<6;i++) p[0x28+i]=macBytes[i]||0;
           p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
@@ -1574,7 +1593,7 @@ class BridgeCore {
       const pkt=Buffer.alloc(54);
       PDJL.MAGIC.copy(pkt,0);
       pkt[0x0A]=0x06; pkt[0x0B]=0x00;
-      Buffer.from('BRIDGE-PLUS','ascii').copy(pkt,0x0C,0,11);
+      Buffer.from('TCS-SHOWKONTROL','ascii').copy(pkt,0x0C,0,15);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x22]=0x00; pkt[0x23]=0x36;
       pkt[0x24]=process.platform==='darwin'?0xF9:0xC1; // bridge device type (macOS=0xF9)
       pkt[0x25]=0x00;
@@ -1598,7 +1617,7 @@ class BridgeCore {
       const pkt=Buffer.alloc(95);
       PDJL.MAGIC.copy(pkt,0);
       pkt[0x0A]=0x06;
-      Buffer.from('BRIDGE-PLUS','ascii').copy(pkt,0x0C,0,11);
+      Buffer.from('TCS-SHOWKONTROL','ascii').copy(pkt,0x0C,0,15);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x23]=0x36;
       pkt[0x24]=spoofPlayer; // player=5
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
@@ -1632,7 +1651,7 @@ class BridgeCore {
       const pkt=Buffer.alloc(40);
       PDJL.MAGIC.copy(pkt,0);
       pkt[10]=0x57; // subscribe type
-      Buffer.from('BRIDGE-PLUS','ascii').copy(pkt,11,0,11);
+      Buffer.from('TCS-SHOWKONTROL','ascii').copy(pkt,11,0,15);
       pkt[31]=0x01; pkt[32]=0x00;
       pkt[33]=process.platform==='darwin'?0xFE:0x87; // macOS=0xFE, Windows=0x87
       pkt[34]=0x00; pkt[35]=0x04; pkt[36]=0x01; // subtype=4, subscribe=1
@@ -1755,11 +1774,7 @@ class BridgeCore {
           const beatNum = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0; // filter invalid
           const beatIdx = beatNum - 1;
 
-          // actualSpeed=0 means platter stopped (track end, loading, etc.)
-          // Don't interpolate when speed is 0 — preserve last known position
-          if(p.actualSpeed === 0 && acc._anchorMs != null){
-            timecodeMs = acc._anchorMs;
-          } else if(beatNum > 0 && acc.prevBn !== beatNum){
+          if(beatNum > 0 && acc.prevBn !== beatNum){
             // New beat arrived — definitive position anchor
             if(bg && beatIdx >= 0 && beatIdx < bg.length){
               timecodeMs = bg[beatIdx].timeMs;
@@ -1775,10 +1790,9 @@ class BridgeCore {
               try{console.log(`[TC] P${p.playerNum} beat=${beatNum} ms=${timecodeMs} bpm=${p.bpm} ${bg?'(grid)':'(calc)'}`);}catch(_){}
             }
           } else if(acc._anchorMs != null){
-            // Between beats — interpolate from last anchor using pitch-corrected speed
-            const speed = p.actualSpeed > 0 ? p.actualSpeed / 0x100000 : 0.0;
+            // Between beats — interpolate from last anchor using pitch multiplier (beat-link method)
             const elapsed = Date.now() - acc._anchorTime;
-            timecodeMs = Math.round(acc._anchorMs + elapsed * speed);
+            timecodeMs = Math.round(acc._anchorMs + elapsed * p.pitchMultiplier);
           } else if(beatNum > 0 && p.bpm > 0){
             // First status with no anchor yet
             const baseBpm = p.bpmTrack || p.bpm;
@@ -1787,15 +1801,31 @@ class BridgeCore {
             acc._anchorTime = Date.now();
             acc.prevBn = beatNum;
           } else {
-            // No valid beat data: preserve previous position or stay at 0
-            const prevLayer = this.layers[li];
-            timecodeMs = prevLayer?.timecodeMs || 0;
+            // No valid beat data (BPM-less tracks): use pitch multiplier wall-clock interpolation
+            if(p.pitchMultiplier > 0){
+              if(acc._noBeatAnchorTime == null){
+                // Start wall-clock tracking from now
+                acc._noBeatAnchorTime = Date.now();
+                acc._noBeatAnchorMs = (this.layers[li]?.timecodeMs) || 0;
+                console.log(`[TC] P${p.playerNum} no-beat start: speed=${p.pitchMultiplier.toFixed(3)} anchor=${acc._noBeatAnchorMs}ms`);
+              }
+              const elapsed = Date.now() - acc._noBeatAnchorTime;
+              timecodeMs = Math.round(acc._noBeatAnchorMs + elapsed * p.pitchMultiplier);
+              // Re-anchor periodically to prevent drift
+              if(elapsed > 2000){
+                acc._noBeatAnchorTime = Date.now();
+                acc._noBeatAnchorMs = timecodeMs;
+              }
+            } else {
+              const prevLayer = this.layers[li];
+              timecodeMs = prevLayer?.timecodeMs || 0;
+            }
           }
         } else {
           // Stopped/paused: preserve previous position
           const prevLayer = this.layers[li];
           if(prevLayer && prevLayer.timecodeMs > 0) timecodeMs = prevLayer.timecodeMs;
-          if(acc){ acc._playStart = 0; acc._anchorMs = null; acc._anchorTime = null; }
+          if(acc){ acc._playStart = 0; acc._anchorMs = null; acc._anchorTime = null; acc._noBeatAnchorTime = null; acc._noBeatAnchorMs = null; }
         }
 
         const prev = this.layers[li];
@@ -1937,22 +1967,21 @@ class BridgeCore {
   /** Update layer state; actual transmission happens in Status/TIME packets. */
   updateLayer(i, data){
     if(i<0||i>7) return;
-    const prev = this.layers[i];
+    const prev = this.layers[i] || {};
 
-    const newTrackName  = data.trackName  || (prev ? prev.trackName  : '');
-    const newArtistName = data.artistName || (prev ? prev.artistName : '');
-
+    // Merge: only overwrite fields that are explicitly provided
     this.layers[i] = {
-      timecodeMs:  data.timecodeMs||0,
-      state:       data.state ?? STATE.IDLE,
-      bpm:         data.bpm||0,
-      trackId:     data.trackId||0,
-      totalLength: data.totalLength||0,
-      trackName:   newTrackName,
-      artistName:  newArtistName,
-      deviceName:  data.deviceName || (prev ? prev.deviceName : ''),
-      beatPhase:   data.beatPhase||0,
-      _updateTime: Date.now(),  // for timecode interpolation
+      timecodeMs:  data.timecodeMs ?? prev.timecodeMs ?? 0,
+      state:       data.state ?? prev.state ?? STATE.IDLE,
+      bpm:         data.bpm ?? prev.bpm ?? 0,
+      trackId:     data.trackId ?? prev.trackId ?? 0,
+      totalLength: data.totalLength ?? prev.totalLength ?? 0,
+      trackName:   data.trackName  ?? prev.trackName  ?? '',
+      artistName:  data.artistName ?? prev.artistName ?? '',
+      deviceName:  data.deviceName ?? prev.deviceName ?? '',
+      beatPhase:   data.beatPhase ?? prev.beatPhase ?? 0,
+      _updateTime: Date.now(),
+      _pitch:      data._pitch ?? prev._pitch ?? 0,
     };
     // Virtual deck: broadcast CDJ status so Arena queries our dbserver immediately
     if(!this.hwMode[i] && data.trackId){
