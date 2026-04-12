@@ -821,8 +821,13 @@ class BridgeCore {
       this.txSocket=null; this.rxSocket=null; this._loRxSocket=null;
       this._ipRxSocket=null; this.lPortSocket=null; this.pdjlSocket=null;
       this._pdjlSockets=[];
-      try{this._pdjlAnnSock?.close();}catch(_){}
+      // _pdjlAnnSock may be shared with _pdjlSockets[0], don't double-close
+      if(this._pdjlAnnSock && !this._pdjlSockets?.includes(this._pdjlAnnSock)){
+        try{this._pdjlAnnSock.close();}catch(_){}
+      }
       this._pdjlAnnSock=null;
+      try{this._dbKaSock?.close();}catch(_){}
+      this._dbKaSock=null;
       console.log('[BridgeCore] sockets closed');
     };
     setTimeout(closeSockets, 100);
@@ -893,11 +898,13 @@ class BridgeCore {
     console.log(`[PDJL] rebind ${prev||'auto'} → ${newAddr||'auto'}`);
 
     // Close existing PDJL sockets
+    if(this._pdjlAnnSock && !this._pdjlSockets?.includes(this._pdjlAnnSock)){
+      try{this._pdjlAnnSock.close();}catch(_){}
+    }
+    this._pdjlAnnSock=null;
     if(this._pdjlSockets){ this._pdjlSockets.forEach(s=>{try{s.close();}catch(_){}}); }
     else if(this.pdjlSocket){ try{this.pdjlSocket.close();}catch(_){} }
     this._pdjlSockets=[]; this.pdjlSocket=null; this.pdjlPort=null;
-    try{ this._pdjlAnnSock?.close(); }catch(_){}
-    this._pdjlAnnSock=null;
     // Clear PDJL announce timer
     if(this._pdjlAnnTimer){ clearInterval(this._pdjlAnnTimer); this._pdjlAnnTimer=null; }
 
@@ -1304,12 +1311,16 @@ class BridgeCore {
     const macBytes=pdjlMAC.split(':').map(h=>parseInt(h,16));
     const ipParts=pdjlIP.split('.').map(Number);
 
-    // Bind to 0.0.0.0 so we can send to any subnet
-    this._pdjlAnnSock=dgram.createSocket({type:'udp4',reuseAddr:true});
-    this._pdjlAnnSock.on('error',()=>{});
-    this._pdjlAnnSock.bind(0, ()=>{
-      try{this._pdjlAnnSock.setBroadcast(true);}catch(_){}
-    });
+    // Use port 50000 socket for keepalive broadcast (DJM requires keepalives from port 50000)
+    // STC reference: keepaliveSock is the port 50000 socket, not an ephemeral port.
+    // DJM only recognizes bridge identity from broadcasts originating on port 50000.
+    this._pdjlAnnSock = this._pdjlSockets?.[0] || null;
+    if(!this._pdjlAnnSock){
+      // Fallback: create new socket if port 50000 socket not available
+      this._pdjlAnnSock=dgram.createSocket({type:'udp4',reuseAddr:true});
+      this._pdjlAnnSock.on('error',()=>{});
+      this._pdjlAnnSock.bind(0, ()=>{try{this._pdjlAnnSock.setBroadcast(true);}catch(_){}});
+    }
 
     // Bridge join sequence — DJM needs hello + claims before activating fader delivery
     // STC reference: 2 hellos (0x0A, 37B) + 11 IP claims (0x02, 50B)
@@ -1362,9 +1373,38 @@ class BridgeCore {
       }
     };
 
+    // 95B dbserver keepalive — UNICAST to CDJs only (not broadcast!)
+    // STC: CDJ-3000 validates "PIONEER DJ CORP" / "PRODJLINK BRIDGE" strings
+    // CRITICAL: DJM must NOT see this packet (player=5 conflicts with bridge player=0xF9)
+    this._dbKaSock = dgram.createSocket({type:'udp4',reuseAddr:true});
+    this._dbKaSock.on('error',()=>{});
+    this._dbKaSock.bind(0,()=>{try{this._dbKaSock.setBroadcast(true);}catch(_){}});
+    const _dbKeepaliveSocket = this._dbKaSock;
+    const sendDbKeepalive=()=>{
+      const pkt=Buffer.alloc(95);
+      PDJL.MAGIC.copy(pkt,0);
+      pkt[0x0A]=0x06;
+      Buffer.from('BRIDGE-PLUS','ascii').copy(pkt,0x0C,0,11);
+      pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x23]=0x36;
+      pkt[0x24]=spoofPlayer; // player=5
+      for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
+      for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
+      pkt[0x35]=0x20;
+      // Pioneer identification strings (required for CDJ-3000 dbserver access)
+      Buffer.from('PIONEER DJ CORP','ascii').copy(pkt,54,0,15);
+      Buffer.from('PRODJLINK BRIDGE','ascii').copy(pkt,74,0,16);
+      pkt[94]=0x43; // 'C'
+      // Unicast to each CDJ only (not DJM!)
+      for(const[k,dev] of Object.entries(this.devices)){
+        if(dev.type==='CDJ'&&dev.ip){
+          try{_dbKeepaliveSocket.send(pkt,0,pkt.length,50000,dev.ip);}catch(_){}
+        }
+      }
+    };
+
     sendAnn();
     if(this._pdjlAnnTimer) clearInterval(this._pdjlAnnTimer);
-    this._pdjlAnnTimer=setInterval(sendAnn,1500);
+    this._pdjlAnnTimer=setInterval(()=>{sendAnn();sendDbKeepalive();},1500);
     this._timers.push(this._pdjlAnnTimer);
 
     // DJM subscribe (0x57) — triggers fader + VU meter delivery

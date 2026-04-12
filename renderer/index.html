@@ -2444,8 +2444,8 @@ function tick(){
           else if(d._smoothPos==null){d._smoothPos=target;}
           else{d._smoothPos+=(target-d._smoothPos)*0.7;} // fast track
           displayPos=d._smoothPos;
-        }else{
-          // CDJ-2000: beat-based, need more interpolation
+        }else if(d.bpm>0){
+          // CDJ-2000: beat-based, need more interpolation (only when BPM is known)
           const target=d.pos+elapsed;
           if(d._stateChanged){d._smoothPos=d.pos;d._stateChanged=false;}
           else if(d._smoothPos==null){d._smoothPos=target;}
@@ -2455,6 +2455,10 @@ function tick(){
             else{d._smoothPos+=diff*0.5;}
           }
           displayPos=d._smoothPos;
+        }else{
+          // BPM=0 without Precise Position: show exact pos, no interpolation
+          displayPos=d.pos;
+          d._smoothPos=null;
         }
       }else{
         // Not playing: show exact pos from CDJ, no interpolation
