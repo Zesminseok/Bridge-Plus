@@ -2716,7 +2716,6 @@ function renderSettings(){
     <div class="sl">Pro DJ Link 설정</div>
     <div class="sgr">
       <div class="srw"><span class="srl">Pro DJ Link 인터페이스</span><select class="ss" data-cfg="pdjlIface">${ifaceOpts(allIfaces,'pdjlIface')}</select></div>
-      <div class="srw"><span class="srl">CDJ 네트워크</span><span class="srv" style="color:var(--tx3)">169.254.x.x (링크로컬)</span></div>
     </div>
     <div class="sl">오디오 출력</div>
     <div class="sgr"><div class="srw"><span class="srl">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div></div>
@@ -2724,7 +2723,7 @@ function renderSettings(){
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
       <div style="font:400 10px var(--sn);color:var(--ylw)">
         <b>두 NIC 환경:</b> TCNet 인터페이스 = 공유기 LAN (192.168.x.x), Pro DJ Link 인터페이스 = CDJ 이더넷 (169.254.x.x).<br>
-        설정 변경 후 STOP → START 필요.
+        인터페이스·모드 변경은 실시간 적용됩니다.
       </div>
     </div>
     <div class="sl mt">SMPTE 타임코드 출력</div>
@@ -2762,6 +2761,9 @@ function renderSettings(){
         _ltcSetDevice(layer,e.target.value);
       }
       else if(k==='tcArtnetIp'||k==='tcArtnetPort'){cfg[k]=e.target.value;}
+      else if(k==='tcnetIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindTCNet(e.target.value||null);return;}
+      else if(k==='pdjlIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindPDJL(e.target.value||null);return;}
+      else if(k==='tcnetMode'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.setTCNetMode(e.target.value||'auto');return;}
       else cfg[k]=e.target.value;
       _saveCfg();
     });

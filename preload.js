@@ -27,5 +27,8 @@ contextBridge.exposeInMainWorld('bridge',{
   setVirtualArt:(slot,jpegBase64)=>ipcRenderer.invoke('bridge:setVirtualArt',{slot,jpegBase64}),
   sendArtnet:(d)=>ipcRenderer.invoke('bridge:artTimeCode',d),
   findRekordboxWaveform:(filename)=>ipcRenderer.invoke('bridge:findRekordboxWaveform',{filename}),
+  rebindTCNet:(addr)=>ipcRenderer.invoke('bridge:rebindTCNet',{addr}),
+  rebindPDJL:(addr)=>ipcRenderer.invoke('bridge:rebindPDJL',{addr}),
+  setTCNetMode:(mode)=>ipcRenderer.invoke('bridge:setTCNetMode',{mode}),
   onQuitting:(cb)=>ipcRenderer.on('app:quitting',()=>cb()),
 });

@@ -838,6 +838,82 @@ class BridgeCore {
     console.log('[BridgeCore] stop: all sockets and connections closed');
   }
 
+  // ── Live rebind: TCNet interface ──
+  async rebindTCNet(newAddr){
+    if(!this.running) return;
+    const prev = this.tcnetBindAddr;
+    this.tcnetBindAddr = newAddr||null;
+    this.isLocalMode = (newAddr==='127.0.0.1');
+    this.broadcastAddr = this._resolveBroadcast();
+    console.log(`[TCNet] rebind ${prev||'auto'} → ${newAddr||'auto'}  bc=${this.broadcastAddr}`);
+
+    // 1) Close TX socket + rebind
+    try{ this.txSocket?.close(); }catch(_){}
+    this.txSocket = dgram.createSocket({type:'udp4', reuseAddr:true});
+    this.txSocket.on('error',()=>{});
+    await new Promise((res)=>{
+      let attempts=0;
+      const tryBind = port => {
+        if(++attempts>3){ this.txSocket.bind(0,'127.0.0.1',()=>res()); return; }
+        this.txSocket.once('error',()=>{ this.txSocket.removeAllListeners('error'); this.txSocket.on('error',()=>{}); tryBind(0); });
+        this.txSocket.bind(port, this.isLocalMode?'127.0.0.1':(this.tcnetBindAddr||undefined), ()=>{
+          this.txSocket.removeAllListeners('error'); this.txSocket.on('error',()=>{});
+          if(!this.isLocalMode) try{this.txSocket.setBroadcast(true);}catch(_){}
+          res();
+        });
+      };
+      tryBind(0);
+    });
+    this.txSocket.on('message',(msg,rinfo)=>this._handleTCNetMsg(msg, rinfo, 'tx-RX'));
+
+    // 2) Close listener port + rebind
+    try{ this.lPortSocket?.close(); }catch(_){}
+    this.lPortSocket = null;
+    await this._startListenerPortRx();
+
+    // 3) Close RX sockets + rebind
+    try{ this.rxSocket?.close(); }catch(_){}
+    try{ this._loRxSocket?.close(); }catch(_){}
+    try{ this._ipRxSocket?.close(); }catch(_){}
+    this.rxSocket=null; this._loRxSocket=null; this._ipRxSocket=null;
+    this._startTCNetRx();
+
+    console.log(`[TCNet] rebind complete — lPort=${this.listenerPort}`);
+  }
+
+  // ── Live rebind: Pro DJ Link interface ──
+  async rebindPDJL(newAddr){
+    if(!this.running) return;
+    const prev = this.pdjlBindAddr;
+    this.pdjlBindAddr = newAddr||null;
+    console.log(`[PDJL] rebind ${prev||'auto'} → ${newAddr||'auto'}`);
+
+    // Close existing PDJL sockets
+    if(this._pdjlSockets){ this._pdjlSockets.forEach(s=>{try{s.close();}catch(_){}}); }
+    else if(this.pdjlSocket){ try{this.pdjlSocket.close();}catch(_){} }
+    this._pdjlSockets=[]; this.pdjlSocket=null; this.pdjlPort=null;
+    try{ this._pdjlAnnSock?.close(); }catch(_){}
+    this._pdjlAnnSock=null;
+    // Clear PDJL announce timer
+    if(this._pdjlAnnTimer){ clearInterval(this._pdjlAnnTimer); this._pdjlAnnTimer=null; }
+
+    if(!this.isLocalMode){
+      await this._startPDJLRx();
+      this._startPDJLAnnounce();
+    }
+    console.log(`[PDJL] rebind complete — port=${this.pdjlPort}`);
+  }
+
+  // ── Live change: TCNet mode ──
+  setTCNetMode(mode){
+    if(!this.running) return;
+    const prev = this.tcnetMode;
+    this.tcnetMode = mode||'auto';
+    if(mode==='client') TC.NTYPE = 0x04;
+    else TC.NTYPE = 0x02;
+    console.log(`[TCNet] mode ${prev} → ${mode} NodeType=0x${TC.NTYPE.toString(16)}`);
+  }
+
   /**
    * Send to broadcast + own IP unicast + 127.0.0.1
    * (covers Arena on same machine regardless of which interface it binds to)
@@ -1227,8 +1303,9 @@ class BridgeCore {
     };
 
     sendAnn();
-    const t=setInterval(sendAnn,1500);
-    this._timers.push(t);
+    if(this._pdjlAnnTimer) clearInterval(this._pdjlAnnTimer);
+    this._pdjlAnnTimer=setInterval(sendAnn,1500);
+    this._timers.push(this._pdjlAnnTimer);
 
     // Virtual CDJ status broadcast every 500ms — keeps Arena updated on virtual decks
     // Real CDJs broadcast status packets ~every 500ms; Arena stops querying if it stops seeing them

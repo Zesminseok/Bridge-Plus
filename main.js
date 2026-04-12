@@ -144,6 +144,16 @@ ipcMain.handle('bridge:setVirtualArt',(_,{slot,jpegBase64})=>{
   if(bridge&&jpegBase64){bridge.setVirtualArt(slot,Buffer.from(jpegBase64,'base64'));}
   return{ok:true};
 });
+// Live rebind — interface/mode changes without restart
+ipcMain.handle('bridge:rebindTCNet',async(_,{addr})=>{
+  try{await bridge?.rebindTCNet(addr);return{ok:true};}catch(e){return{ok:false,err:e.message};}
+});
+ipcMain.handle('bridge:rebindPDJL',async(_,{addr})=>{
+  try{await bridge?.rebindPDJL(addr);return{ok:true};}catch(e){return{ok:false,err:e.message};}
+});
+ipcMain.handle('bridge:setTCNetMode',(_,{mode})=>{
+  bridge?.setTCNetMode(mode);return{ok:true};
+});
 
 // ═══ Rekordbox ANLZ PWV7 reader ═══
 // Reads 3-band waveform data from .2EX files for pixel-perfect Rekordbox rendering
