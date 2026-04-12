@@ -507,7 +507,11 @@ function parsePDJL(msg){
   const name = msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
 
   if(type===PDJL.CDJ && msg.length>=0x90){
-    const pNum = msg[0x24]; if(pNum<1||pNum>6) return null;
+    // Deep Symmetry: device number at 0x21 (NXS2), also at 0x24 (CDJ-3000)
+    // Try 0x21 first (works for both NXS2 and CDJ-3000), fallback to 0x24
+    // ROLLBACK: was `const pNum = msg[0x24]` only
+    let pNum = msg[0x21]; if(pNum<1||pNum>6) pNum = msg[0x24];
+    if(pNum<1||pNum>6) return null;
     // Debug: dump wider range to find media color field
     if(!parsePDJL._cdjDump)parsePDJL._cdjDump={};
     if(!parsePDJL._cdjDump[pNum]){
@@ -526,9 +530,9 @@ function parsePDJL(msg){
     // Ref: https://djl-analysis.deepsymmetry.org/djl-analysis/vcdj.html
     const bpmRaw16 = msg.length>0x93 ? msg.readUInt16BE(0x92) : 0;
     const trackBpm = (bpmRaw16>0 && bpmRaw16!==0xFFFF) ? bpmRaw16/100 : 0;
-    // Pitch: 3 bytes at 0x8D–0x8F (Pitch 1 — effective pitch including master tempo)
-    // Reference: beat-link CdjStatus.java reads 3 bytes at 0x8D, neutral=0x100000
-    const pitchRaw = msg.length>0x8F ? (msg[0x8D]*65536 + msg[0x8E]*256 + msg[0x8F]) : 0x100000;
+    // Pitch: 4 bytes uint32BE at 0x8C (Deep Symmetry: 0x8C-0x8F, neutral=0x100000)
+    // ROLLBACK: was 3-byte read from 0x8D (msg[0x8D]*65536+msg[0x8E]*256+msg[0x8F])
+    const pitchRaw = msg.length>0x8F ? msg.readUInt32BE(0x8C) : 0x100000;
     const pitch = (pitchRaw-0x100000)/0x100000*100;
     // Effective BPM = trackBpm × (1 + pitch/100), clamped to sane range
     let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+pitch/100)*100)/100 : 0;
@@ -2082,9 +2086,10 @@ class BridgeCore {
       pkt[0x0B] = 0x00;
       const nm = 'BRIDGE-CLONE';
       Buffer.from(nm,'ascii').copy(pkt, 0x0C, 0, Math.min(nm.length,20));
-      // Header fields matching real CDJ-3000 capture
-      pkt[0x20] = 0x01; pkt[0x21] = 0x04; pkt[0x22] = 0x00; pkt[0x23] = 0xD4;
-      pkt[0x24] = playerNum & 0xFF;   // player number
+      // Header fields — Deep Symmetry spec: 0x20=subtype(0x03=CDJ), 0x21=deviceNum
+      // ROLLBACK: was pkt[0x20]=0x01, pkt[0x21]=0x04
+      pkt[0x20] = 0x03; pkt[0x21] = playerNum & 0xFF; pkt[0x22] = 0x00; pkt[0x23] = 0xD4;
+      pkt[0x24] = playerNum & 0xFF;   // player number (NXS2 reads 0x21, CDJ-3000 reads 0x24)
       pkt[0x25] = 0x00;
       // 0x26-0x27: sub-field (unused, zero)
       // Track source fields — verified offsets from parsePDJL
@@ -2095,7 +2100,8 @@ class BridgeCore {
       pkt.writeUInt32BE(trackId >>> 0, 0x2C);  // trackId (big-endian)
 
       // Playing state: P1 byte (0x7B) and flags (0x89)
-      pkt[0x7B] = 0x09;   // P1 = playing forward
+      // ROLLBACK: was pkt[0x7B]=0x09 (0x09=searching per Deep Symmetry spec)
+      pkt[0x7B] = 0x03;   // P1 = 0x03 = playing (Deep Symmetry: 0x03=playing, 0x09=search)
       pkt[0x89] = 0x68;   // flags: bit6=playing(0x40) | bit5=master(0x20) | bit3=onAir(0x08)
       // BPM × 100 as uint16BE at 0x92
       const bpmVal = Math.round((bpm||128)*100);
