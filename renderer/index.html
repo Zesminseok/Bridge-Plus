@@ -10,7 +10,7 @@
   --bg-lowest:#0c0e12;--bg-highest:#333539;
   --bdr:rgba(60,60,80,.15);--bdr2:rgba(60,60,80,.3);
   --tx:#e2e2e8;--tx2:#c0c0cc;--tx3:#8b8b98;--tx4:#42424e;
-  --grn:#8787ff;--grn2:#6a6adf;--grn-dim:#7575ef;--blu:#a4c9ff;--blu2:#0267b8;--ylw:#ffd16d;--ylw2:#ecb210;--red:#ffb4ab;--pur:#a78bfa;--org:#fb923c;
+  --key:#8787ff;--key2:#6a6adf;--key-dim:#7575ef;--blu:#a4c9ff;--blu2:#0267b8;--ylw:#ffd16d;--ylw2:#ecb210;--red:#ffb4ab;--pur:#a78bfa;--org:#fb923c;
   --mn:'DM Mono',monospace;--sn:'Noto Sans KR',-apple-system,sans-serif;--lb:'Space Grotesk','Noto Sans KR',sans-serif;--seg:'DSEG7',monospace
 }
 .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
@@ -22,11 +22,11 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .hdr{height:52px;padding:0 20px 0 80px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);flex-shrink:0;z-index:50}
 .hdr .btn,.hdr select,.hdr input,.hdr span[id]{-webkit-app-region:no-drag}
 .logo{display:flex;align-items:center;gap:10px}
-.li{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--grn2),var(--grn));display:flex;align-items:center;justify-content:center;font:800 11px var(--mn);color:#1a1a3d}
+.li{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--key2),var(--key));display:flex;align-items:center;justify-content:center;font:800 11px var(--mn);color:#1a1a3d}
 .tabs{display:flex;padding:0 20px;border-bottom:1px solid var(--bdr);background:var(--bg-lowest);flex-shrink:0;height:36px}
 .tab{padding:0 14px;font:600 10px var(--lb);letter-spacing:.1em;cursor:pointer;border:none;background:0;color:rgba(226,226,232,.4);position:relative;transition:color .15s;text-transform:uppercase;height:100%;display:flex;align-items:center}
-.tab:hover{color:var(--tx2)}.tab.on{color:var(--grn)}
-.tab.on::after{content:'';position:absolute;bottom:0;left:14px;right:14px;height:2px;background:var(--grn);border-radius:2px 2px 0 0}
+.tab:hover{color:var(--tx2)}.tab.on{color:var(--key)}
+.tab.on::after{content:'';position:absolute;bottom:0;left:14px;right:14px;height:2px;background:var(--key);border-radius:2px 2px 0 0}
 .pg{padding:16px 20px 56px;overflow-y:auto;height:calc(100vh - 88px);scroll-behavior:smooth;-webkit-overflow-scrolling:touch;-webkit-app-region:no-drag}
 .pg::-webkit-scrollbar{width:5px}.pg::-webkit-scrollbar-track{background:transparent}.pg::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}.pg::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
 .hide{display:none!important}
@@ -34,7 +34,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .sc{background:var(--bg4);border:none;border-radius:999px;padding:5px 14px;display:flex;align-items:center;gap:6px}
 .scl{font:500 9px var(--lb);color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:0}
 .bd{padding:0;border-radius:0;font:600 10px var(--mn);display:inline-block;background:none}
-.bg{color:var(--grn)}.br{color:var(--red)}
+.bg{color:var(--key)}.br{color:var(--red)}
 .bb{color:var(--blu)}.by{color:var(--ylw)}
 .bm{color:var(--tx2)}.bp{color:var(--pur)}
 .sc-online{background:rgba(40,40,100,.15);border:1px solid rgba(135,135,255,.2)}
@@ -58,7 +58,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dk-hdr{padding:3px 8px 2px}
 .dk{background:#0d0f12;border:1px solid rgba(113,255,232,.1);border-radius:10px;overflow:hidden;transition:box-shadow .2s,border-color .2s;min-width:0;box-shadow:0 2px 12px rgba(0,0,0,.4)}
 .dk[data-st="play"]{box-shadow:0 0 18px rgba(135,135,255,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(135,135,255,.2)}.dk[data-st="cue"]{box-shadow:0 0 14px rgba(255,209,109,.1),0 2px 12px rgba(0,0,0,.4);border-color:rgba(255,209,109,.18)}.dk.dov{box-shadow:0 0 14px rgba(164,201,255,.12),0 2px 12px rgba(0,0,0,.4)!important;border-color:rgba(164,201,255,.25)!important}
-.dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--grn),transparent)}
+.dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--key),transparent)}
 .dk[data-st="play"] .dshim{opacity:1;animation:shimmer 2s ease-in-out infinite}
 .dk[data-st="cue"] .dshim{opacity:.6;background:linear-gradient(90deg,transparent,var(--ylw),transparent)}
 .dtop{padding:8px 13px 8px}
@@ -78,7 +78,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* Zoom: scrolling RGB waveform + beat grid */
 .dwz{height:64px;margin:0 0 4px;background:var(--bg-lowest);border-radius:6px;overflow:hidden;cursor:pointer;position:relative;border:1px solid var(--bdr)}
 .dwz canvas{flex:1;height:100%;display:block;min-width:0}
-.wf-key{position:absolute;top:4px;right:8px;font:700 14px var(--mn);color:var(--grn);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 8px;border-radius:4px}
+.wf-key{position:absolute;top:4px;right:8px;font:700 14px var(--mn);color:var(--key);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 8px;border-radius:4px}
 .wf-bpm{position:absolute;bottom:4px;right:8px;font:600 12px var(--mn);color:var(--tx2);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 8px;border-radius:4px}
 .wf-key:empty,.wf-bpm:empty{display:none}
 /* Expanded full-width deck — only widens, no height change */
@@ -113,7 +113,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-tc-info-row{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;margin-top:auto}
 .dk-bpm-cur,.dk-key-box{font:700 15px/1 var(--mn);border-radius:3px;padding:2px 6px;white-space:nowrap;display:inline-flex;align-items:center;height:24px;box-sizing:border-box;vertical-align:middle}
 .dk-bpm-cur{color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:-.01em;border:1px solid rgba(135,135,255,.35)}
-.dk-key-box{color:var(--grn);letter-spacing:.04em;border:1px solid rgba(135,135,255,.35)}
+.dk-key-box{color:var(--key);letter-spacing:.04em;border:1px solid rgba(135,135,255,.35)}
 .dk-tc-time{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px}
 
 /* SECTION 3 — Transport: CUE|PLAY row + STOP below */
@@ -139,9 +139,9 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dkbtn.dkcue.ac{border-color:#ecb210;color:#ffd16d;background:linear-gradient(180deg,rgba(249,189,34,.2),rgba(236,178,16,.3));box-shadow:0 0 20px rgba(236,178,16,.5),inset 0 0 10px rgba(255,209,109,.15);text-shadow:0 0 8px rgba(255,209,109,.6)}
 /* PLAY button states: dim → blink (cue state) → bright (playing) */
 .dkbtn.dkplay{border-color:rgba(135,135,255,.2);color:rgba(160,160,255,.5);text-shadow:0 0 4px rgba(135,135,255,.15)}
-.dkbtn.dkplay.ac{border-color:var(--grn2);color:var(--grn);background:linear-gradient(180deg,rgba(135,135,255,.15),rgba(135,135,255,.25));box-shadow:0 0 20px rgba(135,135,255,.5),inset 0 0 10px rgba(160,160,255,.15);text-shadow:0 0 8px rgba(160,160,255,.6)}
+.dkbtn.dkplay.ac{border-color:var(--key2);color:var(--key);background:linear-gradient(180deg,rgba(135,135,255,.15),rgba(135,135,255,.25));box-shadow:0 0 20px rgba(135,135,255,.5),inset 0 0 10px rgba(160,160,255,.15);text-shadow:0 0 8px rgba(160,160,255,.6)}
 .dkbtn.dkplay.blink{animation:play-blink 1s ease-in-out infinite}
-@keyframes play-blink{0%,100%{border-color:rgba(135,135,255,.25);color:rgba(135,135,255,.35);background:transparent;box-shadow:none}50%{border-color:var(--grn);color:var(--grn);background:rgba(135,135,255,.15);box-shadow:0 0 8px rgba(135,135,255,.3)}}
+@keyframes play-blink{0%,100%{border-color:rgba(135,135,255,.25);color:rgba(135,135,255,.35);background:transparent;box-shadow:none}50%{border-color:var(--key);color:var(--key);background:rgba(135,135,255,.15);box-shadow:0 0 8px rgba(135,135,255,.3)}}
 /* STOP (return to start) button */
 .dkbtn.dkstop{border-color:rgba(255,180,171,.18);color:rgba(255,180,171,.45);font-size:12px}
 .dkbtn.dkstop:not(:disabled):hover{border-color:rgba(255,180,171,.5);color:var(--red)}
@@ -151,7 +151,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-stop-lyr-row .dkbtn.dklyr{height:22px;font-size:7px}
 .dkbtn.dklyr{height:18px;font-size:7px;letter-spacing:.06em;border-radius:4px}
 .dkbtn.dklyr-a{border-color:rgba(160,160,255,.2);color:rgba(160,160,255,.4)}
-.dkbtn.dklyr-a.ac{border-color:var(--grn2);color:var(--grn);background:rgba(135,135,255,.18);box-shadow:0 0 6px rgba(135,135,255,.3)}
+.dkbtn.dklyr-a.ac{border-color:var(--key2);color:var(--key);background:rgba(135,135,255,.18);box-shadow:0 0 6px rgba(135,135,255,.3)}
 .dkbtn.dklyr-b{border-color:rgba(164,201,255,.2);color:rgba(164,201,255,.4)}
 .dkbtn.dklyr-b.ac{border-color:var(--blu);color:var(--blu);background:rgba(164,201,255,.12);box-shadow:0 0 6px rgba(164,201,255,.25)}
 /* Waveform + VU side-by-side row */
@@ -187,7 +187,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dhtb{padding:3px 6px;border-radius:4px;font:600 9px var(--mn);cursor:pointer;border:1px solid var(--bdr2);background:0;color:var(--tx2);transition:all .12s;letter-spacing:.04em;white-space:nowrap}
 .dhtb:hover:not(:disabled){background:var(--bg4);color:var(--tx)}.dhtb:active:not(:disabled){transform:scale(.97)}.dhtb:disabled{opacity:.3;cursor:not-allowed}
 .dhtb.cc{color:var(--ylw);border-color:rgba(251,191,36,.3)}.dhtb.cc:hover:not(:disabled){background:rgba(251,191,36,.08)}.dhtb.cc.ac{background:rgba(251,191,36,.2);border-color:var(--ylw)}
-.dhtb.cp{color:var(--grn);border-color:rgba(135,135,255,.3)}.dhtb.cp:hover:not(:disabled){background:rgba(135,135,255,.08)}.dhtb.cp.ac{background:rgba(135,135,255,.15);border-color:var(--grn)}
+.dhtb.cp{color:var(--key);border-color:rgba(135,135,255,.3)}.dhtb.cp:hover:not(:disabled){background:rgba(135,135,255,.08)}.dhtb.cp.ac{background:rgba(135,135,255,.15);border-color:var(--key)}
 .dhtb.cdl{color:var(--red);border-color:rgba(239,68,68,.25)}.dhtb.cdl:hover{background:rgba(239,68,68,.08)}
 .din{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:7px}
 .dil{font:400 9px var(--sn);color:var(--tx3);letter-spacing:.04em}
@@ -246,7 +246,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .ddzi{width:28px;height:28px;border:1.5px dashed var(--tx3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px}
 .dk.dov .ddzi{border-color:var(--blu);color:var(--blu)}
 .add-deck-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border:1.5px dashed var(--bdr2);border-radius:12px;cursor:pointer;color:var(--tx3);font:600 11px var(--sn);background:0;transition:all .15s;width:100%}
-.add-deck-btn:hover{border-color:var(--grn);color:var(--grn);background:rgba(135,135,255,.04)}
+.add-deck-btn:hover{border-color:var(--key);color:var(--key);background:rgba(135,135,255,.04)}
 .sgr{background:var(--bg2);border:none;border-radius:10px;padding:4px 16px;margin-bottom:12px}
 .srw{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(60,60,80,.1)}.srw:last-child{border-bottom:none}
 .srl{font:400 11px var(--sn);color:var(--tx2)}.srv{font:400 11px var(--mn);color:var(--tx)}
@@ -261,7 +261,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .dpu{animation:pulse 2s ease-in-out infinite}
 .bbar{position:fixed;bottom:0;left:0;right:0;height:34px;padding:0 16px;display:flex;justify-content:space-between;align-items:center;background:var(--bg-lowest);border-top:1px solid rgba(60,60,80,.2);backdrop-filter:blur(12px);-webkit-app-region:no-drag;z-index:50}
 .btn{padding:6px 18px;border-radius:8px;font:700 11px var(--sn);cursor:pointer;border:none;transition:all .12s}.btn:active{transform:scale(.95)}
-.btng{background:linear-gradient(180deg,var(--grn),var(--grn2));color:#1a1a3d;box-shadow:0 0 15px rgba(135,135,255,.3)}.btng:hover{brightness:1.1}
+.btng{background:linear-gradient(180deg,var(--key),var(--key2));color:#1a1a3d;box-shadow:0 0 15px rgba(135,135,255,.3)}.btng:hover{brightness:1.1}
 .btnr{background:rgba(255,180,171,.1);color:var(--red);border:1px solid rgba(255,180,171,.2)}.btnr:hover{background:rgba(255,180,171,.2)}
 /* Album art — far-left of art-title-row */
 .dkart{width:52px;height:52px;border-radius:5px;flex-shrink:0;overflow:hidden;background:var(--bg-lowest);border:1px solid var(--bdr);cursor:pointer;position:relative;transition:filter .15s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
@@ -290,7 +290,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .devbar-item.dvi-master{border-color:rgba(251,191,36,.4)}
 .devbar-item.dvi-onair{border-color:rgba(248,113,113,.4)}
 .dvi-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 11px var(--mn);flex-shrink:0;position:relative}
-.dvi-icon.cdj{background:rgba(135,135,255,.1);color:var(--grn);border:1px solid rgba(135,135,255,.2)}
+.dvi-icon.cdj{background:rgba(135,135,255,.1);color:var(--key);border:1px solid rgba(135,135,255,.2)}
 .dvi-icon.djm{background:rgba(167,139,250,.1);color:var(--pur);border:1px solid rgba(167,139,250,.2)}
 .dvi-state{position:absolute;bottom:-2px;right:-2px;font-size:8px;line-height:1}
 .dvi-info{display:flex;flex-direction:column;gap:1px;min-width:0}
@@ -304,17 +304,17 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .dvi-bd.onair{background:rgba(248,113,113,.12);color:var(--red);animation:pulse-air 1s ease-in-out infinite}
 .dvi-sep{width:1px;height:28px;background:var(--bdr);margin:0 2px}
 .dvi-link{display:flex;align-items:center;gap:4px;padding:4px 6px}
-.dvi-link-icon{font:700 10px var(--mn);color:var(--grn)}
+.dvi-link-icon{font:700 10px var(--mn);color:var(--key)}
 .mode-bar{display:flex;align-items:center;gap:12px;padding:8px 0;margin-bottom:8px;flex-shrink:0}
 .mode-label{font:700 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-transform:uppercase}
 .mode-btns{display:flex;gap:0;background:var(--bg-lowest);border-radius:8px;padding:2px;border:1px solid var(--bdr)}
 .mode-btn{padding:5px 18px;border-radius:6px;font:700 9px var(--lb);cursor:pointer;border:none;background:0;color:var(--tx3);transition:all .15s;letter-spacing:.08em;text-transform:uppercase}
-.mode-btn:hover{color:var(--tx2)}.mode-btn.ac{background:var(--bg4);color:var(--grn);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.mode-btn:hover{color:var(--tx2)}.mode-btn.ac{background:var(--bg4);color:var(--key);box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .mode-hint{font:400 10px var(--sn);color:var(--tx4);margin-left:auto}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes shimmer{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
-#masterVol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--grn);cursor:pointer;border:none}
-#masterVol::-webkit-slider-thumb:hover{background:var(--grn2);box-shadow:0 0 6px rgba(135,135,255,.5)}
+#masterVol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--key);cursor:pointer;border:none}
+#masterVol::-webkit-slider-thumb:hover{background:var(--key2);box-shadow:0 0 6px rgba(135,135,255,.5)}
 </style>
 <script src="./waveform-gl.js"></script>
 </head><body>
@@ -332,7 +332,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
     <div style="display:flex;align-items:center;gap:5px;-webkit-app-region:no-drag" title="출력 볼륨">
       <span style="font:700 8px var(--mn);color:var(--tx4);letter-spacing:.06em">M.VOL</span>
       <input type="range" id="masterVol" min="0" max="100" value="100" step="1"
-        style="width:64px;height:4px;appearance:none;background:linear-gradient(to right,var(--grn) 100%,rgba(255,255,255,.12) 100%);border-radius:2px;outline:none;cursor:pointer;-webkit-app-region:no-drag"
+        style="width:64px;height:4px;appearance:none;background:linear-gradient(to right,var(--key) 100%,rgba(255,255,255,.12) 100%);border-radius:2px;outline:none;cursor:pointer;-webkit-app-region:no-drag"
         oninput="setMasterVol(this.value)">
       <span id="masterVolLbl" style="font:600 9px var(--mn);color:var(--tx3);min-width:26px;text-align:right;font-variant-numeric:tabular-nums">100%</span>
     </div>
@@ -368,7 +368,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
       <button class="mode-btn ac" id="modeHW" onclick="switchMode('hw')">HARDWARE</button>
     </div>
     <span class="mode-hint" id="modeHint">CDJ 연결 시 자동 감지됩니다</span>
-    <span class="mode-hint" id="djmHint" style="display:none;color:var(--grn)"></span>
+    <span class="mode-hint" id="djmHint" style="display:none;color:var(--key)"></span>
   </div>
   <div class="deck-area">
     <div id="hwSection" style="display:none">
@@ -665,7 +665,7 @@ function renderOutLayers(){
       </div>
     </div>`;
   };
-  el.innerHTML=mkOutCard('A','var(--grn)')+mkOutCard('B','var(--blu)')+mkOutCard('M','var(--pur)');
+  el.innerHTML=mkOutCard('A','var(--key)')+mkOutCard('B','var(--blu)')+mkOutCard('M','var(--pur)');
   // event binding
   el.querySelectorAll('.olss').forEach(sel=>{
     sel.onchange=e=>{
@@ -2282,7 +2282,7 @@ function setMasterVol(v){
   const lbl=document.getElementById('masterVolLbl');
   if(lbl)lbl.textContent=v+'%';
   const sl=document.getElementById('masterVol');
-  if(sl)sl.style.background=`linear-gradient(to right,var(--grn) ${v}%,rgba(255,255,255,.12) ${v}%)`;
+  if(sl)sl.style.background=`linear-gradient(to right,var(--key) ${v}%,rgba(255,255,255,.12) ${v}%)`;
 }
 
 function _sendTCState(slot){
@@ -2673,7 +2673,7 @@ function tick(){
       d.vu=d.vuL;
     }
     // dB scale: peak 1.0 → 0dB, -60dB floor, +6dB headroom so loud music fills to top
-    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-60;const h=Math.min(100,Math.max(0,(db+60)*100/60));el2.style.height=h+'%';el2.style.background=h>90?'var(--red)':h>70?'var(--ylw)':'var(--grn)';};
+    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-60;const h=Math.min(100,Math.max(0,(db+60)*100/60));el2.style.height=h+'%';el2.style.background=h>90?'var(--red)':h>70?'var(--ylw)':'var(--key)';};
     if(d.vuChs&&d.vuChs.length>2){
       const CH_IDS=['L','R','3','4','5','6','7','8'];
       d.vuChs.forEach((an,i)=>_vuBar('dvu'+(CH_IDS[i]||String(i+1))+slot, an._lvl||0));
@@ -2704,7 +2704,7 @@ function tick(){
       const mc=d._mediaColor;
       const MCOLORS={0:'',1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
       const usbC=mc>0?MCOLORS[mc]:'';
-      did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)');
+      did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--key)':d.cu?'var(--ylw)':'var(--tx3)');
     }
     // CUE/PLAY button states — CDJ-3000 style
     const pb=el.querySelector('[data-a="play"]');
@@ -2854,7 +2854,7 @@ function tick(){
   updateHeader();
   const slots=Object.keys(DECKS).map(Number).sort();
   document.getElementById('bDots').innerHTML=slots.map(s=>{
-    const d=DECKS[s],c=d.type==='hw'?'var(--pur)':d.pl?'var(--grn)':d.cu?'var(--ylw)':d.ld?'rgba(135,135,255,.4)':'var(--tx4)';
+    const d=DECKS[s],c=d.type==='hw'?'var(--pur)':d.pl?'var(--key)':d.cu?'var(--ylw)':d.ld?'rgba(135,135,255,.4)':'var(--tx4)';
     return`<div style="display:flex;align-items:center;gap:4px"><span class="dot${d.pl?' dpu':''}" style="background:${c}"></span><span style="font:400 9px var(--mn);color:var(--tx3)">${s+1}</span></div>`;
   }).join('');
   if(run)document.getElementById('bPk').textContent='TX: '+pk.toLocaleString();
@@ -2879,7 +2879,7 @@ function updateHeader(){
 function renderPDJL(){
   const now=Date.now(),devs=pdjlDevices.filter(d=>now-d.lastSeen<10000);
   const hwDevs=devs.filter(d=>!d.virtual);
-  const col=pdjlPort?'var(--grn)':'var(--red)';
+  const col=pdjlPort?'var(--key)':'var(--red)';
   document.getElementById('pdjlStatus').innerHTML=`<div class="al ${pdjlPort?'als':'aler'}"><span class="dot ${pdjlPort?'dpu':''}" style="width:5px;height:5px;flex-shrink:0;background:${col}"></span><div style="font:500 11px var(--sn);color:${col}">Pro DJ Link — ${pdjlPort?'UDP '+pdjlPort+' 수신 중':'바인드 실패'}</div></div>`;
   // hide device list when no HW devices are present
   const devListEl=document.getElementById('pdjlDevList');
@@ -2887,7 +2887,7 @@ function renderPDJL(){
   if(hwDevs.length){
     if(devLabelEl)devLabelEl.style.display='';
     devListEl.style.display='';
-    devListEl.innerHTML=`<div class="tbl"><div class="tblh" style="grid-template-columns:1fr 2fr 2fr auto">${['TYPE','NAME','IP',''].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>${hwDevs.map(d=>`<div class="tblr" style="grid-template-columns:1fr 2fr 2fr auto"><div><span class="bd ${d.type==='CDJ'?'bb':d.type==='DJM'?'bp':'bm'}">${d.type}</span></div><div style="font:400 11px var(--mn);color:var(--tx)">${d.name||'—'}</div><div style="font:400 10px var(--mn);color:var(--tx3)">${d.ip}</div><div><span class="dot dpu" style="background:var(--grn)"></span></div></div>`).join('')}</div>`;
+    devListEl.innerHTML=`<div class="tbl"><div class="tblh" style="grid-template-columns:1fr 2fr 2fr auto">${['TYPE','NAME','IP',''].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>${hwDevs.map(d=>`<div class="tblr" style="grid-template-columns:1fr 2fr 2fr auto"><div><span class="bd ${d.type==='CDJ'?'bb':d.type==='DJM'?'bp':'bm'}">${d.type}</span></div><div style="font:400 11px var(--mn);color:var(--tx)">${d.name||'—'}</div><div style="font:400 10px var(--mn);color:var(--tx3)">${d.ip}</div><div><span class="dot dpu" style="background:var(--key)"></span></div></div>`).join('')}</div>`;
   }else{
     if(devLabelEl)devLabelEl.style.display='none';
     devListEl.style.display='none';
@@ -2898,7 +2898,7 @@ function renderPDJL(){
 function renderTcnet(){
   const nodes=Object.values(tcNodes).filter(n=>Date.now()-n.lastSeen<10000);
   document.getElementById('pgTcnet').innerHTML=`
-    ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span><div><div style="font:500 11px var(--sn);color:var(--grn)">TCNet — ${TC_NAME||'BRIDGE+'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">Data: 브로드캐스트 + Resolume Arena 유니캐스트 동시</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">오프라인</span></div>`}
+    ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--key)"></span><div><div style="font:500 11px var(--sn);color:var(--key)">TCNet — ${TC_NAME||'BRIDGE+'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">Data: 브로드캐스트 + Resolume Arena 유니캐스트 동시</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">오프라인</span></div>`}
     <div class="sl">노드</div>
     <div class="tbl">
       <div class="tblh" style="grid-template-columns:1.5fr 1fr 2fr 1.5fr">${['NODE','TYPE','VENDOR / DEVICE','IP'].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>
@@ -2907,7 +2907,7 @@ function renderTcnet(){
       ${nodes.length===0?'<div style="padding:9px 12px;color:var(--tx3);font:400 11px var(--sn)">Arena 미감지 — Arena에서 TCNet 활성화하세요</div>':''}
     </div>
     <div class="sl mt">통계</div>
-    <div class="pgr">${[{l:'TIME 0xFE',v:pk,c:'var(--grn)'},{l:'DATA 0xC8',v:pk,c:'var(--pur)'},{l:'OPTIN 0x02',v:up,c:'var(--blu)'},{l:'STATUS 0x05',v:Math.floor(up/2),c:'var(--ylw)'}].map(p=>`<div class="pgc"><div style="font:500 9px var(--sn);color:var(--tx3);margin-bottom:3px">${p.l}</div><div style="font:600 14px var(--mn);color:${p.c};font-variant-numeric:tabular-nums">${p.v.toLocaleString()}</div></div>`).join('')}</div>`;
+    <div class="pgr">${[{l:'TIME 0xFE',v:pk,c:'var(--key)'},{l:'DATA 0xC8',v:pk,c:'var(--pur)'},{l:'OPTIN 0x02',v:up,c:'var(--blu)'},{l:'STATUS 0x05',v:Math.floor(up/2),c:'var(--ylw)'}].map(p=>`<div class="pgc"><div style="font:500 9px var(--sn);color:var(--tx3);margin-bottom:3px">${p.l}</div><div style="font:600 14px var(--mn);color:${p.c};font-variant-numeric:tabular-nums">${p.v.toLocaleString()}</div></div>`).join('')}</div>`;
 }
 
 function renderSettings(){
@@ -2937,8 +2937,8 @@ function renderSettings(){
       <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
       <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">유니캐스트 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcUnicast" ${cfg.tcnetUnicast?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">브로드캐스트 대신 발견된 노드에만 전송</span></label></div>
-      <div class="srw" id="rowTcAllIfaces" style="${cfg.tcnetUnicast?'':'display:none'}"><span class="srl">모든 인터페이스 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcAllIfaces" ${cfg.tcnetAllIfaces?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">모든 NIC 서브넷으로 유니캐스트</span></label></div>
+      <div class="srw"><span class="srl">유니캐스트 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcUnicast" ${cfg.tcnetUnicast?'checked':''} style="accent-color:var(--key)"><span style="font:400 10px var(--sn);color:var(--tx2)">브로드캐스트 대신 발견된 노드에만 전송</span></label></div>
+      <div class="srw" id="rowTcAllIfaces" style="${cfg.tcnetUnicast?'':'display:none'}"><span class="srl">모든 인터페이스 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcAllIfaces" ${cfg.tcnetAllIfaces?'checked':''} style="accent-color:var(--key)"><span style="font:400 10px var(--sn);color:var(--tx2)">모든 NIC 서브넷으로 유니캐스트</span></label></div>
     </div>
     <div class="sl">Pro DJ Link 설정</div>
     <div class="sgr">
@@ -3085,8 +3085,8 @@ async function doStart(){
     });
   }
   const hd=document.getElementById('hDot'),hs=document.getElementById('hSt'),mb=document.getElementById('mainBtn');
-  hd.style.background='var(--grn)';hd.classList.add('dpu');
-  hs.textContent='ONLINE';hs.style.color='var(--grn)';
+  hd.style.background='var(--key)';hd.classList.add('dpu');
+  hs.textContent='ONLINE';hs.style.color='var(--key)';
   mb.textContent='STOP';mb.className='btn btnr';
 }
 async function doStop(){
