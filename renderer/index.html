@@ -10,11 +10,11 @@
   --bg-lowest:#0c0e12;--bg-highest:#333539;
   --bdr:rgba(60,60,80,.15);--bdr2:rgba(60,60,80,.3);
   --tx:#e2e2e8;--tx2:#c0c0cc;--tx3:#8b8b98;--tx4:#42424e;
-  --key:#8787ff;--key2:#6a6adf;--key-dim:#7575ef;--blu:#a4c9ff;--blu2:#0267b8;--ylw:#ffd16d;--ylw2:#ecb210;--red:#ffb4ab;--pur:#a78bfa;--org:#fb923c;
+  --key:#8787ff;--key2:#6a6adf;--key-dim:#7575ef;--grn:#5af0b3;--grn2:#34d399;--blu:#a4c9ff;--blu2:#0267b8;--ylw:#ffd16d;--ylw2:#ecb210;--red:#ffb4ab;--pur:#a78bfa;--org:#fb923c;
   --mn:'DM Mono',monospace;--sn:'Noto Sans KR',-apple-system,sans-serif;--lb:'Space Grotesk','Noto Sans KR',sans-serif;--seg:'DSEG7',monospace
 }
 .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
-.active-glow{box-shadow:0 0 20px rgba(135,135,255,.15)}
+.active-glow{box-shadow:0 0 20px rgba(52,211,153,.15)}
 .glass-panel{background:rgba(51,53,57,.6);backdrop-filter:blur(12px)}
 body{background:var(--bg);color:var(--tx);font-family:var(--sn);-webkit-app-region:drag;user-select:none;overflow:hidden;font-weight:400}
 button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
@@ -37,9 +37,9 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .bg{color:var(--key)}.br{color:var(--red)}
 .bb{color:var(--blu)}.by{color:var(--ylw)}
 .bm{color:var(--tx2)}.bp{color:var(--pur)}
-.sc-online{background:rgba(40,40,100,.15);border:1px solid rgba(135,135,255,.2)}
+.sc-online{background:rgba(0,86,59,.15);border:1px solid rgba(52,211,153,.2)}
 .al{padding:10px 16px;border-radius:8px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
-.als{background:rgba(40,40,100,.08);border:1px solid rgba(135,135,255,.15)}
+.als{background:rgba(0,86,59,.08);border:1px solid rgba(52,211,153,.15)}
 .alw{background:rgba(92,67,0,.08);border:1px solid rgba(255,209,109,.15)}
 .aler{background:rgba(147,0,10,.08);border:1px solid rgba(255,180,171,.15)}
 .fstrip{display:flex;gap:5px;padding:6px 10px;background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;margin-bottom:8px;align-items:flex-end}
@@ -57,8 +57,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact{gap:4px}
 .deck-row.compact .dk-hdr{padding:3px 8px 2px}
 .dk{background:#0d0f12;border:1px solid rgba(113,255,232,.1);border-radius:10px;overflow:hidden;transition:box-shadow .2s,border-color .2s;min-width:0;box-shadow:0 2px 12px rgba(0,0,0,.4)}
-.dk[data-st="play"]{box-shadow:0 0 18px rgba(135,135,255,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(135,135,255,.2)}.dk[data-st="cue"]{box-shadow:0 0 14px rgba(255,209,109,.1),0 2px 12px rgba(0,0,0,.4);border-color:rgba(255,209,109,.18)}.dk.dov{box-shadow:0 0 14px rgba(164,201,255,.12),0 2px 12px rgba(0,0,0,.4)!important;border-color:rgba(164,201,255,.25)!important}
-.dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--key),transparent)}
+.dk[data-st="play"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk[data-st="cue"]{box-shadow:0 0 14px rgba(255,209,109,.1),0 2px 12px rgba(0,0,0,.4);border-color:rgba(255,209,109,.18)}.dk.dov{box-shadow:0 0 14px rgba(164,201,255,.12),0 2px 12px rgba(0,0,0,.4)!important;border-color:rgba(164,201,255,.25)!important}
+.dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--grn),transparent)}
 .dk[data-st="play"] .dshim{opacity:1;animation:shimmer 2s ease-in-out infinite}
 .dk[data-st="cue"] .dshim{opacity:.6;background:linear-gradient(90deg,transparent,var(--ylw),transparent)}
 .dtop{padding:8px 13px 8px}
@@ -138,10 +138,10 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dkbtn.dkcue.medium{border-color:rgba(249,189,34,.5);color:#ffd16d;background:rgba(249,189,34,.1);text-shadow:0 0 6px rgba(255,209,109,.3)}
 .dkbtn.dkcue.ac{border-color:#ecb210;color:#ffd16d;background:linear-gradient(180deg,rgba(249,189,34,.2),rgba(236,178,16,.3));box-shadow:0 0 20px rgba(236,178,16,.5),inset 0 0 10px rgba(255,209,109,.15);text-shadow:0 0 8px rgba(255,209,109,.6)}
 /* PLAY button states: dim → blink (cue state) → bright (playing) */
-.dkbtn.dkplay{border-color:rgba(135,135,255,.2);color:rgba(160,160,255,.5);text-shadow:0 0 4px rgba(135,135,255,.15)}
-.dkbtn.dkplay.ac{border-color:var(--key2);color:var(--key);background:linear-gradient(180deg,rgba(135,135,255,.15),rgba(135,135,255,.25));box-shadow:0 0 20px rgba(135,135,255,.5),inset 0 0 10px rgba(160,160,255,.15);text-shadow:0 0 8px rgba(160,160,255,.6)}
+.dkbtn.dkplay{border-color:rgba(52,211,153,.2);color:rgba(90,240,179,.5);text-shadow:0 0 4px rgba(52,211,153,.15)}
+.dkbtn.dkplay.ac{border-color:var(--grn2);color:var(--grn);background:linear-gradient(180deg,rgba(52,211,153,.15),rgba(52,211,153,.25));box-shadow:0 0 20px rgba(52,211,153,.5),inset 0 0 10px rgba(90,240,179,.15);text-shadow:0 0 8px rgba(90,240,179,.6)}
 .dkbtn.dkplay.blink{animation:play-blink 1s ease-in-out infinite}
-@keyframes play-blink{0%,100%{border-color:rgba(135,135,255,.25);color:rgba(135,135,255,.35);background:transparent;box-shadow:none}50%{border-color:var(--key);color:var(--key);background:rgba(135,135,255,.15);box-shadow:0 0 8px rgba(135,135,255,.3)}}
+@keyframes play-blink{0%,100%{border-color:rgba(52,211,153,.25);color:rgba(52,211,153,.35);background:transparent;box-shadow:none}50%{border-color:var(--grn);color:var(--grn);background:rgba(52,211,153,.15);box-shadow:0 0 8px rgba(52,211,153,.3)}}
 /* STOP (return to start) button */
 .dkbtn.dkstop{border-color:rgba(255,180,171,.18);color:rgba(255,180,171,.45);font-size:12px}
 .dkbtn.dkstop:not(:disabled):hover{border-color:rgba(255,180,171,.5);color:var(--red)}
@@ -206,7 +206,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* Output Layer 카드 */
 .out-layers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
 .olc{background:var(--bg2);border:none;border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;gap:5px;transition:box-shadow .2s;border-left:4px solid var(--tx4)}
-.olc-play{box-shadow:0 0 16px rgba(135,135,255,.1)}
+.olc-play{box-shadow:0 0 16px rgba(52,211,153,.1)}
 .olh{display:flex;align-items:center;gap:6px}
 .olb{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font:800 9px var(--mn);color:#1a1a3d;flex-shrink:0}
 .oltc{font:500 14px var(--mn);color:var(--tx3);letter-spacing:-.02em;font-variant-numeric:tabular-nums;flex:1;text-align:right}
@@ -286,11 +286,11 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .dk[data-st="play"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
 .devbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg2);border:none;border-radius:10px;margin-bottom:10px;min-height:44px;flex-wrap:wrap}
 .devbar-item{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg3);border:none;border-radius:8px;transition:box-shadow .2s}
-.devbar-item.dvi-play{border-color:rgba(135,135,255,.3)}
+.devbar-item.dvi-play{border-color:rgba(52,211,153,.3)}
 .devbar-item.dvi-master{border-color:rgba(251,191,36,.4)}
 .devbar-item.dvi-onair{border-color:rgba(248,113,113,.4)}
 .dvi-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font:700 11px var(--mn);flex-shrink:0;position:relative}
-.dvi-icon.cdj{background:rgba(135,135,255,.1);color:var(--key);border:1px solid rgba(135,135,255,.2)}
+.dvi-icon.cdj{background:rgba(52,211,153,.1);color:var(--grn);border:1px solid rgba(52,211,153,.2)}
 .dvi-icon.djm{background:rgba(167,139,250,.1);color:var(--pur);border:1px solid rgba(167,139,250,.2)}
 .dvi-state{position:absolute;bottom:-2px;right:-2px;font-size:8px;line-height:1}
 .dvi-info{display:flex;flex-direction:column;gap:1px;min-width:0}
@@ -304,7 +304,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .dvi-bd.onair{background:rgba(248,113,113,.12);color:var(--red);animation:pulse-air 1s ease-in-out infinite}
 .dvi-sep{width:1px;height:28px;background:var(--bdr);margin:0 2px}
 .dvi-link{display:flex;align-items:center;gap:4px;padding:4px 6px}
-.dvi-link-icon{font:700 10px var(--mn);color:var(--key)}
+.dvi-link-icon{font:700 10px var(--mn);color:var(--grn)}
 .mode-bar{display:flex;align-items:center;gap:12px;padding:8px 0;margin-bottom:8px;flex-shrink:0}
 .mode-label{font:700 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-transform:uppercase}
 .mode-btns{display:flex;gap:0;background:var(--bg-lowest);border-radius:8px;padding:2px;border:1px solid var(--bdr)}
@@ -313,8 +313,8 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mode-hint{font:400 10px var(--sn);color:var(--tx4);margin-left:auto}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes shimmer{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
-#masterVol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--key);cursor:pointer;border:none}
-#masterVol::-webkit-slider-thumb:hover{background:var(--key2);box-shadow:0 0 6px rgba(135,135,255,.5)}
+#masterVol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--grn);cursor:pointer;border:none}
+#masterVol::-webkit-slider-thumb:hover{background:var(--grn2);box-shadow:0 0 6px rgba(52,211,153,.5)}
 </style>
 <script src="./waveform-gl.js"></script>
 </head><body>
@@ -332,7 +332,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
     <div style="display:flex;align-items:center;gap:5px;-webkit-app-region:no-drag" title="출력 볼륨">
       <span style="font:700 8px var(--mn);color:var(--tx4);letter-spacing:.06em">M.VOL</span>
       <input type="range" id="masterVol" min="0" max="100" value="100" step="1"
-        style="width:64px;height:4px;appearance:none;background:linear-gradient(to right,var(--key) 100%,rgba(255,255,255,.12) 100%);border-radius:2px;outline:none;cursor:pointer;-webkit-app-region:no-drag"
+        style="width:64px;height:4px;appearance:none;background:linear-gradient(to right,var(--grn) 100%,rgba(255,255,255,.12) 100%);border-radius:2px;outline:none;cursor:pointer;-webkit-app-region:no-drag"
         oninput="setMasterVol(this.value)">
       <span id="masterVolLbl" style="font:600 9px var(--mn);color:var(--tx3);min-width:26px;text-align:right;font-variant-numeric:tabular-nums">100%</span>
     </div>
@@ -368,7 +368,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
       <button class="mode-btn ac" id="modeHW" onclick="switchMode('hw')">HARDWARE</button>
     </div>
     <span class="mode-hint" id="modeHint">CDJ 연결 시 자동 감지됩니다</span>
-    <span class="mode-hint" id="djmHint" style="display:none;color:var(--key)"></span>
+    <span class="mode-hint" id="djmHint" style="display:none;color:var(--grn)"></span>
   </div>
   <div class="deck-area">
     <div id="hwSection" style="display:none">
@@ -2282,7 +2282,7 @@ function setMasterVol(v){
   const lbl=document.getElementById('masterVolLbl');
   if(lbl)lbl.textContent=v+'%';
   const sl=document.getElementById('masterVol');
-  if(sl)sl.style.background=`linear-gradient(to right,var(--key) ${v}%,rgba(255,255,255,.12) ${v}%)`;
+  if(sl)sl.style.background=`linear-gradient(to right,var(--grn) ${v}%,rgba(255,255,255,.12) ${v}%)`;
 }
 
 function _sendTCState(slot){
@@ -2673,7 +2673,7 @@ function tick(){
       d.vu=d.vuL;
     }
     // dB scale: peak 1.0 → 0dB, -60dB floor, +6dB headroom so loud music fills to top
-    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-60;const h=Math.min(100,Math.max(0,(db+60)*100/60));el2.style.height=h+'%';el2.style.background=h>90?'var(--red)':h>70?'var(--ylw)':'var(--key)';};
+    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-60;const h=Math.min(100,Math.max(0,(db+60)*100/60));el2.style.height=h+'%';el2.style.background=h>90?'var(--red)':h>70?'var(--ylw)':'var(--grn)';};
     if(d.vuChs&&d.vuChs.length>2){
       const CH_IDS=['L','R','3','4','5','6','7','8'];
       d.vuChs.forEach((an,i)=>_vuBar('dvu'+(CH_IDS[i]||String(i+1))+slot, an._lvl||0));
@@ -2704,7 +2704,7 @@ function tick(){
       const mc=d._mediaColor;
       const MCOLORS={0:'',1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
       const usbC=mc>0?MCOLORS[mc]:'';
-      did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--key)':d.cu?'var(--ylw)':'var(--tx3)');
+      did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)');
     }
     // CUE/PLAY button states — CDJ-3000 style
     const pb=el.querySelector('[data-a="play"]');
@@ -2854,7 +2854,7 @@ function tick(){
   updateHeader();
   const slots=Object.keys(DECKS).map(Number).sort();
   document.getElementById('bDots').innerHTML=slots.map(s=>{
-    const d=DECKS[s],c=d.type==='hw'?'var(--pur)':d.pl?'var(--key)':d.cu?'var(--ylw)':d.ld?'rgba(135,135,255,.4)':'var(--tx4)';
+    const d=DECKS[s],c=d.type==='hw'?'var(--pur)':d.pl?'var(--grn)':d.cu?'var(--ylw)':d.ld?'rgba(52,211,153,.4)':'var(--tx4)';
     return`<div style="display:flex;align-items:center;gap:4px"><span class="dot${d.pl?' dpu':''}" style="background:${c}"></span><span style="font:400 9px var(--mn);color:var(--tx3)">${s+1}</span></div>`;
   }).join('');
   if(run)document.getElementById('bPk').textContent='TX: '+pk.toLocaleString();
@@ -2879,7 +2879,7 @@ function updateHeader(){
 function renderPDJL(){
   const now=Date.now(),devs=pdjlDevices.filter(d=>now-d.lastSeen<10000);
   const hwDevs=devs.filter(d=>!d.virtual);
-  const col=pdjlPort?'var(--key)':'var(--red)';
+  const col=pdjlPort?'var(--grn)':'var(--red)';
   document.getElementById('pdjlStatus').innerHTML=`<div class="al ${pdjlPort?'als':'aler'}"><span class="dot ${pdjlPort?'dpu':''}" style="width:5px;height:5px;flex-shrink:0;background:${col}"></span><div style="font:500 11px var(--sn);color:${col}">Pro DJ Link — ${pdjlPort?'UDP '+pdjlPort+' 수신 중':'바인드 실패'}</div></div>`;
   // hide device list when no HW devices are present
   const devListEl=document.getElementById('pdjlDevList');
@@ -2887,7 +2887,7 @@ function renderPDJL(){
   if(hwDevs.length){
     if(devLabelEl)devLabelEl.style.display='';
     devListEl.style.display='';
-    devListEl.innerHTML=`<div class="tbl"><div class="tblh" style="grid-template-columns:1fr 2fr 2fr auto">${['TYPE','NAME','IP',''].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>${hwDevs.map(d=>`<div class="tblr" style="grid-template-columns:1fr 2fr 2fr auto"><div><span class="bd ${d.type==='CDJ'?'bb':d.type==='DJM'?'bp':'bm'}">${d.type}</span></div><div style="font:400 11px var(--mn);color:var(--tx)">${d.name||'—'}</div><div style="font:400 10px var(--mn);color:var(--tx3)">${d.ip}</div><div><span class="dot dpu" style="background:var(--key)"></span></div></div>`).join('')}</div>`;
+    devListEl.innerHTML=`<div class="tbl"><div class="tblh" style="grid-template-columns:1fr 2fr 2fr auto">${['TYPE','NAME','IP',''].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>${hwDevs.map(d=>`<div class="tblr" style="grid-template-columns:1fr 2fr 2fr auto"><div><span class="bd ${d.type==='CDJ'?'bb':d.type==='DJM'?'bp':'bm'}">${d.type}</span></div><div style="font:400 11px var(--mn);color:var(--tx)">${d.name||'—'}</div><div style="font:400 10px var(--mn);color:var(--tx3)">${d.ip}</div><div><span class="dot dpu" style="background:var(--grn)"></span></div></div>`).join('')}</div>`;
   }else{
     if(devLabelEl)devLabelEl.style.display='none';
     devListEl.style.display='none';
@@ -2898,7 +2898,7 @@ function renderPDJL(){
 function renderTcnet(){
   const nodes=Object.values(tcNodes).filter(n=>Date.now()-n.lastSeen<10000);
   document.getElementById('pgTcnet').innerHTML=`
-    ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--key)"></span><div><div style="font:500 11px var(--sn);color:var(--key)">TCNet — ${TC_NAME||'BRIDGE+'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">Data: 브로드캐스트 + Resolume Arena 유니캐스트 동시</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">오프라인</span></div>`}
+    ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span><div><div style="font:500 11px var(--sn);color:var(--grn)">TCNet — ${TC_NAME||'BRIDGE+'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">Data: 브로드캐스트 + Resolume Arena 유니캐스트 동시</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">오프라인</span></div>`}
     <div class="sl">노드</div>
     <div class="tbl">
       <div class="tblh" style="grid-template-columns:1.5fr 1fr 2fr 1.5fr">${['NODE','TYPE','VENDOR / DEVICE','IP'].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>
@@ -2907,7 +2907,7 @@ function renderTcnet(){
       ${nodes.length===0?'<div style="padding:9px 12px;color:var(--tx3);font:400 11px var(--sn)">Arena 미감지 — Arena에서 TCNet 활성화하세요</div>':''}
     </div>
     <div class="sl mt">통계</div>
-    <div class="pgr">${[{l:'TIME 0xFE',v:pk,c:'var(--key)'},{l:'DATA 0xC8',v:pk,c:'var(--pur)'},{l:'OPTIN 0x02',v:up,c:'var(--blu)'},{l:'STATUS 0x05',v:Math.floor(up/2),c:'var(--ylw)'}].map(p=>`<div class="pgc"><div style="font:500 9px var(--sn);color:var(--tx3);margin-bottom:3px">${p.l}</div><div style="font:600 14px var(--mn);color:${p.c};font-variant-numeric:tabular-nums">${p.v.toLocaleString()}</div></div>`).join('')}</div>`;
+    <div class="pgr">${[{l:'TIME 0xFE',v:pk,c:'var(--grn)'},{l:'DATA 0xC8',v:pk,c:'var(--pur)'},{l:'OPTIN 0x02',v:up,c:'var(--blu)'},{l:'STATUS 0x05',v:Math.floor(up/2),c:'var(--ylw)'}].map(p=>`<div class="pgc"><div style="font:500 9px var(--sn);color:var(--tx3);margin-bottom:3px">${p.l}</div><div style="font:600 14px var(--mn);color:${p.c};font-variant-numeric:tabular-nums">${p.v.toLocaleString()}</div></div>`).join('')}</div>`;
 }
 
 function renderSettings(){
@@ -2937,8 +2937,8 @@ function renderSettings(){
       <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
       <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">유니캐스트 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcUnicast" ${cfg.tcnetUnicast?'checked':''} style="accent-color:var(--key)"><span style="font:400 10px var(--sn);color:var(--tx2)">브로드캐스트 대신 발견된 노드에만 전송</span></label></div>
-      <div class="srw" id="rowTcAllIfaces" style="${cfg.tcnetUnicast?'':'display:none'}"><span class="srl">모든 인터페이스 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcAllIfaces" ${cfg.tcnetAllIfaces?'checked':''} style="accent-color:var(--key)"><span style="font:400 10px var(--sn);color:var(--tx2)">모든 NIC 서브넷으로 유니캐스트</span></label></div>
+      <div class="srw"><span class="srl">유니캐스트 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcUnicast" ${cfg.tcnetUnicast?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">브로드캐스트 대신 발견된 노드에만 전송</span></label></div>
+      <div class="srw" id="rowTcAllIfaces" style="${cfg.tcnetUnicast?'':'display:none'}"><span class="srl">모든 인터페이스 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcAllIfaces" ${cfg.tcnetAllIfaces?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">모든 NIC 서브넷으로 유니캐스트</span></label></div>
     </div>
     <div class="sl">Pro DJ Link 설정</div>
     <div class="sgr">
@@ -3085,8 +3085,8 @@ async function doStart(){
     });
   }
   const hd=document.getElementById('hDot'),hs=document.getElementById('hSt'),mb=document.getElementById('mainBtn');
-  hd.style.background='var(--key)';hd.classList.add('dpu');
-  hs.textContent='ONLINE';hs.style.color='var(--key)';
+  hd.style.background='var(--grn)';hd.classList.add('dpu');
+  hs.textContent='ONLINE';hs.style.color='var(--grn)';
   mb.textContent='STOP';mb.className='btn btnr';
 }
 async function doStop(){
@@ -3351,14 +3351,25 @@ if(E){
   });
   window.bridge.onDevices?.(devs=>{
     pdjlDevices=devs;
-    // only real PDJL CDJs switch to HW mode — not virtual decks
-    devs.filter(d=>d.type==='CDJ'&&!d.virtual).forEach(d=>ensureHWDeck(d.playerNum));
-    if(devs.some(d=>d.type==='DJM')){
-      // Just update DJM hint — no full rebuild needed
-      const djmHint=document.getElementById('djmHint');
-      const djmDevs=devs.filter(d=>d.type==='DJM');
-      if(djmHint){if(djmDevs.length){djmHint.style.display='';djmHint.textContent='♪ '+djmDevs.map(d=>d.name).join(', ')+' CONNECTED';}else djmHint.style.display='none';}
+    const hwCdjs=devs.filter(d=>d.type==='CDJ'&&!d.virtual);
+    // Add new HW decks
+    hwCdjs.forEach(d=>ensureHWDeck(d.playerNum));
+    // Remove HW decks whose CDJ disappeared
+    if(glMode==='hw'){
+      const activeNums=new Set(hwCdjs.map(d=>d.playerNum));
+      Object.keys(DECKS).map(Number).forEach(slot=>{
+        if(DECKS[slot]&&DECKS[slot].type==='hw'&&!activeNums.has(slot+1)){
+          if(DECKS[slot].au){try{DECKS[slot].au.pause();}catch(_){}}
+          delete DECKS[slot];
+          if(E&&run)window.bridge.setHWMode(slot,false);
+        }
+      });
+      renderDecks();
     }
+    // DJM hint
+    const djmHint=document.getElementById('djmHint');
+    const djmDevs=devs.filter(d=>d.type==='DJM');
+    if(djmHint){if(djmDevs.length){djmHint.style.display='';djmHint.textContent='♪ '+djmDevs.map(d=>d.name).join(', ')+' CONNECTED';}else{djmHint.style.display='none';}}
     if(curTab==='pdjl')renderPDJL();
   });
   loadInterfaces();
