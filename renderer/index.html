@@ -169,7 +169,6 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dwz-row .dwz{flex:1;min-width:0;margin:0;height:100%;border-radius:6px 0 0 6px}
 /* VU strip: right side of waveform, channels side-by-side, bars vertical */
 .dvu-strip{display:flex;flex-direction:row;gap:2px;align-items:stretch;width:28px;flex-shrink:0;background:var(--bg-lowest);border:1px solid rgba(0,255,200,.2);border-left:none;border-radius:0 4px 4px 0;padding:3px 3px 3px 2px}
-.dfader-strip{width:18px;padding:3px 2px 3px 1px}
 .dvu-ch{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;height:100%}
 .dvu-lbl{font:700 6px var(--mn);color:var(--tx4);height:7px;line-height:7px;flex-shrink:0}
 .dvu-hbar{flex:1;width:100%;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;position:relative}
@@ -1478,9 +1477,8 @@ function deckHTML(slot){
   const d=DECKS[slot];
   const isHW=d.type==='hw';
   const phas=`<div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>`;
-  const vuStrip=isHW
-    ?`<div class="dvu-strip dfader-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dfader${slot}" style="background:var(--grn)"></div></div></div></div>`
-    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>`;
+  // VU strip — 동일한 L/R 디자인 (HW: DJM 미터 데이터, Virtual: Web Audio 분석)
+  const vuStrip=`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>`;
 
   /* Empty virtual deck: simple drop zone */
   if(!d.ld && !isHW){
@@ -2536,7 +2534,15 @@ function tick(){
     // Peak meter: returns instantaneous peak (0-1) from time domain buffer
     const _getPeak=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i++){const v=Math.abs((buf[i]-128)/128);if(v>pk)pk=v;}return pk;};
     if(d.type==='hw'){
-      if(run){d.vu=d.hwVu>0?d.hwVu:Math.max(0,(d.vu||0)-0.025);d.hwVu=Math.max(0,(d.hwVu||0)-0.04);d.vuL=d.vu;d.vuR=d.vu;}
+      // HW: DJM 미터 데이터 사용 (L/R 동일 — 모노 채널 VU)
+      if(run){
+        const meterVal=d._djmMeter||0;
+        const target=meterVal/255;
+        d.vuL=target>d.vuL?target:target*0.4+(d.vuL||0)*0.6;
+        d.vuR=d.vuL; // 모노 채널
+        d.vu=d.vuL;
+        d._djmMeter=Math.max(0,(d._djmMeter||0)*0.92);
+      }
     } else {
       const active=d.pl||d.cu;
       if(d.vuChs&&d.vuBufs){
@@ -2576,16 +2582,6 @@ function tick(){
     if(bMst2)bMst2.classList.toggle('on',!!d.master);
     const bMst=document.getElementById('dmst'+slot);
     if(bMst)bMst.classList.toggle('on',!!d.mtcMaster);
-    // Fader meter for HW decks (from DJM fader value)
-    if(d.type==='hw'){
-      const fEl=document.getElementById('dfader'+slot);
-      if(fEl){
-        const fv=faders[slot]||0;
-        const pct=Math.round(fv/255*100);
-        fEl.style.height=pct+'%';
-        fEl.style.background=pct>90?'var(--red)':pct>70?'var(--ylw)':'var(--grn)';
-      }
-    }
     const did=document.getElementById('did'+slot);
     if(did){
       // USB media color takes priority over default state color
@@ -3173,7 +3169,7 @@ if(E){
   window.bridge.onDJMStatus?.(d=>{faders=d.faders;});
   window.bridge.onDJMMeter?.(ch=>{
     // ch[0..3] = DJM channel 1-4 post-fader level (0-255)
-    ch.forEach((v,i)=>{if(DECKS[i])DECKS[i].hwVu=v/255;});
+    ch.forEach((v,i)=>{if(DECKS[i]){DECKS[i].hwVu=v/255;DECKS[i]._djmMeter=v;}});
   });
   window.bridge.onDevices?.(devs=>{
     pdjlDevices=devs;

@@ -1310,18 +1310,52 @@ class BridgeCore {
       try{this._pdjlAnnSock.setBroadcast(true);}catch(_){}
     });
 
+    // Bridge join sequence — DJM needs hello + claims before activating fader delivery
+    // STC reference: 2 hellos (0x0A, 37B) + 11 IP claims (0x02, 50B)
+    const spoofPlayer=5;
+    const _bridgeJoin=()=>{
+      // Hello (0x0A) — 37B broadcast × 2
+      for(let h=0;h<2;h++){
+        setTimeout(()=>{
+          const p=Buffer.alloc(37);
+          PDJL.MAGIC.copy(p,0);
+          p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
+          Buffer.from('BRIDGE-PLUS','ascii').copy(p,0x0C,0,11);
+          for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
+          console.log(`[PDJL] bridge hello #${h+1}`);
+        }, h*300);
+      }
+      // Claim (0x02) — 50B broadcast × 11
+      for(let n=1;n<=11;n++){
+        setTimeout(()=>{
+          const p=Buffer.alloc(50);
+          PDJL.MAGIC.copy(p,0);
+          p[0x0A]=0x02; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x32;
+          Buffer.from('BRIDGE-PLUS','ascii').copy(p,0x0C,0,11);
+          for(let i=0;i<4;i++) p[0x24+i]=ipParts[i];
+          for(let i=0;i<6;i++) p[0x28+i]=macBytes[i]||0;
+          p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
+          p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
+          for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
+        }, 600+n*500);
+      }
+    };
+    _bridgeJoin();
+
     const sendAnn=()=>{
+      // 54B bridge keepalive (0x06) — DJM recognizes player=0xF9 as bridge device
+      // STC reference: pkt[0x24]=0xF9(macOS)/0xC1(other), pkt[0x30]=0x03, pkt[0x35]=0x20
       const pkt=Buffer.alloc(54);
       PDJL.MAGIC.copy(pkt,0);
       pkt[0x0A]=0x06; pkt[0x0B]=0x00;
-      const nameStr='BRIDGE-CLONE';
-      Buffer.from(nameStr,'ascii').copy(pkt,0x0C,0,Math.min(nameStr.length,20));
+      Buffer.from('BRIDGE-PLUS','ascii').copy(pkt,0x0C,0,11);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x22]=0x00; pkt[0x23]=0x36;
-      pkt[0x24]=0x05; pkt[0x25]=0x01;
+      pkt[0x24]=process.platform==='darwin'?0xF9:0xC1; // bridge device type (macOS=0xF9)
+      pkt[0x25]=0x00;
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
-      for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];  // embed TCNet IP so Arena connects to us
-      pkt[0x30]=0x08; pkt[0x34]=0x05; pkt[0x35]=0x64;
-      // Send to all broadcast addresses — covers Arena's subnet even if PDJL/TCNet on different NICs
+      for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
+      pkt[0x30]=0x03; pkt[0x34]=0x05; pkt[0x35]=0x20;
+      // Send to all broadcast addresses
       for(const bc of allBCs){
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
       }
@@ -1333,42 +1367,42 @@ class BridgeCore {
     this._timers.push(this._pdjlAnnTimer);
 
     // DJM subscribe (0x57) — triggers fader + VU meter delivery
-    // Must be delayed ~3s after first keepalive (DJM needs time to register bridge)
+    // STC ref: must be sent from a SEPARATE socket (bridgeSock, ephemeral port)
+    // NOT from the beat socket (50001). DJM may reject subscribe from a port it sends data to.
+    // Must be delayed ~3s+ after first keepalive (DJM needs to register bridge identity first)
     this._djmSubSock = dgram.createSocket({type:'udp4',reuseAddr:true});
     this._djmSubSock.on('error',()=>{});
     this._djmSubSock.bind(0,()=>{try{this._djmSubSock.setBroadcast(true);}catch(_){}});
+    const _mkDjmSub=()=>{
+      const pkt=Buffer.alloc(40);
+      PDJL.MAGIC.copy(pkt,0);
+      pkt[10]=0x57; // subscribe type
+      Buffer.from('BRIDGE-PLUS','ascii').copy(pkt,11,0,11);
+      pkt[31]=0x01; pkt[32]=0x00;
+      pkt[33]=process.platform==='darwin'?0xFE:0x87; // macOS=0xFE, Windows=0x87
+      pkt[34]=0x00; pkt[35]=0x04; pkt[36]=0x01; // subtype=4, subscribe=1
+      return pkt;
+    };
     const sendDJMSub = ()=>{
+      const pkt=_mkDjmSub();
       for(const[k,dev] of Object.entries(this.devices)){
         if(dev.type==='DJM'||k==='djm'){
-          const pkt=Buffer.alloc(40);
-          PDJL.MAGIC.copy(pkt,0);
-          pkt[10]=0x57; // subscribe type
-          Buffer.from('BRIDGE-CLONE','ascii').copy(pkt,11,0,15);
-          pkt[31]=0x01;
-          pkt[32]=0x00;
-          pkt[33]=0xFE; // macOS: full subscription (faders + VU)
-          pkt[34]=0x00;
-          pkt[35]=0x04; // subtype
-          pkt[36]=0x01; // subscribe=1
           try{this._djmSubSock.send(pkt,0,pkt.length,50001,dev.ip);}catch(_){}
           console.log(`[PDJL] DJM subscribe 0x57 → ${dev.ip}:50001`);
         }
       }
     };
-    // Also subscribe to DJMs on all broadcast addresses (in case DJM not yet discovered)
     const sendDJMSubBC = ()=>{
-      const pkt=Buffer.alloc(40);
-      PDJL.MAGIC.copy(pkt,0);
-      pkt[10]=0x57;
-      Buffer.from('BRIDGE-CLONE','ascii').copy(pkt,11,0,15);
-      pkt[31]=0x01;pkt[32]=0x00;pkt[33]=0xFE;pkt[34]=0x00;pkt[35]=0x04;pkt[36]=0x01;
+      const pkt=_mkDjmSub();
       for(const bc of allBCs){
         try{this._djmSubSock.send(pkt,0,pkt.length,50001,bc);}catch(_){}
       }
     };
-    setTimeout(sendDJMSubBC, 3000);  // initial delayed subscribe
-    setTimeout(sendDJMSub, 5000);    // retry after devices discovered
-    const djmSubTimer = setInterval(()=>{sendDJMSub();sendDJMSubBC();}, 10000);
+    // Delay: join sequence takes ~6s, then wait 2s more for DJM to register
+    setTimeout(sendDJMSubBC, 8000);
+    setTimeout(sendDJMSub, 10000);
+    // Re-subscribe every 2s (STC uses kBridgeSubInterval=2.0)
+    const djmSubTimer = setInterval(()=>{sendDJMSub();sendDJMSubBC();}, 2000);
     this._timers.push(djmSubTimer);
 
     // Virtual CDJ status broadcast every 500ms — keeps Arena updated on virtual decks
