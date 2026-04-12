@@ -2144,6 +2144,11 @@ function loadFile(slot,f){
           trackId:d.trackId||0,totalLength:Math.round(d.dur)||0,
           trackName:d.tn||'',artistName:d.ar||'',deviceName:'CDJ-3000',beatPhase:0,
         });
+        // Send placeholder art to Arena if no album art was found in ID3 tags
+        // (BLANK_JPEG from bridge-core is used; setVirtualArt with null triggers it)
+        if(!d._artRawB64 && window.bridge?.setVirtualArt){
+          window.bridge.setVirtualArt(slot, null);
+        }
       }
       // Defer analysis so audio is playable immediately
       setTimeout(async()=>{

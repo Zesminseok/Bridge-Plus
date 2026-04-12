@@ -2056,7 +2056,7 @@ class BridgeCore {
    *  and pushes thumbnail via REST API as fallback. */
   setVirtualArt(slot, jpegBuf){
     if(slot<0||slot>7) return;
-    this._virtualArt[slot] = jpegBuf;
+    this._virtualArt[slot] = jpegBuf || BLANK_JPEG;
     console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B`);
     // Primary: send artwork via TCNet LowResArtwork (MessageType 0xCC)
     this._sendArtwork(slot + 1, jpegBuf);
