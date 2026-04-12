@@ -1226,18 +1226,23 @@ class BridgeCore {
    */
   async _startPDJLRx(){
     this._pdjlSockets = [];
-    for(const port of [50002, 50001]){
+    // macOS: keepalive(50000) and beat(50001) MUST bind to INADDR_ANY (0.0.0.0)
+    // to receive broadcast packets. Binding to a specific IP blocks broadcast delivery.
+    // status(50002) can bind to specific IP for unicast CDJ status packets.
+    for(const port of [50000, 50001, 50002]){
       try{
         const sock = dgram.createSocket({type:'udp4', reuseAddr:true});
+        // 50000/50001: always INADDR_ANY for broadcast. 50002: try specific IP first.
+        const bindAddr = (port===50002) ? (this.pdjlBindAddr||undefined) : undefined;
         await new Promise((res,rej)=>{
           sock.on('error',rej);
-          sock.bind(port, this.pdjlBindAddr||undefined, ()=>{ sock.setBroadcast(true); res(); });
+          sock.bind(port, bindAddr, ()=>{ sock.setBroadcast(true); res(); });
         });
         sock.on('message',(msg,rinfo)=>this._onPDJL(msg,rinfo));
         sock.on('error',()=>{});
         this._pdjlSockets.push(sock);
         if(!this.pdjlSocket){ this.pdjlSocket = sock; this.pdjlPort = port; }
-        console.log(`[PDJL] UDP ${port} active`);
+        console.log(`[PDJL] UDP ${port} active (${bindAddr||'0.0.0.0'})`);
       }catch(e){ console.warn(`[PDJL] port ${port} fail: ${e.message}`); }
     }
     if(this._pdjlSockets.length===0) console.warn('[PDJL] all ports failed');
@@ -1246,20 +1251,29 @@ class BridgeCore {
   // Pro DJ Link keep-alive announcement on 50000
   // CDJs only send status to devices they see on the network
   _startPDJLAnnounce(){
-    // Determine the "primary" IP to embed in the PDJL packet:
-    // Arena uses this IP to connect to our VDB server (port 12523).
-    // Must be the TCNet interface IP so Arena (on the same subnet) can reach us.
+    // Determine the "primary" IP to embed in the PDJL keepalive packet.
+    // CDJs use this IP to identify us on the network.
+    // Priority: 1) pdjlBindAddr (user selected), 2) localAddr, 3) any available (including link-local)
     let pdjlIP=null, pdjlMAC='00:00:00:00:00:00';
 
-    if(this.localAddr && !this.isLocalMode){
+    // 1) User explicitly selected PDJL interface — use it directly (even 169.254.x.x)
+    if(this.pdjlBindAddr && this.pdjlBindAddr!=='auto' && this.pdjlBindAddr!=='0.0.0.0'){
+      pdjlIP = this.pdjlBindAddr;
+      for(const iface of getAllInterfaces()){
+        if(iface.address===pdjlIP){ pdjlMAC=iface.mac||pdjlMAC; break; }
+      }
+    }
+    // 2) Fall back to localAddr (TCNet interface)
+    if(!pdjlIP && this.localAddr && !this.isLocalMode){
       pdjlIP = this.localAddr;
       for(const iface of getAllInterfaces()){
         if(iface.address===pdjlIP){ pdjlMAC=iface.mac||pdjlMAC; break; }
       }
     }
+    // 3) Fall back to any non-internal interface (including link-local for USB LAN CDJ setups)
     if(!pdjlIP){
       for(const iface of getAllInterfaces()){
-        if(!iface.internal && !iface.address.startsWith('169.254.')){
+        if(!iface.internal && iface.address!=='127.0.0.1'){
           pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC; break;
         }
       }
@@ -1502,10 +1516,24 @@ class BridgeCore {
       this.onWaveformPreview?.(p.playerNum, {seg:p.seg, pts:p.pts, wfType:p.wfType});
     }
     if(p.kind==='announce'){
-      const k=`dev_${rinfo.address}`;
-      if(!this.devices[k]){
-        this.devices[k]={type:'DEVICE',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
-        this.onDeviceList?.(this.devices);
+      const pn = p.playerNum;
+      // Register as CDJ device if playerNum is valid (1-6) and name suggests CDJ/XDJ
+      if(pn>0 && pn<=6){
+        const key = `cdj${pn}`;
+        if(!this.devices[key]){
+          this.devices[key]={type:'CDJ',playerNum:pn,name:p.name,ip:rinfo.address,lastSeen:Date.now()};
+          console.log(`[PDJL] CDJ keepalive P${pn}(${p.name})@${rinfo.address}`);
+          this.onDeviceList?.(this.devices);
+        } else {
+          this.devices[key].lastSeen=Date.now();
+          this.devices[key].ip=rinfo.address; // update IP in case it changed
+        }
+      } else {
+        const k=`dev_${rinfo.address}`;
+        if(!this.devices[k]){
+          this.devices[k]={type:'DEVICE',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
+          this.onDeviceList?.(this.devices);
+        }
       }
     }
   }
