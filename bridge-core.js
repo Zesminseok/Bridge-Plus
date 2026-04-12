@@ -464,6 +464,7 @@ function parsePDJL(msg){
       kind:'cdj', playerNum:pNum, name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
       isPlaying: state===STATE.PLAYING,
+      isLooping: state===STATE.LOOPING,
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
       pitch,
       trackId: msg.readUInt32BE(0x2C),
@@ -1330,6 +1331,45 @@ class BridgeCore {
     if(this._pdjlAnnTimer) clearInterval(this._pdjlAnnTimer);
     this._pdjlAnnTimer=setInterval(sendAnn,1500);
     this._timers.push(this._pdjlAnnTimer);
+
+    // DJM subscribe (0x57) — triggers fader + VU meter delivery
+    // Must be delayed ~3s after first keepalive (DJM needs time to register bridge)
+    this._djmSubSock = dgram.createSocket({type:'udp4',reuseAddr:true});
+    this._djmSubSock.on('error',()=>{});
+    this._djmSubSock.bind(0,()=>{try{this._djmSubSock.setBroadcast(true);}catch(_){}});
+    const sendDJMSub = ()=>{
+      for(const[k,dev] of Object.entries(this.devices)){
+        if(dev.type==='DJM'||k==='djm'){
+          const pkt=Buffer.alloc(40);
+          PDJL.MAGIC.copy(pkt,0);
+          pkt[10]=0x57; // subscribe type
+          Buffer.from('BRIDGE-CLONE','ascii').copy(pkt,11,0,15);
+          pkt[31]=0x01;
+          pkt[32]=0x00;
+          pkt[33]=0xFE; // macOS: full subscription (faders + VU)
+          pkt[34]=0x00;
+          pkt[35]=0x04; // subtype
+          pkt[36]=0x01; // subscribe=1
+          try{this._djmSubSock.send(pkt,0,pkt.length,50001,dev.ip);}catch(_){}
+          console.log(`[PDJL] DJM subscribe 0x57 → ${dev.ip}:50001`);
+        }
+      }
+    };
+    // Also subscribe to DJMs on all broadcast addresses (in case DJM not yet discovered)
+    const sendDJMSubBC = ()=>{
+      const pkt=Buffer.alloc(40);
+      PDJL.MAGIC.copy(pkt,0);
+      pkt[10]=0x57;
+      Buffer.from('BRIDGE-CLONE','ascii').copy(pkt,11,0,15);
+      pkt[31]=0x01;pkt[32]=0x00;pkt[33]=0xFE;pkt[34]=0x00;pkt[35]=0x04;pkt[36]=0x01;
+      for(const bc of allBCs){
+        try{this._djmSubSock.send(pkt,0,pkt.length,50001,bc);}catch(_){}
+      }
+    };
+    setTimeout(sendDJMSubBC, 3000);  // initial delayed subscribe
+    setTimeout(sendDJMSub, 5000);    // retry after devices discovered
+    const djmSubTimer = setInterval(()=>{sendDJMSub();sendDJMSubBC();}, 10000);
+    this._timers.push(djmSubTimer);
 
     // Virtual CDJ status broadcast every 500ms — keeps Arena updated on virtual decks
     // Real CDJs broadcast status packets ~every 500ms; Arena stops querying if it stops seeing them
@@ -2207,6 +2247,9 @@ class BridgeCore {
         .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform preview failed:`,e.message));
       this._dbserverWaveformDetail(ip, slot, trackId, playerNum, tt)
         .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message));
+      // NXS2 extension: 3-band waveform (PWV7) — higher quality than single-byte encoding
+      this._dbserverWaveformNxs2(ip, slot, trackId, playerNum, tt)
+        .catch(e=>console.warn(`[DBSRV] P${playerNum} nxs2 waveform failed:`,e.message));
       this._dbserverCuePoints(ip, slot, trackId, playerNum, tt)
         .catch(e=>console.warn(`[DBSRV] P${playerNum} cue points failed:`,e.message));
       this._dbserverBeatGrid(ip, slot, trackId, playerNum, tt)
@@ -2294,21 +2337,240 @@ class BridgeCore {
     }finally{try{sock?.destroy();}catch(_){}}
   }
 
-  async _dbserverCuePoints(ip, slot, trackId, playerNum, trackType){
+  // NXS2 extension request (0x2c04) for 3-band waveform (PWV7)
+  // Returns raw bass/mid/treble bytes per entry (3 bytes/entry, 150 entries/sec)
+  async _dbserverWaveformNxs2(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
-      // Use ANLZ tag request (0x2c04) with "PCO2" tag (0x32544347) for nxs2 cue points
-      // Fallback: hot cue request via 0x2104 doesn't always work
-      // Method: request rekordbox cue list via menu request type 0x2104
+      // PWV7 magic = 0x50575637 ("PWV7" big-endian)
+      const rmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
+      const req = this._dbBuildMsg(1, 0x2c04, [
+        rmst, this._dbArg4(trackId), this._dbArg4(0),
+        this._dbArg4(0x50575637) // PWV7 tag magic
+      ]);
+      sock.write(req);
+      const resp = await this._dbReadFullResponse(sock);
+      // Find binary field (tag 0x14) containing raw ANLZ tag data
+      let anlzData=null;
+      for(let i=0;i<resp.length-5;i++){
+        if(resp[i]===0x14){
+          const len=resp.readUInt32BE(i+1);
+          if(len>100&&len<2000000&&i+5+len<=resp.length){
+            anlzData=resp.slice(i+5,i+5+len);
+            break;
+          }
+        }
+      }
+      if(!anlzData||anlzData.length<20){
+        console.log(`[DBSRV] P${playerNum} nxs2 waveform: no ANLZ data`);
+        return;
+      }
+      // Parse ANLZ tag structure — find PWV7 tag
+      let pos=0;
+      while(pos<anlzData.length-12){
+        const tag=anlzData.toString('ascii',pos,pos+4);
+        const tHL=anlzData.readUInt32BE(pos+4);
+        const tTL=anlzData.readUInt32BE(pos+8);
+        if(tag==='PWV7'){
+          const dataStart=pos+tHL;
+          const dataLen=tTL-tHL;
+          const entries=Math.floor(dataLen/3);
+          if(entries>10){
+            // PWV7: 3 bytes/entry = mid, hi, low (0-255 each)
+            const pts=[];
+            for(let j=0;j<entries;j++){
+              const off=dataStart+j*3;
+              pts.push({
+                low:anlzData[off+2]/255,
+                mid:anlzData[off]/255,
+                hi:anlzData[off+1]/255,
+              });
+            }
+            this.onWaveformDetail?.(playerNum, {pts, wfType:'nxs2_3band'});
+            console.log(`[DBSRV] P${playerNum} NXS2 PWV7 waveform: ${entries} entries (${Math.round(entries/150)}s)`);
+            return;
+          }
+        }
+        if(tTL===0)break;
+        pos+=tTL;
+      }
+      console.log(`[DBSRV] P${playerNum} nxs2 waveform: PWV7 tag not found in ${anlzData.length}B`);
+    }catch(e){
+      console.warn(`[DBSRV] P${playerNum} nxs2 waveform failed:`,e.message);
+    }finally{try{sock?.destroy();}catch(_){}}
+  }
+
+  async _dbserverCuePoints(ip, slot, trackId, playerNum, trackType){
+    // Try NXS2 PCO2 first (has loop end positions + RGB colors), fall back to menu 0x2104
+    let cues = await this._dbserverCuePointsNxs2(ip, slot, trackId, playerNum, trackType);
+    if(!cues||cues.length===0){
+      cues = await this._dbserverCuePointsMenu(ip, slot, trackId, playerNum, trackType);
+    }
+    if(cues&&cues.length>0){
+      this.onCuePoints?.(playerNum, cues);
+      const hot=cues.filter(c=>c.type==='hot').length;
+      const mem=cues.filter(c=>c.type==='memory').length;
+      const lp=cues.filter(c=>c.type==='loop').length;
+      console.log(`[DBSRV] P${playerNum} cue points: ${cues.length} (${hot} hot, ${mem} memory, ${lp} loop)`);
+    } else {
+      console.log(`[DBSRV] P${playerNum} cue points: none found`);
+    }
+  }
+
+  // PCO2 — NXS2 extended cue list via ANLZ tag request (0x2c04)
+  // Provides loop end positions, RGB colors, and comment text
+  async _dbserverCuePointsNxs2(ip, slot, trackId, playerNum, trackType){
+    const spoofPlayer = 5;
+    let sock;
+    try{
+      sock = await this._dbConnect(ip, spoofPlayer);
+      // PCO2 magic = "PCO2" as big-endian uint32 = 0x50434F32
+      const rmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
+      const req = this._dbBuildMsg(1, 0x2c04, [
+        rmst, this._dbArg4(trackId), this._dbArg4(0),
+        this._dbArg4(0x50434F32) // "PCO2" tag magic
+      ]);
+      sock.write(req);
+      const resp = await this._dbReadFullResponse(sock);
+      // Find binary field (tag 0x14) containing raw ANLZ tag data
+      let anlzData=null;
+      for(let i=0;i<resp.length-5;i++){
+        if(resp[i]===0x14){
+          const len=resp.readUInt32BE(i+1);
+          if(len>20&&len<500000&&i+5+len<=resp.length){
+            anlzData=resp.slice(i+5,i+5+len);
+            break;
+          }
+        }
+      }
+      if(!anlzData||anlzData.length<20){
+        console.log(`[DBSRV] P${playerNum} PCO2: no ANLZ data in ${resp.length}B`);
+        return null;
+      }
+      // Parse ANLZ tag structure — find PCO2 tag
+      let pos=0;
+      while(pos<anlzData.length-12){
+        const tag=anlzData.toString('ascii',pos,pos+4);
+        const tHL=anlzData.readUInt32BE(pos+4);
+        const tTL=anlzData.readUInt32BE(pos+8);
+        if(tag==='PCO2'){
+          // PCO2 header: numCues at offset tHL-2 (uint16BE)
+          const numCues=anlzData.readUInt16BE(pos+tHL-2);
+          const cues=[];
+          let ePos=pos+tHL;
+          for(let ci=0;ci<numCues&&ePos<pos+tTL-12;ci++){
+            // Each entry starts with "PCP2" magic
+            const entTag=anlzData.toString('ascii',ePos,ePos+4);
+            if(entTag!=='PCP2')break;
+            const eHL=anlzData.readUInt32BE(ePos+4);
+            const eTL=anlzData.readUInt32BE(ePos+8);
+            if(eTL<0x1D){ePos+=eTL||1;continue;}
+            const hotCue=anlzData.readUInt32BE(ePos+0x0C);
+            const ctype=anlzData[ePos+0x10];  // 1=cue, 2=loop
+            const timeMs=anlzData.readUInt32BE(ePos+0x14);
+            const loopMs=anlzData.readUInt32BE(ePos+0x18);
+            const colorCode=anlzData[ePos+0x1C];
+            // Determine type
+            let type='memory';
+            if(hotCue>0) type='hot';
+            if(ctype===2||(loopMs>0&&loopMs!==0xFFFFFFFF)){
+              type='loop';
+            }
+            const cue={
+              name:'', timeMs, hotCueNum:hotCue, colorId:colorCode,
+              type, loopEndMs: type==='loop'?loopMs:0,
+              colorR:30, colorG:200, colorB:60, // defaults
+            };
+            // Read comment text if entry is large enough
+            if(eTL>=0x2C){
+              try{
+                const commentBytes=anlzData.readUInt32BE(ePos+0x28);
+                if(commentBytes>0&&commentBytes<512){
+                  const txt=anlzData.toString('utf16be',ePos+0x2C,ePos+0x2C+commentBytes).replace(/\0+$/,'');
+                  cue.name=txt;
+                  // RGB color after comment
+                  const colorOff=ePos+0x2C+commentBytes;
+                  if(colorOff+3<ePos+eTL){
+                    cue.colorR=anlzData[colorOff+1];
+                    cue.colorG=anlzData[colorOff+2];
+                    cue.colorB=anlzData[colorOff+3];
+                  }
+                }
+              }catch(_){}
+            }
+            // Default colors by type if no custom color
+            if(colorCode===0){
+              if(type==='memory'){cue.colorR=200;cue.colorG=30;cue.colorB=30;}
+              else if(type==='loop'){cue.colorR=255;cue.colorG=136;cue.colorB=0;}
+            }
+            cues.push(cue);
+            ePos+=eTL;
+          }
+          console.log(`[DBSRV] P${playerNum} PCO2: ${cues.length} cue entries parsed`);
+          return cues;
+        }
+        if(tTL===0)break;
+        pos+=tTL;
+      }
+      // PCO2 tag not found — try PCOB fallback within same response
+      pos=0;
+      while(pos<anlzData.length-12){
+        const tag=anlzData.toString('ascii',pos,pos+4);
+        const tHL=anlzData.readUInt32BE(pos+4);
+        const tTL=anlzData.readUInt32BE(pos+8);
+        if(tag==='PCOB'){
+          const numCues=anlzData.readUInt16BE(pos+0x12);
+          const cues=[];
+          let ePos=pos+tHL;
+          for(let ci=0;ci<numCues&&ePos<pos+tTL-12;ci++){
+            const entTag=anlzData.toString('ascii',ePos,ePos+4);
+            if(entTag!=='PCPT')break;
+            const eTL=anlzData.readUInt32BE(ePos+8);
+            if(eTL<0x24){ePos+=eTL||1;continue;}
+            const hotCue=anlzData.readUInt32BE(ePos+0x0C);
+            const ctype=anlzData[ePos+0x1C];
+            const timeMs=anlzData.readUInt32BE(ePos+0x20);
+            const loopMs=anlzData.readUInt32BE(ePos+0x24);
+            let type='memory';
+            if(hotCue>0) type='hot';
+            if(ctype===2||loopMs>0) type='loop';
+            cues.push({
+              name:'', timeMs, hotCueNum:hotCue, colorId:0, type,
+              loopEndMs:type==='loop'?loopMs:0,
+              colorR:type==='memory'?200:type==='loop'?255:30,
+              colorG:type==='memory'?30:type==='loop'?136:200,
+              colorB:type==='memory'?30:type==='loop'?0:60,
+            });
+            ePos+=eTL;
+          }
+          console.log(`[DBSRV] P${playerNum} PCOB fallback: ${cues.length} cues`);
+          return cues;
+        }
+        if(tTL===0)break;
+        pos+=tTL;
+      }
+      console.log(`[DBSRV] P${playerNum} PCO2/PCOB tag not found`);
+      return null;
+    }catch(e){
+      console.warn(`[DBSRV] P${playerNum} PCO2 cue points failed:`,e.message);
+      return null;
+    }finally{try{sock?.destroy();}catch(_){}}
+  }
+
+  // Fallback: menu-based cue point request (0x2104)
+  async _dbserverCuePointsMenu(ip, slot, trackId, playerNum, trackType){
+    const spoofPlayer = 5;
+    let sock;
+    try{
+      sock = await this._dbConnect(ip, spoofPlayer);
       const rmst = this._dbRMST(spoofPlayer, 0x01, slot, trackType||1);
       const req = this._dbBuildMsg(1, 0x2104, [
         rmst, this._dbArg4(0), this._dbArg4(trackId), this._dbArg4(0)
       ]);
       sock.write(req);
       const menuAvail = await this._dbReadResponse(sock);
-      // Render the menu
       const renderReq = this._dbBuildMsg(2, 0x3000, [
         rmst, this._dbArg4(0), this._dbArg4(64),
         this._dbArg4(0), this._dbArg4(64), this._dbArg4(0)
@@ -2320,24 +2582,20 @@ class BridgeCore {
       for(const item of items){
         if(item.msgType===0x4101){
           const itemType = item.args[6]?.val || 0;
-          // 0x000e = CUE_POINT item
           if(itemType===0x000e){
             const name = item.args[3]?.val || '';
-            const timeMs = item.args[1]?.val || 0;     // cue time in ms
-            const hotCueNum = item.args[4]?.val || 0;   // 0=memory cue, A-H=hot cue
+            const timeMs = item.args[1]?.val || 0;
+            const hotCueNum = item.args[4]?.val || 0;
             const colorId = item.args[5]?.val || 0;
-            cues.push({name, timeMs, hotCueNum, colorId, type: hotCueNum>0?'hot':'memory'});
+            cues.push({name, timeMs, hotCueNum, colorId, type: hotCueNum>0?'hot':'memory',
+              loopEndMs:0, colorR:0, colorG:0, colorB:0});
           }
         }
       }
-      if(cues.length>0){
-        this.onCuePoints?.(playerNum, cues);
-        console.log(`[DBSRV] P${playerNum} cue points: ${cues.length} (${cues.filter(c=>c.type==='hot').length} hot, ${cues.filter(c=>c.type==='memory').length} memory)`);
-      } else {
-        console.log(`[DBSRV] P${playerNum} cue points: none found (${items.length} items)`);
-      }
+      return cues.length>0 ? cues : null;
     }catch(e){
-      console.warn(`[DBSRV] P${playerNum} cue points failed:`,e.message);
+      console.warn(`[DBSRV] P${playerNum} menu cue points failed:`,e.message);
+      return null;
     }finally{try{sock?.destroy();}catch(_){}}
   }
 

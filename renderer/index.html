@@ -66,9 +66,10 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .deck-row.compact .dk-hdr{padding:3px 8px 2px}
 .deck-row.compact .dtc{font-size:20px}
 .dk{background:#0d0f12;border:1px solid rgba(113,255,232,.1);border-radius:10px;overflow:hidden;transition:box-shadow .2s,border-color .2s;min-width:0;box-shadow:0 2px 12px rgba(0,0,0,.4)}
-.dk[data-st="play"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk[data-st="cue"]{box-shadow:0 0 14px rgba(255,209,109,.1),0 2px 12px rgba(0,0,0,.4);border-color:rgba(255,209,109,.18)}.dk[data-st="hw"]{box-shadow:0 0 10px rgba(167,139,250,.08),0 2px 12px rgba(0,0,0,.4);border-color:rgba(167,139,250,.15)}.dk[data-st="hwplay"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk.dov{box-shadow:0 0 14px rgba(164,201,255,.12),0 2px 12px rgba(0,0,0,.4)!important;border-color:rgba(164,201,255,.25)!important}
+.dk[data-st="play"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk[data-st="cue"]{box-shadow:0 0 14px rgba(255,209,109,.1),0 2px 12px rgba(0,0,0,.4);border-color:rgba(255,209,109,.18)}.dk[data-st="hw"]{box-shadow:0 0 10px rgba(167,139,250,.08),0 2px 12px rgba(0,0,0,.4);border-color:rgba(167,139,250,.15)}.dk[data-st="hwplay"]{box-shadow:0 0 18px rgba(52,211,153,.12),0 2px 12px rgba(0,0,0,.4);border-color:rgba(52,211,153,.2)}.dk[data-st="hwloop"]{box-shadow:0 0 18px rgba(255,136,0,.15),0 2px 12px rgba(0,0,0,.4);border-color:rgba(255,136,0,.25)}.dk.dov{box-shadow:0 0 14px rgba(164,201,255,.12),0 2px 12px rgba(0,0,0,.4)!important;border-color:rgba(164,201,255,.25)!important}
 .dshim{height:2px;opacity:0;transition:opacity .3s;background:linear-gradient(90deg,transparent,var(--grn),transparent)}
 .dk[data-st="play"] .dshim,.dk[data-st="hwplay"] .dshim{opacity:1;animation:shimmer 2s ease-in-out infinite}
+.dk[data-st="hwloop"] .dshim{opacity:1;background:linear-gradient(90deg,transparent,#ff8800,transparent);animation:shimmer 1.2s ease-in-out infinite}
 .dk[data-st="cue"] .dshim{opacity:.6;background:linear-gradient(90deg,transparent,var(--ylw),transparent)}
 .dtop{padding:8px 13px 8px}
 .dhd{display:flex;align-items:center;margin-bottom:5px;gap:4px;justify-content:space-between}
@@ -78,7 +79,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .did-n{font:700 18px var(--mn);letter-spacing:-.02em;line-height:1}
 .dbadge{font:600 9px var(--mn);padding:2px 5px;border-radius:3px;letter-spacing:.05em}
 .dtc{font:normal 28px var(--seg);color:var(--tx4);letter-spacing:.04em;transition:color .15s;white-space:nowrap}
-.dk[data-st="play"] .dtc,.dk[data-st="hwplay"] .dtc,.dk[data-st="scratch"] .dtc{color:var(--tx)}
+.dk[data-st="play"] .dtc,.dk[data-st="hwplay"] .dtc,.dk[data-st="hwloop"] .dtc,.dk[data-st="scratch"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
 .dwov{height:14px;margin:0 0 3px;background:var(--bg-lowest);border-radius:3px;overflow:hidden;cursor:pointer;position:relative}
 .dwov canvas{width:100%;height:100%;display:block}
@@ -141,7 +142,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dkctrl-btns{display:flex;gap:3px}
 .dkbtn{flex:1;height:30px;min-height:0;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
 .dkbtn:disabled{opacity:.25;cursor:not-allowed}
-.dk[data-st="hw"] .dkbtn,.dk[data-st="hwplay"] .dkbtn{pointer-events:none}
+.dk[data-st="hw"] .dkbtn,.dk[data-st="hwplay"] .dkbtn,.dk[data-st="hwloop"] .dkbtn{pointer-events:none}
 /* CUE button states: dim → medium (playing) → bright (cue active) → pressed (extra bright) */
 .dkbtn.dkcue{border-color:rgba(249,189,34,.2);color:rgba(255,209,109,.5);text-shadow:0 0 4px rgba(255,209,109,.15)}
 .dkbtn.dkcue.medium{border-color:rgba(249,189,34,.5);color:#ffd16d;background:rgba(249,189,34,.1);text-shadow:0 0 6px rgba(255,209,109,.3)}
@@ -201,7 +202,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .din{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:7px}
 .dil{font:400 9px var(--sn);color:var(--tx3);letter-spacing:.04em}
 .div{font:600 11px var(--mn);color:var(--tx4);transition:color .15s;font-variant-numeric:tabular-nums}
-.dk[data-st="play"] .div,.dk[data-st="hwplay"] .div,.dk[data-st="cue"] .div{color:var(--tx)}
+.dk[data-st="play"] .div,.dk[data-st="hwplay"] .div,.dk[data-st="hwloop"] .div,.dk[data-st="cue"] .div{color:var(--tx)}
 .dtr{padding:5px 13px;border-top:1px solid var(--bg3);display:flex;align-items:center;gap:8px}
 .dart{width:44px;height:44px;border-radius:5px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.04);border:1px solid var(--bdr)}
 .dartp{display:flex;align-items:center;justify-content:center}
@@ -285,11 +286,11 @@ select.ss:focus{border-color:rgba(90,240,179,.4)}
 @keyframes marquee-scroll{0%,10%{transform:translateX(0)}45%,55%{transform:translateX(var(--scroll-dist,-200px))}90%,100%{transform:translateX(0)}}
 .dktn-a{font:400 11px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
 .dktn-time{font:500 12px var(--mn);color:var(--tx3);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.dk[data-st="play"] .dktn-time,.dk[data-st="hwplay"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
+.dk[data-st="play"] .dktn-time,.dk[data-st="hwplay"] .dktn-time,.dk[data-st="hwloop"] .dktn-time,.dk[data-st="cue"] .dktn-time{color:var(--tx2)}
 .dktn-time-row{font:600 13px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em;text-align:right}
-.dk[data-st="play"] .dktn-time-row,.dk[data-st="hwplay"] .dktn-time-row,.dk[data-st="cue"] .dktn-time-row{color:var(--tx)}
+.dk[data-st="play"] .dktn-time-row,.dk[data-st="hwplay"] .dktn-time-row,.dk[data-st="hwloop"] .dktn-time-row,.dk[data-st="cue"] .dktn-time-row{color:var(--tx)}
 .dbk-hd{font:600 11px var(--mn);color:var(--tx3);letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis}
-.dk[data-st="play"] .dbk-hd,.dk[data-st="hwplay"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
+.dk[data-st="play"] .dbk-hd,.dk[data-st="hwplay"] .dbk-hd,.dk[data-st="hwloop"] .dbk-hd,.dk[data-st="cue"] .dbk-hd{color:var(--tx2)}
 .devbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg2);border:none;border-radius:10px;margin-bottom:10px;min-height:44px;flex-wrap:wrap}
 .devbar-item{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg3);border:none;border-radius:8px;transition:box-shadow .2s}
 .devbar-item.dvi-play{border-color:rgba(52,211,153,.3)}
@@ -971,14 +972,29 @@ function drawOverview(slot,prog){
     }
   }
   ctx.putImageData(ovImg,0,0);
-  // Draw cue points on overview (memory=white, hot=colored with letter)
+  // Draw cue points on overview (memory=white, hot=colored, loop=orange bracket)
   const _cueColors={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
+  function _ovCueCol(cue){
+    if(cue.colorR||cue.colorG||cue.colorB) return`rgb(${cue.colorR},${cue.colorG},${cue.colorB})`;
+    if(cue.type==='hot')return _cueColors[cue.colorId]||'#00e676';
+    if(cue.type==='loop')return '#ff8800';
+    return '#fff';
+  }
   if(d.cuePoints&&d.dur>0){
     ctx.font='bold 8px "DM Mono",monospace';
     for(const cue of d.cuePoints){
       const cx=Math.round(cue.timeMs/d.dur*W);
       if(cx<0||cx>=W)continue;
-      const col=cue.type==='hot'?(_cueColors[cue.colorId]||'#00e676'):'#fff';
+      const col=_ovCueCol(cue);
+      // Loop range on overview
+      if(cue.type==='loop'&&cue.loopEndMs>0){
+        const ex=Math.round(cue.loopEndMs/d.dur*W);
+        if(ex>cx){
+          const isActive=d._isLooping&&d.pos>=cue.timeMs-50&&d.pos<=cue.loopEndMs+50;
+          ctx.fillStyle=isActive?'rgba(0,255,100,.2)':'rgba(255,136,0,.12)';
+          ctx.fillRect(cx,0,ex-cx,H);
+        }
+      }
       // Vertical line
       ctx.strokeStyle=col;ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
@@ -987,7 +1003,11 @@ function drawOverview(slot,prog){
       ctx.beginPath();ctx.moveTo(cx-4,0);ctx.lineTo(cx+4,0);ctx.lineTo(cx,6);ctx.closePath();ctx.fill();
       // Label
       if(cue.type==='hot'&&cue.hotCueNum>0){
-        const label=String.fromCharCode(64+cue.hotCueNum);
+        const label=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
+        ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cx+1,0,9,10);
+        ctx.fillStyle=col;ctx.fillText(label,cx+2,9);
+      }else if(cue.type==='loop'){
+        const label=cue.hotCueNum>0?String.fromCharCode(64+cue.hotCueNum):'L';
         ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cx+1,0,9,10);
         ctx.fillStyle=col;ctx.fillText(label,cx+2,9);
       }else if(cue.type==='memory'){
@@ -1013,31 +1033,37 @@ function drawZoomWaveform(slot,prog){
   const pos=Math.max(0,Math.min(1,prog||0));
 
   // Store bar.beat for overlay use
-  if(d.bpm>0&&d.dur>0){
-    const dur=d.dur,posMs=pos*dur;
-    if(d._beatGrid&&d._beatGrid.length>0){
-      const bg=d._beatGrid;
-      let lo=0, hi=bg.length-1;
-      while(lo<hi){const mid2=(lo+hi+1)>>1;if(bg[mid2].timeMs<=posMs)lo=mid2;else hi=mid2-1;}
-      if(bg[lo].timeMs<=posMs){
-        const barNum=Math.floor(lo/4)+1;
-        const beatInBar=bg[lo].beatInBar||((lo%4)+1);
-        d._barBeat=barNum+'.'+beatInBar+'Bars';
+  if(d.bpm>0){
+    // HW deck: use beatNum from CDJ directly for accurate bar counting
+    if(d.type==='hw'&&d._beatNum>0){
+      const barNum=Math.floor((d._beatNum-1)/4)+1;
+      const beatInBar=d.beatInBar||((d._beatNum-1)%4+1);
+      d._barBeat=barNum+'.'+beatInBar+'Bars';
+    } else if(d.dur>0){
+      const dur=d.dur,posMs=pos*dur;
+      if(d._beatGrid&&d._beatGrid.length>0){
+        const bg=d._beatGrid;
+        let lo=0, hi=bg.length-1;
+        while(lo<hi){const mid2=(lo+hi+1)>>1;if(bg[mid2].timeMs<=posMs)lo=mid2;else hi=mid2-1;}
+        if(bg[lo].timeMs<=posMs){
+          const barNum=Math.floor(lo/4)+1;
+          const beatInBar=bg[lo].beatInBar||((lo%4)+1);
+          d._barBeat=barNum+'.'+beatInBar+'Bars';
+        }else{
+          const beatMs=60000/(bg[0].bpm||d.bpm);
+          const beatsBack=Math.ceil((bg[0].timeMs-posMs)/beatMs);
+          const beatIdx=-beatsBack;
+          const barNum=Math.floor(beatIdx/4);
+          const beatInBar=((beatIdx%4)+4)%4+1;
+          d._barBeat=barNum+'.'+beatInBar+'Bars';
+        }
       }else{
-        // Before first beat — negative bars
-        const beatMs=60000/(bg[0].bpm||d.bpm);
-        const beatsBack=Math.ceil((bg[0].timeMs-posMs)/beatMs);
-        const beatIdx=-beatsBack;
-        const barNum=Math.floor(beatIdx/4);
+        const beatMs=60000/(d.baseBpm||d.bpm),anchor=d._barAnchorMs||0;
+        const beatIdx=Math.floor((posMs-anchor)/beatMs);
+        const barNum=beatIdx>=0?Math.floor(beatIdx/4)+1:Math.floor(beatIdx/4);
         const beatInBar=((beatIdx%4)+4)%4+1;
         d._barBeat=barNum+'.'+beatInBar+'Bars';
       }
-    }else{
-      const beatMs=60000/(d.baseBpm||d.bpm),anchor=d._barAnchorMs||0;
-      const beatIdx=Math.floor((posMs-anchor)/beatMs);
-      const barNum=beatIdx>=0?Math.floor(beatIdx/4)+1:Math.floor(beatIdx/4);
-      const beatInBar=((beatIdx%4)+4)%4+1;
-      d._barBeat=barNum+'.'+beatInBar+'Bars';
     }
   }
 
@@ -1212,33 +1238,81 @@ function drawZoomOverlay(slot, prog){
     }
   }
 
-  // Cue points
+  // Cue points (PCO2 RGB colors + loop overlay)
   const _cueColorsZ={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
+  function _cueCol(cue){
+    // Use PCO2 RGB if available (non-zero), else fall back to colorId palette
+    if(cue.colorR||cue.colorG||cue.colorB){
+      return`rgb(${cue.colorR},${cue.colorG},${cue.colorB})`;
+    }
+    if(cue.type==='hot')return _cueColorsZ[cue.colorId]||'#00e676';
+    if(cue.type==='loop')return '#ff8800';
+    return '#fff';
+  }
   if(d.cuePoints&&dur>0){
     ctx.font='bold 8px "DM Mono",monospace';
+    // Check if CDJ is currently looping — find active loop cue
+    const isLooping=d._isLooping;
+    let activeLoop=null;
+    if(isLooping&&d.cuePoints){
+      for(const c of d.cuePoints){
+        if(c.type==='loop'&&c.loopEndMs>0&&posMs>=c.timeMs-50&&posMs<=c.loopEndMs+50){
+          activeLoop=c;break;
+        }
+      }
+    }
     for(const cue of d.cuePoints){
       const cpx=Math.round((cue.timeMs-posMs)/msPerPx+cX);
-      if(cpx<0||cpx>=W)continue;
-      const col=cue.type==='hot'?(_cueColorsZ[cue.colorId]||'#00e676'):'#fff';
+      const col=_cueCol(cue);
       // Loop body overlay
       if(cue.type==='loop'&&cue.loopEndMs>0){
         const epx=Math.round((cue.loopEndMs-posMs)/msPerPx+cX);
-        if(epx>cpx){ctx.fillStyle=col+'1F';ctx.fillRect(cpx,0,epx-cpx,H);}
+        const isActive=(cue===activeLoop);
+        if(epx>Math.max(cpx,0)&&cpx<W){
+          const lx=Math.max(0,cpx),rx=Math.min(W,epx);
+          if(isActive){
+            // Active loop: bright green overlay with pulsing border
+            ctx.fillStyle='rgba(0,255,100,.12)';ctx.fillRect(lx,0,rx-lx,H);
+            ctx.fillStyle='rgba(0,255,100,.5)';ctx.fillRect(lx,0,1,H);ctx.fillRect(rx-1,0,1,H);
+            ctx.fillStyle='rgba(0,255,100,.35)';ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
+          }else{
+            // Inactive loop: subtle overlay
+            ctx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.08)').replace('rgb(','rgba('):col+'14';
+            ctx.fillRect(lx,0,rx-lx,H);
+          }
+        }
       }
+      if(cpx<-10||cpx>=W+10)continue;
       // Vertical line
-      ctx.fillStyle=col+'99';ctx.fillRect(cpx-.5,0,1,H);
+      ctx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.6)').replace('rgb(','rgba('):col+'99';
+      ctx.fillRect(cpx-.5,0,1,H);
       if(cue.type==='hot'){
-        // Hot cue: triangle marker + letter label
+        // Hot cue: triangle marker + letter label (A-H)
         ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx-4,0);ctx.lineTo(cpx+4,0);ctx.lineTo(cpx,5);ctx.closePath();ctx.fill();
         if(cue.hotCueNum>0){
-          const lbl=String.fromCharCode(64+cue.hotCueNum);
-          ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cpx+2,0,10,11);
+          const lbl=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
+          ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(cpx+2,0,10,11);
           ctx.fillStyle=col;ctx.fillText(lbl,cpx+3,9);
+        }
+      }else if(cue.type==='loop'){
+        // Loop cue: bracket marker + 'L' label (or hot cue letter if hot-loop)
+        ctx.fillStyle=col;
+        ctx.fillRect(cpx-1,0,2,6);ctx.fillRect(cpx-1,0,5,2); // ┌ bracket
+        const lbl=cue.hotCueNum>0?String.fromCharCode(64+cue.hotCueNum):'L';
+        ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(cpx+2,0,10,11);
+        ctx.fillStyle=col;ctx.fillText(lbl,cpx+3,9);
+        // End bracket
+        if(cue.loopEndMs>0){
+          const epx=Math.round((cue.loopEndMs-posMs)/msPerPx+cX);
+          if(epx>0&&epx<W){
+            ctx.fillStyle=col;
+            ctx.fillRect(epx-1,0,2,6);ctx.fillRect(epx-5,0,5,2); // ┐ bracket
+          }
         }
       }else{
         // Memory cue: diamond marker + 'M' label
         ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx,0);ctx.lineTo(cpx+3,3);ctx.lineTo(cpx,6);ctx.lineTo(cpx-3,3);ctx.closePath();ctx.fill();
-        ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(cpx+2,0,10,11);
+        ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(cpx+2,0,10,11);
         ctx.fillStyle=col;ctx.fillText('M',cpx+3,9);
       }
     }
@@ -1438,7 +1512,7 @@ function deckHTML(slot){
   </div>
   <div class="dk-title-row">
     <span id="dta${slot}" style="font:500 13px var(--sn);color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0">${isLoaded?(d.ar||''):''}</span>
-    <span class="dk-title-sep">—</span>
+    <span class="dk-title-sep" id="dtsep${slot}" ${(isLoaded&&d.ar)?'':'style="display:none"'}>—</span>
     <span class="dktn-t" id="dtn${slot}" style="font:500 13px var(--sn);color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">${isLoaded?(d.tn||'—'):'—'}</span>
   </div>`;
 
@@ -2319,9 +2393,19 @@ document.addEventListener('click',e=>{
   else if(act==='zoom-out'){const d2=DECKS[slot];if(d2)d2.zoomMs=Math.min(32000,(d2.zoomMs||8000)*2);}
   else if(act==='zoom-rst'){const d2=DECKS[slot];if(d2)d2.zoomMs=8000;}
   else if(act==='mtc-master'){
-    // MTC Master Out: toggle which deck drives MTC/SMPTE output
+    // MTC Master Out: toggle which deck drives SMPTE/MTC/LTC/Art-Net output
+    const d2=DECKS[slot];if(!d2)return;
+    const wasOn=d2.mtcMaster;
     Object.values(DECKS).forEach(dk=>dk.mtcMaster=false);
-    const d2=DECKS[slot];if(d2)d2.mtcMaster=true;
+    if(!wasOn){
+      d2.mtcMaster=true;
+      // Bind this deck to ALL output layers (A, B, M) so its timecode drives all SMPTE outputs
+      OUT.A.src=slot; OUT.B.src=slot; OUT.M.src=slot;
+    }else{
+      // Toggle off — unbind
+      OUT.A.src=null; OUT.B.src=null; OUT.M.src=null;
+    }
+    renderOutLayers();
   }
 });
 document.getElementById('addDeckBtn').addEventListener('click',addVirtualDeck);
@@ -2393,7 +2477,7 @@ function tick(){
     const prog=d.dur>0?(displayPos/d.dur):0;
 
     // UI updates — ALWAYS
-    el.setAttribute('data-st',d.type==='hw'?(d.pl?'hwplay':'hw'):d.scratch?'play':d.pl?'play':d.cu?'cue':'stop');
+    el.setAttribute('data-st',d.type==='hw'?(d._isLooping?'hwloop':d.pl?'hwplay':'hw'):d.scratch?'play':d.pl?'play':d.cu?'cue':'stop');
     // USB media color border — persisted via inline style to override data-st CSS
     if(d._mediaColor>0){
       const MCOLORS={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
@@ -2429,6 +2513,7 @@ function tick(){
       }
     }
     const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar||'';
+    const dtsepEl=document.getElementById('dtsep'+slot);if(dtsepEl)dtsepEl.style.display=d.ar?'':'none';
     // Waveform key + BPM — 2-line display in TC info section
     const wfkEl=document.getElementById('wfkey'+slot);
     if(wfkEl){
@@ -2928,7 +3013,8 @@ if(E){
     const wasPl=dk.pl, wasCu=dk.cu;
     dk.pl=status.state===3||status.state===4; // PLAYING or LOOPING
     dk.cu=status.state===7||status.state===8;  // CUEDOWN or PLATTERDOWN
-    if(dk.pl!==wasPl||dk.cu!==wasCu) dk._stateChanged=true;
+    dk._isLooping=!!status.isLooping; // CDJ active loop state
+    if(dk.pl!==wasPl||dk.cu!==wasCu){dk._stateChanged=true;dk._smoothPos=null;}
     if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
     if(status.bpmEffective)dk.bpm=Math.round(status.bpmEffective*100)/100;
     else if(status.bpm)dk.bpm=Math.round(status.bpm*100)/100;
@@ -2956,6 +3042,7 @@ if(E){
       const _abpm=dk.baseBpm||dk.bpm;
       if(_abpm>0){const bMs=60000/_abpm;dk._barAnchorMs=(dk.pos||0)-(status.beatInBar-1)*bMs;}
     }
+    if(status.beatNum>0)dk._beatNum=status.beatNum;
     dk.onAir=!!status.isOnAir;
     dk.master=!!status.isMaster;
     dk.sync=!!status.isSync;
@@ -3040,12 +3127,22 @@ if(E){
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
     if(d.pts&&d.pts.length>0){
-      const cmap=[[.35,.35,.35],[1,.1,.1],[1,.5,.05],[1,.85,.1],[.1,.9,.1],[.1,.9,.9],[.2,.35,1],[.75,.15,1]];
-      dk.rgbWfDetail=d.pts.map(p=>{
-        const [r,g,b]=cmap[p.color&7]||cmap[0];
-        const h=p.height/31;
-        return{r,g,b,mn:-h,mx:h};
-      });
+      if(d.wfType==='nxs2_3band'){
+        // PWV7 3-band: raw bass/mid/treble (0-1 each)
+        dk.rgbWfDetail=d.pts.map(p=>{
+          const h=Math.max(p.low||0,p.mid||0,p.hi||0);
+          return{r:p.low||0,g:p.mid||0,b:p.hi||0,h,mn:-h,mx:h};
+        });
+        dk._pwv7=true;
+      } else {
+        // Standard 1-byte encoding: 5-bit height + 3-bit color
+        const cmap=[[.35,.35,.35],[1,.1,.1],[1,.5,.05],[1,.85,.1],[.1,.9,.1],[.1,.9,.9],[.2,.35,1],[.75,.15,1]];
+        dk.rgbWfDetail=d.pts.map(p=>{
+          const [r,g,b]=cmap[p.color&7]||cmap[0];
+          const h=p.height/31;
+          return{r,g,b,mn:-h,mx:h};
+        });
+      }
       // Duration from detail waveform: pts / 150 segments per second * 1000ms
       const detailDur=Math.round(d.pts.length/150*1000);
       if(!dk.dur||dk.dur<=0||Math.abs(dk.dur-detailDur)>5000) dk.dur=detailDur;
