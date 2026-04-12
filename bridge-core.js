@@ -1579,7 +1579,7 @@ class BridgeCore {
           const p=Buffer.alloc(37);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
-          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
+          Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(p,0x0C,0,15);
           for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
           console.log(`[PDJL] bridge hello #${h+1}`);
         }, h*300);
@@ -1590,7 +1590,7 @@ class BridgeCore {
           const p=Buffer.alloc(50);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x02; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x32;
-          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
+          Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(p,0x0C,0,15);
           for(let i=0;i<4;i++) p[0x24+i]=ipParts[i];
           for(let i=0;i<6;i++) p[0x28+i]=macBytes[i]||0;
           p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
@@ -1607,7 +1607,7 @@ class BridgeCore {
       const pkt=Buffer.alloc(54);
       PDJL.MAGIC.copy(pkt,0);
       pkt[0x0A]=0x06; pkt[0x0B]=0x00;
-      Buffer.from('TCS-SHOWKONTROL','ascii').copy(pkt,0x0C,0,15);
+      Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,0x0C,0,15);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x22]=0x00; pkt[0x23]=0x36;
       pkt[0x24]=process.platform==='darwin'?0xF9:0xC1; // bridge device type (macOS=0xF9)
       pkt[0x25]=0x00;
@@ -1631,7 +1631,7 @@ class BridgeCore {
       const pkt=Buffer.alloc(95);
       PDJL.MAGIC.copy(pkt,0);
       pkt[0x0A]=0x06;
-      Buffer.from('TCS-SHOWKONTROL','ascii').copy(pkt,0x0C,0,15);
+      Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,0x0C,0,15);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x23]=0x36;
       pkt[0x24]=spoofPlayer; // player=5
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
@@ -1665,7 +1665,7 @@ class BridgeCore {
       const pkt=Buffer.alloc(40);
       PDJL.MAGIC.copy(pkt,0);
       pkt[10]=0x57; // subscribe type
-      Buffer.from('TCS-SHOWKONTROL','ascii').copy(pkt,11,0,15);
+      Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,11,0,15);
       pkt[31]=0x01; pkt[32]=0x00;
       pkt[33]=process.platform==='darwin'?0xFE:0x87; // macOS=0xFE, Windows=0x87
       pkt[34]=0x00; pkt[35]=0x04; pkt[36]=0x01; // subtype=4, subscribe=1
@@ -1726,6 +1726,8 @@ class BridgeCore {
       }
     }
     if(!p) return;
+    // Skip own packets (bridge spoofed device)
+    if(p.name==='BRIDGE+'||rinfo.address==='127.0.0.1') return;
     if(p.kind==='cdj'){
       const li = p.playerNum-1;
       const key = `cdj${p.playerNum}`;
@@ -2043,7 +2045,7 @@ class BridgeCore {
     }
   }
   getActiveNodes(){ const now=Date.now(); return Object.values(this.nodes).filter(n=>now-n.lastSeen<10000); }
-  getActiveDevices(){ const now=Date.now(); return Object.values(this.devices).filter(d=>now-d.lastSeen<10000); }
+  getActiveDevices(){ const now=Date.now(); return Object.values(this.devices).filter(d=>now-d.lastSeen<10000&&d.name!=='BRIDGE+'&&d.ip!=='127.0.0.1'); }
   getPDJLPort(){ return this.pdjlPort; }
   get nodeName(){ return TC.NNAME; }
 
