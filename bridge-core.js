@@ -1187,9 +1187,24 @@ class BridgeCore {
       if(isNew) console.log(`[${label}] OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor}`);
       this.onNodeDiscovered?.(this.nodes[key]);
     }
+    // Auto-register non-Bridge nodes that send any TCNet packet (Arena may skip OptIn)
+    if(type!==TC.OPTIN && !name.toUpperCase().startsWith('BRIDGE')){
+      const key = name+'@'+rinfo.address;
+      if(!this.nodes[key]){
+        this.nodes[key] = {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()};
+        console.log(`[${label}] auto-register ${name}@${rinfo.address} lPort=${rinfo.port}`);
+        this.onNodeDiscovered?.(this.nodes[key]);
+      } else {
+        this.nodes[key].lastSeen = Date.now();
+      }
+    }
     if(type===TC.APP){
       if(!this._lPortDbg)this._lPortDbg={};
       if(!this._lPortDbg['txapp_'+rinfo.address]){this._lPortDbg['txapp_'+rinfo.address]=true;console.log(`[${label}] APP from ${name} → ${rinfo.address}:${rinfo.port}`);}
+      const body = msg.slice(TC.H);
+      const lPort = body.length>=22 ? body.readUInt16LE(20) : rinfo.port;
+      const key = name+'@'+rinfo.address;
+      if(this.nodes[key]) this.nodes[key].lPort = lPort || rinfo.port;
       try{ this.txSocket?.send(mkAppResp(this.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
     }
     // 0x14 MetadataRequest — Arena asks for track metadata on a layer
@@ -1296,10 +1311,23 @@ class BridgeCore {
           if(isNew) console.log(`[lPort] OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor} device=${device}`);
           this.onNodeDiscovered?.(this.nodes[key]);
         }
+        // Register any Arena-like node even without OptIn (Arena sends APP/0x1e/0x14 but NOT OptIn)
+        if(type!==TC.OPTIN && !name.toUpperCase().startsWith('BRIDGE')){
+          const key = name+'@'+rinfo.address;
+          if(!this.nodes[key]){
+            this.nodes[key] = {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()};
+            console.log(`[lPort] auto-register ${name}@${rinfo.address} lPort=${rinfo.port} (from type=0x${type.toString(16)})`);
+            this.onNodeDiscovered?.(this.nodes[key]);
+          } else {
+            this.nodes[key].lastSeen = Date.now();
+          }
+        }
         if(type===TC.APP){
           const body = msg.slice(TC.H);
-          const lPort = body.length>=22 ? body.readUInt16LE(20) : this.listenerPort;
-          if(!this._lPortDbg['app_'+rinfo.address]){this._lPortDbg['app_'+rinfo.address]=true;console.log(`[lPort] APP from ${name} → ${rinfo.address}:${rinfo.port}`);}
+          const lPort = body.length>=22 ? body.readUInt16LE(20) : rinfo.port;
+          const key = name+'@'+rinfo.address;
+          if(this.nodes[key]) this.nodes[key].lPort = lPort || rinfo.port;
+          if(!this._lPortDbg['app_'+rinfo.address]){this._lPortDbg['app_'+rinfo.address]=true;console.log(`[lPort] APP from ${name} → ${rinfo.address}:${rinfo.port} lPort=${lPort}`);}
           try{ this.txSocket?.send(mkAppResp(this.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
         }
         if(type===0x14){
