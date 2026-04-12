@@ -116,20 +116,20 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-key-box{color:var(--grn);letter-spacing:.04em;border:1px solid rgba(52,211,153,.35)}
 .dk-tc-time{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px}
 
-/* SECTION 3 — Transport: CUE|PLAY square + STOP full width */
+/* SECTION 3 — Transport: CUE|PLAY row + STOP below */
 .dk-transport{display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:96px}
 .dk-tp-top{display:flex;gap:4px;flex:1}
 .dk-tp-top .dkbtn{flex:1;height:auto;border-radius:8px}
 .dk-transport .dkbtn.dkcue{font:700 13px var(--mn)}
 .dk-transport .dkbtn.dkplay{font-size:20px}
-.dk-transport .dkbtn.dkstop{flex:none;border-radius:6px;height:26px}
+.dk-transport .dkbtn.dkstop{flex:none;border-radius:6px;height:28px}
 
 /* SECTION 4 — Layer/SMPTE — CUE/PLAY 행에 맞춤 */
 .dk-layer{display:flex;flex-direction:column;gap:4px;width:80px;flex-shrink:0;align-items:stretch}
 .dk-layer-lbl{font:700 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-align:center;flex-shrink:0}
-.dk-layer .dksm-btn{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
-.dk-layer-ab{display:flex;gap:4px;flex:none;height:26px}
-.dk-layer-ab .dkbtn{flex:1;height:100%}
+.dk-layer .dksm-btn{flex:none;height:26px;display:flex;align-items:center;justify-content:center;min-height:0}
+.dk-layer-ab{display:flex;gap:4px;flex:1}
+.dk-layer-ab .dkbtn{flex:1;height:auto;border-radius:8px;font-size:11px;letter-spacing:.08em}
 .dkctrl-btns{display:flex;gap:3px}
 .dkbtn{flex:1;height:30px;min-height:0;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 9px var(--mn);cursor:pointer;border:2px solid;background:var(--bg-highest);transition:all .14s;letter-spacing:.03em;flex-shrink:0}
 .dkbtn:disabled{opacity:.25;cursor:not-allowed}
@@ -835,21 +835,23 @@ function _cdjColorToRGB(c){
   ];
   return map[c&0xF]||[0,0,0];
 }
-// CDJ color index → pseudo bass/mid/treble (approximate frequency mapping)
-// Used to render all HW waveforms with Rekordbox 3-band style
+// CDJ color index → smooth bass/mid/treble via HSL-like frequency mapping
+// Each color gets a blended ratio instead of hard single-band dominance
 function _cdjColorTo3Band(c){
-  // [bass, mid, treble] — maps CDJ's 8 discrete colors to frequency bands
-  const map=[
-    [.25,.25,.25], // 0: gray (low energy)
-    [1.0,.15,.0],  // 1: red (deep bass)
-    [.7, .5, .1],  // 2: orange (bass-heavy mix)
-    [.3, 1.0,.15], // 3: yellow-green (mid dominant)
-    [.1, .85,.4],  // 4: green (upper mid)
-    [.05,.45,.9],  // 5: cyan (high-mid/treble)
-    [.0, .15,1.0], // 6: blue (treble)
-    [.25,.1, .8],  // 7: purple (treble + sub bass)
-  ];
-  return map[c&7]||[.25,.25,.25];
+  // CDJ colors map to a frequency "angle" — smooth sine-based blending
+  // 0=silent, 1=deep bass, 2=bass, 3=low-mid, 4=mid, 5=hi-mid, 6=treble, 7=sub+treble
+  const idx = c & 7;
+  if(idx===0) return [.15,.15,.15]; // gray = low energy across all bands
+  // Map color index to frequency angle (0=bass, π/2=mid, π=treble)
+  const angles = [0, 0, .25, .55, .75, 1.05, 1.35, 1.55]; // radians × π
+  const a = angles[idx] * Math.PI;
+  // Smooth cosine-bell overlap: each band peaks at its center angle
+  const bass   = Math.max(0, Math.cos(a) * 0.5 + 0.5);           // peaks at 0
+  const mid    = Math.max(0, Math.cos(a - Math.PI*0.5) * 0.5 + 0.5); // peaks at π/2
+  const treble = Math.max(0, Math.cos(a - Math.PI) * 0.5 + 0.5);     // peaks at π
+  // Purple (7) has sub-bass + treble
+  if(idx===7) return [.35, .1, .7];
+  return [bass, mid, treble];
 }
 
 // Waveform color: 3 presets — 'blue', 'rgb', '3band'
@@ -1586,6 +1588,7 @@ function deckHTML(slot){
     </div>
     <button class="dkbtn dkstop" ${stopAc}>⏮</button>
   </div>`;
+  /* SECTION 4: SMPTE layer — MASTER small + A/B large */
 
   /* SECTION 4: layer/SMPTE + expand/close + STOP */
   const aAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="A"`:' disabled';
@@ -3093,17 +3096,28 @@ if(E){
     ensureHWDeck(status.playerNum);
     const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
     // Track change detection — reset stale data when track changes
+    // Require 3 consecutive different trackId packets to confirm a real track change
+    // (avoids false resets from dbserver reconnection or transient ID glitches)
     const newTid=status.trackId||0;
     const oldTid=dk._trackId||0;
     if(newTid>0 && oldTid>0 && newTid!==oldTid){
-      console.log(`[UI] P${status.playerNum} track change: ${oldTid} → ${newTid}`);
-      dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;
-      dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
-      dk._trackId=newTid;
-      // 아트워크 플레이스홀더 복원
-      const _artEl=document.getElementById('dart'+layerIndex);
-      if(_artEl)_artEl.innerHTML='<span class="noart-icon">♪</span>';
-    } else if(newTid>0) dk._trackId=newTid;
+      dk._tidChangeCount=(dk._tidChangeCount||0)+1;
+      dk._tidChangeTo=newTid;
+      if(dk._tidChangeCount>=3 && dk._tidChangeTo===newTid){
+        console.log(`[UI] P${status.playerNum} track change confirmed: ${oldTid} → ${newTid}`);
+        dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;
+        dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
+        dk._trackId=newTid;dk._tidChangeCount=0;
+        const _artEl=document.getElementById('dart'+layerIndex);
+        if(_artEl)_artEl.innerHTML='<span class="noart-icon">♪</span>';
+        // Update title/artist DOM
+        const _tnEl=document.getElementById('dtn'+layerIndex);if(_tnEl)_tnEl.textContent='—';
+        const _taEl=document.getElementById('dta'+layerIndex);if(_taEl)_taEl.textContent='';
+      }
+    } else {
+      dk._tidChangeCount=0;
+      if(newTid>0) dk._trackId=newTid;
+    }
     // Always update model name (even when no track loaded)
     if(status.name&&!dk.model){dk.model=status.name;const _hwlEl=document.getElementById('dhwl'+layerIndex);if(_hwlEl)_hwlEl.textContent='⬡ '+status.name;else patchDeck(layerIndex);}
     else if(status.name)dk.model=status.name;
@@ -3189,14 +3203,15 @@ if(E){
         dk.rgbWf=allPts.map(p=>{
           const [bass,mid,treble]=_cdjColorTo3Band(p.color);
           const h=p.height/255;
-          return{r:bass*h,g:mid*h,b:treble*h,h,mn:-h,mx:h};
+          // Store pure band ratios in r/g/b, height in h — shader uses wf.a for height
+          return{r:bass,g:mid,b:treble,h,mn:-h,mx:h};
         });
       } else {
         // dbserver preview waveform: {height:0-31, color:0-7} → 3-band pseudo-mapping
         dk.rgbWf=d.pts.map(p=>{
           const [bass,mid,treble]=_cdjColorTo3Band(p.color);
           const h=p.height/31;
-          return{r:bass*h,g:mid*h,b:treble*h,h,mn:-h,mx:h};
+          return{r:bass,g:mid,b:treble,h,mn:-h,mx:h};
         });
       }
       // Don't override duration if we have a real value from metadata
@@ -3255,11 +3270,10 @@ if(E){
         dk._pwv7=true;
       } else {
         // Standard 1-byte encoding: 5-bit height + 3-bit color
-        const cmap=[[.35,.35,.35],[1,.1,.1],[1,.5,.05],[1,.85,.1],[.1,.9,.1],[.1,.9,.9],[.2,.35,1],[.75,.15,1]];
         dk.rgbWfDetail=d.pts.map(p=>{
-          const [r,g,b]=cmap[p.color&7]||cmap[0];
+          const [bass,mid,treble]=_cdjColorTo3Band(p.color);
           const h=p.height/31;
-          return{r,g,b,mn:-h,mx:h};
+          return{r:bass,g:mid,b:treble,h,mn:-h,mx:h};
         });
       }
       // Duration from detail waveform: pts / 150 segments per second * 1000ms

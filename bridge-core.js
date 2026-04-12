@@ -574,32 +574,23 @@ function parsePDJL(msg){
     };
   }
   if((type===PDJL.DJM || type===PDJL.DJM2) && msg.length>=0x70){
-    // DJM Mixer Status (type 0x29 or 0x39, port 50002)
-    // Debug: hex dump first packet to find correct fader offsets
-    if(!parsePDJL._djmDumped){
-      parsePDJL._djmDumped=true;
-      try{
-        console.log(`[DJM] mixer status type=0x${type.toString(16)} len=${msg.length}`);
-        const hex=msg.slice(0x20,Math.min(0x80,msg.length)).toString('hex').match(/.{2}/g).join(' ');
-        console.log(`[DJM] hex@0x20: ${hex}`);
-        for(const base of [0x24,0x3C,0x54,0x6C]){
-          if(base+2>msg.length) break;
-          const vals=[];
-          for(let i=0;i<24&&base+i+1<msg.length;i+=2) vals.push(`+${i}:${msg.readUInt16BE(base+i).toString(16)}`);
-          console.log(`[DJM] block@0x${base.toString(16)}: ${vals.join(' ')}`);
-        }
-      }catch(_){}
-    }
-    const ch=[0x24,0x3C,0x54,0x6C].map(off=>{
-      if(off+1>=msg.length) return 0;
-      const raw=msg.readUInt16BE(off);
-      return Math.round(raw/0x3FF*255);
+    // DJM Mixer Status (type 0x39, 248B on port 50002)
+    // Confirmed via pcapng analysis: 4 channels × 24 bytes starting at 0x24
+    // Per-channel layout: byte+3 = channel fader (0-255), byte+11 = on-air level (0-255)
+    const CH_BASE = 0x24, CH_STRIDE = 0x18; // 24 bytes per channel
+    const ch = [0,1,2,3].map(c => {
+      const off = CH_BASE + c * CH_STRIDE + 3; // byte 3 = channel fader
+      return off < msg.length ? msg[off] : 0;
+    });
+    const onAir = [0,1,2,3].map(c => {
+      const off = CH_BASE + c * CH_STRIDE + 11; // byte 11 = on-air level
+      return off < msg.length ? msg[off] : 0;
     });
     if(!parsePDJL._lastDjm || parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
       parsePDJL._lastDjm=ch.slice();
-      try{console.log(`[DJM] faders=[${ch}]`);}catch(_){}
+      try{console.log(`[DJM] faders=[${ch}] onair=[${onAir}]`);}catch(_){}
     }
-    return{kind:'djm',name,channel:ch};
+    return{kind:'djm',name,channel:ch,onAir};
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
   // 15-band spectrum per channel: base 0xA4, stride 0x3C, uint16BE per band
@@ -1863,8 +1854,9 @@ class BridgeCore {
       }
     }
     if(p.kind==='djm'){
-      this._hasRealFaders=true;  // Got actual fader data from 0x29/0x39 mixer status
+      this._hasRealFaders=true;
       this.faders=p.channel;
+      if(p.onAir) this.onAir = p.onAir.map(v => v > 127 ? 1 : 0);
       if(!this.devices['djm']){
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);

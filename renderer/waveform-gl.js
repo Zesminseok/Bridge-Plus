@@ -343,28 +343,8 @@ void main() {
     return;
   }
 
-  // ── Mode 0/1/3: 3-band waveform with ratio-based coloring ──
+  // ── Mode 0/1/3: 3-band waveform ──
   float B = bass, M = midf, T = treble;
-
-  // Perceptual gain correction
-  float bV, mV, tV;
-  if (u_mode == 3) {
-    bV = sqrt(max(B, 0.0)) * 1.2;
-    mV = max(M, 0.0);
-    tV = max(T, 0.0) * 0.6;
-  } else {
-    bV = sqrt(max(B, 0.0)) * 1.3;
-    mV = max(M, 0.0) * 1.0;
-    tV = max(T, 0.0) * 0.7;
-  }
-
-  float outerH = max(bV, max(mV, tV)) * scale;
-  float AA = 1.0;
-  float inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
-
-  if (inside < 0.005) {
-    fragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
-  }
 
   vec3 bassCol, midCol, trebCol;
   if (u_mode == 0) {
@@ -372,31 +352,42 @@ void main() {
     midCol  = vec3(0.1, 1.0, 0.1);
     trebCol = vec3(0.2, 0.35, 1.0);
   } else {
-    bassCol = vec3(0.2,  0.53, 1.0);     // #3388FF — brighter blue
-    midCol  = vec3(1.0,  0.72, 0.0);    // #FFB800 — warm amber
-    trebCol = vec3(1.0,  1.0,   1.0);    // #FFFFFF
+    bassCol = vec3(0.2,  0.53, 1.0);     // #3388FF — blue
+    midCol  = vec3(1.0,  0.72, 0.0);     // #FFB800 — warm amber
+    trebCol = vec3(1.0,  1.0,   1.0);     // #FFFFFF
   }
 
-  // Rekordbox-style: dominant band picks the color, slight lerp to 2nd for smooth transitions
+  float outerH, inside;
   vec3 col;
-  if (bV >= mV && bV >= tV) {
-    float t2 = mV >= tV ? mV : tV;
-    vec3 c2 = mV >= tV ? midCol : trebCol;
-    float blend = (bV > 0.001) ? clamp(t2 / bV, 0.0, 1.0) * 0.3 : 0.0;
-    col = mix(bassCol, c2, blend);
-  } else if (mV >= tV) {
-    float t2 = bV >= tV ? bV : tV;
-    vec3 c2 = bV >= tV ? bassCol : trebCol;
-    float blend = (mV > 0.001) ? clamp(t2 / mV, 0.0, 1.0) * 0.3 : 0.0;
-    col = mix(midCol, c2, blend);
+
+  if (u_mode == 3) {
+    // HW mode: height from original data (wf.a), color from band ratios
+    float h = wf.a;  // original CDJ height preserved
+    outerH = h * scale;
+    float AA = 1.0;
+    inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
+    if (inside < 0.005) { fragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+    // Color from band ratio only (not height)
+    float total = B + M + T + 0.001;
+    col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
-    float t2 = bV >= mV ? bV : mV;
-    vec3 c2 = bV >= mV ? bassCol : midCol;
-    float blend = (tV > 0.001) ? clamp(t2 / tV, 0.0, 1.0) * 0.3 : 0.0;
-    col = mix(trebCol, c2, blend);
+    // Virtual mode: height derived from band values
+    float bV = sqrt(max(B, 0.0)) * 1.3;
+    float mV = max(M, 0.0) * 1.0;
+    float tV = max(T, 0.0) * 0.7;
+    outerH = max(bV, max(mV, tV)) * scale;
+    float AA = 1.0;
+    inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
+    if (inside < 0.005) { fragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+    float total = bV + mV + tV + 0.001;
+    col = (bassCol * bV + midCol * mV + trebCol * tV) / total;
   }
 
-  fragColor = vec4(col * inside, 1.0);
+  // Boost saturation to avoid muddy gray
+  float lum = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(lum), col, 1.3);
+
+  fragColor = vec4(clamp(col, 0.0, 1.0) * inside, 1.0);
 }
 `;
 
@@ -455,28 +446,8 @@ void main() {
     return;
   }
 
-  // ── Mode 0/1/3: 3-band ratio-based color ──
+  // ── Mode 0/1/3: 3-band ──
   float B = bass, M = midf, T = treble;
-
-  float bV, mV, tV;
-  if (u_mode == 3) {
-    bV = sqrt(max(B, 0.0)) * 1.2;
-    mV = max(M, 0.0);
-    tV = max(T, 0.0) * 0.6;
-  } else {
-    bV = sqrt(max(B, 0.0)) * 1.3;
-    mV = max(M, 0.0) * 1.0;
-    tV = max(T, 0.0) * 0.7;
-  }
-
-  float outerH = max(bV, max(mV, tV)) * scale;
-  float AA2 = 0.6;
-  float inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
-
-  if (inside < 0.005) {
-    fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
-    return;
-  }
 
   vec3 bassCol, midCol, trebCol;
   if (u_mode == 0) {
@@ -489,25 +460,34 @@ void main() {
     trebCol = vec3(1.0, 1.0,   1.0);
   }
 
+  float outerH, inside;
   vec3 col;
-  if (bV >= mV && bV >= tV) {
-    float t2 = mV >= tV ? mV : tV;
-    vec3 c2 = mV >= tV ? midCol : trebCol;
-    float blend = (bV > 0.001) ? clamp(t2 / bV, 0.0, 1.0) * 0.3 : 0.0;
-    col = mix(bassCol, c2, blend);
-  } else if (mV >= tV) {
-    float t2 = bV >= tV ? bV : tV;
-    vec3 c2 = bV >= tV ? bassCol : trebCol;
-    float blend = (mV > 0.001) ? clamp(t2 / mV, 0.0, 1.0) * 0.3 : 0.0;
-    col = mix(midCol, c2, blend);
+
+  if (u_mode == 3) {
+    // HW mode: height from original data, color from band ratios
+    float h = wf.a;
+    outerH = h * scale;
+    float AA2 = 0.6;
+    inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
+    if (inside < 0.005) { fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0); return; }
+    float total = B + M + T + 0.001;
+    col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
-    float t2 = bV >= mV ? bV : mV;
-    vec3 c2 = bV >= mV ? bassCol : midCol;
-    float blend = (tV > 0.001) ? clamp(t2 / tV, 0.0, 1.0) * 0.3 : 0.0;
-    col = mix(trebCol, c2, blend);
+    float bV = sqrt(max(B, 0.0)) * 1.3;
+    float mV = max(M, 0.0) * 1.0;
+    float tV = max(T, 0.0) * 0.7;
+    outerH = max(bV, max(mV, tV)) * scale;
+    float AA2 = 0.6;
+    inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
+    if (inside < 0.005) { fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0); return; }
+    float total = bV + mV + tV + 0.001;
+    col = (bassCol * bV + midCol * mV + trebCol * tV) / total;
   }
 
+  float lum = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(lum), col, 1.3);
+
   float dim = played ? 0.38 : 1.0;
-  fragColor = vec4(col * inside * dim, 1.0);
+  fragColor = vec4(clamp(col, 0.0, 1.0) * inside * dim, 1.0);
 }
 `;
