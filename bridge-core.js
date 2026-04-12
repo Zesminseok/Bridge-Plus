@@ -1456,7 +1456,7 @@ class BridgeCore {
         let timecodeMs = 0;
 
         if(trackChanged){
-          this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false };
+          this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false, initPos:0 };
           try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} trackType=${p.trackType} trackDeviceId=${p.trackDeviceId} ip=${rinfo?.address}`);}catch(_){}
           // Auto-request metadata — must query the SOURCE device's dbserver (Link Export)
           if(p.trackId>0 && p.hasTrack){
@@ -1502,6 +1502,10 @@ class BridgeCore {
           // Short samples / no BPM: use wall-clock elapsed time
           if(!acc._playStart) acc._playStart = Date.now();
           timecodeMs = Date.now() - acc._playStart;
+        } else if(!p.isPlaying && !p.isLooping){
+          // Stopped/paused: preserve previous position (don't reset to 0)
+          const prevLayer = this.layers[li];
+          if(prevLayer && prevLayer.timecodeMs > 0) timecodeMs = prevLayer.timecodeMs;
         }
         if(!p.isPlaying && acc) acc._playStart = 0;
 
@@ -1511,12 +1515,16 @@ class BridgeCore {
         const beatChanged  = !prev || prev.beatPhase !== beatPhase;
 
         if(stateChanged || bpmChanged || trackChanged || beatChanged){
+          // totalLength: use precise position's trackLengthSec if available, else preserve previous
+          const ppLen = this._precisePos?.[p.playerNum]?.trackLengthSec;
+          const prevLen = prev?.totalLength || 0;
+          const totalLen = ppLen ? Math.round(ppLen*1000) : prevLen;
           this.updateLayer(li, {
             state:       p.state,
             timecodeMs,
             bpm:         p.bpm,
             trackId:     p.trackId,
-            totalLength: 0,
+            totalLength: totalLen,
             beatPhase,
             deviceName:  p.name,
             _pitch:      p.pitch || 0,
