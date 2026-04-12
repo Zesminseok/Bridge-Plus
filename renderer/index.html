@@ -1606,6 +1606,24 @@ function deckHTML(slot){
   </div>`;
 }
 
+/* patchDeck: replace a single deck's DOM without touching other decks' WebGL */
+function patchDeck(slot){
+  const el=document.getElementById('dk'+slot);
+  if(!el)return; // deck element doesn't exist → need full renderDecks
+  const d=DECKS[slot];if(!d)return;
+  // Destroy only THIS deck's GL contexts
+  if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
+  if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
+  // Replace just this deck's HTML
+  const tmp=document.createElement('div');
+  tmp.innerHTML=deckHTML(slot);
+  const newEl=tmp.firstElementChild;
+  el.replaceWith(newEl);
+  bindDeck(slot);
+  // Restore expanded state
+  if(_expandedSlot===slot){newEl.classList.add('dk-wide');}
+}
+
 function bindDeck(slot){
   const el=document.getElementById('dk'+slot);if(!el)return;
   const d=DECKS[slot];
@@ -2062,7 +2080,7 @@ function loadFile(slot,f){
     if(cfg.aoId)setOut(d.au,cfg.aoId);
     d.au.addEventListener('loadedmetadata',()=>{
       d.dur=d.au.duration*1000;d.bpm=0;d.ld=true;
-      renderDecks();
+      patchDeck(slot);
       // Setup canvases — guard: only resize if dimensions changed (setting canvas.width ALWAYS resets WebGL context!)
       setTimeout(()=>{
         const wov=document.getElementById('wov'+slot);
@@ -2356,7 +2374,7 @@ function doEject(slot){
   if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
   Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,art:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
   if(E&&run)window.bridge.removeLayer(slot);
-  renderDecks();
+  patchDeck(slot);
 }
 
 function doSeek(slot,r){
@@ -2398,7 +2416,7 @@ async function doToggleHW(slot){
     d.tn='';d.ar='';d.dur=0;d.pos=0;d.bpm=0;d.cp=0;d.wf=null;
   }
 
-  renderDecks();
+  patchDeck(slot);
 }
 
 document.addEventListener('click',e=>{
@@ -2409,7 +2427,15 @@ document.addEventListener('click',e=>{
   else if(act==='layer'){
     const lyr=b.dataset.lyr;
     OUT[lyr].src=_deckLayerAssigned(slot,lyr)?null:slot;
-    renderOutLayers();renderDecks();
+    renderOutLayers();
+    // Update layer button states for all decks without full DOM rebuild
+    Object.keys(DECKS).forEach(s=>{
+      const si=+s;
+      const aBtn=document.querySelector(`#dk${si} .dklyr-a`);
+      const bBtn=document.querySelector(`#dk${si} .dklyr-b`);
+      if(aBtn){aBtn.classList.toggle('ac',_deckLayerAssigned(si,'A'));}
+      if(bBtn){bBtn.classList.toggle('ac',_deckLayerAssigned(si,'B'));}
+    });
   }
   else if(act==='eject')doEject(slot);
   else if(act==='hw')doToggleHW(slot);
@@ -2430,7 +2456,12 @@ document.addEventListener('click',e=>{
       OUT.M.src=null;
     }
     renderOutLayers();
-    renderDecks();
+    // Update master button states for all decks without full DOM rebuild
+    Object.keys(DECKS).forEach(s=>{
+      const si=+s;
+      const mstBtn=document.getElementById('dmst'+si);
+      if(mstBtn)mstBtn.classList.toggle('on',!!DECKS[si].mtcMaster);
+    });
   }
 });
 document.getElementById('addDeckBtn').addEventListener('click',addVirtualDeck);
@@ -3074,7 +3105,7 @@ if(E){
       if(_artEl)_artEl.innerHTML='<span class="noart-icon">♪</span>';
     } else if(newTid>0) dk._trackId=newTid;
     // Always update model name (even when no track loaded)
-    if(status.name&&!dk.model){dk.model=status.name;renderDecks();}
+    if(status.name&&!dk.model){dk.model=status.name;const _hwlEl=document.getElementById('dhwl'+layerIndex);if(_hwlEl)_hwlEl.textContent='⬡ '+status.name;else patchDeck(layerIndex);}
     else if(status.name)dk.model=status.name;
     // If track ejected (hasTrack went false for 2+ consecutive status), reset
     if(!status.hasTrack){
@@ -3083,7 +3114,7 @@ if(E){
         console.log(`[UI] P${status.playerNum} track ejected`);
         dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
         dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
-        renderDecks();
+        patchDeck(layerIndex);
       }
       return;
     }
@@ -3113,14 +3144,14 @@ if(E){
     const wasLoaded=dk.ld;
     dk.ld=!!status.hasTrack;
     if(!wasLoaded&&dk.ld){
-      renderDecks(); // re-render when track first loads
+      patchDeck(layerIndex); // re-render only this deck when track loads
       // If no metadata yet after 2s, trigger refresh
       if(!dk._metaRetry){dk._metaRetry=setTimeout(()=>{
         dk._metaRetry=null;
         if(dk.ld&&!dk.tn&&E&&run)window.bridge.refreshMeta?.();
       },2000);}
     }
-    if(wasLoaded&&!dk.ld){renderDecks();if(dk._metaRetry){clearTimeout(dk._metaRetry);dk._metaRetry=null;}}
+    if(wasLoaded&&!dk.ld){patchDeck(layerIndex);if(dk._metaRetry){clearTimeout(dk._metaRetry);dk._metaRetry=null;}}
     if(status.beatInBar&&status.beatInBar!==dk.beatInBar){
       dk.beatInBar=status.beatInBar;dk._beatTime=Date.now();
       // Cache beat grid anchor: ms position of bar start (beat 1), using baseBpm (native track time)
@@ -3256,7 +3287,10 @@ if(E){
     if(window.bridge&&dk.tn){
       window.bridge.updateLayer(li,{trackName:dk.tn,artistName:dk.ar||''});
     }
-    renderDecks();
+    // Incremental DOM update — no full rebuild needed for meta changes
+    const _tnEl=document.getElementById('dtn'+li);if(_tnEl)_tnEl.textContent=dk.tn||'—';
+    const _taEl=document.getElementById('dta'+li);if(_taEl)_taEl.textContent=dk.ar||'';
+    const _sepEl=document.getElementById('dtsep'+li);if(_sepEl)_sepEl.style.display=dk.ar?'':'none';
   });
   window.bridge.onDJMStatus?.(d=>{faders=d.faders;});
   window.bridge.onDJMMeter?.(ch=>{
@@ -3267,7 +3301,12 @@ if(E){
     pdjlDevices=devs;
     // only real PDJL CDJs switch to HW mode — not virtual decks
     devs.filter(d=>d.type==='CDJ'&&!d.virtual).forEach(d=>ensureHWDeck(d.playerNum));
-    if(devs.some(d=>d.type==='DJM'))renderDecks();
+    if(devs.some(d=>d.type==='DJM')){
+      // Just update DJM hint — no full rebuild needed
+      const djmHint=document.getElementById('djmHint');
+      const djmDevs=devs.filter(d=>d.type==='DJM');
+      if(djmHint){if(djmDevs.length){djmHint.style.display='';djmHint.textContent='♪ '+djmDevs.map(d=>d.name).join(', ')+' CONNECTED';}else djmHint.style.display='none';}
+    }
     if(curTab==='pdjl')renderPDJL();
   });
   loadInterfaces();
