@@ -2980,6 +2980,14 @@ if(E){
   window.bridge.onTcnetNode?.(n=>{tcNodes[n.name+'@'+n.ip]={...n,lastSeen:Date.now()};if(curTab==='tcnet')renderTcnet();});
   window.bridge.onCDJStatus?.(d=>{
     const{layerIndex,status}=d;
+    // Beat packet (0x28) — update beatInBar for display
+    if(status._beatPacket){
+      const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
+      if(status.beatInBar>0) dk.beatInBar=status.beatInBar;
+      if(status.bpmFromBeat>0&&!dk.bpm) dk.bpm=status.bpmFromBeat;
+      dk._beatTime=Date.now();
+      return;
+    }
     // CDJ-3000 Precise Position — direct ms update, highest priority
     if(status._precisePos){
       const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;

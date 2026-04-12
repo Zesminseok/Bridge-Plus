@@ -461,13 +461,16 @@ function parsePDJL(msg){
       parsePDJL._syncDbg[pNum]=(parsePDJL._syncDbg[pNum]||0)+1;
       console.log(`[CDJ] P${pNum} flags@89=0x${flags.toString(16)} sync=${isSync} master=${isMaster} onAir=${isOnAir} trackBpm=${trackBpm} bpmEff=${bpmEff} pitch=${pitch.toFixed(3)} p3=0x${p3.toString(16)} vinyl=${isVinylMode}`);
     }
+    // Actual playback speed at offset 0x98 (152): 0=stopped, 0x100000=1.0x
+    // STC reference: used for PLL interpolation between status packets
+    const actualSpeed = msg.length>0x9B ? msg.readUInt32BE(0x98) : 0;
     return{
       kind:'cdj', playerNum:pNum, name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
       isPlaying: state===STATE.PLAYING,
       isLooping: state===STATE.LOOPING,
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
-      pitch,
+      pitch, actualSpeed,
       trackId: msg.readUInt32BE(0x2C),
       trackDeviceId: msg[0x28],
       slot:     msg[0x29],
@@ -538,8 +541,22 @@ function parsePDJL(msg){
         onAir:[msg[0x25]?1:0, msg[0x27]?1:0, msg[0x29]?1:0, msg[0x2B]?1:0]};
     }
   }
-  // Type 0x28 = Beat packet (96B) — beat timing data, no media color
-  // Previously misidentified as "CDJ media" — ignored now
+  // Type 0x28 = Beat packet (96B on port 50001) — beat timing + position data
+  // STC reference: offset 84=pitch(u32BE), 90=bpm(u16BE×100), 92=beatInBar(1-4)
+  if(type===0x28 && msg.length>=96){
+    const pNum = msg[33];
+    if(pNum>=1&&pNum<=6){
+      const pitch = msg.readUInt32BE(84);
+      const bpm16 = msg.readUInt16BE(90);
+      const beat  = msg[92]; // 1-4
+      return{
+        kind:'beat', playerNum:pNum, name,
+        pitch: (pitch-0x100000)/0x100000*100,
+        bpm: (bpm16>0&&bpm16!==0xFFFF)?bpm16/100:0,
+        beatInBar: beat,
+      };
+    }
+  }
   // CDJ-3000 waveform preview (type 0x56, variable size)
   // Sub-types at byte 0x33: 0x02=mono preview, 0x03=beat grid, 0x25=color waveform
   if(type===PDJL.CDJ_WF && msg.length>0x34){
@@ -1538,16 +1555,23 @@ class BridgeCore {
             try{console.log(`[TC] P${p.playerNum} beat=${p.beatNum} delta=${deltaBn} ms=${timecodeMs} bpm=${p.bpm} ${bg?'(grid)':'(calc)'}`);}catch(_){}
           }
           acc.prevBn = p.beatNum;
-        } else if(acc && p.isPlaying && (p.bpm<=0||p.beatNum<=0)){
-          // Short samples / no BPM: use wall-clock elapsed time
-          if(!acc._playStart) acc._playStart = Date.now();
-          timecodeMs = Date.now() - acc._playStart;
+        } else if(acc && (p.isPlaying||p.isLooping) && (p.bpm<=0||p.beatNum<=0)){
+          // Short samples / no BPM / no beats: use actualSpeed-based wall-clock
+          const speed = p.actualSpeed>0 ? p.actualSpeed/0x100000 : 1.0;
+          if(!acc._playStart){
+            acc._playStart = Date.now();
+            acc._playMs = this.layers[li]?.timecodeMs || 0; // start from current position
+          }
+          timecodeMs = acc._playMs + Math.round((Date.now() - acc._playStart) * speed);
         } else if(!p.isPlaying && !p.isLooping){
           // Stopped/paused: preserve previous position (don't reset to 0)
           const prevLayer = this.layers[li];
           if(prevLayer && prevLayer.timecodeMs > 0) timecodeMs = prevLayer.timecodeMs;
         }
-        if(!p.isPlaying && acc) acc._playStart = 0;
+        if(!p.isPlaying && !p.isLooping && acc){
+          if(acc._playStart) acc._playMs = timecodeMs; // save position on stop
+          acc._playStart = 0;
+        }
 
         const prev = this.layers[li];
         const stateChanged = !prev || prev.state     !== p.state;
@@ -1600,6 +1624,19 @@ class BridgeCore {
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
+    }
+    // Beat packet (0x28, port 50001) — beat timing from CDJ
+    if(p.kind==='beat'){
+      const li=p.playerNum-1;
+      if(li>=0&&li<8){
+        // Forward to renderer for beatInBar display
+        this.onCDJStatus?.(li,{
+          playerNum:p.playerNum,
+          beatInBar:p.beatInBar,
+          bpmFromBeat:p.bpm,
+          _beatPacket:true,
+        });
+      }
     }
     // CDJ-3000 Precise Position (type 0x0b on port 50001, ~30ms interval)
     // Contains direct ms playback position — most accurate source
