@@ -329,21 +329,30 @@ void main() {
     return;
   }
 
-  // Wavypy 3-band: perceptual gain correction applied per band
-  // Raw analysis yields T > M > B (treble-heavy); compensate so bass dominates visually
-  // Bass: sqrt expansion + 1.4x boost | Mid: linear 1.0x | Treble: 0.5x reduction
-  // mode==3: raw (HW mode) — no gain correction, show CDJ data as-is
+  // CDJ-style 3-band waveform: single bar height with ratio-based coloring
+  // Height = max of all bands, color = weighted blend by band dominance
   float B = bass, M = midf, T = treble;
 
-  float bH, mH, tH;
+  // Perceptual gain correction: bass boost, treble reduction
+  // mode==3: raw HW data with minimal correction
+  float bV, mV, tV;
   if (u_mode == 3) {
-    bH = max(B, 0.0) * scale;
-    mH = max(M, 0.0) * scale;
-    tH = max(T, 0.0) * scale;
+    bV = sqrt(max(B, 0.0)) * 1.2;
+    mV = max(M, 0.0);
+    tV = max(T, 0.0) * 0.6;
   } else {
-    bH = sqrt(max(B, 0.0)) * scale * 1.4;
-    mH = max(M, 0.0) * scale * 1.0;
-    tH = max(T, 0.0) * scale * 0.5;
+    bV = sqrt(max(B, 0.0)) * 1.4;
+    mV = max(M, 0.0) * 1.0;
+    tV = max(T, 0.0) * 0.5;
+  }
+
+  // Bar height = max corrected band
+  float outerH = max(bV, max(mV, tV)) * scale;
+  float AA = 1.0;
+  float inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
+
+  if (inside < 0.005) {
+    fragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
   }
 
   // Rekordbox 3-band palette: bass=#0055E1 (deep blue), mid=#FFA600 (amber), treble=#FFFFFF (white)
@@ -351,26 +360,16 @@ void main() {
   vec3 midCol  = vec3(1.0,  0.651, 0.0);
   vec3 trebCol = vec3(1.0,  1.0,   1.0);
 
-  // CDJ stacked rendering: each band independently draws its height
-  // bass=outermost(blue), mid=middle(amber), treble=innermost(white)
-  // Only draw a band's color where yDist is within that band's height
-  float AA = 1.0;
-  float inBass = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
-  float inMid  = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
-  float inTreb = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
-
-  // No band covers this pixel → black
-  if (inBass < 0.005 && inMid < 0.005 && inTreb < 0.005) {
-    fragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
+  // Color from band ratios — CDJ style: dominant frequency determines color
+  float total = bV + mV + tV;
+  vec3 col;
+  if (total < 0.001) {
+    col = bassCol;
+  } else {
+    col = bassCol * (bV / total) + midCol * (mV / total) + trebCol * (tV / total);
   }
 
-  // Layer from outside in: bass → mid → treble (treble wins when overlapping)
-  vec3 col = bassCol * inBass;
-  col = mix(col, midCol, inMid);
-  col = mix(col, trebCol, inTreb);
-
-  float alpha = max(inBass, max(inMid, inTreb));
-  fragColor = vec4(col * alpha, 1.0);
+  fragColor = vec4(col * inside, 1.0);
 }
 `;
 
@@ -413,37 +412,42 @@ void main() {
     return;
   }
 
+  // CDJ-style 3-band: single bar height, ratio-based color (same as zoom shader)
   float B = bass, M = midf, T = treble;
 
-  // Same perceptual gain correction as zoom shader (mode==3: raw for HW)
-  float bH, mH, tH;
+  float bV, mV, tV;
   if (u_mode == 3) {
-    bH = max(B, 0.0) * scale;
-    mH = max(M, 0.0) * scale;
-    tH = max(T, 0.0) * scale;
+    bV = sqrt(max(B, 0.0)) * 1.2;
+    mV = max(M, 0.0);
+    tV = max(T, 0.0) * 0.6;
   } else {
-    bH = sqrt(max(B, 0.0)) * scale * 1.4;
-    mH = max(M, 0.0) * scale * 1.0;
-    tH = max(T, 0.0) * scale * 0.5;
+    bV = sqrt(max(B, 0.0)) * 1.4;
+    mV = max(M, 0.0) * 1.0;
+    tV = max(T, 0.0) * 0.5;
   }
 
+  float outerH = max(bV, max(mV, tV)) * scale;
   float AA2 = 0.6;
-  float inBass = 1.0 - smoothstep(bH - AA2, bH + AA2, yDist);
-  float inMid  = 1.0 - smoothstep(mH - AA2, mH + AA2, yDist);
-  float inTreb = 1.0 - smoothstep(tH - AA2, tH + AA2, yDist);
+  float inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
 
-  if (inBass < 0.005 && inMid < 0.005 && inTreb < 0.005) {
+  if (inside < 0.005) {
     fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
     return;
   }
 
-  // CDJ stacked: bass outer, mid middle, treble inner — each independently sized
-  vec3 col = vec3(0.0, 0.333, 0.882) * inBass;
-  col = mix(col, vec3(1.0, 0.651, 0.0),  inMid);
-  col = mix(col, vec3(1.0, 1.0,   1.0),  inTreb);
+  vec3 bassCol = vec3(0.0, 0.333, 0.882);
+  vec3 midCol  = vec3(1.0, 0.651, 0.0);
+  vec3 trebCol = vec3(1.0, 1.0,   1.0);
 
-  float alpha = max(inBass, max(inMid, inTreb));
+  float total = bV + mV + tV;
+  vec3 col;
+  if (total < 0.001) {
+    col = bassCol;
+  } else {
+    col = bassCol * (bV / total) + midCol * (mV / total) + trebCol * (tV / total);
+  }
+
   float dim = played ? 0.38 : 1.0;
-  fragColor = vec4(col * alpha * dim, 1.0);
+  fragColor = vec4(col * inside * dim, 1.0);
 }
 `;

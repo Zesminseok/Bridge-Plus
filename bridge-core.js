@@ -1687,7 +1687,7 @@ class BridgeCore {
             }
           } else if(acc._anchorMs != null){
             // Between beats — interpolate from last anchor using pitch-corrected speed
-            const speed = p.actualSpeed > 0 ? p.actualSpeed / 0x100000 : 1.0;
+            const speed = p.actualSpeed > 0 ? p.actualSpeed / 0x100000 : 0.0;
             const elapsed = Date.now() - acc._anchorTime;
             timecodeMs = Math.round(acc._anchorMs + elapsed * speed);
           } else if(beatNum > 0 && p.bpm > 0){
@@ -2482,6 +2482,16 @@ class BridgeCore {
         }
       }
       console.log(`[DBSRV] P${playerNum} metadata:`, JSON.stringify(meta));
+
+      // Store metadata into layer so TCNet DATA packets include it
+      const li = playerNum - 1;
+      if(li >= 0 && li < 8 && this.layers[li]){
+        if(meta.title)  this.layers[li].trackName  = meta.title;
+        if(meta.artist) this.layers[li].artistName = meta.artist;
+        // Invalidate MetaData packet cache so it gets rebuilt with new names
+        if(this._metaCache && this._metaCache[li]) this._metaCache[li] = null;
+        console.log(`[DBSRV] P${playerNum} stored metadata → layer ${li}: "${meta.title}" / "${meta.artist}"`);
+      }
 
       // Emit metadata
       if(meta.title||meta.artist){
