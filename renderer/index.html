@@ -380,7 +380,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
       <div class="deck-row" id="vtRow"></div>
       <button class="add-deck-btn" id="addDeckBtn" style="margin-top:8px">
         <span style="font-size:18px;line-height:1">＋</span>
-        <span>Virtual 덱 추가 <span style="color:var(--tx3);font-size:9px">(최대 8개)</span></span>
+        <span>Virtual 덱 추가 <span style="color:var(--tx3);font-size:9px">(최대 6개)</span></span>
       </button>
     </div>
   </div>
@@ -1438,7 +1438,7 @@ function switchMode(mode){
 function addVirtualDeck(){
   if(glMode==='hw'){alert('HW 모드에서는 버츄얼 덱을 추가할 수 없습니다.');return;}
   const slot=nextFreeSlot();
-  if(slot<0){alert('최대 8개');return;}
+  if(slot<0){alert('최대 6개');return;}
   DECKS[slot]=createDeck(slot,'virtual');
   if(E&&run) window.bridge.registerVirtualDeck(slot,'CDJ-3000');
   renderDecks();
