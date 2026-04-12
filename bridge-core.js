@@ -710,8 +710,14 @@ class BridgeCore {
     this.txSocket = dgram.createSocket({type:'udp4', reuseAddr:true});
     this.txSocket.on('error', ()=>{});
 
-    await new Promise(res=>{
+    await new Promise((res,rej)=>{
+      let attempts = 0;
       const tryBind = port => {
+        if(++attempts > 3){
+          console.warn('[TCNet] TX bind failed after 3 attempts, falling back to 127.0.0.1');
+          this.txSocket.bind(0, '127.0.0.1', ()=>{ res(); });
+          return;
+        }
         const onErr = ()=>{
           this.txSocket.removeAllListeners('error');
           this.txSocket.on('error',()=>{});
@@ -1018,10 +1024,22 @@ class BridgeCore {
     sock.on('error',(e)=>{ console.warn(`[TCNet] RX error: ${e.message}`); });
 
     const bindAddr = this.isLocalMode ? '127.0.0.1' : (this.tcnetBindAddr||undefined);
-    sock.bind(TC.P_BC, bindAddr, ()=>{
-      console.log(`[TCNet] RX bound to ${bindAddr||'0.0.0.0'}:${TC.P_BC}`);
-      if(!this.isLocalMode){ try{ sock.addMembership('224.0.0.1'); }catch(_){} }
-    });
+    const bindRx = addr => {
+      sock.removeAllListeners('error');
+      sock.on('error',(e)=>{
+        if(e.code==='EADDRNOTAVAIL' && addr!=='0.0.0.0'){
+          console.warn(`[TCNet] RX bind ${addr} unavailable, fallback to 0.0.0.0`);
+          bindRx('0.0.0.0');
+          return;
+        }
+        console.warn(`[TCNet] RX error: ${e.message}`);
+      });
+      sock.bind(TC.P_BC, addr==='0.0.0.0'?undefined:addr, ()=>{
+        console.log(`[TCNet] RX bound to ${addr||'0.0.0.0'}:${TC.P_BC}`);
+        if(!this.isLocalMode){ try{ sock.addMembership('224.0.0.1'); }catch(_){} }
+      });
+    };
+    bindRx(bindAddr);
 
     // 2) loopback RX socket (network mode only)
     if(!this.isLocalMode){
@@ -1100,6 +1118,17 @@ class BridgeCore {
       });
       sock.on('error',(e)=>{
         console.warn(`[lPort] error: ${e.message}`);
+        // Fallback to 127.0.0.1 if bind address unavailable
+        if(e.code==='EADDRNOTAVAIL'){
+          sock.removeAllListeners('error');
+          sock.on('error',(e2)=>{console.warn(`[lPort] fallback error: ${e2.message}`);reject(e2);});
+          sock.bind(0, '127.0.0.1', ()=>{
+            this.listenerPort = sock.address().port;
+            console.log(`[TCNet] listener port ${this.listenerPort} (fallback 127.0.0.1)`);
+            resolve();
+          });
+          return;
+        }
         reject(e);
       });
 
