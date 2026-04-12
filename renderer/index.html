@@ -1525,10 +1525,10 @@ function deckHTML(slot){
   const d=DECKS[slot];
   const isHW=d.type==='hw';
   const phas=`<div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>`;
-  // VU strip — HW: L/R 2채널 DJM 미터, Virtual: F 모노 1채널
+  // VU strip — Virtual: L/R 스테레오, HW: VU(DJM 미터) + Fader 별도
   const vuStrip=isHW
-    ?`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>`
-    :`<div class="dvu-strip dvu-mono" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div></div>`;
+    ?`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">VU</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur)"></div></div></div></div>`
+    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div></div>`;
 
   /* Empty virtual deck: simple drop zone */
   if(!d.ld && !isHW){
@@ -2649,17 +2649,20 @@ function tick(){
     // Peak meter: returns instantaneous peak (0-1) from time domain buffer
     const _getPeak=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i++){const v=Math.abs((buf[i]-128)/128);if(v>pk)pk=v;}return pk;};
     if(d.type==='hw'){
-      // HW: DJM 미터 데이터 사용 (L/R 동일 — 모노 채널 VU)
+      // HW: DJM on-air 미터 → VU, 페이더 값 → F
       if(run){
         const meterVal=d._djmMeter||0;
         const target=meterVal/255;
         d.vuL=target>d.vuL?target:target*0.4+(d.vuL||0)*0.6;
-        d.vuR=d.vuL; // 모노 채널
         d.vu=d.vuL;
         d._djmMeter=Math.max(0,(d._djmMeter||0)*0.92);
+        // Fader bar
+        const fv=faders[slot]||0;
+        const ft=fv/255;
+        d._faderSmooth=ft>(d._faderSmooth||0)?ft:ft*0.3+(d._faderSmooth||0)*0.7;
       }
     } else {
-      // Virtual: 모노(F) — L/R 중 최대값으로 단일 채널 표시
+      // Virtual: L/R 스테레오
       const active=d.pl||d.cu;
       let peakL=0,peakR=0;
       if(d.vuChs&&d.vuBufs){
@@ -2669,12 +2672,17 @@ function tick(){
         if(d.vuAnL&&d.vuBufL){const v=_getPeak(d.vuAnL,d.vuBufL);const p=d.vuL||0;peakL=active?(v>p?v:v*0.4+p*0.6):Math.max(0,p-0.025);}
         if(d.vuAnR&&d.vuBufR){const v=_getPeak(d.vuAnR,d.vuBufR);const p=d.vuR||0;peakR=active?(v>p?v:v*0.4+p*0.6):Math.max(0,p-0.025);}
       }
-      d.vuL=Math.max(peakL,peakR); d.vuR=d.vuL; // mono: max(L,R)
-      d.vu=d.vuL;
+      d.vuL=peakL; d.vuR=peakR;
+      d.vu=Math.max(peakL,peakR);
     }
     // dB scale: peak 1.0 → 0dB, -60dB floor, +6dB headroom so loud music fills to top
     const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-60;const h=Math.min(100,Math.max(0,(db+60)*100/60));el2.style.height=h+'%';el2.style.background=h>90?'var(--red)':h>70?'var(--ylw)':'var(--grn)';};
-    if(d.vuChs&&d.vuChs.length>2){
+    if(d.type==='hw'){
+      _vuBar('dvuL'+slot,d.vuL||0);
+      // Fader bar (linear, not dB)
+      const fEl=document.getElementById('dvuF'+slot);
+      if(fEl){const h=Math.round((d._faderSmooth||0)*100);fEl.style.height=h+'%';fEl.style.background='var(--pur)';}
+    } else if(d.vuChs&&d.vuChs.length>2){
       const CH_IDS=['L','R','3','4','5','6','7','8'];
       d.vuChs.forEach((an,i)=>_vuBar('dvu'+(CH_IDS[i]||String(i+1))+slot, an._lvl||0));
     } else {
