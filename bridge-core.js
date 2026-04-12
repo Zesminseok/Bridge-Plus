@@ -37,14 +37,16 @@ const TC = {
 // TCNet LayerStatus values (node-tcnet spec)
 const STATE = { IDLE:0, PLAYING:3, LOOPING:4, PAUSED:5, STOPPED:6, CUEDOWN:7, PLATTERDOWN:8, FFWD:9, FFRV:10, HOLD:11 };
 // TCNet layer state (for Arena): 0=Idle, 1=Playing, 2=Paused, 3=Stopped, 4=FF, 5=RW
+// Official Bridge state values (from pcap analysis) — NOT TCNet spec values
+// Arena expects: 0=Idle, 2=Paused, 3=Playing, 6=Stopped
 function toTCNetState(s){
   switch(s){
-    case STATE.PLAYING: case STATE.LOOPING: return 1; // Playing
-    case STATE.PAUSED: case STATE.CUEDOWN: case STATE.PLATTERDOWN: return 2; // Paused
-    case STATE.STOPPED: return 3;
+    case STATE.PLAYING: case STATE.LOOPING: return 3;
+    case STATE.PAUSED: case STATE.CUEDOWN: case STATE.PLATTERDOWN: return 2;
+    case STATE.STOPPED: return 6;
     case STATE.FFWD: return 4;
     case STATE.FFRV: return 5;
-    default: return 0; // Idle
+    default: return 0;
   }
 }
 
@@ -197,11 +199,11 @@ function mkStatus(port, devices, layers, faders, hwMode){
   d.writeUInt16LE(nc||1, 0);
   d.writeUInt16LE(port||0, 2);     // nodeListenerPort
 
-  // layerSource[0-7] at body[10-17] — always report hwMode slots as active
+  // layerSource[0-7] at body[8-15] — matches official Bridge offset
   for(let n=0;n<8;n++){
     const hasLayer = layers && layers[n];
     const isHW = hwMode && hwMode[n];
-    d[10+n] = (hasLayer || isHW) ? (n+1) : 0;
+    d[8+n] = (hasLayer || isHW) ? (n+1) : 0;
   }
 
   // layerStatus[0-7] at body[18-25] — raw TCNetLayerStatus (0=IDLE,3=PLAYING,5=PAUSED,6=STOPPED)
@@ -820,6 +822,12 @@ class BridgeCore {
     // Arena sends MetadataRequest(0x14) to Bridge's txSocket source port
     this.txSocket.on('message',(msg,rinfo)=>this._handleTCNetMsg(msg, rinfo, 'tx-RX'));
 
+    // Dedicated DATA socket — official Bridge sends DATA/Metrics/Meta from separate ephemeral port
+    this._dataSocket = dgram.createSocket({type:'udp4', reuseAddr:true});
+    this._dataSocket.on('error',()=>{});
+    await new Promise(r=>this._dataSocket.bind(0, this.isLocalMode?'127.0.0.1':undefined, r));
+    console.log(`[TCNet] DATA socket bound to port ${this._dataSocket.address().port}`);
+
     this.running = true; this.startTime = Date.now();
 
     await this._startListenerPortRx();
@@ -843,16 +851,14 @@ class BridgeCore {
       this.packetCount++;
     }, 33);
     // DATA packets cycle through layers: MetricsData + MetaData per layer
+    // Sent via dedicated _dataSocket (separate from txSocket) — matches official Bridge architecture
     const t4 = setInterval(()=>this._sendDataCycle(), 170);
     // Mixer Data (Type 150) — fader levels to Arena, every 200ms
     const t5 = setInterval(()=>{
       if(!this.running) return;
-      // Find DJM name from devices
       const djm = Object.values(this.devices).find(d=>d.type==='DJM');
       const pkt = mkMixerData(this.faders, djm?.name);
-      const hasArenas = Object.values(this.nodes).some(n=>Date.now()-n.lastSeen<15000);
-      if(hasArenas){this._sendToArenasLPort(pkt);this._sendToArenasSourcePort(pkt);}
-      this._send(pkt, TC.P_DATA);
+      this._sendDataToArenas(pkt);
     }, 200);
 
     this._timers = [t1, t2, t3, t4, t5];
@@ -904,12 +910,12 @@ class BridgeCore {
     this._timers.forEach(t=>{clearInterval(t);clearTimeout(t);}); this._timers=[];
     // Delay socket close by 100ms to let OptOut UDP packets flush from OS buffer
     const closeSockets=()=>{
-      const sockets = [this.txSocket,this.rxSocket,this._loRxSocket,this._ipRxSocket,this.lPortSocket];
+      const sockets = [this.txSocket,this.rxSocket,this._loRxSocket,this._ipRxSocket,this.lPortSocket,this._dataSocket];
       if(this._pdjlSockets) this._pdjlSockets.forEach(s=>sockets.push(s));
       else if(this.pdjlSocket) sockets.push(this.pdjlSocket);
       sockets.forEach(s=>{try{s?.close();}catch(_){}});
       this.txSocket=null; this.rxSocket=null; this._loRxSocket=null;
-      this._ipRxSocket=null; this.lPortSocket=null; this.pdjlSocket=null;
+      this._ipRxSocket=null; this.lPortSocket=null; this._dataSocket=null; this.pdjlSocket=null;
       this._pdjlSockets=[];
       // _pdjlAnnSock may be shared with _pdjlSockets[0], don't double-close
       if(this._pdjlAnnSock && !this._pdjlSockets?.includes(this._pdjlAnnSock)){
@@ -1042,8 +1048,11 @@ class BridgeCore {
     }
   }
   _uc(buf, port, ip){
-    if(!this.running||!this.txSocket||!ip||!port) return;
-    try{ this.txSocket.send(buf, 0, buf.length, port, ip); }catch(_){}
+    if(!this.running||!ip||!port) return;
+    // Use dedicated _dataSocket for DATA responses (official Bridge pattern)
+    const sock = this._dataSocket || this.txSocket;
+    if(!sock) return;
+    try{ sock.send(buf, 0, buf.length, port, ip); }catch(_){}
   }
 
   /** Unicast to all known Arena nodes at the given port. */
@@ -1072,9 +1081,22 @@ class BridgeCore {
       if(Date.now()-node.lastSeen > 15000) continue;
       if(!node.lPort) continue;
       try{ this.txSocket.send(buf, 0, buf.length, node.lPort, node.ip); }catch(_){}
-      // 같은 머신이면 127.0.0.1로도 전송
       if(!this.isLocalMode){try{ this.txSocket.send(buf, 0, buf.length, node.lPort, '127.0.0.1'); }catch(_){}}
     }
+  }
+
+  /** Send DATA packets via dedicated _dataSocket to Arena lPort (official Bridge pattern). */
+  _sendDataToArenas(buf){
+    const sock = this._dataSocket || this.txSocket;
+    if(!this.running || !sock) return;
+    for(const node of Object.values(this.nodes)){
+      if(Date.now()-node.lastSeen > 15000) continue;
+      if(!node.lPort) continue;
+      try{ sock.send(buf, 0, buf.length, node.lPort, node.ip); }catch(_){}
+      if(!this.isLocalMode){try{ sock.send(buf, 0, buf.length, node.lPort, '127.0.0.1'); }catch(_){}}
+    }
+    // Also broadcast on DATA port as fallback
+    try{ sock.send(buf, 0, buf.length, TC.P_DATA, this.broadcastAddr); }catch(_){}
   }
 
   /**
@@ -1115,14 +1137,8 @@ class BridgeCore {
       pkt = mkDataMetrics(layerIdx, layerData, faderVal);
     }
 
-    // send to Arena lPort when known; always broadcast to P_DATA as fallback
-    const hasArenas = Object.values(this.nodes).some(n=>Date.now()-n.lastSeen<15000);
-    if(hasArenas){
-      this._sendToArenasLPort(pkt);
-      this._sendToArenasSourcePort(pkt);
-    }
-    // broadcast:60002는 항상 (Arena 미발견 대비 + 새로운 Arena 탐색용)
-    this._send(pkt, TC.P_DATA);
+    // Send via dedicated _dataSocket (official Bridge architecture)
+    this._sendDataToArenas(pkt);
 
     this._dataLayerIdx = (idx + 1) % 24;
     this.packetCount++;
@@ -1619,43 +1635,44 @@ class BridgeCore {
           // NXS2 (or CDJ-3000 without recent 0x0b): beat-link style interpolation
           if(!acc) this._tcAcc[li] = acc = { prevBn:0, elapsedMs:0, trackId:p.trackId, dbgCount:0, metaRequested:false };
           const bg = this._beatGrids?.[p.playerNum];
-          const beatIdx = p.beatNum - 1;
+          const beatNum = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0; // filter invalid
+          const beatIdx = beatNum - 1;
 
-          if(p.beatNum > 0 && acc.prevBn !== p.beatNum){
+          // actualSpeed=0 means platter stopped (track end, loading, etc.)
+          // Don't interpolate when speed is 0 — preserve last known position
+          if(p.actualSpeed === 0 && acc._anchorMs != null){
+            timecodeMs = acc._anchorMs;
+          } else if(beatNum > 0 && acc.prevBn !== beatNum){
             // New beat arrived — definitive position anchor
             if(bg && beatIdx >= 0 && beatIdx < bg.length){
               timecodeMs = bg[beatIdx].timeMs;
             } else {
               const baseBpm = p.bpmTrack || p.bpm;
-              timecodeMs = baseBpm > 0 ? Math.round((p.beatNum - 1) * 60000 / baseBpm) : 0;
+              timecodeMs = baseBpm > 0 ? Math.round((beatNum - 1) * 60000 / baseBpm) : 0;
             }
             acc._anchorMs = timecodeMs;
             acc._anchorTime = Date.now();
-            acc.prevBn = p.beatNum;
+            acc.prevBn = beatNum;
             if(acc.dbgCount < 20){
               acc.dbgCount++;
-              try{console.log(`[TC] P${p.playerNum} beat=${p.beatNum} ms=${timecodeMs} bpm=${p.bpm} ${bg?'(grid)':'(calc)'}`);}catch(_){}
+              try{console.log(`[TC] P${p.playerNum} beat=${beatNum} ms=${timecodeMs} bpm=${p.bpm} ${bg?'(grid)':'(calc)'}`);}catch(_){}
             }
           } else if(acc._anchorMs != null){
             // Between beats — interpolate from last anchor using pitch-corrected speed
             const speed = p.actualSpeed > 0 ? p.actualSpeed / 0x100000 : 1.0;
             const elapsed = Date.now() - acc._anchorTime;
             timecodeMs = Math.round(acc._anchorMs + elapsed * speed);
-          } else if(p.beatNum > 0 && p.bpm > 0){
+          } else if(beatNum > 0 && p.bpm > 0){
             // First status with no anchor yet
             const baseBpm = p.bpmTrack || p.bpm;
-            timecodeMs = baseBpm > 0 ? Math.round((p.beatNum - 1) * 60000 / baseBpm) : 0;
+            timecodeMs = baseBpm > 0 ? Math.round((beatNum - 1) * 60000 / baseBpm) : 0;
             acc._anchorMs = timecodeMs;
             acc._anchorTime = Date.now();
-            acc.prevBn = p.beatNum;
+            acc.prevBn = beatNum;
           } else {
-            // No BPM/no beat: wall-clock fallback
-            const speed = p.actualSpeed > 0 ? p.actualSpeed / 0x100000 : 1.0;
-            if(!acc._playStart){
-              acc._playStart = Date.now();
-              acc._playMs = this.layers[li]?.timecodeMs || 0;
-            }
-            timecodeMs = acc._playMs + Math.round((Date.now() - acc._playStart) * speed);
+            // No valid beat data: preserve previous position or stay at 0
+            const prevLayer = this.layers[li];
+            timecodeMs = prevLayer?.timecodeMs || 0;
           }
         } else {
           // Stopped/paused: preserve previous position

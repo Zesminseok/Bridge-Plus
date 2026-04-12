@@ -346,26 +346,30 @@ void main() {
     tH = max(T, 0.0) * scale * 0.5;
   }
 
-  // Use max of all three as the outer boundary — avoids cutting off treble/mid when bass is quiet
-  float AA = 1.0;
-  float outerH = max(bH, max(mH, tH));
-  float alpha = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
-  if (alpha < 0.005) { fragColor = vec4(0.0,0.0,0.0,1.0); return; }
-
   // Rekordbox 3-band palette: bass=#0055E1 (deep blue), mid=#FFA600 (amber), treble=#FFFFFF (white)
   vec3 bassCol = vec3(0.0,  0.333, 0.882);
   vec3 midCol  = vec3(1.0,  0.651, 0.0);
   vec3 trebCol = vec3(1.0,  1.0,   1.0);
 
-  // Sharp color layering: use step-like transitions to avoid blue+amber=brown artifact
-  // treble→mid: smooth 0.5px (white→amber is acceptable)
-  // mid→bass:   sharp step (amber→blue blend = ugly brown)
-  float ftH = smoothstep(tH - 0.5, tH + 0.5, yDist);
-  float fmH = step(mH, yDist);   // hard boundary — no brown
+  // CDJ stacked rendering: each band independently draws its height
+  // bass=outermost(blue), mid=middle(amber), treble=innermost(white)
+  // Only draw a band's color where yDist is within that band's height
+  float AA = 1.0;
+  float inBass = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
+  float inMid  = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
+  float inTreb = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
 
-  vec3 col = mix(trebCol, midCol, ftH);
-  col = mix(col, bassCol, fmH);
+  // No band covers this pixel → black
+  if (inBass < 0.005 && inMid < 0.005 && inTreb < 0.005) {
+    fragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
+  }
 
+  // Layer from outside in: bass → mid → treble (treble wins when overlapping)
+  vec3 col = bassCol * inBass;
+  col = mix(col, midCol, inMid);
+  col = mix(col, trebCol, inTreb);
+
+  float alpha = max(inBass, max(inMid, inTreb));
   fragColor = vec4(col * alpha, 1.0);
 }
 `;
@@ -423,22 +427,22 @@ void main() {
     tH = max(T, 0.0) * scale * 0.5;
   }
 
-  float outerH = max(bH, max(mH, tH));
   float AA2 = 0.6;
-  float alpha = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
-  if (alpha < 0.005) {
-    fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
-    return;
-  }
-
   float inBass = 1.0 - smoothstep(bH - AA2, bH + AA2, yDist);
   float inMid  = 1.0 - smoothstep(mH - AA2, mH + AA2, yDist);
   float inTreb = 1.0 - smoothstep(tH - AA2, tH + AA2, yDist);
 
-  vec3 col = vec3(0.0, 0.333, 0.882);
+  if (inBass < 0.005 && inMid < 0.005 && inTreb < 0.005) {
+    fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0);
+    return;
+  }
+
+  // CDJ stacked: bass outer, mid middle, treble inner — each independently sized
+  vec3 col = vec3(0.0, 0.333, 0.882) * inBass;
   col = mix(col, vec3(1.0, 0.651, 0.0),  inMid);
   col = mix(col, vec3(1.0, 1.0,   1.0),  inTreb);
 
+  float alpha = max(inBass, max(inMid, inTreb));
   float dim = played ? 0.38 : 1.0;
   fragColor = vec4(col * alpha * dim, 1.0);
 }

@@ -68,7 +68,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .did{font:400 10px var(--sn);letter-spacing:.05em;transition:color .15s;white-space:nowrap;display:flex;align-items:baseline;gap:2px}
 .did-n{font:700 18px var(--mn);letter-spacing:-.02em;line-height:1}
 .dbadge{font:600 9px var(--mn);padding:2px 5px;border-radius:3px;letter-spacing:.05em}
-.dtc{font:normal 28px var(--seg);color:var(--tx4);letter-spacing:.04em;transition:color .15s;white-space:nowrap}
+.dtc{font:normal 32px var(--seg);color:var(--tx4);letter-spacing:.04em;transition:color .15s;white-space:nowrap}
 .dk[data-st="play"] .dtc,.dk[data-st="scratch"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
 .dwov{height:14px;margin:0 0 3px;background:var(--bg-lowest);border-radius:3px;overflow:hidden;cursor:pointer;position:relative}
@@ -91,11 +91,11 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-hdr-r{display:flex;align-items:center;gap:3px;flex-shrink:0;margin-left:auto}
 .dk-hdr-r .dhtb{padding:3px 8px;font-size:11px;border-radius:4px}
 /* Header row 2: artist — title */
-.dk-title-row{display:flex;align-items:center;gap:5px;padding:2px 8px 4px;overflow:hidden;white-space:nowrap;min-width:0}
+.dk-title-row{display:flex;align-items:center;gap:5px;padding:2px 8px 6px;overflow:hidden;white-space:nowrap;min-width:0}
 .dk-title-sep{color:var(--tx3);flex-shrink:0;font-size:12px}
 
 /* Body: WF+VU | TC | Transport | SMPTE — all top-aligned */
-.dk-body{display:flex;flex-direction:row;align-items:stretch;padding:0 8px 6px;gap:6px}
+.dk-body{display:flex;flex-direction:row;align-items:stretch;padding:0 8px 10px;gap:8px}
 
 /* SECTION 1 — Waveform panel + VU (cyan bordered) */
 .dk-wf-wrap{display:flex;flex-direction:row;flex:1;min-width:0;height:96px;gap:0}
@@ -116,7 +116,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-tc-time{font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px}
 
 /* SECTION 3 — Transport: CUE|PLAY square + STOP full width */
-.dk-transport{display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:112px}
+.dk-transport{display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:96px}
 .dk-tp-top{display:flex;gap:4px;flex:1}
 .dk-tp-top .dkbtn{flex:1;height:auto;border-radius:8px}
 .dk-transport .dkbtn.dkcue{font:700 13px var(--mn)}
@@ -2118,7 +2118,7 @@ function loadFile(slot,f){
           }
           // Update BPM display in-place — avoids DOM rebuild / canvas context reset
           const _bpmEl=document.getElementById('wfbpm'+slot);
-          if(_bpmEl&&d.bpm>0){const _b=d.baseBpm||d.bpm;const _bs=_b%1===0?_b.toFixed(0):_b.toFixed(1);const _cs=d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1);_bpmEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums">${_bs}</span><span style="font:500 11px var(--mn);color:var(--tx3)">±0.00%</span><span class="dk-bpm-cur">${_cs}<sub style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</sub></span>`;}else if(_bpmEl)_bpmEl.innerHTML='';
+          if(_bpmEl&&d.bpm>0){const _b=d.baseBpm||d.bpm;const _bf=(v)=>{const int=Math.floor(v),dec=((v-int)*10+0.5|0)%10;return`${int}<span style="font-size:0.7em;opacity:0.7">.${dec}</span>`;};_bpmEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums">${_bf(_b)}</span><span style="font:500 11px var(--mn);color:var(--tx3)">±0.00%</span><span class="dk-bpm-cur">${_bf(d.bpm)}<sub style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</sub></span>`;}else if(_bpmEl)_bpmEl.innerHTML='';
         });
       },100); // 100ms delay — let audio element finish loading
     });
@@ -2514,8 +2514,10 @@ function tick(){
     if(wfbEl&&d.bpm>0){
       const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
       const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
-      const baseStr=(d.baseBpm&&d.baseBpm>0)?(d.baseBpm%1===0?d.baseBpm.toFixed(0):d.baseBpm.toFixed(1)):(d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1));
-      const curStr=d.bpm%1===0?d.bpm.toFixed(0):d.bpm.toFixed(1);
+      const _bpmFmt=(v)=>{const int=Math.floor(v),dec=((v-int)*10+0.5|0)%10;return`${int}<span style="font-size:0.7em;opacity:0.7">.${dec}</span>`;};
+      const baseVal=(d.baseBpm&&d.baseBpm>0)?d.baseBpm:d.bpm;
+      const baseStr=_bpmFmt(baseVal);
+      const curStr=_bpmFmt(d.bpm);
       wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<sub style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</sub></span>`;
     }else if(wfbEl)wfbEl.innerHTML='';
     const dhwlEl=document.getElementById('dhwl'+slot);
