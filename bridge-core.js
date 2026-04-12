@@ -27,7 +27,7 @@ const TC = {
   VENDOR: 'BRIDGE+', DEVICE: 'BRIDGE+',
   APPV  : { ma:1, mi:1, bug:67 },
   H     : 24,
-  SZ_OI : 68, SZ_ST: 300, SZ_TM: 154,
+  SZ_OI : 68, SZ_ST: 300, SZ_TM: 162,
   SZ_DT_METRICS: 122, SZ_DT_META: 548,
   LPORT : 0,  // dynamically assigned each run
   DT_METRICS: 0x02,  // MetricsData: fader, gain, pitch, BPM, status per layer
@@ -248,10 +248,10 @@ function mkStatus(port, devices, layers, faders, hwMode){
  *   body[81]     = generalSMPTEMode
  *   body[82+n*6] = layerTimecode[n]    (6B: mode,state,h,m,s,frames, n=0-7)
  */
-function mkTime(layers, uptimeMs){
+function mkTime(layers, uptimeMs, faders){
   const b = Buffer.alloc(TC.SZ_TM);
   buildHdr(TC.TIME).copy(b,0);
-  const d = b.slice(24);  // body 130B
+  const d = b.slice(24);  // body 138B
 
   // layerCurrentTime[0-7] at body[0-31] — interpolated from wall clock
   const now = Date.now();
@@ -309,6 +309,11 @@ function mkTime(layers, uptimeMs){
       d[off+4] = s;
       d[off+5] = frames;
     }
+  }
+
+  // layerOnAir[0-7] at body[130-137] — fader position 0-255
+  for(let n=0;n<8;n++){
+    d[130+n] = faders?.[n] || 0;
   }
 
   return b;
@@ -682,6 +687,15 @@ function parsePDJL(msg){
 }
 
 // ─────────────────────────────────────────────
+// 1x1 black JPEG — used to clear artwork in Arena when track has no art
+const BLANK_JPEG = Buffer.from(
+  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoH'+
+  'BwYIDAoMCwsKCwsNCw0KDQ4ODQsREhMUFBQXFhcZGxsbGxoiIiIiIiL/2wBDAQME'+
+  'BAUEBQkFBQkiHA0cIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIi'+
+  'IiIiIiIiIiIiIiIiIiL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf'+
+  '/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAA'+
+  'AAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AKwA//9k=','base64');
+
 // BridgeCore
 // ─────────────────────────────────────────────
 class BridgeCore {
@@ -694,6 +708,8 @@ class BridgeCore {
     this.isLocalMode   = (opts.tcnetIface==='127.0.0.1');
 
     this.tcnetMode = opts.tcnetMode || 'auto';  // 'auto' | 'server' | 'client'
+    this.tcnetUnicast   = !!opts.tcnetUnicast;
+    this.tcnetAllIfaces = !!opts.tcnetAllIfaces;
 
     this.listenerPort  = 0;  // dynamically assigned on start()
     this.txSocket      = null;
@@ -844,7 +860,7 @@ class BridgeCore {
     const t1 = setInterval(()=>this._sendOptIn(), 1000);
     const t2 = setInterval(()=>this._sendStatus(), 170);
     const t3 = setInterval(()=>{
-      const timePkt = mkTime(this.layers, Date.now()-this.startTime);
+      const timePkt = mkTime(this.layers, Date.now()-this.startTime, this.faders);
       this._send(timePkt, TC.P_TIME);
       this._sendToArenas(timePkt, TC.P_TIME);
       this._sendToArenasLPort(timePkt);
@@ -875,6 +891,12 @@ class BridgeCore {
     console.log(`[v13] Sending: OptIn(1s) + Status(170ms) + TIME(33ms) + DATA(170ms)`);
     console.log(`[v13] Triple-send: broadcast + localIP(${this.localAddr}) + 127.0.0.1`);
     return this;
+  }
+
+  setTCNetUnicast(unicast, allIfaces){
+    this.tcnetUnicast   = !!unicast;
+    this.tcnetAllIfaces = !!allIfaces;
+    console.log(`[TCNet] unicast=${this.tcnetUnicast} allIfaces=${this.tcnetAllIfaces}`);
   }
 
   stop(){
@@ -1024,9 +1046,29 @@ class BridgeCore {
    */
   _send(buf, port){
     if(!this.running||!this.txSocket) return;
+    // ── Unicast mode: only send to discovered Arena nodes ──
+    if(this.tcnetUnicast && !this.isLocalMode){
+      const sent=new Set();
+      for(const node of Object.values(this.nodes)){
+        if(Date.now()-node.lastSeen > 15000 || sent.has(node.ip)) continue;
+        sent.add(node.ip);
+        try{ this.txSocket.send(buf, 0, buf.length, port, node.ip); }catch(_){}
+      }
+      // allIfaces: also send unicast to each node IP from every NIC
+      if(this.tcnetAllIfaces){
+        for(const iface of getAllInterfaces()){
+          if(iface.internal) continue;
+          for(const ip of sent){
+            try{ this.txSocket.send(buf, 0, buf.length, port, ip); }catch(_){}
+          }
+        }
+      }
+      try{ this.txSocket.send(buf, 0, buf.length, port, '127.0.0.1'); }catch(_){}
+      return;
+    }
+    // ── Broadcast mode (default) ──
     try{ this.txSocket.send(buf, 0, buf.length, port, this.broadcastAddr); }catch(_){}
     if(!this.isLocalMode){
-      // Auto mode: send to ALL subnet broadcasts so TCNet reaches every network
       if(!this.tcnetBindAddr || this.tcnetBindAddr==='auto' || this.tcnetBindAddr==='0.0.0.0'){
         const sent=new Set([this.broadcastAddr]);
         for(const iface of getAllInterfaces()){
@@ -1629,6 +1671,15 @@ class BridgeCore {
         if(trackChanged){
           this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false, initPos:0 };
           try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} trackType=${p.trackType} trackDeviceId=${p.trackDeviceId} ip=${rinfo?.address}`);}catch(_){}
+          // Clear artwork on track change — push blank JPEG to Arena to replace stale art
+          this._virtualArt[li] = BLANK_JPEG;
+          if(this.layers[li]){
+            this.layers[li].trackName = '';
+            this.layers[li].artistName = '';
+            if(this._metaCache?.[li]) this._metaCache[li] = null;
+          }
+          this.onAlbumArt?.(p.playerNum, null);
+          this._pushArtToResolume(li, BLANK_JPEG).catch(()=>{});
           // Auto-request metadata — must query the SOURCE device's dbserver (Link Export)
           if(p.trackId>0 && p.hasTrack){
             this._tcAcc[li].metaRequested = true;
@@ -2108,19 +2159,21 @@ class BridgeCore {
         sock.write(this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(1)]));
       } else if(reqType === 0x3000){
         // RenderMenuReq → send MenuItem(s) + render complete
-        // Use trackId from 0x2002 request (or fall back to layers state)
-        let title='BRIDGE+', artist='';
+        // Find layer by trackId from earlier 0x2002 request
+        const tid = sock._vdbTrackId || this._lastVdbTrackId || 0;
+        let title='BRIDGE+', artist='', artSlot=-1;
         for(let i=0;i<8;i++){
           const ld=this.layers[i];
-          if(ld?.trackName){title=ld.trackName;artist=ld.artistName||'';break;}
+          if(ld && ((tid && ld.trackId===tid) || (!tid && ld.trackName))){
+            title=ld.trackName||'';artist=ld.artistName||'';artSlot=i;break;
+          }
         }
-        const art=this._findVirtualArt();
-        // Prefer trackId from the 0x2002 request on this same connection
-        const artworkId = art ? (sock._vdbTrackId || this._lastVdbTrackId || (this.layers.find(l=>l?.trackId)?.trackId) || 1) : 0;
+        const art = artSlot>=0 ? this._virtualArt[artSlot] : this._findVirtualArt();
+        const artworkId = art ? (tid || (this.layers.find(l=>l?.trackId)?.trackId) || 1) : 0;
         const item=this._dbBuildMenuItem(actualTxId, title, artist, artworkId);
         const done=this._dbBuildMsg(actualTxId+1, 0x4003, [this._dbArg4(1)]);
         sock.write(Buffer.concat([item, done]));
-        console.log(`[VDBSRV] render menu: title="${title}" artworkId=${artworkId}`);
+        console.log(`[VDBSRV] render menu: title="${title}" artSlot=${artSlot} artworkId=${artworkId}`);
       } else if(reqType === 0x2003){
         // ArtworkReq → serve stored JPEG, then close (EOF signals response complete)
         const reqArtId = buf.length >= 42 ? buf.readUInt32BE(38) : 0;
@@ -2135,8 +2188,10 @@ class BridgeCore {
             sock.end();
           });
         } else {
-          console.log(`[VDBSRV] artwork req artId=${reqArtId} → no art stored`);
-          sock.write(this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]), ()=>sock.end());
+          // No real art — send blank JPEG so Arena clears previous artwork
+          console.log(`[VDBSRV] artwork req artId=${reqArtId} → sending blank JPEG`);
+          const artResp = this._dbBuildArtResponse(actualTxId, BLANK_JPEG);
+          sock.write(artResp, ()=>sock.end());
         }
       } else if(reqType === 0x0100){
         // TEARDOWN — client is closing connection
@@ -2154,7 +2209,7 @@ class BridgeCore {
   _findVirtualArt(){
     for(const slot of Object.keys(this._virtualArt)){
       const buf=this._virtualArt[slot];
-      if(buf&&buf.length>0) return buf;
+      if(buf&&buf.length>100) return buf;  // skip BLANK_JPEG (tiny placeholder)
     }
     return null;
   }
