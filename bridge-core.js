@@ -2301,9 +2301,11 @@ class BridgeCore {
         sock.write(Buffer.concat([item, done]));
         console.log(`[VDBSRV] render menu: title="${title}" artSlot=${artSlot} artworkId=${artworkId}`);
       } else if(reqType === 0x2003){
-        // ArtworkReq → serve stored JPEG, then close (EOF signals response complete)
+        // ArtworkReq → serve stored JPEG matching the trackId, then close
         const reqArtId = buf.length >= 42 ? buf.readUInt32BE(38) : 0;
-        const artBuf = this._findVirtualArt();
+        // Find artwork by trackId (reqArtId = trackId used as artworkId)
+        // First match by trackId, then fallback to _findVirtualArt()
+        const artBuf = this._findArtByTrackId(reqArtId) || this._findVirtualArt();
         if(artBuf){
           const isJpeg = artBuf[0]===0xFF && artBuf[1]===0xD8;
           console.log(`[VDBSRV] artwork req artId=${reqArtId} → ${artBuf.length}B ${isJpeg?'JPEG':'?'} hex=${artBuf.slice(0,4).toString('hex')}`);
@@ -2330,6 +2332,19 @@ class BridgeCore {
     }catch(e){
       console.warn(`[VDBSRV] handleRequest error: ${e.message}`);
     }
+  }
+
+  // Find artwork for a specific trackId (matches layer's trackId → slot → _virtualArt)
+  _findArtByTrackId(trackId){
+    if(!trackId) return null;
+    for(let i=0;i<8;i++){
+      const ld=this.layers[i];
+      if(ld && ld.trackId===trackId){
+        const buf=this._virtualArt[i];
+        if(buf&&buf.length>100) return buf;
+      }
+    }
+    return null;
   }
 
   _findVirtualArt(){
