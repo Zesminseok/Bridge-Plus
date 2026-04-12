@@ -1571,7 +1571,7 @@ class BridgeCore {
 
     // Bridge join sequence — DJM needs hello + claims before activating fader delivery
     // STC reference: 2 hellos (0x0A, 37B) + 11 IP claims (0x02, 50B)
-    const spoofPlayer=5;
+    const spoofPlayer=7;
     const _bridgeJoin=()=>{
       // Hello (0x0A) — 37B broadcast × 2
       for(let h=0;h<2;h++){
@@ -1622,7 +1622,7 @@ class BridgeCore {
 
     // 95B dbserver keepalive — UNICAST to CDJs only (not broadcast!)
     // STC: CDJ-3000 validates "PIONEER DJ CORP" / "PRODJLINK BRIDGE" strings
-    // CRITICAL: DJM must NOT see this packet (player=5 conflicts with bridge player=0xF9)
+    // CRITICAL: DJM must NOT see this packet (player=7 conflicts with bridge player=0xF9)
     this._dbKaSock = dgram.createSocket({type:'udp4',reuseAddr:true});
     this._dbKaSock.on('error',()=>{});
     this._dbKaSock.bind(0,()=>{try{this._dbKaSock.setBroadcast(true);}catch(_){}});
@@ -1633,7 +1633,7 @@ class BridgeCore {
       pkt[0x0A]=0x06;
       Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,0x0C,0,15);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x23]=0x36;
-      pkt[0x24]=spoofPlayer; // player=5
+      pkt[0x24]=spoofPlayer; // player=7
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
       for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
       pkt[0x35]=0x20;
@@ -2585,8 +2585,8 @@ class BridgeCore {
   }
 
   async _dbserverMetadata(ip, slot, trackId, playerNum, trackType=1){
-    // Spoof as player 5 (unlikely to conflict with real CDJs 1-4)
-    const spoofPlayer = 5;
+    // Spoof as player 7 (Deep Symmetry recommended, avoids conflict with CDJs 1-6)
+    const spoofPlayer = 7;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
@@ -2677,7 +2677,7 @@ class BridgeCore {
   }
 
   async _dbserverWaveform(ip, slot, trackId, playerNum, trackType){
-    const spoofPlayer = 5;
+    const spoofPlayer = 7;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
@@ -2713,7 +2713,7 @@ class BridgeCore {
   }
 
   async _dbserverWaveformDetail(ip, slot, trackId, playerNum, trackType){
-    const spoofPlayer = 5;
+    const spoofPlayer = 7;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
@@ -2755,7 +2755,7 @@ class BridgeCore {
   // NXS2 extension request (0x2c04) for 3-band waveform (PWV7)
   // Returns raw bass/mid/treble bytes per entry (3 bytes/entry, 150 entries/sec)
   async _dbserverWaveformNxs2(ip, slot, trackId, playerNum, trackType){
-    const spoofPlayer = 5;
+    const spoofPlayer = 7;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
@@ -2837,7 +2837,7 @@ class BridgeCore {
   // PCO2 — NXS2 extended cue list via ANLZ tag request (0x2c04)
   // Provides loop end positions, RGB colors, and comment text
   async _dbserverCuePointsNxs2(ip, slot, trackId, playerNum, trackType){
-    const spoofPlayer = 5;
+    const spoofPlayer = 7;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
@@ -2976,7 +2976,7 @@ class BridgeCore {
 
   // Fallback: menu-based cue point request (0x2104)
   async _dbserverCuePointsMenu(ip, slot, trackId, playerNum, trackType){
-    const spoofPlayer = 5;
+    const spoofPlayer = 7;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
@@ -3015,7 +3015,7 @@ class BridgeCore {
   }
 
   async _dbserverBeatGrid(ip, slot, trackId, playerNum, trackType){
-    const spoofPlayer = 5;
+    const spoofPlayer = 7;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
@@ -3072,7 +3072,7 @@ class BridgeCore {
   }
 
   async _dbserverArtwork(ip, slot, artworkId, playerNum, cacheKey){
-    const spoofPlayer = 5;
+    const spoofPlayer = 7;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
