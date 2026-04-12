@@ -1984,7 +1984,9 @@ class BridgeCore {
     }
     if(p.kind==='announce'){
       const pn = p.playerNum;
-      // Register as CDJ device if playerNum is valid (1-6) and name suggests CDJ/XDJ
+      // Skip self-announce (bridge device) — double-check name and IP
+      if(p.name==='BRIDGE+'||p.name==='TCS-SHOWKONTROL'||rinfo.address==='127.0.0.1') return;
+      // Register as CDJ device if playerNum is valid (1-6)
       if(pn>0 && pn<=6){
         const key = `cdj${pn}`;
         if(!this.devices[key]){
