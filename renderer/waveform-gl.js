@@ -364,9 +364,9 @@ void main() {
     float total = B + M + T + 0.001;
     col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
-    float bV = sqrt(max(B, 0.0)) * 1.3;
-    float mV = max(M, 0.0) * 1.0;
-    float tV = max(T, 0.0) * 0.7;
+    float bV = sqrt(max(B, 0.0)) * 1.5;
+    float mV = sqrt(max(M, 0.0)) * 1.2;
+    float tV = max(T, 0.0) * 0.8;
     outerH = max(bV, max(mV, tV)) * scale;
     float AA = 1.0;
     inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
@@ -375,9 +375,10 @@ void main() {
     col = (bassCol * bV + midCol * mV + trebCol * tV) / total;
   }
 
-  // Slight saturation boost
+  // Saturation + brightness boost
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(vec3(lum), col, 1.2);
+  col = mix(vec3(lum), col, 1.3);
+  col *= 1.25;
 
   fragColor = vec4(clamp(col, 0.0, 1.0) * inside, 1.0);
 }
@@ -458,9 +459,9 @@ void main() {
     float total = B + M + T + 0.001;
     col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
-    float bV = sqrt(max(B, 0.0)) * 1.3;
-    float mV = max(M, 0.0) * 1.0;
-    float tV = max(T, 0.0) * 0.7;
+    float bV = sqrt(max(B, 0.0)) * 1.5;
+    float mV = sqrt(max(M, 0.0)) * 1.2;
+    float tV = max(T, 0.0) * 0.8;
     outerH = max(bV, max(mV, tV)) * scale;
     float AA2 = 0.6;
     inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
@@ -470,7 +471,8 @@ void main() {
   }
 
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(vec3(lum), col, 1.2);
+  col = mix(vec3(lum), col, 1.3);
+  col *= 1.25;
 
   float dim = played ? 0.38 : 1.0;
   fragColor = vec4(clamp(col, 0.0, 1.0) * inside * dim, 1.0);

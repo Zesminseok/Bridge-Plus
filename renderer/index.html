@@ -1716,7 +1716,9 @@ function bindDeck(slot){
       DECKS[slot].scratch=true; _vel=0; _lastMoveT=performance.now(); _lastSeek=0;
       _drag={startX:e.clientX,startPos:d2.pos,lastX:e.clientX,lastT:performance.now()};
       wzDiv.setPointerCapture(e.pointerId);
-      // RAF starts only on first movement — clicking waveform must NOT pause audio
+      // Platter down: immediately pause audio (vinyl stop effect)
+      if(d2.au&&!d2.au.paused){try{d2.au.pause();}catch(_){}}
+      if(!_raf)_raf=requestAnimationFrame(_vinylTick);
     });
     wzDiv.addEventListener('pointermove',e=>{
       if(!_drag)return;
@@ -1739,10 +1741,13 @@ function bindDeck(slot){
       _drag=null; DECKS[slot].scratch=false;
       const d2=DECKS[slot];
       if(d2?.au){
-        // Start spin-up from current velocity toward 1.0
-        if(d2.pl){if(!_raf)_raf=requestAnimationFrame(_vinylTick);}
-        else{d2.au.pause();d2.au.playbackRate=1.0;d2.au.currentTime=(d2.pos||0)/1000;}
+        // Platter release: restore playbackRate to 1.0 and resume if was playing
+        d2.au.playbackRate=1.0;
+        d2.au.currentTime=(d2.pos||0)/1000;
+        if(d2.pl){d2.au.play().catch(()=>{});}
+        else{d2.au.pause();}
       }
+      _vel=0; if(_raf){cancelAnimationFrame(_raf);_raf=null;}
     });
     wzDiv.addEventListener('pointercancel',()=>{
       _drag=null;_vel=0;DECKS[slot].scratch=false;

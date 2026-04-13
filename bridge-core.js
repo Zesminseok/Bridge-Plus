@@ -485,7 +485,9 @@ function mkNotification(){
  * Large images are split into multiple packets (MTU-safe chunks)
  */
 function mkLowResArtwork(layerIdx, jpegBuf){
-  const MAX_CHUNK = 1400;  // MTU-safe payload per packet
+  // TCNet V3.5.1B: Low Res Artwork = Data Packet (Type 200) + DataType 128
+  // Spec standard cluster size = 4842 bytes per packet
+  const MAX_CHUNK = 4842;
   const totalPackets = Math.ceil(jpegBuf.length / MAX_CHUNK);
   const packets = [];
 
@@ -494,9 +496,9 @@ function mkLowResArtwork(layerIdx, jpegBuf){
     const chunk = jpegBuf.slice(chunkStart, chunkStart + MAX_CHUNK);
     // header(24) + dataType(1) + layerID(1) + dataSize(4) + totalPackets(4) + packetNumber(4) + clusterSize(4) + chunk
     const b = Buffer.alloc(TC.H + 2 + 16 + chunk.length);
-    buildHdr(TC.ARTWORK).copy(b, 0);
-    b[TC.H]     = TC.DT_ARTWORK;  // 128 = LowResArtworkFile
-    b[TC.H + 1] = layerIdx;       // 1-based layer
+    buildHdr(TC.DATA).copy(b, 0);  // Type 200 (0xC8) Data Packet — NOT 204 (File Packet)
+    b[TC.H]     = TC.DT_ARTWORK;   // DataType 128 = LowResArtworkFile
+    b[TC.H + 1] = layerIdx;        // 1-based layer
     b.writeUInt32LE(jpegBuf.length, TC.H + 2);   // total dataSize
     b.writeUInt32LE(totalPackets,   TC.H + 6);   // totalPackets
     b.writeUInt32LE(i,              TC.H + 10);   // packetNumber (0-based)
