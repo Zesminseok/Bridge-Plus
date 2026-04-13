@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('bridge',{
   getInterfaces:()=>ipcRenderer.invoke('bridge:getInterfaces'),
   getDevices:()=>ipcRenderer.invoke('bridge:getDevices'),
   updateLayer:(i,d)=>ipcRenderer.invoke('bridge:updateLayer',{i,data:d}),
+  setFader:(i,val)=>ipcRenderer.invoke('bridge:setFader',{i,val}),
   removeLayer:(i)=>ipcRenderer.invoke('bridge:removeLayer',{i}),
   registerVirtualDeck:(slot,model)=>ipcRenderer.invoke('bridge:registerVirtualDeck',{slot,model}),
   unregisterVirtualDeck:(slot)=>ipcRenderer.invoke('bridge:unregisterVirtualDeck',{slot}),
