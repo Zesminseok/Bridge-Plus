@@ -2198,8 +2198,11 @@ function loadFile(slot,f){
               d._pwv7=true; // flag: using PWV7 data (different weight scheme)
               d._wfCache=null;
               buildWaveformCache(slot);
-              if(d.wgl){const wfD=d.rgbWfDetail||d.rgbWf;d.wgl.setData(wfD,(wfD.length/150*1000)||1);}
-              if(d.ovgl){d.ovgl.setData(d.rgbWfDetail||d.rgbWf);}
+              const wfD2=d.rgbWfDetail||d.rgbWf;
+              if(!d.ovgl){const wov=document.getElementById('wov'+slot);if(wov){try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}}}
+              if(!d.wgl){const wzc=document.getElementById('wzc'+slot);if(wzc){try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}catch(e){d.wzCtx=wzc.getContext('2d');}}}
+              if(d.wgl){d.wgl.setData(wfD2,(wfD2.length/150*1000)||1);}
+              if(d.ovgl){d.ovgl.setData(wfD2);}
               drawOverview(slot,0);drawZoomWaveform(slot,0);
               usedPWV7=true;
               console.log(`[WF] slot${slot} using Rekordbox PWV7: ${pwv7.length} entries`);
@@ -2220,8 +2223,13 @@ function loadFile(slot,f){
             if(prog2)prog2.style.width='0';
             if(wf){
               buildWaveformCache(slot);
-              if(d.wgl){const wfD=d.rgbWfDetail||d.rgbWf;d.wgl.setData(wfD,(wfD.length/150*1000)||1);}
-              if(d.ovgl){d.ovgl.setData(d.rgbWfDetail||d.rgbWf);}
+              const wfD=d.rgbWfDetail||d.rgbWf;
+              if(d.wgl){d.wgl.setData(wfD,(wfD.length/150*1000)||1);}
+              // Ensure overview GL exists before setData (may not exist on first load)
+              if(!d.ovgl){const wov=document.getElementById('wov'+slot);if(wov){try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}}}
+              if(d.ovgl){d.ovgl.setData(wfD);}
+              // Same for zoom GL
+              if(!d.wgl){const wzc=document.getElementById('wzc'+slot);if(wzc){try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}catch(e){d.wzCtx=wzc.getContext('2d');}if(d.wgl)d.wgl.setData(wfD,(wfD.length/150*1000)||1);}}
               drawOverview(slot,0);drawZoomWaveform(slot,0);
             }
           });

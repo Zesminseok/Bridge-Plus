@@ -2068,7 +2068,7 @@ class BridgeCore {
   }
 
   removeLayer(i){ if(i>=0&&i<=7){ this.layers[i]=null; this._syncVirtualDevices(); } }
-  setHWMode(i,e){ if(i>=0&&i<=7) this.hwMode[i]=e; }
+  setHWMode(i,e){ if(i>=0&&i<=7){this.hwMode[i]=e;console.log(`[HW] setHWMode(${i},${e}) → [${this.hwMode.slice(0,4)}]`);} }
 
   /** Register virtual deck in devices list so Arena sees a CDJ model name. */
   registerVirtualDeck(slot, modelName){
