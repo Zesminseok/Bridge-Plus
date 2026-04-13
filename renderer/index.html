@@ -103,7 +103,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-wf-area .dkart{border-radius:0;border:none;border-right:1px solid rgba(135,135,255,.1);width:96px;min-height:96px;aspect-ratio:1;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-lowest)}
 .dk-wf-col{display:flex;flex-direction:column;flex:1;min-width:0}
 .dk-wf-col .dwov{height:16px;margin:0;border-radius:0;border-bottom:1px solid rgba(135,135,255,.1);background:rgba(5,8,12,.8);position:relative}
-.dk-wf-col .dwov canvas{display:block;width:100%;height:100%}
+.dk-wf-col .dwov canvas{display:block;width:100%;height:100%;background:#000}
 .dk-wf-col .dwz-row{flex:1;margin:0;height:auto}
 .dk-wf-col .dwz-row .dwz{border-radius:0;border:none;height:100%;margin:0}
 
@@ -1568,7 +1568,7 @@ function deckHTML(slot){
   /* SECTION 1: waveform panel + VU strip (right side, full height) */
   const sec1=`<div class="dk-wf-wrap">
     <div class="dk-wf-area">
-      <div class="dkart" id="dart${slot}" ${isLoaded?`data-a="eject" data-i="${slot}"`:''}>${artSrc?`<img src="${artSrc}" alt="">`:'<span class="noart-icon">♪</span>'}</div>
+      <div class="dkart" id="dart${slot}" ${isLoaded?`data-a="eject" data-i="${slot}"`:''}>${artSrc?`<img src="${artSrc}" alt="" onerror="this.parentElement.innerHTML='<span class=\\'noart-icon\\'>♪</span>'">`:'<span class="noart-icon">♪</span>'}</div>
       <div class="dk-wf-col">
         <div class="dwov" id="dwov${slot}" style="${isLoaded?'':'display:flex;align-items:center;justify-content:center'}">
           ${isLoaded?`<canvas id="wov${slot}"></canvas><canvas id="wovol${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
@@ -2128,7 +2128,7 @@ function loadFile(slot,f){
       if(_art&&d.artUrl){
         const _existImg=_art.querySelector('img');
         if(_existImg){_existImg.src=d.artUrl;}
-        else{_art.innerHTML=`<img src="${d.artUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;}
+        else{_art.innerHTML=`<img src="${d.artUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML='<span class=\\'noart-icon\\'>♪</span>'">`;}
       }
       if(E&&run)window.bridge.updateLayer(slot,{trackName:d.tn||'',artistName:d.ar||''});
     });
@@ -2141,8 +2141,8 @@ function loadFile(slot,f){
     d.au.addEventListener('loadedmetadata',()=>{
       d.dur=d.au.duration*1000;d.bpm=0;d.ld=true;
       patchDeck(slot);
-      // Setup canvases — guard: only resize if dimensions changed (setting canvas.width ALWAYS resets WebGL context!)
-      setTimeout(()=>{
+      // Setup canvases — double rAF ensures layout is fully settled (critical for first-load)
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
         const wov=document.getElementById('wov'+slot);
         if(wov){
           const p=wov.parentElement;
@@ -2167,7 +2167,7 @@ function loadFile(slot,f){
           const wzov=document.getElementById('wzov'+slot);
           if(wzov&&!d.wovCtx2){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
         }
-      },0);
+      }));
       if(E&&run){
         window.bridge.updateLayer(slot,{
           state:0,timecodeMs:0,bpm:d.bpm||128,
@@ -2198,12 +2198,19 @@ function loadFile(slot,f){
               d._pwv7=true; // flag: using PWV7 data (different weight scheme)
               d._wfCache=null;
               buildWaveformCache(slot);
+              // Upload data + ensure overview GL exists
               const wfD2=d.rgbWfDetail||d.rgbWf;
-              if(!d.ovgl){const wov=document.getElementById('wov'+slot);if(wov){try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}}}
-              if(!d.wgl){const wzc=document.getElementById('wzc'+slot);if(wzc){try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}catch(e){d.wzCtx=wzc.getContext('2d');}}}
-              if(d.wgl){d.wgl.setData(wfD2,(wfD2.length/150*1000)||1);}
-              if(d.ovgl){d.ovgl.setData(wfD2);}
-              drawOverview(slot,0);drawZoomWaveform(slot,0);
+              if(wfD2){
+                if(d.wgl)d.wgl.setData(wfD2,(wfD2.length/150*1000)||1);
+                // Overview: create GL if missing, then upload
+                const _wov=document.getElementById('wov'+slot);
+                if(_wov&&!d.ovgl){
+                  const _p=_wov.parentElement;
+                  const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;
+                  if(_w>0){_wov.width=_w;_wov.height=_h;try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}
+                }
+                if(d.ovgl)d.ovgl.setData(wfD2);
+              }
               usedPWV7=true;
               console.log(`[WF] slot${slot} using Rekordbox PWV7: ${pwv7.length} entries`);
             }
@@ -2223,14 +2230,19 @@ function loadFile(slot,f){
             if(prog2)prog2.style.width='0';
             if(wf){
               buildWaveformCache(slot);
+              // Upload data + ensure overview GL exists
               const wfD=d.rgbWfDetail||d.rgbWf;
-              if(d.wgl){d.wgl.setData(wfD,(wfD.length/150*1000)||1);}
-              // Ensure overview GL exists before setData (may not exist on first load)
-              if(!d.ovgl){const wov=document.getElementById('wov'+slot);if(wov){try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}}}
-              if(d.ovgl){d.ovgl.setData(wfD);}
-              // Same for zoom GL
-              if(!d.wgl){const wzc=document.getElementById('wzc'+slot);if(wzc){try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}catch(e){d.wzCtx=wzc.getContext('2d');}if(d.wgl)d.wgl.setData(wfD,(wfD.length/150*1000)||1);}}
-              drawOverview(slot,0);drawZoomWaveform(slot,0);
+              if(wfD){
+                if(d.wgl)d.wgl.setData(wfD,(wfD.length/150*1000)||1);
+                // Overview: create GL if missing, then upload
+                const _wov=document.getElementById('wov'+slot);
+                if(_wov&&!d.ovgl){
+                  const _p=_wov.parentElement;
+                  const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;
+                  if(_w>0){_wov.width=_w;_wov.height=_h;try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}
+                }
+                if(d.ovgl)d.ovgl.setData(wfD);
+              }
             }
           });
         }
@@ -2769,7 +2781,31 @@ function tick(){
     }
 
 
-    // Waveform — ALWAYS
+    // Overview GL recovery — runs even without waveform data (ensures canvas is initialized)
+    const wov=document.getElementById('wov'+slot);
+    if(wov){
+      const op=wov.parentElement;
+      const opW=op?.offsetWidth||0, opH=op?.offsetHeight||14;
+      const ovStale=d.ovgl&&d.ovgl.gl.canvas!==wov;
+      const ovCtxLost=d.ovgl&&(!d.ovgl._prog||(d.ovgl.gl.isContextLost&&d.ovgl.gl.isContextLost()));
+      const ovMissing=!d.ovgl&&!d.wovCtx;
+      const dimBad=opW>0&&(wov.width<2||wov.width!==opW||wov.height!==opH);
+      if(ovStale||ovCtxLost||ovMissing||dimBad){
+        if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
+        if(opW>0){
+          wov.width=opW; wov.height=opH;
+          try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}
+          const wovol=document.getElementById('wovol'+slot);
+          if(wovol){wovol.width=opW;wovol.height=opH;d._wovOlCtx=wovol.getContext('2d');}
+          const wfD=d.rgbWfDetail||d.rgbWf;
+          if(wfD&&d.ovgl)d.ovgl.setData(wfD);
+        }
+      } else if(d.ovgl&&!d.ovgl._wfTex){
+        const wfD=d.rgbWfDetail||d.rgbWf;
+        if(wfD)d.ovgl.setData(wfD);
+      }
+    }
+    // Waveform drawing — requires data
     if(d.rgbWf){
       // Canvas stale-ref recovery: if WGL/2D ctx refers to a detached canvas, reinit
       const wzc=document.getElementById('wzc'+slot);
@@ -2799,9 +2835,9 @@ function tick(){
           if(wfD){const wfDMs=(wfD.length/150*1000)||1;d.wgl.setData(wfD,wfDMs);}
         }
       }
-      const wov=document.getElementById('wov'+slot);
       if(wov&&wov.width>0)drawOverview(slot,prog);
-      if(wzc&&wzc.width>0)drawZoomWaveform(slot,prog);
+      const wzc2=document.getElementById('wzc'+slot);
+      if(wzc2&&wzc2.width>0)drawZoomWaveform(slot,prog);
     }
 
     // Beat phasor — use beat grid lookup when available
@@ -3318,7 +3354,7 @@ if(E){
       if(d.art){
         const img=el.querySelector('img');
         if(img){img.src=d.art;}
-        else{el.innerHTML=`<img src="${d.art}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;}
+        else{el.innerHTML=`<img src="${d.art}" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML='<span class=\\'noart-icon\\'>♪</span>'">`;}
       } else {
         // 아트워크 없음 → 플레이스홀더로 복원
         el.innerHTML='<span class="noart-icon">♪</span>';

@@ -161,7 +161,7 @@ class WaveformGL {
  */
 class OverviewGL {
   constructor(canvas) {
-    const gl = canvas.getContext('webgl2');
+    const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
     if (!gl) throw new Error('WebGL2 not available');
     this.gl = gl;
     gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
@@ -371,9 +371,9 @@ void main() {
     col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
     // Virtual: direct RGB mapping — Bass→Red, Mid→Green, Treble→Blue
-    float bV = sqrt(max(B, 0.0)) * 1.5;
-    float mV = max(M, 0.0) * 1.2;
-    float tV = max(T, 0.0) * 0.8;
+    float bV = max(B, 0.0) * 1.1;
+    float mV = sqrt(max(M, 0.0)) * 1.4;
+    float tV = sqrt(max(T, 0.0)) * 1.6;
     float h = wf.a;
     outerH = (h > 0.01 ? h : max(bV, max(mV, tV))) * scale;
     float AA = 1.0;
@@ -463,9 +463,9 @@ void main() {
     float total = B + M + T + 0.001;
     col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
-    float bV = sqrt(max(B, 0.0)) * 1.5;
-    float mV = max(M, 0.0) * 1.2;
-    float tV = max(T, 0.0) * 0.8;
+    float bV = max(B, 0.0) * 1.1;
+    float mV = sqrt(max(M, 0.0)) * 1.4;
+    float tV = sqrt(max(T, 0.0)) * 1.6;
     float h = wf.a;
     outerH = (h > 0.01 ? h : max(bV, max(mV, tV))) * scale;
     float AA2 = 0.6;
