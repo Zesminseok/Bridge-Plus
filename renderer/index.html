@@ -956,7 +956,7 @@ function drawOverview(slot,prog){
   const pos=Math.max(0,Math.min(1,prog||0));
   if(d.ovgl&&(d.rgbWfDetail||d.rgbWf)){
     const modeMap={'rgb':0,'3band':1,'blue':2};
-    d.ovgl.draw(pos, d.type==='hw'?3:(cfg.wfColor==='blue'?2:3));
+    d.ovgl.draw(pos, d.type==='hw'?3:(modeMap[cfg.wfColor]??1));
     // Continue to draw overlay markers on separate canvas
   } else {
     if(!d.wovCtx)return;
@@ -1117,7 +1117,7 @@ function drawZoomWaveform(slot,prog){
     }
     if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;} // no data yet
     const modeMap={'rgb':0,'3band':1,'blue':2};
-    const mode=d.type==='hw'?3:(cfg.wfColor==='blue'?2:3);
+    const mode=d.type==='hw'?3:(modeMap[cfg.wfColor]??1);
     const cX=cfg.wfCenter==='left'?0.25:0.5;
     d.wgl.draw(pos*d.dur, d.zoomMs||8000, cX, mode);
     drawZoomOverlay(slot,prog);

@@ -364,20 +364,28 @@ void main() {
     float total = B + M + T + 0.001;
     col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
+    // Virtual 3band: gain-corrected band values for vivid color separation
     float bV = sqrt(max(B, 0.0)) * 1.3;
     float mV = max(M, 0.0) * 1.0;
     float tV = max(T, 0.0) * 0.7;
-    outerH = max(bV, max(mV, tV)) * scale;
+    // Height from alpha (like HW) if available, else from corrected bands
+    float h = wf.a;
+    outerH = (h > 0.01 ? h : max(bV, max(mV, tV))) * scale;
     float AA = 1.0;
     inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
     if (inside < 0.005) { fragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
-    float total = bV + mV + tV + 0.001;
-    col = (bassCol * bV + midCol * mV + trebCol * tV) / total;
+    // Dominant band gets boosted — suppress weaker bands for vivid color
+    float mx = max(bV, max(mV, tV)) + 0.001;
+    float bN = pow(bV / mx, 1.5);
+    float mN = pow(mV / mx, 1.5);
+    float tN = pow(tV / mx, 1.5);
+    float total = bN + mN + tN + 0.001;
+    col = (bassCol * bN + midCol * mN + trebCol * tN) / total;
   }
 
-  // Slight saturation boost
+  // Saturation boost for vivid band colors
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(vec3(lum), col, 1.2);
+  col = mix(vec3(lum), col, 1.4);
 
   fragColor = vec4(clamp(col, 0.0, 1.0) * inside, 1.0);
 }
@@ -461,16 +469,21 @@ void main() {
     float bV = sqrt(max(B, 0.0)) * 1.3;
     float mV = max(M, 0.0) * 1.0;
     float tV = max(T, 0.0) * 0.7;
-    outerH = max(bV, max(mV, tV)) * scale;
+    float h = wf.a;
+    outerH = (h > 0.01 ? h : max(bV, max(mV, tV))) * scale;
     float AA2 = 0.6;
     inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
     if (inside < 0.005) { fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0); return; }
-    float total = bV + mV + tV + 0.001;
-    col = (bassCol * bV + midCol * mV + trebCol * tV) / total;
+    float mx = max(bV, max(mV, tV)) + 0.001;
+    float bN = pow(bV / mx, 1.5);
+    float mN = pow(mV / mx, 1.5);
+    float tN = pow(tV / mx, 1.5);
+    float total = bN + mN + tN + 0.001;
+    col = (bassCol * bN + midCol * mN + trebCol * tN) / total;
   }
 
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(vec3(lum), col, 1.2);
+  col = mix(vec3(lum), col, 1.4);
 
   float dim = played ? 0.38 : 1.0;
   fragColor = vec4(clamp(col, 0.0, 1.0) * inside * dim, 1.0);
