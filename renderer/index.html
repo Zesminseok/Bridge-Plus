@@ -2198,18 +2198,15 @@ function loadFile(slot,f){
               d._pwv7=true; // flag: using PWV7 data (different weight scheme)
               d._wfCache=null;
               buildWaveformCache(slot);
-              // Upload data + ensure overview GL exists
+              // Upload data + ensure GL contexts exist, then draw immediately
               const wfD2=d.rgbWfDetail||d.rgbWf;
               if(wfD2){
+                if(!d.wgl){const _wzc=document.getElementById('wzc'+slot);if(_wzc){const _pp=_wzc.parentElement;const _w2=_pp?.offsetWidth||0,_h2=_pp?.offsetHeight||64;if(_w2>0){_wzc.width=_w2;_wzc.height=_h2;try{d.wgl=new WaveformGL(_wzc);d.wzCtx=null;}catch(_e){d.wzCtx=_wzc.getContext('2d');}}}}
                 if(d.wgl)d.wgl.setData(wfD2,(wfD2.length/150*1000)||1);
-                // Overview: create GL if missing, then upload
                 const _wov=document.getElementById('wov'+slot);
-                if(_wov&&!d.ovgl){
-                  const _p=_wov.parentElement;
-                  const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;
-                  if(_w>0){_wov.width=_w;_wov.height=_h;try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}
-                }
+                if(_wov&&!d.ovgl){const _p=_wov.parentElement;const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;if(_w>0){_wov.width=_w;_wov.height=_h;try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}}
                 if(d.ovgl)d.ovgl.setData(wfD2);
+                drawOverview(slot,0);drawZoomWaveform(slot,0);
               }
               usedPWV7=true;
               console.log(`[WF] slot${slot} using Rekordbox PWV7: ${pwv7.length} entries`);
@@ -2230,18 +2227,15 @@ function loadFile(slot,f){
             if(prog2)prog2.style.width='0';
             if(wf){
               buildWaveformCache(slot);
-              // Upload data + ensure overview GL exists
+              // Upload data + ensure GL contexts exist, then draw immediately
               const wfD=d.rgbWfDetail||d.rgbWf;
               if(wfD){
+                if(!d.wgl){const _wzc=document.getElementById('wzc'+slot);if(_wzc){const _pp=_wzc.parentElement;const _w2=_pp?.offsetWidth||0,_h2=_pp?.offsetHeight||64;if(_w2>0){_wzc.width=_w2;_wzc.height=_h2;try{d.wgl=new WaveformGL(_wzc);d.wzCtx=null;}catch(_e){d.wzCtx=_wzc.getContext('2d');}}}}
                 if(d.wgl)d.wgl.setData(wfD,(wfD.length/150*1000)||1);
-                // Overview: create GL if missing, then upload
                 const _wov=document.getElementById('wov'+slot);
-                if(_wov&&!d.ovgl){
-                  const _p=_wov.parentElement;
-                  const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;
-                  if(_w>0){_wov.width=_w;_wov.height=_h;try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}
-                }
+                if(_wov&&!d.ovgl){const _p=_wov.parentElement;const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;if(_w>0){_wov.width=_w;_wov.height=_h;try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}}
                 if(d.ovgl)d.ovgl.setData(wfD);
+                drawOverview(slot,0);drawZoomWaveform(slot,0);
               }
             }
           });
@@ -2638,10 +2632,16 @@ function tick(){
     el.setAttribute('data-type', d.type==='hw'?'hw':'virtual');
     // HW/Virtual 동일한 상태 표시 — 루프 중이면 play와 동일하게 처리
     el.setAttribute('data-st',d._isLooping?'play':d.pl?'play':d.scratch?'play':d.cu?'cue':'stop');
-    // USB media color border — persisted via inline style to override data-st CSS
-    if(d._mediaColor>0){
-      const MCOLORS={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
-      el.style.borderColor=MCOLORS[d._mediaColor]||'';el.style.borderWidth='2px';
+    // USB media color — deck border + glow via inline style (overrides data-st CSS)
+    {
+      const _MCOL={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
+      const _mc=d.type==='hw'&&d._mediaColor>0?(_MCOL[d._mediaColor]||''):'';
+      if(_mc){
+        el.style.borderColor=_mc;el.style.borderWidth='2px';
+        el.style.boxShadow=`0 0 14px ${_mc}55,0 0 4px ${_mc}88,0 2px 12px rgba(0,0,0,.4)`;
+      }else{
+        el.style.borderColor='';el.style.borderWidth='';el.style.boxShadow='';
+      }
     }
     const tc=document.getElementById('dtc'+slot);
     if(tc)tc.textContent=fTC(displayPos);
@@ -2758,11 +2758,11 @@ function tick(){
     if(bMst)bMst.classList.toggle('on',!!d.mtcMaster);
     const did=document.getElementById('did'+slot);
     if(did){
-      // USB media color takes priority over default state color
-      const mc=d._mediaColor;
-      const MCOLORS={0:'',1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
-      const usbC=mc>0?MCOLORS[mc]:'';
+      // HW: USB media color → player number + text-shadow glow
+      const _MCOL2={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
+      const usbC=d.type==='hw'&&d._mediaColor>0?(_MCOL2[d._mediaColor]||''):'';
       did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)');
+      did.style.textShadow=usbC?`0 0 8px ${usbC}cc,0 0 20px ${usbC}66`:'';
     }
     // CUE/PLAY button states — CDJ-3000 style
     const pb=el.querySelector('[data-a="play"]');
@@ -2805,8 +2805,8 @@ function tick(){
         if(wfD)d.ovgl.setData(wfD);
       }
     }
-    // Waveform drawing — requires data
-    if(d.rgbWf){
+    // Waveform drawing — requires data (either preview or detail waveform)
+    if(d.rgbWf||d.rgbWfDetail){
       // Canvas stale-ref recovery: if WGL/2D ctx refers to a detached canvas, reinit
       const wzc=document.getElementById('wzc'+slot);
       if(wzc){
@@ -3338,10 +3338,12 @@ if(E){
       if(!dk.dur||dk.dur<=0) dk.dur=dk.rgbWf.length*30;
       dk._wfCache=null; // invalidate cache
       buildWaveformCache(li);
-      if(dk.wgl){const wfD=dk.rgbWfDetail||dk.rgbWf;dk.wgl.setData(wfD,(wfD.length/150*1000)||1);}
-      if(dk.ovgl){dk.ovgl.setData(dk.rgbWfDetail||dk.rgbWf);}
+      const _wfD=dk.rgbWfDetail||dk.rgbWf;
+      if(dk.wgl&&_wfD)dk.wgl.setData(_wfD,(_wfD.length/150*1000)||1);
+      if(dk.ovgl&&_wfD)dk.ovgl.setData(_wfD);
       console.log(`[UI] P${d.playerNum} waveform: ${dk.rgbWf.length}pts (${d.wfType})`);
-      drawOverview(li, dk.dur>0&&dk.pos>0 ? dk.pos/dk.dur : 0);
+      const _prog=dk.dur>0&&dk.pos>0?dk.pos/dk.dur:0;
+      drawOverview(li,_prog);drawZoomWaveform(li,_prog);
     }
   });
   // HW album art from CDJ dbserver
@@ -3401,9 +3403,12 @@ if(E){
       if(!dk.dur||dk.dur<=0||Math.abs(dk.dur-detailDur)>5000) dk.dur=detailDur;
       dk._wfCache=null; // invalidate cache — detail waveform replaces preview
       buildWaveformCache(li);
-      if(dk.wgl){const wfD=dk.rgbWfDetail||dk.rgbWf;dk.wgl.setData(wfD,(wfD.length/150*1000)||1);}
-      if(dk.ovgl){dk.ovgl.setData(dk.rgbWfDetail||dk.rgbWf);}
+      const _wfD2=dk.rgbWfDetail||dk.rgbWf;
+      if(dk.wgl&&_wfD2)dk.wgl.setData(_wfD2,(_wfD2.length/150*1000)||1);
+      if(dk.ovgl&&_wfD2)dk.ovgl.setData(_wfD2);
       console.log(`[UI] P${d.playerNum} detail waveform: ${d.pts.length}pts (${Math.round(detailDur/1000)}s)`);
+      const _prog2=dk.dur>0&&dk.pos>0?dk.pos/dk.dur:0;
+      drawOverview(li,_prog2);drawZoomWaveform(li,_prog2);
     }
   });
   // Track metadata from dbserver (title, artist, album, key, etc.)
