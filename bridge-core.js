@@ -55,17 +55,25 @@ function toTCNetState(s){
 const P1_TO_STATE = {
   0x00: STATE.IDLE,       0x02: STATE.STOPPED,  0x03: STATE.PLAYING,
   0x04: STATE.LOOPING,    0x05: STATE.PAUSED,   0x06: STATE.CUEDOWN,
-  0x07: STATE.CUEDOWN,    0x08: STATE.CUEDOWN,
+  // ROLLBACK: 0x07 was CUEDOWN — cue play = playing from cue point (트랙 재생 중)
+  0x07: STATE.PLAYING,
+  // ROLLBACK: 0x08 was CUEDOWN — cue scratch = vinyl platter touch while cued
+  0x08: STATE.PLATTERDOWN,
   // ROLLBACK: 0x09 was STATE.STOPPED — prolink-connect: 0x09=Searching (not stopped)
   0x09: STATE.PAUSED,     // Searching = 일시정지 상태로 취급 (트랙 유지)
   0x0D: STATE.STOPPED,
   0x0E: STATE.STOPPED,    // SpunDown — prolink-connect에서 추가 확인
-  0x11: STATE.PLAYING,    0x13: STATE.CUEDOWN,
+  0x11: STATE.PLAYING,
+  // ROLLBACK: 0x12 was unmapped — emergency loop = looping
+  0x12: STATE.LOOPING,
+  // ROLLBACK: 0x13 was CUEDOWN — vinyl scratch = platter touch during playback
+  0x13: STATE.PLATTERDOWN,
 };
 const P1_NAME = {
   0x00:'no track',0x02:'loading',0x03:'playing',0x04:'loop',
   0x05:'paused',0x06:'paused@cue',0x07:'cue play',0x08:'cue scratch',
-  0x09:'searching',0x0D:'end',0x0E:'spun down',0x11:'reverse',0x13:'vinyl scratch',
+  0x09:'searching',0x0D:'end',0x0E:'spun down',0x11:'reverse',
+  0x12:'emergency loop',0x13:'vinyl scratch',
 };
 
 const PDJL = {
@@ -265,8 +273,9 @@ function mkTime(layers, uptimeMs, faders){
     const ld = layers && layers[n];
     if(ld){
       let ms = ld.timecodeMs || 0;
-      // Interpolate: if playing, add elapsed time since last beat update (pitch-corrected)
-      if((ld.state === STATE.PLAYING || ld.state === STATE.LOOPING) && ld._updateTime){
+      // Interpolate: if playing/looping/cue-play, add elapsed time since last beat update (pitch-corrected)
+      const isActive = ld.state === STATE.PLAYING || ld.state === STATE.LOOPING;
+      if(isActive && ld._updateTime){
         const pitch = ld._pitch || 0;
         ms += (now - ld._updateTime) * (1 + pitch / 100);
       }
@@ -1225,6 +1234,22 @@ class BridgeCore {
     }
   }
 
+  /** Re-send all stored artwork to all connected nodes.
+   *  Called when a new node joins (e.g., Arena reconnects) to ensure artwork is up-to-date. */
+  _resendAllArtwork(){
+    if(!this.running) return;
+    let count = 0;
+    for(let i = 0; i < 8; i++){
+      const buf = this._virtualArt[i];
+      if(buf && buf.length > 100){  // skip BLANK_JPEG
+        // Stagger sends to avoid UDP packet loss (50ms between layers)
+        setTimeout(()=>this._sendArtwork(i + 1, buf), count * 50);
+        count++;
+      }
+    }
+    if(count > 0) console.log(`[TCNET-ART] resending ${count} artwork(s) to new node`);
+  }
+
   /**
    * DATA cycle (24 packets): Phase 1 (0-7) MetricsData per layer,
    * Phase 2 (8-15) MetaData per layer, Phase 3 (16-23) MetricsData again.
@@ -1434,7 +1459,11 @@ class BridgeCore {
           const key = name+'@'+rinfo.address;
           const isNew = !this.nodes[key];
           this.nodes[key] = {name,vendor,device,type:msg[17],ip:rinfo.address,port:rinfo.port,lPort,lastSeen:Date.now()};
-          if(isNew) console.log(`[lPort] OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor} device=${device}`);
+          if(isNew){
+            console.log(`[lPort] OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor} device=${device}`);
+            // Re-send artwork to newly connected node (delayed to allow node registration)
+            setTimeout(()=>this._resendAllArtwork(), 500);
+          }
           this.onNodeDiscovered?.(this.nodes[key]);
         }
         // Register any Arena-like node even without OptIn (Arena sends APP/0x1e/0x14 but NOT OptIn)
@@ -1443,6 +1472,7 @@ class BridgeCore {
           if(!this.nodes[key]){
             this.nodes[key] = {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()};
             console.log(`[lPort] auto-register ${name}@${rinfo.address} lPort=${rinfo.port} (from type=0x${type.toString(16)})`);
+            setTimeout(()=>this._resendAllArtwork(), 500);
             this.onNodeDiscovered?.(this.nodes[key]);
           } else {
             this.nodes[key].lastSeen = Date.now();
