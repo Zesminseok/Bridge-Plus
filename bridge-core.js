@@ -42,27 +42,33 @@ const STATE = { IDLE:0, PLAYING:3, LOOPING:4, PAUSED:5, STOPPED:6, CUEDOWN:7, PL
 // Identity function — STATE values are already TCNet protocol values
 function toTCNetState(s){ return s || 0; }
 
+// Pro DJ Link P1 (0x7B) → TCNet LayerStatus 매핑
+// 소스: prolink-connect PlayState enum + Deep Symmetry djl-analysis
+// TCNet V3.5.1B: 0=IDLE,3=PLAYING,4=LOOPING,5=PAUSED,6=STOPPED,7=CUE,8=PLATTER,9=FFWD,10=FFRV,11=HOLD
 const P1_TO_STATE = {
-  0x00: STATE.IDLE,       0x02: STATE.STOPPED,  0x03: STATE.PLAYING,
-  0x04: STATE.LOOPING,    0x05: STATE.PAUSED,   0x06: STATE.CUEDOWN,
-  // ROLLBACK: 0x07 was CUEDOWN — cue play = playing from cue point (트랙 재생 중)
-  0x07: STATE.PLAYING,
-  // ROLLBACK: 0x08 was CUEDOWN — cue scratch = vinyl platter touch while cued
-  0x08: STATE.PLATTERDOWN,
-  // ROLLBACK: 0x09 was STATE.STOPPED — prolink-connect: 0x09=Searching (not stopped)
-  0x09: STATE.PAUSED,     // Searching = 일시정지 상태로 취급 (트랙 유지)
-  0x0D: STATE.STOPPED,
-  0x0E: STATE.STOPPED,    // SpunDown — prolink-connect에서 추가 확인
-  0x11: STATE.PLAYING,
-  // ROLLBACK: 0x12 was unmapped — emergency loop = looping
-  0x12: STATE.LOOPING,
-  // ROLLBACK: 0x13 was CUEDOWN — vinyl scratch = platter touch during playback
-  0x13: STATE.PLATTERDOWN,
+  0x00: STATE.IDLE,          // Empty — 트랙 없음
+  0x02: STATE.STOPPED,       // Loading — 트랙 로딩 중
+  0x03: STATE.PLAYING,       // Playing — 재생
+  0x04: STATE.LOOPING,       // Looping — 루프 재생
+  0x05: STATE.PAUSED,        // Paused — 일시정지
+  0x06: STATE.CUEDOWN,       // Cued — 큐 포인트에서 정지 (큐 버튼 홀드)
+  // ROLLBACK: 0x07 was PLAYING — prolink-connect: Cuing = 큐 탐색 중 (재생 아님)
+  0x07: STATE.CUEDOWN,       // Cuing — 큐 포인트 탐색
+  0x08: STATE.PLATTERDOWN,   // PlatterHeld — 플래터 누름 (바이닐 모드)
+  // ROLLBACK: 0x09 was PAUSED — TCNet에 FFWD(9) 상태 존재
+  0x09: STATE.FFWD,          // Searching — 탐색 (빨리감기/되감기)
+  0x0D: STATE.STOPPED,       // End — 트랙 끝 (루프 없이)
+  // ROLLBACK: 0x0E was STOPPED — TCNet에 HOLD(11) 상태 존재
+  0x0E: STATE.HOLD,          // SpunDown — 플래터 감속 정지 (홀드)
+  // ROLLBACK: 0x11 was PLAYING — prolink-connect: Ended = 트랙 끝
+  0x11: STATE.STOPPED,       // Ended — 트랙 종료
+  0x12: STATE.LOOPING,       // Emergency Loop — 긴급 루프
+  0x13: STATE.PLATTERDOWN,   // Vinyl Scratch — 재생 중 플래터 터치
 };
 const P1_NAME = {
   0x00:'no track',0x02:'loading',0x03:'playing',0x04:'loop',
-  0x05:'paused',0x06:'paused@cue',0x07:'cue play',0x08:'cue scratch',
-  0x09:'searching',0x0D:'end',0x0E:'spun down',0x11:'reverse',
+  0x05:'paused',0x06:'cued',0x07:'cuing',0x08:'platter held',
+  0x09:'searching',0x0D:'end of track',0x0E:'spun down',0x11:'ended',
   0x12:'emergency loop',0x13:'vinyl scratch',
 };
 
@@ -263,8 +269,9 @@ function mkTime(layers, uptimeMs, faders){
     const ld = layers && layers[n];
     if(ld){
       let ms = ld.timecodeMs || 0;
-      // Interpolate: if playing/looping/cue-play, add elapsed time since last beat update (pitch-corrected)
-      const isActive = ld.state === STATE.PLAYING || ld.state === STATE.LOOPING;
+      // Interpolate: if playing/looping/searching, add elapsed time since last beat update (pitch-corrected)
+      const isActive = ld.state === STATE.PLAYING || ld.state === STATE.LOOPING
+        || ld.state === STATE.FFWD || ld.state === STATE.FFRV;
       if(isActive && ld._updateTime){
         const pitch = ld._pitch || 0;
         ms += (now - ld._updateTime) * (1 + pitch / 100);
@@ -570,7 +577,7 @@ function parsePDJL(msg){
     return{
       kind:'cdj', playerNum:pNum, name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
-      isPlaying: state===STATE.PLAYING,
+      isPlaying: state===STATE.PLAYING || state===STATE.FFWD || state===STATE.FFRV,
       isLooping: state===STATE.LOOPING,
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
       pitch, effectivePitch:effPitch, pitchMultiplier,
