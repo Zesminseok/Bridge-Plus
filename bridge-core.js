@@ -36,21 +36,11 @@ const TC = {
   DT_ARTWORK: 0x80,  // LowResArtworkFile (128) — JPEG artwork per layer
 };
 
-// TCNet LayerStatus values (node-tcnet spec)
+// TCNet V3.5.1B LayerStatus values — these ARE the protocol values, send directly
+// ROLLBACK: was using toTCNetState() that collapsed CUEDOWN(7)/PLATTERDOWN(8) to 2(Paused)
 const STATE = { IDLE:0, PLAYING:3, LOOPING:4, PAUSED:5, STOPPED:6, CUEDOWN:7, PLATTERDOWN:8, FFWD:9, FFRV:10, HOLD:11 };
-// TCNet layer state (for Arena): 0=Idle, 1=Playing, 2=Paused, 3=Stopped, 4=FF, 5=RW
-// Official Bridge state values (from pcap analysis) — NOT TCNet spec values
-// Arena expects: 0=Idle, 2=Paused, 3=Playing, 6=Stopped
-function toTCNetState(s){
-  switch(s){
-    case STATE.PLAYING: case STATE.LOOPING: return 3;
-    case STATE.PAUSED: case STATE.CUEDOWN: case STATE.PLATTERDOWN: return 2;
-    case STATE.STOPPED: return 6;
-    case STATE.FFWD: return 4;
-    case STATE.FFRV: return 5;
-    default: return 0;
-  }
-}
+// Identity function — STATE values are already TCNet protocol values
+function toTCNetState(s){ return s || 0; }
 
 const P1_TO_STATE = {
   0x00: STATE.IDLE,       0x02: STATE.STOPPED,  0x03: STATE.PLAYING,
