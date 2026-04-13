@@ -955,6 +955,9 @@ function drawOverview(slot,prog){
   const d=DECKS[slot];if(!d)return;
   const pos=Math.max(0,Math.min(1,prog||0));
   if(d.ovgl&&(d.rgbWfDetail||d.rgbWf)){
+    // Auto-upload texture if missing — mirrors drawZoomWaveform's self-healing pattern
+    if(!d.ovgl._wfTex){const _wd=d.rgbWfDetail||d.rgbWf;if(_wd)d.ovgl.setData(_wd);}
+    if(!d.ovgl._wfTex)return; // still no data
     const modeMap={'rgb':0,'3band':1,'blue':2};
     d.ovgl.draw(pos, d.type==='hw'?3:(modeMap[cfg.wfColor]??1));
     // Continue to draw overlay markers on separate canvas

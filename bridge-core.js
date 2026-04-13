@@ -480,27 +480,28 @@ function mkNotification(){
 
 /**
  * LowResArtwork (MessageType 0xCC = 204)
- * TCNet artwork packet: header(24B) + dataType(1B) + layerID(1B) +
- * dataSize(4B BE) + totalPackets(4B BE) + packetNumber(4B BE) + dataClusterSize(4B BE) + JPEG data
- * Large images are split into multiple packets (MTU-safe chunks)
+ * TCNet V3.5.1B spec page 29: File Data Packet - Low Res Artwork File
+ * header(24B) + dataType(1B) + layerID(1B) + dataSize(4B LE) +
+ * totalPackets(4B LE) + packetNo(4B LE) + dataClusterSize(4B LE) + JPEG data
+ * Standard Data Cluster Size = 4800, Max payload per packet = 4842
  */
 function mkLowResArtwork(layerIdx, jpegBuf){
-  const MAX_CHUNK = 1400;  // MTU-safe payload per packet
-  const totalPackets = Math.ceil(jpegBuf.length / MAX_CHUNK);
+  const CLUSTER_SIZE = 4800;  // TCNet standard Data Cluster Size
+  const totalPackets = Math.ceil(jpegBuf.length / CLUSTER_SIZE);
   const packets = [];
 
   for(let i = 0; i < totalPackets; i++){
-    const chunkStart = i * MAX_CHUNK;
-    const chunk = jpegBuf.slice(chunkStart, chunkStart + MAX_CHUNK);
-    // header(24) + dataType(1) + layerID(1) + dataSize(4) + totalPackets(4) + packetNumber(4) + clusterSize(4) + chunk
-    const b = Buffer.alloc(TC.H + 2 + 16 + chunk.length);
-    buildHdr(TC.ARTWORK).copy(b, 0);
-    b[TC.H]     = TC.DT_ARTWORK;  // 128 = LowResArtworkFile
-    b[TC.H + 1] = layerIdx;       // 1-based layer
-    b.writeUInt32BE(jpegBuf.length, TC.H + 2);   // total dataSize
-    b.writeUInt32BE(totalPackets,   TC.H + 6);   // totalPackets
-    b.writeUInt32BE(i,              TC.H + 10);   // packetNumber (0-based)
-    b.writeUInt32BE(chunk.length,   TC.H + 14);   // dataClusterSize
+    const chunkStart = i * CLUSTER_SIZE;
+    const chunk = jpegBuf.slice(chunkStart, chunkStart + CLUSTER_SIZE);
+    // header(24) + dataType(1) + layerID(1) + dataSize(4) + totalPackets(4) + packetNo(4) + clusterSize(4) + data
+    const b = Buffer.alloc(TC.H + 18 + chunk.length);
+    buildHdr(TC.ARTWORK).copy(b, 0);  // Type 204 (0xCC) — TCNet File Data File Packet
+    b[TC.H]     = TC.DT_ARTWORK;     // DataType 128 = Low Res Artwork File
+    b[TC.H + 1] = layerIdx;          // 1-8 layer number
+    b.writeUInt32LE(jpegBuf.length, TC.H + 2);   // total Data Size (LE per spec)
+    b.writeUInt32LE(totalPackets,   TC.H + 6);   // Total Packets (LE per spec)
+    b.writeUInt32LE(i,              TC.H + 10);  // Packet No (LE per spec)
+    b.writeUInt32LE(CLUSTER_SIZE,   TC.H + 14);  // Data Cluster Size = 4800 (LE per spec)
     chunk.copy(b, TC.H + 18);
     packets.push(b);
   }
@@ -1232,7 +1233,7 @@ class BridgeCore {
     }
     const isJpeg = jpegBuf[0]===0xFF && jpegBuf[1]===0xD8;
     const endOk = jpegBuf[jpegBuf.length-2]===0xFF && jpegBuf[jpegBuf.length-1]===0xD9;
-    console.log(`[TCNET-ART] L${layerIdx} sending ${packets.length} artwork packets (${jpegBuf.length}B) JPEG=${isJpeg} endFFD9=${endOk} hdr=[${jpegBuf[0].toString(16)},${jpegBuf[1].toString(16)}] → [${targets.join(', ')}]`);
+    console.log(`[TCNET-ART] L${layerIdx} sending ${packets.length} artwork packets (${jpegBuf.length}B) JPEG=${isJpeg} endFFD9=${endOk} hdr=[${jpegBuf[0].toString(16)},${jpegBuf[1].toString(16)}] → [${targets.join(', ')}] local=${this.isLocalMode}`);
     for(const pkt of packets){
       this._sendDataToArenas(pkt);
     }
