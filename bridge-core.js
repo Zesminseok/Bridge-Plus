@@ -595,21 +595,37 @@ function parsePDJL(msg){
   if((type===PDJL.DJM || type===PDJL.DJM2) && msg.length>=0x70){
     // DJM Mixer Status (type 0x39, 248B on port 50002)
     // Confirmed via pcapng analysis: 4 channels × 24 bytes starting at 0x24
-    // Per-channel layout: byte+3 = channel fader (0-255), byte+11 = on-air level (0-255)
-    const CH_BASE = 0x24, CH_STRIDE = 0x18; // 24 bytes per channel
+    // Per-channel layout: +0=Hi EQ, +1=Mid EQ, +2=Lo EQ, +3=fader, +11=on-air
+    // EQ range: 0x00=-12dB, 0x40=0dB(neutral), 0x7F=+12dB
+    const CH_BASE = 0x24, CH_STRIDE = 0x18;
     const ch = [0,1,2,3].map(c => {
-      const off = CH_BASE + c * CH_STRIDE + 3; // byte 3 = channel fader
+      const off = CH_BASE + c * CH_STRIDE + 3; // byte +3 = channel fader
       return off < msg.length ? msg[off] : 0;
     });
     const onAir = [0,1,2,3].map(c => {
-      const off = CH_BASE + c * CH_STRIDE + 11; // byte 11 = on-air level
+      const off = CH_BASE + c * CH_STRIDE + 11; // byte +11 = on-air level
       return off < msg.length ? msg[off] : 0;
     });
+    // EQ: Hi/Mid/Lo at byte +0/+1/+2 within each channel block (needs pcap verification)
+    const eq = [0,1,2,3].map(c => {
+      const base = CH_BASE + c * CH_STRIDE;
+      return [
+        base   < msg.length ? msg[base]   : 0x40, // Hi EQ
+        base+1 < msg.length ? msg[base+1] : 0x40, // Mid EQ
+        base+2 < msg.length ? msg[base+2] : 0x40, // Lo EQ
+      ];
+    });
+    // Debug: log full channel blocks on first receive to verify EQ offsets
+    if(!parsePDJL._djmBlockLogged){
+      parsePDJL._djmBlockLogged=true;
+      const hex=[0,1,2,3].map(c=>{const b=CH_BASE+c*CH_STRIDE;return`CH${c+1}[${Array.from(msg.slice(b,b+12)).map(x=>x.toString(16).padStart(2,'0')).join(' ')}]`;}).join(' ');
+      try{console.log(`[DJM-EQ-DBG] type=0x${type.toString(16)} len=${msg.length} ${hex}`);}catch(_){}
+    }
     if(!parsePDJL._lastDjm || parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
       parsePDJL._lastDjm=ch.slice();
-      try{console.log(`[DJM] faders=[${ch}] onair=[${onAir}]`);}catch(_){}
+      try{console.log(`[DJM] faders=[${ch}] onair=[${onAir}] eq=${JSON.stringify(eq)}`);}catch(_){}
     }
-    return{kind:'djm',name,channel:ch,onAir};
+    return{kind:'djm',name,channel:ch,onAir,eq};
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
   // 15-band spectrum per channel: base 0xA4, stride 0x3C, uint16BE per band
@@ -1935,7 +1951,7 @@ class BridgeCore {
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
-      this.onDJMStatus?.(p.channel);
+      this.onDJMStatus?.({channel:p.channel, eq:p.eq});
     }
     if(p.kind==='djm_meter'){
       this.onDJMMeter?.(p.ch);

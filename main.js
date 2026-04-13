@@ -112,7 +112,7 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     const _send=(ch,d)=>{try{if(win&&!win.isDestroyed())win.webContents.send(ch,d);}catch(_){}};
     bridge.onNodeDiscovered=n=>_send('tcnet:node',n);
     bridge.onCDJStatus=(li,s)=>_send('bridge:cdj',{layerIndex:li,status:s});
-    bridge.onDJMStatus=f=>_send('bridge:djm',{faders:f});
+    bridge.onDJMStatus=f=>_send('bridge:djm',{faders:f.channel||f, eq:f.eq});
     bridge.onDJMMeter=ch=>_send('bridge:djmmeter',ch);
     bridge.onDeviceList=devs=>_send('pdjl:devices',Object.values(devs));
     bridge.onWaveformPreview=(pn,wf)=>_send('bridge:wfpreview',{playerNum:pn,...wf});
