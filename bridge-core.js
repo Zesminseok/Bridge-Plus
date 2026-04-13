@@ -1225,7 +1225,12 @@ class BridgeCore {
   _sendArtwork(layerIdx, jpegBuf){
     if(!jpegBuf || !this.running) return;
     const packets = mkLowResArtwork(layerIdx, jpegBuf);
-    console.log(`[TCNET-ART] L${layerIdx} sending ${packets.length} artwork packets (${jpegBuf.length}B JPEG)`);
+    const targets = [];
+    for(const node of Object.values(this.nodes)){
+      if(Date.now()-node.lastSeen > 15000) continue;
+      if(node.lPort) targets.push(`${node.name||'?'}@${node.ip}:${node.lPort}`);
+    }
+    console.log(`[TCNET-ART] L${layerIdx} sending ${packets.length} artwork packets (${jpegBuf.length}B JPEG) → [${targets.join(', ')}]`);
     for(const pkt of packets){
       this._sendDataToArenas(pkt);
     }
@@ -2104,13 +2109,12 @@ class BridgeCore {
     if(slot<0||slot>7) return;
     this._virtualArt[slot] = jpegBuf || BLANK_JPEG;
     console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B`);
-    // Primary: send artwork via TCNet LowResArtwork (MessageType 0xCC)
+    // Send artwork via TCNet LowResArtwork (same path as HW mode)
     this._sendArtwork(slot + 1, jpegBuf);
-    // Trigger Arena to query our dbserver: send CDJ status with track loaded
-    const layer = this.layers[slot];
-    if(layer && layer.trackId){
-      this._sendVirtualCDJStatus(slot+1, layer.trackId, layer.bpm||128);
-    }
+    // Retry after delays — Arena may not have registered the layer yet
+    setTimeout(()=>this._sendArtwork(slot + 1, this._virtualArt[slot]), 500);
+    setTimeout(()=>this._sendArtwork(slot + 1, this._virtualArt[slot]), 2000);
+    setTimeout(()=>this._sendArtwork(slot + 1, this._virtualArt[slot]), 5000);
   }
 
   /** Send a virtual CDJ status packet (type 0x0A) so Resolume Arena sees

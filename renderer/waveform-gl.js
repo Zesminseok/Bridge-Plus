@@ -11,6 +11,7 @@ class WaveformGL {
     const gl = canvas.getContext('webgl2');
     if (!gl) throw new Error('WebGL2 not available');
     this.gl = gl;
+    gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     this._wfTex = null;
     this._wfLen = 0;
     this._wfDurMs = 1;
@@ -163,6 +164,7 @@ class OverviewGL {
     const gl = canvas.getContext('webgl2');
     if (!gl) throw new Error('WebGL2 not available');
     this.gl = gl;
+    gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     this._wfTex = null;
     this._prog = this._compileProgram(_WGL_VS, _WGL_OV_FS);
     this._initGeometry();
