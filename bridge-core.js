@@ -952,13 +952,13 @@ class BridgeCore {
     // DATA packets cycle through layers: MetricsData + MetaData per layer
     // Sent via dedicated _dataSocket (separate from txSocket) — matches official Bridge architecture
     const t4 = setInterval(()=>this._sendDataCycle(), 170);
-    // Mixer Data (Type 150) — fader levels to Arena, every 200ms
+    // Mixer Data (Type 150) — fader levels to Arena, every 50ms for smooth control
     const t5 = setInterval(()=>{
       if(!this.running) return;
       const djm = Object.values(this.devices).find(d=>d.type==='DJM');
       const pkt = mkMixerData(this.faders, djm?.name);
       this._sendDataToArenas(pkt);
-    }, 200);
+    }, 50);
 
     this._timers = [t1, t2, t3, t4, t5];
     this._startTCNetRx();
