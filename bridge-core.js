@@ -2215,6 +2215,7 @@ class BridgeCore {
           // Client sends NumberField UInt32 = player number (5 bytes: 0x11 + 4B BE)
           if(buf.length >= 5 && buf[0] === 0x11){
             const player = buf.readUInt32BE(1);
+            sock._vdbPlayer = player;  // save greeting player for routing context
             console.log(`[VDBSRV] greeting from player ${player}`);
             // Echo back greeting
             sock.write(this._dbNum4(player));
@@ -2225,20 +2226,24 @@ class BridgeCore {
         }
 
         if(phase === 'setup'){
-          // SETUP_REQ: magic(5) + txId(5) + type(3) + argc(2) + tags(17) + arg(5) = 37+ bytes
-          if(buf.length >= 32){
+          // SETUP_REQ: magic(5) + txId(5) + type(3) + argc(2) + tags(variable) + args
+          // ROLLBACK: was buf.length>=32, but variable-length tags make SETUP as short as 26B
+          if(buf.length >= 15){
             const typeOff = 10;  // after magic(5)+txId(5)
             if(buf[typeOff] === 0x10){  // UInt16 field
               const reqType = buf.readUInt16BE(typeOff+1);
               if(reqType === 0x0000){  // SETUP
                 const setupTxId = buf.readUInt32BE(6);
-                console.log(`[VDBSRV] SETUP received txId=0x${setupTxId.toString(16)}`);
+                const argc = buf[14] || 0;
+                // Calculate actual SETUP message length: 15 header + 5+argc tags + argc*5 args
+                const setupLen = 15 + 5 + argc + argc * 5;
+                console.log(`[VDBSRV] SETUP received txId=0x${setupTxId.toString(16)} argc=${argc} msgLen=${setupLen}`);
                 const resp = this._dbBuildMsg(setupTxId, 0x4000, [this._dbArg4(1)]);
                 sock.write(resp);
                 phase = 'ready';
-                buf = buf.length > 37 ? buf.slice(37) : Buffer.alloc(0);
+                buf = buf.length > setupLen ? buf.slice(setupLen) : Buffer.alloc(0);
                 // Fall through to handle any remaining buffered requests
-                if(buf.length < 32) return;
+                if(buf.length < 15) return;
               } else {
                 // Non-setup request arrived (Arena skips SETUP step) — go directly to ready
                 console.log(`[VDBSRV] no SETUP from client, handling reqType=0x${reqType.toString(16)} directly`);
@@ -2254,7 +2259,8 @@ class BridgeCore {
         }
 
         // phase === 'ready': handle artwork & metadata requests
-        if(buf.length >= 32){
+        // ROLLBACK: was buf.length>=32, but variable-length tags make messages shorter
+        if(buf.length >= 15){
           this._handleVDbRequest(sock, buf);
           buf = Buffer.alloc(0);
         }
@@ -2268,20 +2274,56 @@ class BridgeCore {
     });
   }
 
+  /** Parse a dbserver message to extract txId, type, and UInt32 args.
+   *  Format: magic(5) + txId(5) + type(3) + argc(2) + argTags(5+argc) + args...
+   *  ROLLBACK: was using hardcoded offset 38 for arg1 — only correct for our fixed
+   *  12-byte tag list, but Arena/prolink-connect use variable-length tags (argc bytes). */
+  _parseDbRequest(buf){
+    if(buf.length < 15) return null;
+    const txId = buf.readUInt32BE(6);   // [5]=0x11, [6-9]=value
+    const type = buf.readUInt16BE(11);  // [10]=0x10, [11-12]=value
+    const argc = buf[14];              // [13]=0x0F, [14]=value
+    // argTags binary: [15]=0x14, [16-19]=tagListLen, [20..20+tagListLen-1]=tags
+    if(buf.length < 20) return { txId, type, argc, args: [] };
+    const tagListLen = buf.readUInt32BE(16);
+    const argsStart = 20 + tagListLen;
+    // Parse UInt32 args (each: 0x11 tag + 4B BE value = 5 bytes)
+    const args = [];
+    let pos = argsStart;
+    for(let i = 0; i < argc && pos < buf.length; i++){
+      const tag = buf[pos];
+      if(tag === 0x11 && pos + 5 <= buf.length){       // UInt32
+        args.push(buf.readUInt32BE(pos + 1)); pos += 5;
+      } else if(tag === 0x10 && pos + 3 <= buf.length){ // UInt16
+        args.push(buf.readUInt16BE(pos + 1)); pos += 3;
+      } else if(tag === 0x0F && pos + 2 <= buf.length){ // UInt8
+        args.push(buf[pos + 1]); pos += 2;
+      } else if(tag === 0x14 && pos + 5 <= buf.length){ // Binary — skip
+        const blen = buf.readUInt32BE(pos + 1); pos += 5 + blen;
+        args.push(0);
+      } else if(tag === 0x26 && pos + 5 <= buf.length){ // String — skip
+        const slen = buf.readUInt32BE(pos + 1); pos += 5 + slen * 2;
+        args.push(0);
+      } else { break; }
+    }
+    return { txId, type, argc, args };
+  }
+
   _handleVDbRequest(sock, buf){
     try{
-      if(buf.length < 32) return;
-      const actualTxId = buf.readUInt32BE(6);  // txId field at bytes 6-9
-      const reqType = buf.readUInt16BE(11);     // type field at bytes 11-12
-      console.log(`[VDBSRV] request type=0x${reqType.toString(16)} txId=${actualTxId}`);
+      const msg = this._parseDbRequest(buf);
+      if(!msg) return;
+      const { txId: actualTxId, type: reqType, args } = msg;
+      console.log(`[VDBSRV] request type=0x${reqType.toString(16)} txId=${actualTxId} args=[${args.join(',')}]`);
 
       if(reqType === 0x2002){
         // MetadataReq → MenuAvail with item count=1
-        // Store trackId from request for use in 0x3000 (avoids relying on layers state)
-        const trackIdReq = buf.length >= 42 ? buf.readUInt32BE(38) : 0;
+        // ROLLBACK: was buf.readUInt32BE(38) — wrong offset for variable-length argTags
+        // args[0]=RMST (player|menu|slot|trackType), args[1]=trackId
+        const trackIdReq = args[1] || 0;
         sock._vdbTrackId = trackIdReq;  // save per-connection
         if(trackIdReq) this._lastVdbTrackId = trackIdReq;  // global fallback
-        console.log(`[VDBSRV] meta req trackId=${trackIdReq}`);
+        console.log(`[VDBSRV] meta req trackId=${trackIdReq} greeting=${sock._vdbPlayer||'?'}`);
         sock.write(this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(1)]));
       } else if(reqType === 0x3000){
         // RenderMenuReq → send MenuItem(s) + render complete
@@ -2299,18 +2341,20 @@ class BridgeCore {
         const item=this._dbBuildMenuItem(actualTxId, title, artist, artworkId);
         const done=this._dbBuildMsg(actualTxId+1, 0x4003, [this._dbArg4(1)]);
         sock.write(Buffer.concat([item, done]));
-        console.log(`[VDBSRV] render menu: title="${title}" artSlot=${artSlot} artworkId=${artworkId}`);
+        console.log(`[VDBSRV] render menu: title="${title}" artSlot=${artSlot} artworkId=${artworkId} tid=${tid}`);
       } else if(reqType === 0x2003){
         // ArtworkReq → serve stored JPEG matching the trackId, then close
-        const reqArtId = buf.length >= 42 ? buf.readUInt32BE(38) : 0;
-        // Find artwork by trackId (reqArtId = trackId used as artworkId)
-        // First match by trackId, then fallback to _findVirtualArt()
-        const artBuf = this._findArtByTrackId(reqArtId) || this._findVirtualArt();
+        // ROLLBACK: was buf.readUInt32BE(38) — wrong offset for variable-length argTags
+        // args[0]=RMST, args[1]=artworkId (= trackId set in MenuItem)
+        const reqArtId = args[1] || 0;
+        // Find artwork by trackId, then fallback to per-connection trackId, then _findVirtualArt()
+        const artBuf = this._findArtByTrackId(reqArtId)
+          || this._findArtByTrackId(sock._vdbTrackId)
+          || this._findVirtualArt();
         if(artBuf){
           const isJpeg = artBuf[0]===0xFF && artBuf[1]===0xD8;
-          console.log(`[VDBSRV] artwork req artId=${reqArtId} → ${artBuf.length}B ${isJpeg?'JPEG':'?'} hex=${artBuf.slice(0,4).toString('hex')}`);
+          console.log(`[VDBSRV] artwork req artId=${reqArtId} connTrackId=${sock._vdbTrackId||0} → ${artBuf.length}B ${isJpeg?'JPEG':'?'}`);
           const artResp = this._dbBuildArtResponse(actualTxId, artBuf);
-          console.log(`[VDBSRV] artwork resp: ${artResp.length}B total, hex_hdr=${artResp.slice(0,16).toString('hex')}`);
           sock.write(artResp, ()=>{
             console.log(`[VDBSRV] artwork sent OK, closing conn`);
             sock.end();
