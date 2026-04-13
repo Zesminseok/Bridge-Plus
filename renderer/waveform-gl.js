@@ -368,25 +368,18 @@ void main() {
     float total = B + M + T + 0.001;
     col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
-    // Virtual 3band: dominant band wins color, Rekordbox style
-    float bV = sqrt(max(B, 0.0)) * 1.3;
-    float mV = max(M, 0.0);
-    float tV = max(T, 0.0) * 0.5;
+    // Virtual: direct RGB mapping — Bass→Red, Mid→Green, Treble→Blue
+    float bV = sqrt(max(B, 0.0)) * 1.5;
+    float mV = max(M, 0.0) * 1.2;
+    float tV = max(T, 0.0) * 0.8;
     float h = wf.a;
     outerH = (h > 0.01 ? h : max(bV, max(mV, tV))) * scale;
     float AA = 1.0;
     inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
     if (inside < 0.005) { fragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
-    // Winner-takes-most: dominant band gets full color, others suppressed
-    vec3 vTrebCol = vec3(0.85, 0.15, 0.75);  // purple/magenta for treble
+    // Normalize so max channel = 1.0 → always vivid saturated color
     float mx = max(bV, max(mV, tV)) + 0.001;
-    float bW = bV / mx, mW = mV / mx, tW = tV / mx;
-    // Sharpen: cube ratio so dominant ≈1, others → 0
-    bW = bW * bW * bW; mW = mW * mW * mW; tW = tW * tW * tW;
-    float total = bW + mW + tW + 0.001;
-    col = (bassCol * bW + midCol * mW + vTrebCol * tW) / total;
-    // Brightness from energy
-    col *= (0.7 + 0.3 * max(bV, max(mV, tV)));
+    col = vec3(bV, mV, tV) / mx;
   }
 
   fragColor = vec4(clamp(col, 0.0, 1.0) * inside, 1.0);
@@ -468,21 +461,16 @@ void main() {
     float total = B + M + T + 0.001;
     col = (bassCol * B + midCol * M + trebCol * T) / total;
   } else {
-    float bV = sqrt(max(B, 0.0)) * 1.3;
-    float mV = max(M, 0.0);
-    float tV = max(T, 0.0) * 0.5;
+    float bV = sqrt(max(B, 0.0)) * 1.5;
+    float mV = max(M, 0.0) * 1.2;
+    float tV = max(T, 0.0) * 0.8;
     float h = wf.a;
     outerH = (h > 0.01 ? h : max(bV, max(mV, tV))) * scale;
     float AA2 = 0.6;
     inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
     if (inside < 0.005) { fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0); return; }
-    vec3 vTrebCol = vec3(0.85, 0.15, 0.75);
     float mx = max(bV, max(mV, tV)) + 0.001;
-    float bW = bV / mx, mW = mV / mx, tW = tV / mx;
-    bW = bW * bW * bW; mW = mW * mW * mW; tW = tW * tW * tW;
-    float total = bW + mW + tW + 0.001;
-    col = (bassCol * bW + midCol * mW + vTrebCol * tW) / total;
-    col *= (0.7 + 0.3 * max(bV, max(mV, tV)));
+    col = vec3(bV, mV, tV) / mx;
   }
 
   float dim = played ? 0.38 : 1.0;
