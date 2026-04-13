@@ -116,6 +116,8 @@ class WaveformGL {
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     if (this._prog)  gl.deleteProgram(this._prog);
     if (this._vao)   gl.deleteVertexArray(this._vao);
+    const ext = gl.getExtension('WEBGL_lose_context');
+    if (ext) ext.loseContext();
   }
 
   _initGeometry() {
@@ -248,6 +250,8 @@ class OverviewGL {
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     if (this._prog)  gl.deleteProgram(this._prog);
     if (this._vao)   gl.deleteVertexArray(this._vao);
+    const ext = gl.getExtension('WEBGL_lose_context');
+    if (ext) ext.loseContext();
   }
 
   _initGeometry() {

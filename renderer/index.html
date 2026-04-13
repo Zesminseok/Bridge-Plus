@@ -3413,6 +3413,12 @@ if(E){
   loadInterfaces();
   // Shutdown overlay
   window.bridge.onQuitting?.(()=>{
+    // Destroy all WebGL contexts to prevent V8 BackingStore crash on window close
+    for(const k of Object.keys(DECKS)){
+      const d=DECKS[k];
+      try{if(d.wgl){d.wgl.destroy();d.wgl=null;}}catch(_){}
+      try{if(d.ovgl){d.ovgl.destroy();d.ovgl=null;}}catch(_){}
+    }
     const ov=document.createElement('div');
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:12px';
     ov.innerHTML='<div style="font:600 16px var(--sn);color:var(--tx);letter-spacing:.05em">종료 중...</div><div style="font:400 11px var(--mn);color:var(--tx3)">TCNet 연결 해제 및 소켓 정리</div>';

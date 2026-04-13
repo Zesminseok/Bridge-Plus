@@ -260,9 +260,11 @@ function doQuit(){
   // 1. Save window bounds while window is still valid
   saveBounds();
   clearInterval(iv);
-  // 2. Show shutdown splash BEFORE hiding main window (so position is correct)
+  // 2. Signal renderer to clean up WebGL contexts (prevents V8 BackingStore crash)
+  try{if(win&&!win.isDestroyed())win.webContents.send('app:quitting');}catch(_){}
+  // 3. Show shutdown splash BEFORE hiding main window (so position is correct)
   showSplash('종료 중...','TCNet · ProDJ Link 연결 해제');
-  // 3. Hide main window after splash is positioned
+  // 4. Hide main window after splash is positioned
   try{if(win&&!win.isDestroyed()){win.hide();}}catch(_){}
   // 4. Stop bridge after small delay (let splash render first)
   setTimeout(()=>{
