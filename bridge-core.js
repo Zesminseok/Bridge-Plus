@@ -1230,7 +1230,9 @@ class BridgeCore {
       if(Date.now()-node.lastSeen > 15000) continue;
       if(node.lPort) targets.push(`${node.name||'?'}@${node.ip}:${node.lPort}`);
     }
-    console.log(`[TCNET-ART] L${layerIdx} sending ${packets.length} artwork packets (${jpegBuf.length}B JPEG) → [${targets.join(', ')}]`);
+    const isJpeg = jpegBuf[0]===0xFF && jpegBuf[1]===0xD8;
+    const endOk = jpegBuf[jpegBuf.length-2]===0xFF && jpegBuf[jpegBuf.length-1]===0xD9;
+    console.log(`[TCNET-ART] L${layerIdx} sending ${packets.length} artwork packets (${jpegBuf.length}B) JPEG=${isJpeg} endFFD9=${endOk} hdr=[${jpegBuf[0].toString(16)},${jpegBuf[1].toString(16)}] → [${targets.join(', ')}]`);
     for(const pkt of packets){
       this._sendDataToArenas(pkt);
     }
@@ -2071,6 +2073,7 @@ class BridgeCore {
   /** Register virtual deck in devices list so Arena sees a CDJ model name. */
   registerVirtualDeck(slot, modelName){
     if(slot<0||slot>7) return;
+    this.hwMode[slot] = false;  // virtual deck → disable HW mode for this slot
     const key = `cdj${slot+1}`;
     this.devices[key] = {
       type:'CDJ', playerNum:slot+1,
@@ -2083,6 +2086,7 @@ class BridgeCore {
   }
   unregisterVirtualDeck(slot){
     if(slot<0||slot>7) return;
+    this.hwMode[slot] = true;  // restore HW mode when virtual deck removed
     const key = `cdj${slot+1}`;
     if(this.devices[key]?.virtual) delete this.devices[key];
     this._syncVirtualDevices();
@@ -2108,7 +2112,9 @@ class BridgeCore {
   setVirtualArt(slot, jpegBuf){
     if(slot<0||slot>7) return;
     this._virtualArt[slot] = jpegBuf || BLANK_JPEG;
-    console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B`);
+    const isBuf = Buffer.isBuffer(jpegBuf);
+    const hdr = jpegBuf ? `[${jpegBuf[0]?.toString(16)},${jpegBuf[1]?.toString(16)}]` : 'null';
+    console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B isBuffer=${isBuf} hdr=${hdr}`);
     // Send artwork via TCNet LowResArtwork (same path as HW mode)
     this._sendArtwork(slot + 1, jpegBuf);
     // Retry after delays — Arena may not have registered the layer yet
