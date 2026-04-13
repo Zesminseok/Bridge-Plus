@@ -104,6 +104,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-wf-col{display:flex;flex-direction:column;flex:1;min-width:0}
 .dk-wf-col .dwov{height:16px;margin:0;border-radius:0;border-bottom:1px solid rgba(135,135,255,.1);background:rgba(5,8,12,.8);position:relative}
 .dk-wf-col .dwov canvas{display:block;width:100%;height:100%;background:#000}
+.dk-wf-col .dwov canvas.dwov-overlay{background:transparent!important}
 .dk-wf-col .dwz-row{flex:1;margin:0;height:auto}
 .dk-wf-col .dwz-row .dwz{border-radius:0;border:none;height:100%;margin:0}
 
@@ -1592,7 +1593,7 @@ function deckHTML(slot){
       <div class="dkart" id="dart${slot}" ${isLoaded?`data-a="eject" data-i="${slot}"`:''}>${artSrc?`<img src="${artSrc}" alt="" onerror="this.parentElement.innerHTML='<span class=\\'noart-icon\\'>♪</span>'">`:'<span class="noart-icon">♪</span>'}</div>
       <div class="dk-wf-col">
         <div class="dwov" id="dwov${slot}" style="${isLoaded?'':'display:flex;align-items:center;justify-content:center'}">
-          ${isLoaded?`<canvas id="wov${slot}"></canvas><canvas id="wovol${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
+          ${isLoaded?`<canvas id="wov${slot}"></canvas><canvas id="wovol${slot}" class="dwov-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;background:transparent"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
         </div>
         <div class="dwz-row">
           <div class="dwz" id="dwz${slot}" style="position:relative;${isLoaded?'':'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px'}">
