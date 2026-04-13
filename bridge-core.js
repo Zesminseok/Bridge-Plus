@@ -2093,15 +2093,20 @@ class BridgeCore {
   _sendVirtualCDJStatus(playerNum, trackId, bpm){
     if(!this._pdjlAnnSock || !trackId) return;
     try{
-      const pkt = Buffer.alloc(212);  // 0xD4 = 212 bytes (standard CDJ status size)
+      // ROLLBACK: was 212 (0xD4, Nexus 1st gen size) — NXS2 uses 0x11C (284B)
+      // Arena/CDJs may ignore packets with wrong size for their expected model
+      const pktSize = 0x11C;  // 284 bytes = NXS2 CDJ status size
+      const pkt = Buffer.alloc(pktSize);
       PDJL.MAGIC.copy(pkt, 0);
       pkt[0x0A] = PDJL.CDJ;   // 0x0A = CDJ status type
       pkt[0x0B] = 0x00;
-      const nm = 'BRIDGE-CLONE';
-      Buffer.from(nm,'ascii').copy(pkt, 0x0C, 0, Math.min(nm.length,20));
+      // ROLLBACK: was 'BRIDGE-CLONE' — must match keepalive name for device identity
+      const nm = 'BRIDGE+';
+      Buffer.from(nm+'\0','ascii').copy(pkt, 0x0C, 0, Math.min(nm.length+1,20));
       // Header fields — Deep Symmetry spec: 0x20=subtype(0x03=CDJ), 0x21=deviceNum
       // ROLLBACK: was pkt[0x20]=0x01, pkt[0x21]=0x04
-      pkt[0x20] = 0x03; pkt[0x21] = playerNum & 0xFF; pkt[0x22] = 0x00; pkt[0x23] = 0xD4;
+      pkt[0x20] = 0x03; pkt[0x21] = playerNum & 0xFF;
+      pkt.writeUInt16BE(pktSize - 0x24, 0x22);  // lengthRemaining from 0x24 to end
       pkt[0x24] = playerNum & 0xFF;   // player number (NXS2 reads 0x21, CDJ-3000 reads 0x24)
       pkt[0x25] = 0x00;
       // 0x26-0x27: sub-field (unused, zero)
@@ -2120,7 +2125,11 @@ class BridgeCore {
       // Playing state: P1 byte (0x7B) and flags (0x89)
       // ROLLBACK: was pkt[0x7B]=0x09 (0x09=searching per Deep Symmetry spec)
       pkt[0x7B] = 0x03;   // P1 = 0x03 = playing (Deep Symmetry: 0x03=playing, 0x09=search)
-      pkt[0x89] = 0x68;   // flags: bit6=playing(0x40) | bit5=master(0x20) | bit3=onAir(0x08)
+      // ROLLBACK: was 0x68 (bit5=Master set) — only P1 should be master, others sync+onAir
+      pkt[0x89] = (playerNum === 1) ? 0x68 : 0x48;
+      // 0x68 = play(0x40)+master(0x20)+onAir(0x08), 0x48 = play(0x40)+onAir(0x08)
+      // P2 play mode: NXS2 uses 0xFA(play)/0xFE(stop)
+      pkt[0x8B] = 0xFA;  // P2 = playing (NXS2 format)
       // BPM × 100 as uint16BE at 0x92
       const bpmVal = Math.round((bpm||128)*100);
       pkt.writeUInt16BE(bpmVal, 0x92);
@@ -2130,7 +2139,7 @@ class BridgeCore {
       pkt[0x99] = 0x10; pkt[0x9A] = 0x00; pkt[0x9B] = 0x00; // effectivePitch = 0x100000
       // ROLLBACK: was pkt.writeUInt32BE(0x100000, 0x8C) — wrote 4B starting at 0x8C
       // prolink-connect: 0xB6 MUST be 1 (firmware version check bypass)
-      if(pkt.length > 0xB6) pkt[0xB6] = 0x01;
+      pkt[0xB6] = 0x01;
 
       const allBCs = [...new Set(
         getAllInterfaces()
@@ -2143,7 +2152,9 @@ class BridgeCore {
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50002,bc);}catch(_){}
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,bc);}catch(_){}
       }
-      console.log(`[PDJL-VIRT] CDJ status P${playerNum} trackId=${trackId} bpm=${bpm||128}`);
+      // Also send to localhost for Arena running on the same machine
+      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50002,'127.0.0.1');}catch(_){}
+      console.log(`[PDJL-VIRT] CDJ status P${playerNum} trackId=${trackId} bpm=${bpm||128} size=${pktSize}`);
     }catch(e){console.warn('[PDJL-VIRT] status send error:',e.message);}
   }
 
