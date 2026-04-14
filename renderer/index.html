@@ -422,9 +422,10 @@ let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
 let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]]; // Hi/Mid/Lo per channel (0x40=0dB)
 // 설정 — 인터페이스 포함
-const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
+const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
   tcFps:'25',wfColor:'3band',wfCenter:'left',
   tcLtcA:'',tcLtcB:'',tcLtcM:'',tcMidiOutId:'',
+  tcLtcACh:0,tcLtcBCh:0,tcLtcMCh:0,
   tcArtnetIp:'255.255.255.255',tcArtnetPort:'6454',
   tcnetUnicast:false,tcnetAllIfaces:false};
 // Load persisted settings
@@ -514,35 +515,59 @@ const OUT = {
 
 // ── LTC (AudioWorklet) — independent instance per output layer ──────
 const _ltc = {
-  A:{ctx:null,node:null,out:null,ready:false,ch:0},
-  B:{ctx:null,node:null,out:null,ready:false,ch:0},
-  M:{ctx:null,node:null,out:null,ready:false,ch:0},
+  A:{ctx:null,node:null,out:null,ready:false},
+  B:{ctx:null,node:null,out:null,ready:false},
+  M:{ctx:null,node:null,out:null,ready:false},
 };
+
+function _ltcTeardown(layer){
+  const L=_ltc[layer];
+  try{if(L.node)L.node.disconnect();}catch(_){}
+  try{if(L.out){L.out.pause();L.out.srcObject=null;}}catch(_){}
+  try{if(L.ctx)L.ctx.close();}catch(_){}
+  L.ctx=null;L.node=null;L.out=null;L.ready=false;
+}
 
 async function _ltcInit(layer){
   const L=_ltc[layer];
   if(L.ready)return true;
   const devId=cfg[`tcLtc${layer}`]||'';
+  const ch=parseInt(cfg[`tcLtc${layer}Ch`])||0; // 0-indexed output channel
   try{
     L.ctx=new AudioContext({sampleRate:48000});
     await L.ctx.audioWorklet.addModule('./ltc-processor.js');
-    // single channel per layer — each layer routes to its own audio device
     L.node=new AudioWorkletNode(L.ctx,'ltc-processor',{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[1]});
-    const dest=L.ctx.createMediaStreamDestination();
-    L.node.connect(dest);
-    L.out=new Audio();L.out.srcObject=dest.stream;
-    if(devId){try{await L.out.setSinkId(devId);}catch(_){}}
-    await L.out.play();
+    if(ch===0){
+      // Default: mono → channel 1 via MediaStream (broadest compat)
+      const dest=L.ctx.createMediaStreamDestination();
+      L.node.connect(dest);
+      L.out=new Audio();L.out.srcObject=dest.stream;
+      if(devId){try{await L.out.setSinkId(devId);}catch(_){}}
+      await L.out.play();
+    }else{
+      // Route mono LTC to specific channel via AudioContext destination
+      if(L.ctx.setSinkId&&devId){try{await L.ctx.setSinkId(devId);}catch(_){}}
+      const totalCh=ch+1;
+      try{
+        L.ctx.destination.channelCount=Math.min(totalCh,L.ctx.destination.maxChannelCount);
+        L.ctx.destination.channelCountMode='explicit';
+        L.ctx.destination.channelInterpretation='discrete';
+      }catch(_){}
+      const merger=L.ctx.createChannelMerger(totalCh);
+      L.node.connect(merger,0,ch);
+      merger.connect(L.ctx.destination);
+    }
     L.ready=true;
-    console.log(`[LTC-${layer}] ready device="${devId||'default'}"`);
+    console.log(`[LTC-${layer}] ready device="${devId||'default'}" ch=${ch+1}`);
     return true;
   }catch(e){console.error(`[LTC-${layer}] init failed:`,e);return false;}
 }
 
-async function _ltcSetDevice(layer, devId){
-  const L=_ltc[layer];
+async function _ltcSetDevice(layer,devId,ch){
   cfg[`tcLtc${layer}`]=devId;
-  if(L.out&&devId){try{await L.out.setSinkId(devId);}catch(_){}}
+  if(ch!==undefined)cfg[`tcLtc${layer}Ch`]=ch;
+  _ltcTeardown(layer);
+  if(OUT[layer].ltc)await _ltcInit(layer);
 }
 
 function _ltcSend(layer, ms, playing){
@@ -558,7 +583,6 @@ function _ltcStop(layer){
   const L=_ltc[layer];
   if(!L.node)return;
   L.node.port.postMessage({cmd:'setPos',ch:0,running:false});
-  console.log(`[LTC-${layer}] stopped`);
 }
 
 // ── MTC (Master Timecode) ────────────────────────────
@@ -738,9 +762,38 @@ function _getMasterGain(){
   if(!_masterGain||_masterGain.context!==ac){
     _masterGain=ac.createGain();
     _masterGain.gain.value=_masterVol;
-    _masterGain.connect(ac.destination);
+    _masterGain.connect(ac.destination); // default; _rebuildAuRouting() may reroute
   }
   return _masterGain;
+}
+// ── Virtual deck audio channel routing ───────────────────────────────
+let _auChSplit=null,_auChMerge=null;
+async function _rebuildAuRouting(){
+  const ac=_getAuCtx();
+  const mg=_getMasterGain();
+  const pair=parseInt(cfg.aoChPair)||0;
+  const offset=pair*2;
+  // Set output device on AudioContext (Chrome 110+ / Electron)
+  if(cfg.aoId&&ac.setSinkId){try{await ac.setSinkId(cfg.aoId);}catch(e){console.warn('[AuCtx] setSinkId:',e);}}
+  // Disconnect previous routing
+  try{mg.disconnect();}catch(_){}
+  if(offset===0){
+    try{ac.destination.channelCount=2;ac.destination.channelCountMode='max';}catch(_){}
+    mg.connect(ac.destination);
+  }else{
+    const totalCh=Math.min(offset+2,ac.destination.maxChannelCount||8);
+    try{
+      ac.destination.channelCount=totalCh;
+      ac.destination.channelCountMode='explicit';
+      ac.destination.channelInterpretation='discrete';
+    }catch(_){}
+    _auChSplit=ac.createChannelSplitter(2);
+    _auChMerge=ac.createChannelMerger(totalCh);
+    mg.connect(_auChSplit);
+    _auChSplit.connect(_auChMerge,0,Math.min(offset,totalCh-1));
+    _auChSplit.connect(_auChMerge,1,Math.min(offset+1,totalCh-1));
+    _auChMerge.connect(ac.destination);
+  }
 }
 async function setOut(au,id){if(!au||!id)return;try{if(au.setSinkId)await au.setSinkId(id);}catch(e){}}
 
@@ -2327,6 +2380,8 @@ function loadFile(slot,f){
       ans.forEach((an,i)=>an.connect(merge,0,Math.min(i,numCh-1)));
       // Route through master GainNode (post-analyser: VU meters independent of master vol)
       merge.connect(_getMasterGain());
+      // Apply channel pair routing (rebuilds masterGain → destination wiring)
+      _rebuildAuRouting();
       src.connect(split);
       d.vuSrc=src;d.vuChs=ans;d.vuBufs=bufs;d.vuChCount=numCh;
       d.vuAnL=ans[0];d.vuAnR=ans[1]||ans[0];d.vuBufL=bufs[0];d.vuBufR=bufs[1]||bufs[0];
@@ -3102,7 +3157,10 @@ function renderSettings(){
       <div class="srw"><span class="srl">Pro DJ Link 인터페이스</span><select class="ss" data-cfg="pdjlIface">${ifaceOpts(allIfaces,'pdjlIface')}</select></div>
     </div>
     <div class="sl">오디오 출력</div>
-    <div class="sgr"><div class="srw"><span class="srl">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div></div>
+    <div class="sgr">
+      <div class="srw"><span class="srl">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div>
+      <div class="srw"><span class="srl">출력 채널</span><select class="ss" data-cfg="aoChPair" style="max-width:120px">${[0,1,2,3,4,5,6,7].map(i=>`<option value="${i}" ${(cfg.aoChPair||0)==i?'selected':''}>Ch ${i*2+1}/${i*2+2}</option>`).join('')}</select></div>
+    </div>
     <div class="al alw" style="margin-top:8px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
       <div style="font:400 10px var(--sn);color:var(--ylw)">
@@ -3113,9 +3171,10 @@ function renderSettings(){
     <div class="sl mt">SMPTE 타임코드 출력</div>
     <div class="sgr">
       <div class="srw"><span class="srl">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">LTC — Layer A 장치</span><select class="ss" data-cfg="tcLtcA" style="max-width:200px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg.tcLtcA===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">LTC — Layer B 장치</span><select class="ss" data-cfg="tcLtcB" style="max-width:200px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg.tcLtcB===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">LTC — Layer M 장치</span><select class="ss" data-cfg="tcLtcM" style="max-width:200px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg.tcLtcM===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select></div>
+      ${['A','B','M'].map(lyr=>{
+        const chOpts=[1,2,3,4,5,6,7,8].map(i=>`<option value="${i-1}" ${(cfg[`tcLtc${lyr}Ch`]||0)===(i-1)?'selected':''}>Ch ${i}</option>`).join('');
+        return`<div class="srw"><span class="srl">LTC — Layer ${lyr}</span><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select class="ss" data-cfg="tcLtc${lyr}" style="max-width:180px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg[`tcLtc${lyr}`]===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select><select class="ss" data-cfg="tcLtc${lyr}Ch" style="width:72px">${chOpts}</select></div></div>`;
+      }).join('')}
       <div class="srw"><span class="srl">MTC MIDI 출력</span><select class="ss" id="midiOutSel" style="max-width:200px"><option value="">—</option></select></div>
       <div class="srw"><span class="srl">Artnet 대상 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
       <div class="srw"><span class="srl">Artnet Port</span><input type="text" value="${cfg.tcArtnetPort}" data-cfg="tcArtnetPort" placeholder="6454" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:70px;text-align:right"></div>
@@ -3134,15 +3193,17 @@ function renderSettings(){
   el.querySelectorAll('[data-cfg]').forEach(inp=>{
     inp.addEventListener('change',e=>{
       const k=inp.dataset.cfg;
-      if(k==='ao'){cfg.aoId=e.target.value;Object.values(DECKS).forEach(d=>{if(d.au)setOut(d.au,cfg.aoId);});}
-      else if(k==='tcao'){
-        cfg.tcLtcAoId=e.target.value;
-        if(_ltcOut&&e.target.value){try{_ltcOut.setSinkId(e.target.value);}catch(_){}}
-      }
+      if(k==='ao'){cfg.aoId=e.target.value;_rebuildAuRouting();}
+      else if(k==='aoChPair'){cfg.aoChPair=parseInt(e.target.value)||0;_rebuildAuRouting();}
+      else if(k==='tcao'){cfg.tcLtcAoId=e.target.value;}
       else if(k==='tcFps'){cfg.tcFps=e.target.value;}
-      else if(k==='tcLtcA'||k==='tcLtcB'||k==='tcLtcM'){
-        const layer=k.slice(-1); // 'A','B','M'
+      else if(/^tcLtc[ABM]$/.test(k)){
+        const layer=k.slice(-1);
         _ltcSetDevice(layer,e.target.value);
+      }
+      else if(/^tcLtc[ABM]Ch$/.test(k)){
+        const layer=k.slice(5,6); // 'A','B','M'
+        _ltcSetDevice(layer,cfg[`tcLtc${layer}`],parseInt(e.target.value)||0);
       }
       else if(k==='tcArtnetIp'||k==='tcArtnetPort'){cfg[k]=e.target.value;}
       else if(k==='tcnetIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindTCNet(e.target.value||null);return;}
