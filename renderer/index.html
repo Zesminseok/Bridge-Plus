@@ -2353,13 +2353,15 @@ function setMasterVol(v){
 
 function _sendTCState(slot){
   const d=DECKS[slot];if(!d||!E||!run||d.type==='hw')return;
-  // scratch/platter=8(PLATTERDOWN), playing=3, cue-held=3(PLAY), loaded-stopped=5, idle=0
+  // d.pos는 틱에서 갱신(최대 33ms stale) → 멈출 때 arena seek 오류 유발
+  // au.currentTime을 직접 읽어 정확한 위치 전송
+  const timecodeMs=d.au?Math.round(d.au.currentTime*1000):Math.round(d.pos);
   window.bridge.updateLayer(slot,{
     state:d.scratch?8:d.pl?3:(d.cu&&d.au&&!d.au.paused)?3:(d.ld?5:0),
-    timecodeMs:Math.round(d.pos),
+    timecodeMs,
     bpm:d.bpm||0,trackId:d.trackId||0,totalLength:Math.round(d.dur)||0,
     trackName:d.tn||'',artistName:d.ar||'',deviceName:'CDJ-3000',
-    beatPhase:Math.floor((d.pos/(60000/(d.bpm||128)))%4)*64,
+    beatPhase:Math.floor((timecodeMs/(60000/(d.bpm||128)))%4)*64,
   });
 }
 

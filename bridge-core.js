@@ -298,8 +298,8 @@ function mkTime(layers, uptimeMs, faders){
     if(ld) d[72+n] = toTCNetState(ld.state||0);
   }
 
-  // generalSMPTEMode at body[81]
-  d[81] = 0x00;
+  // generalSMPTEMode at body[81] — 30fps (TCNet spec: valid values 24/25/29/30; 0=invalid)
+  d[81] = 30;
 
   // layerTimecode[0-7] at body[82-129] (6B each: mode, state, h, m, s, frames)
   for(let n=0;n<8;n++){
@@ -314,8 +314,11 @@ function mkTime(layers, uptimeMs, faders){
       const s = totalSec % 60;
       const frames = Math.floor((ms % 1000) / 33.33);  // ~30fps
       const off = 82 + n*6;
-      d[off+0] = 0;      // mode
-      d[off+1] = isPlaying ? 1 : 0;  // state: 1=running if PLAYING
+      d[off+0] = 30;     // layer SMPTE mode = 30fps
+      // TC state: 0=Stopped, 1=Running, 2=Force Re-sync (재생→정지 전환 시 1회 Arena 강제 seek)
+      const tcState = isPlaying ? 1 : (ld._needResync ? 2 : 0);
+      if(ld._needResync) ld._needResync = false;  // 1회만 전송
+      d[off+1] = tcState;
       d[off+2] = h;
       d[off+3] = m;
       d[off+4] = s;
@@ -2064,10 +2067,18 @@ class BridgeCore {
     if(i<0||i>7) return;
     const prev = this.layers[i] || {};
 
+    // 재생→정지 전환 감지: Force Re-sync(TC State=2) 플래그 — Arena가 정확한 위치로 즉시 seek
+    const wasActive = prev.state === STATE.PLAYING || prev.state === STATE.LOOPING
+      || prev.state === STATE.FFWD || prev.state === STATE.FFRV;
+    const newState = data.state ?? prev.state ?? STATE.IDLE;
+    const nowInactive = newState !== STATE.PLAYING && newState !== STATE.LOOPING
+      && newState !== STATE.FFWD && newState !== STATE.FFRV;
+    const _needResync = wasActive && nowInactive && data.state !== undefined;
+
     // Merge: only overwrite fields that are explicitly provided
     this.layers[i] = {
       timecodeMs:  data.timecodeMs ?? prev.timecodeMs ?? 0,
-      state:       data.state ?? prev.state ?? STATE.IDLE,
+      state:       newState,
       bpm:         data.bpm ?? prev.bpm ?? 0,
       trackId:     data.trackId ?? prev.trackId ?? 0,
       totalLength: data.totalLength ?? prev.totalLength ?? 0,
@@ -2077,6 +2088,7 @@ class BridgeCore {
       beatPhase:   data.beatPhase ?? prev.beatPhase ?? 0,
       _updateTime: Date.now(),
       _pitch:      data._pitch ?? prev._pitch ?? 0,
+      _needResync,
     };
     // Virtual deck: broadcast CDJ status so Arena queries our dbserver immediately
     if(!this.hwMode[i] && data.trackId){
