@@ -2403,28 +2403,43 @@ function loadFile(slot,f){
       if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
       const ac=_getAuCtx();
       const src=ac.createMediaElementSource(d.au);
-      // 실제 채널 수는 src.channelCount (오디오 로드 후 알 수 있음)
-      // 일단 최대 8채널까지 ChannelSplitter 생성
-      const numCh=Math.min(Math.max(src.channelCount||2,2),8);
-      const split=ac.createChannelSplitter(numCh);
-      const ans=[],bufs=[];
-      for(let i=0;i<numCh;i++){
-        const an=ac.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=0.65;
-        split.connect(an,i);ans.push(an);bufs.push(new Uint8Array(an.fftSize));
-      }
-      const merge=ac.createChannelMerger(numCh);
-      ans.forEach((an,i)=>an.connect(merge,0,Math.min(i,numCh-1)));
-      // Route through master GainNode (post-analyser: VU meters independent of master vol)
-      merge.connect(_getMasterGain());
-      src.connect(split);
-      d.vuSrc=src;d.vuChs=ans;d.vuBufs=bufs;d.vuChCount=numCh;
-      d.audioChs=numCh; // store for multi-channel auto-routing
-      // Rebuild routing — auto-detects multi-channel and configures destination
-      _rebuildAuRoutingAuto();
-      d.vuAnL=ans[0];d.vuAnR=ans[1]||ans[0];d.vuBufL=bufs[0];d.vuBufR=bufs[1]||bufs[0];
-      d.vuAn=ans[0];d.vuBuf=bufs[0];
-      // VU strip에 채널 수에 맞는 바 생성
-      _buildVuStrip(slot,numCh);
+      // loadedmetadata 시점에는 디코더가 채널 수를 아직 확정하지 않아 2를 반환할 수 있음
+      // 일단 초기 값으로 연결 후, canplaythrough 시점에 재확인
+      const _connectVuNodes=(nCh)=>{
+        // 기존 연결 해제
+        try{src.disconnect();}catch(_){}
+        if(d.vuChs)d.vuChs.forEach(a=>{try{a.disconnect();}catch(_){}});
+        const nChClamped=Math.min(Math.max(nCh,2),8);
+        const split=ac.createChannelSplitter(nChClamped);
+        const ans=[],bufs=[];
+        for(let i=0;i<nChClamped;i++){
+          const an=ac.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=0.65;
+          split.connect(an,i);ans.push(an);bufs.push(new Uint8Array(an.fftSize));
+        }
+        const merge=ac.createChannelMerger(nChClamped);
+        ans.forEach((an,i)=>an.connect(merge,0,Math.min(i,nChClamped-1)));
+        merge.connect(_getMasterGain());
+        src.connect(split);
+        d.vuSrc=src;d.vuChs=ans;d.vuBufs=bufs;d.vuChCount=nChClamped;
+        d.audioChs=nChClamped;
+        d.vuAnL=ans[0];d.vuAnR=ans[1]||ans[0];d.vuBufL=bufs[0];d.vuBufR=bufs[1]||bufs[0];
+        d.vuAn=ans[0];d.vuBuf=bufs[0];
+        _buildVuStrip(slot,nChClamped);
+        _rebuildAuRoutingAuto();
+      };
+      // 초기 연결
+      _connectVuNodes(src.channelCount||2);
+      // canplaythrough: 디코더가 채널 수를 확정한 시점에 재확인
+      const _recheckCh=()=>{
+        const actual=Math.min(Math.max(d.vuSrc?.channelCount||2,2),8);
+        if(actual!==d.vuChCount){
+          console.log(`[VU] ch recheck ${d.vuChCount}→${actual}`);
+          _connectVuNodes(actual);
+        }
+      };
+      d.au.addEventListener('canplaythrough',_recheckCh,{once:true});
+      // 300ms 폴백 (canplaythrough가 이미 발생했거나 늦게 오는 경우)
+      setTimeout(()=>{if(d.au&&!d.au.error)_recheckCh();},300);
     }catch(e){console.warn('[VU]',e);}
   };
   // Formats needing FFmpeg decode (not natively supported in Chromium)
