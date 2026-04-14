@@ -166,7 +166,12 @@ class OverviewGL {
     this.gl = gl;
     gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     this._wfTex = null;
-    this._prog = this._compileProgram(_WGL_VS, _WGL_OV_FS);
+    try {
+      this._prog = this._compileProgram(_WGL_VS, _WGL_OV_FS);
+    } catch(e) {
+      console.error('[OVGL] shader compile FAILED:', e.message);
+      throw e;
+    }
     this._initGeometry();
     this._locs = {
       wf:   gl.getUniformLocation(this._prog, 'u_wf'),
@@ -174,14 +179,16 @@ class OverviewGL {
       res:  gl.getUniformLocation(this._prog, 'u_res'),
       mode: gl.getUniformLocation(this._prog, 'u_mode'),
     };
+    console.log(`[OVGL] init OK canvas=${canvas.width}x${canvas.height} locs={wf:${this._locs.wf},pos:${this._locs.pos},res:${this._locs.res},mode:${this._locs.mode}}`);
   }
 
   setData(wfData) {
     const gl = this.gl;
     const n = wfData.length;
-    if (n < 2) return;
+    if (n < 2) { console.warn('[OVGL] setData: too short n=',n); return; }
     // Recover from WebGL context reset
     if (!this._prog || !gl.isProgram(this._prog)) {
+      console.warn('[OVGL] setData: prog invalid, recovering...');
       try {
         this._prog = this._compileProgram(_WGL_VS, _WGL_OV_FS);
         this._vao = null;
@@ -192,9 +199,11 @@ class OverviewGL {
           res:  gl.getUniformLocation(this._prog, 'u_res'),
           mode: gl.getUniformLocation(this._prog, 'u_mode'),
         };
-      } catch(e) { console.warn('[WGL] ovgl recover failed:', e.message); return; }
+        console.log('[OVGL] setData: recover OK');
+      } catch(e) { console.error('[OVGL] setData: recover FAILED:', e.message); return; }
     }
     const px = new Uint8Array(n * 4);
+    let maxH=0, maxR=0, maxG=0, maxB=0;
     for (let i = 0; i < n; i++) {
       const p = wfData[i];
       const h = p.h || Math.max(Math.abs(p.mn||0), Math.abs(p.mx||0)) || 0;
@@ -202,7 +211,12 @@ class OverviewGL {
       px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
       px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
       px[i*4+3] = Math.min(255, h * 255) | 0;
+      if(h>maxH)maxH=h; if((p.r||0)>maxR)maxR=p.r||0;
+      if((p.g||0)>maxG)maxG=p.g||0; if((p.b||0)>maxB)maxB=p.b||0;
     }
+    const p0=wfData[0], pN=wfData[n-1];
+    console.log(`[OVGL] setData n=${n} maxH=${maxH.toFixed(3)} maxRGB=(${maxR.toFixed(2)},${maxG.toFixed(2)},${maxB.toFixed(2)}) first={r:${(p0.r||0).toFixed(2)},g:${(p0.g||0).toFixed(2)},b:${(p0.b||0).toFixed(2)},h:${(p0.h||0).toFixed(2)}} last={r:${(pN.r||0).toFixed(2)},g:${(pN.g||0).toFixed(2)},b:${(pN.b||0).toFixed(2)},h:${(pN.h||0).toFixed(2)}}`);
+
     // Cap at GPU MAX_TEXTURE_SIZE
     const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
     let texN = n, texPx = px;
@@ -229,10 +243,17 @@ class OverviewGL {
   }
 
   draw(pos, mode) {
-    if (!this._wfTex) return;
-    if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
+    if (!this._wfTex) { console.warn('[OVGL] draw: _wfTex null, skip'); return; }
+    if (!this.gl.isProgram(this._prog)) {
+      console.error('[OVGL] draw: prog invalid → clearing');
+      this._prog = null; this._wfTex = null; return;
+    }
     const gl = this.gl;
     const cv = gl.canvas;
+    if (!cv.width || !cv.height) {
+      console.warn(`[OVGL] draw: canvas zero size ${cv.width}x${cv.height}`);
+      return;
+    }
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
     gl.bindVertexArray(this._vao);
@@ -243,6 +264,12 @@ class OverviewGL {
     gl.uniform2f(this._locs.res,  cv.width, cv.height);
     gl.uniform1i(this._locs.mode, mode | 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    const err = gl.getError();
+    if (err) console.error(`[OVGL] draw: GL error 0x${err.toString(16)} pos=${pos.toFixed(3)} mode=${mode} canvas=${cv.width}x${cv.height}`);
+    else if (!OverviewGL._drawLogged) {
+      OverviewGL._drawLogged = true;
+      console.log(`[OVGL] draw OK pos=${pos.toFixed(3)} mode=${mode} canvas=${cv.width}x${cv.height}`);
+    }
   }
 
   resize(w, h) { const cv = this.gl.canvas; cv.width = w; cv.height = h; }

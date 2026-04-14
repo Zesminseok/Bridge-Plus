@@ -963,10 +963,20 @@ function drawOverview(slot,prog){
   const pos=Math.max(0,Math.min(1,prog||0));
   if(d.ovgl&&(d.rgbWfDetail||d.rgbWf)){
     // Auto-upload texture if missing — mirrors drawZoomWaveform's self-healing pattern
-    if(!d.ovgl._wfTex){const _wd=d.rgbWfDetail||d.rgbWf;if(_wd)d.ovgl.setData(_wd);}
-    if(!d.ovgl._wfTex)return; // still no data
+    if(!d.ovgl._wfTex){
+      const _wd=d.rgbWfDetail||d.rgbWf;
+      if(_wd){console.log(`[dOV] slot${slot} auto-upload tex n=${_wd.length}`);d.ovgl.setData(_wd);}
+    }
+    if(!d.ovgl._wfTex){console.warn(`[dOV] slot${slot} no _wfTex after auto-upload`);return;}
+    const _mode=d.type==='hw' ? 3 : (cfg.wfColor==='blue' ? 2 : 1);
+    if(!drawOverview._logged){drawOverview._logged={};}
+    if(!drawOverview._logged[slot]){
+      drawOverview._logged[slot]=true;
+      const wov=document.getElementById('wov'+slot);
+      console.log(`[dOV] slot${slot} first draw mode=${_mode} type=${d.type} canvas=${wov?.width}x${wov?.height} hasDetail=${!!d.rgbWfDetail} hasRgbWf=${!!d.rgbWf} wfLen=${(d.rgbWfDetail||d.rgbWf)?.length}`);
+    }
     // HW decks → mode 3 (CDJ native colors), blue config → mode 2, default → mode 1
-    d.ovgl.draw(pos, d.type==='hw' ? 3 : (cfg.wfColor==='blue' ? 2 : 1));
+    d.ovgl.draw(pos, _mode);
     // Continue to draw overlay markers on separate canvas
   } else {
     if(!d.wovCtx)return;
