@@ -965,9 +965,8 @@ function drawOverview(slot,prog){
     // Auto-upload texture if missing — mirrors drawZoomWaveform's self-healing pattern
     if(!d.ovgl._wfTex){const _wd=d.rgbWfDetail||d.rgbWf;if(_wd)d.ovgl.setData(_wd);}
     if(!d.ovgl._wfTex)return; // still no data
-    // Overview always uses beat-link palette (shader handles all modes uniformly)
-    // mode 2=blue-mono is kept; others all use beat-link blend
-    d.ovgl.draw(pos, cfg.wfColor==='blue'?2:1);
+    // HW decks → mode 3 (CDJ native colors), blue config → mode 2, default → mode 1
+    d.ovgl.draw(pos, d.type==='hw' ? 3 : (cfg.wfColor==='blue' ? 2 : 1));
     // Continue to draw overlay markers on separate canvas
   } else {
     if(!d.wovCtx)return;

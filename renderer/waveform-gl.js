@@ -443,10 +443,10 @@ void main() {
     return;
   }
 
-  // ── Mode 0/1/3: 3-band ──
+  // ── Mode 1/3: 3-band ──
   float B = bass, M = midf, T = treble;
 
-  // beat-link standard colors
+  // beat-link standard colors (used by mode 3 / HW)
   vec3 bassCol = vec3(0.125, 0.325, 0.85);
   vec3 midCol  = vec3(0.95,  0.667, 0.235);
   vec3 trebCol = vec3(1.0,   1.0,   1.0);
@@ -454,22 +454,29 @@ void main() {
   float outerH, inside;
   vec3 col;
 
-  // All modes: use beat-link palette (Bass=Blue, Mid=Amber, Treble=White)
-  // Direct RGB mapping was discarded — it averages to near-white on full-track overview.
-  // Beat-link weighted blend prevents white-washing when all bands are equal.
-  {
+  if (u_mode == 3) {
+    // HW CDJ: use wf.a for height, beat-link weighted blend for color
+    float h = wf.a;
+    outerH = h * scale;
+    float AA2 = 0.6;
+    inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
+    if (inside < 0.005) { fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0); return; }
+    float total = B + M + T + 0.001;
+    col = (bassCol * B + midCol * M + trebCol * T) / total;
+  } else {
+    // Virtual: sqrt-scaled bands, power-3 ratio to prevent white-washing
     float bV = max(B, 0.0) * 1.1;
     float mV = sqrt(max(M, 0.0)) * 1.4;
     float tV = sqrt(max(T, 0.0)) * 1.6;
     float h = wf.a;
-    // Height: prefer stored height; fall back to loudest band (virtual decks without h)
     outerH = (h > 0.01 ? h : max(bV, max(mV, tV))) * scale;
     float AA2 = 0.6;
     inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
     if (inside < 0.005) { fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0); return; }
-    // Beat-link weighted color blend — equal bands → lavender (not white)
-    float total = bV + mV + tV + 0.001;
-    col = (bassCol * bV + midCol * mV + trebCol * tV) / total;
+    float mx = max(bV, max(mV, tV)) + 0.001;
+    vec3 ratio = vec3(bV, mV, tV) / mx;
+    // Power-3 to emphasize dominant frequency and prevent white-washing
+    col = ratio * ratio * ratio;
   }
 
   float dim = played ? 0.38 : 1.0;
