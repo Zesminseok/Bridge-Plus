@@ -15,7 +15,7 @@ const os    = require('os');
 // ─────────────────────────────────────────────
 const TC = {
   MAGIC : Buffer.from('TCN'),
-  VER   : Buffer.from([0x03, 0x05]),
+  VER   : Buffer.from([0x03, 0x06]),  // TCNet V3.5.1B spec: protocol wire version 3.6
   OPTIN : 0x02, OPTOUT: 0x03, STATUS: 0x05,
   DATA  : 0xC8, TIME  : 0xFE,  APP   : 0x1E,
   ARTWORK: 0xCC, // MessageType 204 = LowResArtwork (JPEG)
