@@ -2960,10 +2960,22 @@ function tick(){
         });
       }
     } else if(d.ld){
-      const beatPhase=Math.floor((d.pos/(60000/(d.bpm||128)))%4)*64;
+      const isActive=d.scratch||d.pl||(d.cu&&d.au&&!d.au.paused);
+      // 멈춰있을 때: 30fps 연속 seek 명령이 Arena 영상 jitter 유발 → 1Hz로 줄임
+      // 재생/스크래치 중: 30fps 풀속도 전송
+      const now=Date.now();
+      if(!isActive){
+        if(d._lastTCStop&&(now-d._lastTCStop)<950)return; // 1Hz keepalive
+        d._lastTCStop=now;
+        d._frozenPosMs=Math.round(d.pos); // 위치 고정
+      } else {
+        d._lastTCStop=0; // 재생 시작하면 리셋
+      }
+      const timecodeMs=isActive?Math.round(d.pos):(d._frozenPosMs??Math.round(d.pos));
+      const beatPhase=Math.floor((timecodeMs/(60000/(d.bpm||128)))%4)*64;
       window.bridge.updateLayer(slot,{
-        state:d.scratch?8:d.pl?3:(d.cu&&d.au&&!d.au.paused)?3:(d.ld?5:0),
-        timecodeMs:Math.round(d.pos),
+        state:d.scratch?8:d.pl?3:(d.cu&&d.au&&!d.au.paused)?3:5,
+        timecodeMs,
         bpm:d.bpm||0,
         trackId:d.trackId||0,
         totalLength:Math.round(d.dur)||0,
