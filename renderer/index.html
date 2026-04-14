@@ -461,7 +461,7 @@ function createDeck(slot,type='virtual'){
     _wfCache:null,_wfCacheH:0,_wfCacheKey:'',
     key:'',vu:0,vuSrc:null,vuAn:null,vuBuf:null,artUrl:null,hwVu:0,beatInBar:1,
     zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,mtcMaster:false,
-    audioChs:2,_tempPath:null,_vuPoll:null,_vuMerge:null,_vuAllAns:null,_vuAllBufs:null,_applyNchFn:null};
+    audioChs:2,_tempPath:null,_vuMerge:null,_vuAllAns:null,_vuAllBufs:null,_applyNchFn:null};
 }
 
 async function getAudioDevs(){try{audioDevs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput');}catch(e){audioDevs=[];}}
@@ -2439,21 +2439,7 @@ function loadFile(slot,f){
         _rebuildAuRoutingAuto();
       };
       d._applyNchFn=_applyNch; // analyzeBPM 결과에서 채널 수 받아 갱신하기 위해 노출
-      _applyNch(2);
-      // play 시작 후 실제 신호를 감지해 채널 수 결정 (100ms 간격, 최대 15회 = 1.5초)
-      const _detectChs=()=>{
-        let mx=0;
-        _aAll.forEach((an,i)=>{an.getByteTimeDomainData(_bAll[i]);if(_bAll[i].some(v=>Math.abs(v-128)>4))mx=i+1;});
-        return Math.max(2,mx);
-      };
-      d.au.addEventListener('play',()=>{
-        if(d._vuPoll)clearInterval(d._vuPoll);
-        let n=0;
-        d._vuPoll=setInterval(()=>{
-          n++;const nCh=_detectChs();
-          if(nCh>2||n>=15){clearInterval(d._vuPoll);d._vuPoll=null;if(nCh!==d.vuChCount)_applyNch(nCh);}
-        },100);
-      },{once:true});
+      _applyNch(2); // 초기 2ch — analyzeBPM.then()에서 실제 채널 수로 갱신
     }catch(e){console.warn('[VU]',e);}
   };
   // Formats needing FFmpeg decode (not natively supported in Chromium)
@@ -2709,7 +2695,6 @@ function doEject(slot){
   d.audioChs=2;
   // VU strip 너비 초기화
   const _strip=document.getElementById('dvustrip'+slot);if(_strip)_strip.style.width='';
-  if(d._vuPoll){clearInterval(d._vuPoll);d._vuPoll=null;}
   if(d._vuMerge){try{d._vuMerge.disconnect();}catch(_){}d._vuMerge=null;}
   if(d._vuAllAns){d._vuAllAns.forEach(a=>{try{a.disconnect();}catch(_){}});d._vuAllAns=null;d._vuAllBufs=null;}
   d._applyNchFn=null;
