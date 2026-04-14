@@ -2,15 +2,66 @@
 // Prevent EPIPE crashes when stdout pipe is broken
 process.stdout?.on('error',()=>{});
 process.stderr?.on('error',()=>{});
-const{app,BrowserWindow,ipcMain}=require('electron');
+const{app,BrowserWindow,ipcMain,protocol,net}=require('electron');
 
 // Single instance lock — prevent duplicate app windows
 const gotLock=app.requestSingleInstanceLock();
 if(!gotLock){console.log('[APP] another instance running — quitting');app.quit();process.exit(0);}
 app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.focus();}});
-const path=require('path'),os=require('os'),fs=require('fs');
+const path=require('path'),os=require('os'),fs=require('fs'),crypto=require('crypto');
+const{spawn}=require('child_process');
 const dgram=require('dgram');
 const{BridgeCore,getAllInterfaces}=require('./bridge-core');
+
+// ═══ FFmpeg multi-channel audio decode ═══════════════════════════════
+let _ffmpegPath=null;
+function _findFFmpeg(){
+  if(_ffmpegPath!==null)return _ffmpegPath;
+  const candidates=[
+    '/opt/homebrew/bin/ffmpeg',   // Apple Silicon Homebrew
+    '/usr/local/bin/ffmpeg',      // Intel Homebrew
+    '/usr/bin/ffmpeg',
+    process.env.FFMPEG_PATH||'',
+  ].filter(Boolean);
+  for(const p of candidates){try{fs.accessSync(p,fs.constants.X_OK);_ffmpegPath=p;return p;}catch(_){}}
+  try{const r=require('child_process').execSync('which ffmpeg 2>/dev/null',{encoding:'utf8',timeout:2000}).trim();if(r){_ffmpegPath=r;return r;}}catch(_){}
+  _ffmpegPath='';return'';
+}
+
+// Temp file registry — cleaned up on quit
+const _tempFiles=new Set();
+app.on('before-quit',()=>{for(const f of _tempFiles){try{fs.unlinkSync(f);}catch(_){}}});
+
+// bridge-audio:// — serves decoded temp WAV files with range request support
+// Registered before app ready via protocol.registerSchemesAsPrivileged
+protocol.registerSchemesAsPrivileged([
+  {scheme:'bridge-audio',privileges:{standard:true,secure:true,supportFetchAPI:true,bypassCSP:true,stream:true}},
+]);
+
+function _registerBridgeAudioProtocol(){
+  protocol.handle('bridge-audio',(req)=>{
+    const fp=decodeURIComponent(new URL(req.url).pathname);
+    // Security: only serve registered temp files
+    if(!_tempFiles.has(fp)){return new Response('Forbidden',{status:403});}
+    try{
+      const stat=fs.statSync(fp);const total=stat.size;
+      const rangeHdr=req.headers.get('range');
+      if(rangeHdr){
+        const[s,e]=rangeHdr.replace('bytes=','').split('-');
+        const start=parseInt(s)||0;const end=e?parseInt(e):total-1;
+        const length=end-start+1;
+        const stream=fs.createReadStream(fp,{start,end});
+        return new Response(stream,{status:206,headers:{
+          'Content-Range':`bytes ${start}-${end}/${total}`,
+          'Accept-Ranges':'bytes','Content-Length':String(length),'Content-Type':'audio/wav',
+        }});
+      }
+      return new Response(fs.createReadStream(fp),{headers:{
+        'Accept-Ranges':'bytes','Content-Length':String(total),'Content-Type':'audio/wav',
+      }});
+    }catch(e){return new Response('Not found',{status:404});}
+  });
+}
 
 // Art-Net ArtTimeCode sender
 const _artSocket=dgram.createSocket('udp4');
@@ -159,6 +210,48 @@ ipcMain.handle('bridge:setTCNetUnicast',(_,{unicast,allIfaces})=>{
   bridge?.setTCNetUnicast(unicast,allIfaces);return{ok:true};
 });
 
+// ═══ Multi-channel audio decode (FFmpeg) ═════════════════════════════
+ipcMain.handle('bridge:checkFFmpeg',()=>{
+  const p=_findFFmpeg();return{available:!!p,path:p};
+});
+
+ipcMain.handle('bridge:decodeAudio',async(_,{filePath,slot})=>{
+  const ffmpeg=_findFFmpeg();
+  if(!ffmpeg)return{ok:false,err:'FFmpeg를 찾을 수 없습니다.\nbrew install ffmpeg 로 설치하세요.'};
+  const tmpOut=path.join(os.tmpdir(),`bridge_${crypto.randomBytes(6).toString('hex')}.wav`);
+  _tempFiles.add(tmpOut);
+  return new Promise(resolve=>{
+    // Decode to 48kHz 24-bit PCM WAV, preserving all channels
+    const args=['-i',filePath,'-vn','-acodec','pcm_s24le','-ar','48000','-y',tmpOut];
+    const proc=spawn(ffmpeg,args,{stdio:['ignore','ignore','pipe']});
+    let stderr='',durationSec=0;
+    proc.stderr.on('data',chunk=>{
+      const txt=chunk.toString();stderr+=txt;
+      // Parse total duration once
+      if(!durationSec){const m=stderr.match(/Duration:\s*(\d+):(\d+):(\d+\.?\d*)/);
+        if(m)durationSec=parseInt(m[1])*3600+parseInt(m[2])*60+parseFloat(m[3]);}
+      // Parse progress
+      const pm=txt.match(/time=(\d+):(\d+):(\d+\.?\d*)/);
+      if(pm&&durationSec>0){
+        const cur=parseInt(pm[1])*3600+parseInt(pm[2])*60+parseFloat(pm[3]);
+        const pct=Math.min(99,Math.round(cur/durationSec*100));
+        if(win&&!win.isDestroyed())win.webContents.send('bridge:audioProgress',{slot,pct});
+      }
+    });
+    proc.on('error',e=>{_tempFiles.delete(tmpOut);try{fs.unlinkSync(tmpOut);}catch(_){}resolve({ok:false,err:e.message});});
+    proc.on('close',code=>{
+      if(code!==0){_tempFiles.delete(tmpOut);try{fs.unlinkSync(tmpOut);}catch(_){}resolve({ok:false,err:stderr.slice(-400)});return;}
+      if(win&&!win.isDestroyed())win.webContents.send('bridge:audioProgress',{slot,pct:100});
+      resolve({ok:true,tempPath:tmpOut});
+    });
+  });
+});
+
+ipcMain.handle('bridge:cleanupTemp',(_,{tempPath})=>{
+  if(tempPath&&_tempFiles.has(tempPath)){try{fs.unlinkSync(tempPath);}catch(_){}finally{_tempFiles.delete(tempPath);}}
+  return{ok:true};
+});
+
 // ═══ Rekordbox ANLZ PWV7 reader ═══
 // Reads 3-band waveform data from .2EX files for pixel-perfect Rekordbox rendering
 const _anlzDir=path.join(os.homedir(),'Library','Pioneer','rekordbox','share','PIONEER','USBANLZ');
@@ -252,7 +345,7 @@ ipcMain.handle('bridge:findRekordboxWaveform',(_,{filename})=>{
   }catch(e){console.warn('[ANLZ]',e.message);return null;}
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(()=>{_registerBridgeAudioProtocol();createWindow();});
 let _cleaned=false,_quitting=false;
 function doQuit(){
   if(_quitting)return;_quitting=true;

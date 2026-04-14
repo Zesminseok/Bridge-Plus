@@ -460,7 +460,8 @@ function createDeck(slot,type='virtual'){
     wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,
     _wfCache:null,_wfCacheH:0,_wfCacheKey:'',
     key:'',vu:0,vuSrc:null,vuAn:null,vuBuf:null,artUrl:null,hwVu:0,beatInBar:1,
-    zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,mtcMaster:false};
+    zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,mtcMaster:false,
+    audioChs:2,_tempPath:null};
 }
 
 async function getAudioDevs(){try{audioDevs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput');}catch(e){audioDevs=[];}}
@@ -828,33 +829,8 @@ async function _probeAndFillChSels(el){
 }
 // ── Virtual deck audio channel routing ───────────────────────────────
 let _auChSplit=null,_auChMerge=null;
-async function _rebuildAuRouting(){
-  const ac=_getAuCtx();
-  const mg=_getMasterGain();
-  const pair=parseInt(cfg.aoChPair)||0;
-  const offset=pair*2;
-  // Set output device on AudioContext (Chrome 110+ / Electron)
-  if(cfg.aoId&&ac.setSinkId){try{await ac.setSinkId(cfg.aoId);}catch(e){console.warn('[AuCtx] setSinkId:',e);}}
-  // Disconnect previous routing
-  try{mg.disconnect();}catch(_){}
-  if(offset===0){
-    try{ac.destination.channelCount=2;ac.destination.channelCountMode='max';}catch(_){}
-    mg.connect(ac.destination);
-  }else{
-    const totalCh=Math.min(offset+2,ac.destination.maxChannelCount||8);
-    try{
-      ac.destination.channelCount=totalCh;
-      ac.destination.channelCountMode='explicit';
-      ac.destination.channelInterpretation='discrete';
-    }catch(_){}
-    _auChSplit=ac.createChannelSplitter(2);
-    _auChMerge=ac.createChannelMerger(totalCh);
-    mg.connect(_auChSplit);
-    _auChSplit.connect(_auChMerge,0,Math.min(offset,totalCh-1));
-    _auChSplit.connect(_auChMerge,1,Math.min(offset+1,totalCh-1));
-    _auChMerge.connect(ac.destination);
-  }
-}
+// Alias — used internally; actual logic in _rebuildAuRoutingAuto (defined after _buildVuStrip)
+async function _rebuildAuRouting(){return _rebuildAuRoutingAuto?.()??null;}
 async function setOut(au,id){if(!au||!id)return;try{if(au.setSinkId)await au.setSinkId(id);}catch(e){}}
 
 // ════ Waveform ════════════════════════════════════════
@@ -1812,13 +1788,13 @@ function bindDeck(slot){
   el.addEventListener('drop',e=>{
     e.preventDefault();el.classList.remove('dov');
     const f=e.dataTransfer.files[0];
-    if(f&&(f.type.startsWith('audio/')||/\.(mp3|wav|flac|aac|ogg|m4a|aiff)$/i.test(f.name)))loadFile(slot,f);
+    if(f&&(f.type.startsWith('audio/')||f.type.startsWith('video/')||/\.(mp3|wav|flac|aac|ogg|m4a|aiff?|mp4|mkv|mka|dts|dtshd|truehd|thd|eac3|ac3)$/i.test(f.name)))loadFile(slot,f);
   });
   // Click to open file picker
   const ddzEl=el.querySelector('.ddz[data-a="open"]');
   if(ddzEl){ddzEl.addEventListener('click',()=>{
     const inp=document.createElement('input');inp.type='file';
-    inp.accept='audio/*,.mp3,.wav,.flac,.aac,.ogg,.m4a,.aiff,.aif';
+    inp.accept='audio/*,video/mp4,.mp3,.wav,.flac,.aac,.ogg,.m4a,.aiff,.aif,.mp4,.mkv,.mka,.dts,.dtshd,.truehd,.thd,.eac3,.ac3';
     inp.onchange=()=>{const f=inp.files[0];if(f)loadFile(slot,f);};
     inp.click();
   });}
@@ -2440,16 +2416,57 @@ function loadFile(slot,f){
       ans.forEach((an,i)=>an.connect(merge,0,Math.min(i,numCh-1)));
       // Route through master GainNode (post-analyser: VU meters independent of master vol)
       merge.connect(_getMasterGain());
-      // Apply channel pair routing (rebuilds masterGain → destination wiring)
-      _rebuildAuRouting();
       src.connect(split);
       d.vuSrc=src;d.vuChs=ans;d.vuBufs=bufs;d.vuChCount=numCh;
+      d.audioChs=numCh; // store for multi-channel auto-routing
+      // Rebuild routing — auto-detects multi-channel and configures destination
+      _rebuildAuRoutingAuto();
       d.vuAnL=ans[0];d.vuAnR=ans[1]||ans[0];d.vuBufL=bufs[0];d.vuBufR=bufs[1]||bufs[0];
       d.vuAn=ans[0];d.vuBuf=bufs[0];
       // VU strip에 채널 수에 맞는 바 생성
       _buildVuStrip(slot,numCh);
     }catch(e){console.warn('[VU]',e);}
   };
+  // Formats needing FFmpeg decode (not natively supported in Chromium)
+  const _needsFFmpeg=/\.(mkv|mka|dts|dtshd|truehd|thd|eac3|ac3)$/i.test(f.name);
+  if(_needsFFmpeg){
+    // Show converting status in deck
+    const _stEl=document.getElementById('did'+slot);
+    if(_stEl){const _prev=_stEl.innerHTML;_stEl.innerHTML='<span style="color:var(--ylw);font:600 10px var(--mn)">FFmpeg 변환 중…</span>';}
+    const _pbar=document.getElementById('wovol'+slot);
+    // Show progress via IPC events
+    const _prgCb=window.bridge.onAudioProgress&&((data)=>{
+      if(data.slot!==slot)return;
+      const bar=document.getElementById('wovol'+slot);
+      if(bar){bar.style.width=data.pct+'%';bar.style.opacity='1';}
+    });
+    // Call main process to decode via FFmpeg
+    f.arrayBuffer().then(async ab=>{
+      // Write temp input file
+      const res=await window.bridge.decodeAudio(f.path||f.name,slot).catch(e=>({ok:false,err:e.message}));
+      if(!res.ok){
+        alert(`FFmpeg 변환 실패:\n${res.err}`);
+        const stEl=document.getElementById('did'+slot);
+        if(stEl)stEl.innerHTML='<span style="color:var(--red);font:600 10px var(--mn)">변환 실패</span>';
+        return;
+      }
+      // Clean up previous temp file for this slot
+      if(d._tempPath){window.bridge.cleanupTemp(d._tempPath);}
+      d._tempPath=res.tempPath;
+      // Load from bridge-audio:// protocol (streaming with range support)
+      const _fakeBlob=await fetch('bridge-audio://'+encodeURIComponent(res.tempPath)).then(r=>r.blob()).catch(()=>null);
+      if(_fakeBlob){_initAudio(_fakeBlob);}
+      else{
+        // Fallback: create audio element directly with custom protocol URL
+        const _au=new Audio('bridge-audio://'+encodeURIComponent(res.tempPath));
+        d.au=_au;if(cfg.aoId)setOut(_au,cfg.aoId);
+        _au.preload='auto';
+        _au.addEventListener('loadedmetadata',()=>{d.dur=_au.duration*1000;d.bpm=0;d.ld=true;patchDeck(slot);});
+        _au.addEventListener('ended',()=>{d.pl=false;d.pos=d.dur||0;});
+      }
+    });
+    return;
+  }
   if(/\.aiff?$/i.test(f.name)){
     f.arrayBuffer().then(ab=>{
       try{_initAudio(_aiffToWav(ab));console.log('[AIFF] converted to WAV');}
@@ -2460,14 +2477,65 @@ function loadFile(slot,f){
 
 // ════ Deck actions ═══════════════════════════════════
 
+// Standard channel label maps
+const _CH_LABELS_STEREO=['L','R'];
+const _CH_LABELS_51=['L','R','C','LFE','Ls','Rs'];
+const _CH_LABELS_71=['L','R','C','LFE','Lss','Rss','Lrs','Rrs'];
+const _CH_LABELS_ATMOS=['L','R','C','LFE','Ls','Rs','Ltf','Rtf']; // 7.1.2
+function _chLabel(ch,total){
+  if(total===6)return _CH_LABELS_51[ch]||String(ch+1);
+  if(total>=7)return(total===8?_CH_LABELS_71:_CH_LABELS_ATMOS)[ch]||String(ch+1);
+  return _CH_LABELS_STEREO[ch]||String(ch+1);
+}
+
 // VU strip: 채널 수에 맞게 동적으로 채널 바 추가
 function _buildVuStrip(slot,numCh){
   const strip=document.getElementById('dvustrip'+slot);if(!strip)return;
-  const CH_LABELS=['L','R','3','4','5','6','7','8'];
   strip.innerHTML='';
   for(let i=0;i<numCh;i++){
-    const lbl=CH_LABELS[i]||String(i+1);
+    const lbl=_chLabel(i,numCh);
     strip.innerHTML+=`<div class="dvu-ch"><span class="dvu-lbl">${lbl}</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvu${i<2?(['L','R'][i]):(i+1)}${slot}"></div></div></div>`;
+  }
+}
+
+// ── Multi-channel audio auto-routing ─────────────────────────────────
+// When any deck has > 2 channels, configure destination for N-channel 1:1 routing
+let _autoChMode=false; // true = N-channel 1:1, false = manual pair selection
+function _getMaxDeckChs(){
+  return Math.max(2,...Object.values(DECKS).filter(d=>d.ld&&d.audioChs>0).map(d=>d.audioChs));
+}
+async function _rebuildAuRoutingAuto(){
+  const ac=_getAuCtx();
+  const mg=_getMasterGain();
+  const maxCh=_getMaxDeckChs();
+  _autoChMode=(maxCh>2);
+  // Update AUTO label in Settings if open
+  const _autoLbl=document.getElementById('aoChAutoLbl');
+  if(_autoLbl){_autoLbl.style.display=_autoChMode?'':'none';if(_autoLbl.parentElement?.previousSibling)_autoLbl.title=_autoChMode?`${maxCh}ch 자동 매핑`:'수동 채널 쌍';}
+  // Set output device
+  if(cfg.aoId&&ac.setSinkId){try{await ac.setSinkId(cfg.aoId);}catch(e){console.warn('[AuCtx] setSinkId:',e);}}
+  try{mg.disconnect();}catch(_){}
+  if(!_autoChMode){
+    // Stereo pair routing (manual selection)
+    const offset=(parseInt(cfg.aoChPair)||0)*2;
+    if(offset===0){
+      try{ac.destination.channelCount=2;ac.destination.channelCountMode='max';}catch(_){}
+      mg.connect(ac.destination);
+    }else{
+      const totalCh=Math.min(offset+2,ac.destination.maxChannelCount||8);
+      try{ac.destination.channelCount=totalCh;ac.destination.channelCountMode='explicit';ac.destination.channelInterpretation='discrete';}catch(_){}
+      _auChSplit=ac.createChannelSplitter(2);_auChMerge=ac.createChannelMerger(totalCh);
+      mg.connect(_auChSplit);
+      _auChSplit.connect(_auChMerge,0,Math.min(offset,totalCh-1));
+      _auChSplit.connect(_auChMerge,1,Math.min(offset+1,totalCh-1));
+      _auChMerge.connect(ac.destination);
+    }
+  }else{
+    // Multi-channel 1:1 routing
+    const ch=Math.min(maxCh,ac.destination.maxChannelCount||maxCh);
+    try{ac.destination.channelCount=ch;ac.destination.channelCountMode='explicit';ac.destination.channelInterpretation='discrete';}catch(_){}
+    mg.connect(ac.destination); // GainNode passes all channels through
+    console.log(`[AuRoute] auto ${ch}ch 1:1`);
   }
 }
 
@@ -2612,6 +2680,8 @@ function doEject(slot){
   const d=DECKS[slot];if(!d)return;
   if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
+  if(d._tempPath){window.bridge.cleanupTemp(d._tempPath);d._tempPath=null;}
+  d.audioChs=2;
   if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
   Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,art:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
   if(E&&run)window.bridge.removeLayer(slot);
@@ -3219,7 +3289,7 @@ function renderSettings(){
     <div class="sl">오디오 출력</div>
     <div class="sgr">
       <div class="srw"><span class="srl">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div>
-      <div class="srw"><span class="srl">출력 채널</span><select class="ss" data-cfg="aoChPair" style="max-width:120px" disabled><option>감지 중…</option></select></div>
+      <div class="srw"><span class="srl">출력 채널</span><div style="display:flex;align-items:center;gap:6px"><select class="ss" data-cfg="aoChPair" style="max-width:120px" disabled><option>감지 중…</option></select><span id="aoChAutoLbl" style="font:400 9px var(--mn);color:var(--grn);display:none">AUTO</span></div></div>
     </div>
     <div class="al alw" style="margin-top:8px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
