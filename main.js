@@ -84,6 +84,13 @@ function createWindow(){
   win.on('close',()=>saveBounds());
   const p=path.join(__dirname,'renderer','index.html');
   win.loadFile(fs.existsSync(p)?p:path.join(__dirname,'index.html'));
+  // 렌더러 콘솔 로그를 main 프로세스 stdout으로 출력 (디버그용)
+  win.webContents.on('console-message',(_e,level,msg,line,src)=>{
+    if(/\[OVGL\]|\[dOV\]|\[WGL\]|\[WFC\]/.test(msg)){
+      const lvl=['V','I','W','E'][level]||'?';
+      console.log(`[RENDERER:${lvl}] ${msg}  (${src?.split('/').pop()}:${line})`);
+    }
+  });
 }
 
 function push(){

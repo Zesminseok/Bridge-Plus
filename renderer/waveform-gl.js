@@ -117,8 +117,8 @@ class WaveformGL {
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     if (this._prog)  gl.deleteProgram(this._prog);
     if (this._vao)   gl.deleteVertexArray(this._vao);
-    const ext = gl.getExtension('WEBGL_lose_context');
-    if (ext) ext.loseContext();
+    // loseContext() 금지: 캔버스 재사용 시 컨텍스트가 소실된 채로 남아
+    // getContext('webgl2')가 소실 컨텍스트를 반환 → createShader()=null 오류
   }
 
   _initGeometry() {
@@ -140,6 +140,7 @@ class WaveformGL {
     const gl = this.gl;
     const mk = (type, src) => {
       const s = gl.createShader(type);
+      if (!s) throw new Error('createShader null — context lost=' + gl.isContextLost());
       gl.shaderSource(s, src);
       gl.compileShader(s);
       if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
@@ -279,8 +280,8 @@ class OverviewGL {
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     if (this._prog)  gl.deleteProgram(this._prog);
     if (this._vao)   gl.deleteVertexArray(this._vao);
-    const ext = gl.getExtension('WEBGL_lose_context');
-    if (ext) ext.loseContext();
+    // loseContext() 금지: 캔버스 재사용 시 컨텍스트가 소실된 채로 남아
+    // getContext('webgl2')가 소실 컨텍스트를 반환 → createShader()=null 오류
   }
 
   _initGeometry() {
@@ -302,6 +303,7 @@ class OverviewGL {
     const gl = this.gl;
     const mk = (type, src) => {
       const s = gl.createShader(type);
+      if (!s) throw new Error('createShader null — context lost=' + gl.isContextLost());
       gl.shaderSource(s, src);
       gl.compileShader(s);
       if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
