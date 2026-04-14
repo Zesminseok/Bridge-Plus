@@ -2493,13 +2493,19 @@ function _chLabel(ch,total){
   return String(ch+1);
 }
 
-// VU strip: 채널 수에 맞게 동적으로 채널 바 추가
+// VU strip: 채널 수에 맞게 동적으로 채널 바 + 너비 조정
+const _VU_CH_W=9; // px per channel (bar + gap)
+const _VU_PAD=6;  // px total padding/border
 function _buildVuStrip(slot,numCh){
   const strip=document.getElementById('dvustrip'+slot);if(!strip)return;
+  // 너비 동적 조정: 2ch=28px, 6ch=62px, 8ch=80px
+  const w=Math.max(28,numCh*_VU_CH_W+_VU_PAD+(numCh-1)*2);
+  strip.style.width=w+'px';
   strip.innerHTML='';
+  const CH_IDS=['L','R','3','4','5','6','7','8'];
   for(let i=0;i<numCh;i++){
-    const lbl=_chLabel(i,numCh);
-    strip.innerHTML+=`<div class="dvu-ch"><span class="dvu-lbl">${lbl}</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvu${i<2?(['L','R'][i]):(i+1)}${slot}"></div></div></div>`;
+    const id='dvu'+(CH_IDS[i]||String(i+1))+slot;
+    strip.innerHTML+=`<div class="dvu-ch"><span class="dvu-lbl">${_chLabel(i,numCh)}</span><div class="dvu-hbar"><div class="dvu-hfill" id="${id}"></div></div></div>`;
   }
 }
 
@@ -2687,6 +2693,8 @@ function doEject(slot){
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
   if(d._tempPath){window.bridge.cleanupTemp(d._tempPath);d._tempPath=null;}
   d.audioChs=2;
+  // VU strip 너비 초기화
+  const _strip=document.getElementById('dvustrip'+slot);if(_strip)_strip.style.width='';
   if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
   Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,art:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
   if(E&&run)window.bridge.removeLayer(slot);
