@@ -766,6 +766,66 @@ function _getMasterGain(){
   }
   return _masterGain;
 }
+// ── Audio device channel probing ─────────────────────────────────────
+const _devChCache={};
+async function _probeDevChannels(deviceId){
+  const key=deviceId||'__default__';
+  if(_devChCache[key]!==undefined)return _devChCache[key];
+  let max=2;
+  try{
+    const ctx=new AudioContext({sampleRate:48000});
+    if(deviceId&&ctx.setSinkId){
+      await ctx.setSinkId(deviceId);
+      await new Promise(r=>setTimeout(r,40)); // let sink settle
+    }
+    max=Math.max(2,ctx.destination.maxChannelCount||2);
+    ctx.close();
+  }catch(_){max=2;}
+  _devChCache[key]=max;
+  return max;
+}
+// Fill stereo pair selector (Ch 1/2, Ch 3/4 …) based on probed maxChannelCount
+function _fillChSelPair(sel,maxCh,curPair){
+  sel.innerHTML='';
+  const pairs=Math.floor(maxCh/2)||1;
+  for(let i=0;i<pairs;i++){
+    const o=document.createElement('option');
+    o.value=i;o.textContent=`Ch ${i*2+1}/${i*2+2}`;
+    if(i===curPair)o.selected=true;
+    sel.appendChild(o);
+  }
+}
+// Fill mono channel selector (Ch 1, Ch 2 …) based on probed maxChannelCount
+function _fillChSelMono(sel,maxCh,curCh){
+  sel.innerHTML='';
+  for(let i=0;i<maxCh;i++){
+    const o=document.createElement('option');
+    o.value=i;o.textContent=`Ch ${i+1}`;
+    if(i===curCh)o.selected=true;
+    sel.appendChild(o);
+  }
+}
+// Probe all selected audio devices and update channel selectors in Settings
+async function _probeAndFillChSels(el){
+  const aoChSel=el.querySelector('[data-cfg="aoChPair"]');
+  if(aoChSel){
+    aoChSel.disabled=true;
+    aoChSel.innerHTML='<option>감지 중…</option>';
+    const max=await _probeDevChannels(cfg.aoId);
+    _fillChSelPair(aoChSel,max,parseInt(cfg.aoChPair)||0);
+    aoChSel.disabled=false;
+  }
+  for(const lyr of['A','B','M']){
+    const ltcChSel=el.querySelector(`[data-cfg="tcLtc${lyr}Ch"]`);
+    if(ltcChSel){
+      ltcChSel.disabled=true;
+      ltcChSel.innerHTML='<option>감지 중…</option>';
+      const max=await _probeDevChannels(cfg[`tcLtc${lyr}`]);
+      _fillChSelMono(ltcChSel,max,parseInt(cfg[`tcLtc${lyr}Ch`])||0);
+      ltcChSel.disabled=false;
+    }
+  }
+}
 // ── Virtual deck audio channel routing ───────────────────────────────
 let _auChSplit=null,_auChMerge=null;
 async function _rebuildAuRouting(){
@@ -3159,7 +3219,7 @@ function renderSettings(){
     <div class="sl">오디오 출력</div>
     <div class="sgr">
       <div class="srw"><span class="srl">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div>
-      <div class="srw"><span class="srl">출력 채널</span><select class="ss" data-cfg="aoChPair" style="max-width:120px">${[0,1,2,3,4,5,6,7].map(i=>`<option value="${i}" ${(cfg.aoChPair||0)==i?'selected':''}>Ch ${i*2+1}/${i*2+2}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">출력 채널</span><select class="ss" data-cfg="aoChPair" style="max-width:120px" disabled><option>감지 중…</option></select></div>
     </div>
     <div class="al alw" style="margin-top:8px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
@@ -3171,10 +3231,7 @@ function renderSettings(){
     <div class="sl mt">SMPTE 타임코드 출력</div>
     <div class="sgr">
       <div class="srw"><span class="srl">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
-      ${['A','B','M'].map(lyr=>{
-        const chOpts=[1,2,3,4,5,6,7,8].map(i=>`<option value="${i-1}" ${(cfg[`tcLtc${lyr}Ch`]||0)===(i-1)?'selected':''}>Ch ${i}</option>`).join('');
-        return`<div class="srw"><span class="srl">LTC — Layer ${lyr}</span><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select class="ss" data-cfg="tcLtc${lyr}" style="max-width:180px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg[`tcLtc${lyr}`]===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select><select class="ss" data-cfg="tcLtc${lyr}Ch" style="width:72px">${chOpts}</select></div></div>`;
-      }).join('')}
+      ${['A','B','M'].map(lyr=>`<div class="srw"><span class="srl">LTC — Layer ${lyr}</span><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select class="ss" data-cfg="tcLtc${lyr}" style="max-width:180px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg[`tcLtc${lyr}`]===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select><select class="ss" data-cfg="tcLtc${lyr}Ch" style="width:72px" disabled><option>감지 중…</option></select></div></div>`).join('')}
       <div class="srw"><span class="srl">MTC MIDI 출력</span><select class="ss" id="midiOutSel" style="max-width:200px"><option value="">—</option></select></div>
       <div class="srw"><span class="srl">Artnet 대상 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
       <div class="srw"><span class="srl">Artnet Port</span><input type="text" value="${cfg.tcArtnetPort}" data-cfg="tcArtnetPort" placeholder="6454" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:70px;text-align:right"></div>
@@ -3193,13 +3250,42 @@ function renderSettings(){
   el.querySelectorAll('[data-cfg]').forEach(inp=>{
     inp.addEventListener('change',e=>{
       const k=inp.dataset.cfg;
-      if(k==='ao'){cfg.aoId=e.target.value;_rebuildAuRouting();}
+      if(k==='ao'){
+        cfg.aoId=e.target.value;
+        // Invalidate cache and re-probe for new device
+        delete _devChCache[e.target.value||'__default__'];
+        const aoChSel=el.querySelector('[data-cfg="aoChPair"]');
+        if(aoChSel){aoChSel.disabled=true;aoChSel.innerHTML='<option>감지 중…</option>';}
+        _probeDevChannels(e.target.value).then(max=>{
+          if(aoChSel){
+            const cur=parseInt(cfg.aoChPair)||0;
+            _fillChSelPair(aoChSel,max,cur<Math.floor(max/2)?cur:0);
+            cfg.aoChPair=parseInt(aoChSel.value)||0;
+            aoChSel.disabled=false;
+          }
+          _rebuildAuRouting();_saveCfg();
+        });
+        return;
+      }
       else if(k==='aoChPair'){cfg.aoChPair=parseInt(e.target.value)||0;_rebuildAuRouting();}
       else if(k==='tcao'){cfg.tcLtcAoId=e.target.value;}
       else if(k==='tcFps'){cfg.tcFps=e.target.value;}
       else if(/^tcLtc[ABM]$/.test(k)){
         const layer=k.slice(-1);
-        _ltcSetDevice(layer,e.target.value);
+        delete _devChCache[e.target.value||'__default__'];
+        const ltcChSel=el.querySelector(`[data-cfg="tcLtc${layer}Ch"]`);
+        if(ltcChSel){ltcChSel.disabled=true;ltcChSel.innerHTML='<option>감지 중…</option>';}
+        _probeDevChannels(e.target.value).then(max=>{
+          if(ltcChSel){
+            const cur=parseInt(cfg[`tcLtc${layer}Ch`])||0;
+            _fillChSelMono(ltcChSel,max,cur<max?cur:0);
+            cfg[`tcLtc${layer}Ch`]=parseInt(ltcChSel.value)||0;
+            ltcChSel.disabled=false;
+          }
+          _ltcSetDevice(layer,e.target.value,cfg[`tcLtc${layer}Ch`]);
+          _saveCfg();
+        });
+        return;
       }
       else if(/^tcLtc[ABM]Ch$/.test(k)){
         const layer=k.slice(5,6); // 'A','B','M'
@@ -3213,6 +3299,8 @@ function renderSettings(){
       _saveCfg();
     });
   });
+  // Probe audio devices and fill channel selectors (async — updates after render)
+  _probeAndFillChSels(el);
   // Waveform settings
   const wfCenterSel=el.querySelector('#wfCenterSel');
   if(wfCenterSel){wfCenterSel.value=cfg.wfCenter||'left';wfCenterSel.onchange=e=>{cfg.wfCenter=e.target.value;_saveCfg();};}
