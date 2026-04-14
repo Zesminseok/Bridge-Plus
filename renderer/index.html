@@ -2952,7 +2952,9 @@ function tick(){
 
     // VU meter — ALWAYS for virtual, only run-gated for HW
     // Peak meter: returns instantaneous peak (0-1) from time domain buffer
-    const _getPeak=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i++){const v=Math.abs((buf[i]-128)/128);if(v>pk)pk=v;}return pk;};
+    // -45dBFS 노이즈 게이트: AAC/MP4 코덱 노이즈 플로어 제거 (FLAC은 영향 없음)
+    const _NOISE_GATE=0.006; // ≈-44dBFS
+    const _getPeak=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i++){const v=Math.abs((buf[i]-128)/128);if(v>pk)pk=v;}return pk>_NOISE_GATE?pk:0;};
     if(d.type==='hw'){
       // HW: DJM on-air 미터 → VU, 페이더 값 → F
       if(run){
@@ -2971,11 +2973,11 @@ function tick(){
       const active=d.pl||d.cu;
       let peakL=0,peakR=0;
       if(d.vuChs&&d.vuBufs){
-        d.vuChs.forEach((an,i)=>{const v=_getPeak(an,d.vuBufs[i]);const p=d.vuChs[i]._lvl||0;d.vuChs[i]._lvl=active?(v>p?v:v*0.08+p*0.92):Math.max(0,p-0.012);});
+        d.vuChs.forEach((an,i)=>{const v=_getPeak(an,d.vuBufs[i]);const p=d.vuChs[i]._lvl||0;d.vuChs[i]._lvl=active?(v>p?v:v*0.22+p*0.78):Math.max(0,p-0.02);});
         peakL=d.vuChs[0]._lvl||0;peakR=(d.vuChs[1]?._lvl)||0;
       } else {
-        if(d.vuAnL&&d.vuBufL){const v=_getPeak(d.vuAnL,d.vuBufL);const p=d.vuL||0;peakL=active?(v>p?v:v*0.08+p*0.92):Math.max(0,p-0.012);}
-        if(d.vuAnR&&d.vuBufR){const v=_getPeak(d.vuAnR,d.vuBufR);const p=d.vuR||0;peakR=active?(v>p?v:v*0.08+p*0.92):Math.max(0,p-0.012);}
+        if(d.vuAnL&&d.vuBufL){const v=_getPeak(d.vuAnL,d.vuBufL);const p=d.vuL||0;peakL=active?(v>p?v:v*0.22+p*0.78):Math.max(0,p-0.02);}
+        if(d.vuAnR&&d.vuBufR){const v=_getPeak(d.vuAnR,d.vuBufR);const p=d.vuR||0;peakR=active?(v>p?v:v*0.22+p*0.78):Math.max(0,p-0.02);}
       }
       d.vuL=peakL; d.vuR=peakR;
       d.vu=Math.max(peakL,peakR);
