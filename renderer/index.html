@@ -2430,40 +2430,35 @@ function loadFile(slot,f){
   // Formats needing FFmpeg decode (not natively supported in Chromium)
   const _needsFFmpeg=/\.(mkv|mka|dts|dtshd|truehd|thd|eac3|ac3)$/i.test(f.name);
   if(_needsFFmpeg){
-    // Show converting status in deck
-    const _stEl=document.getElementById('did'+slot);
-    if(_stEl){const _prev=_stEl.innerHTML;_stEl.innerHTML='<span style="color:var(--ylw);font:600 10px var(--mn)">FFmpeg 변환 중…</span>';}
-    const _pbar=document.getElementById('wovol'+slot);
-    // Show progress via IPC events
-    const _prgCb=window.bridge.onAudioProgress&&((data)=>{
-      if(data.slot!==slot)return;
-      const bar=document.getElementById('wovol'+slot);
-      if(bar){bar.style.width=data.pct+'%';bar.style.opacity='1';}
-    });
-    // Call main process to decode via FFmpeg
-    f.arrayBuffer().then(async ab=>{
-      // Write temp input file
-      const res=await window.bridge.decodeAudio(f.path||f.name,slot).catch(e=>({ok:false,err:e.message}));
-      if(!res.ok){
-        alert(`FFmpeg 변환 실패:\n${res.err}`);
-        const stEl=document.getElementById('did'+slot);
-        if(stEl)stEl.innerHTML='<span style="color:var(--red);font:600 10px var(--mn)">변환 실패</span>';
+    // Check FFmpeg availability first
+    window.bridge.checkFFmpeg().then(async({available})=>{
+      if(!available){
+        // Show non-blocking info in deck area instead of blocking alert
+        const _stEl=document.getElementById('did'+slot);
+        if(_stEl)_stEl.innerHTML=`<div style="font:400 9px var(--sn);color:var(--ylw);line-height:1.4">
+          <b>${f.name.split('.').pop().toUpperCase()}</b> 포맷은 FFmpeg 필요<br>
+          <span style="color:var(--tx3)">brew install ffmpeg</span></div>`;
         return;
       }
-      // Clean up previous temp file for this slot
+      // Show converting progress in deck
+      const _stEl=document.getElementById('did'+slot);
+      if(_stEl)_stEl.innerHTML='<span style="color:var(--ylw);font:600 9px var(--mn)">변환 중…</span>';
+      const _progUnsub=window.bridge.onAudioProgress((data)=>{
+        if(data.slot!==slot)return;
+        const bar=document.getElementById('wovol'+slot);
+        if(bar){bar.style.width=data.pct+'%';bar.style.opacity='1';}
+      });
+      const res=await window.bridge.decodeAudio(f.path||f.name,slot).catch(e=>({ok:false,err:e.message}));
+      if(!res.ok){
+        const stEl=document.getElementById('did'+slot);
+        if(stEl)stEl.innerHTML=`<span style="color:var(--red);font:600 9px var(--mn)">변환 실패: ${res.err.slice(0,60)}</span>`;
+        return;
+      }
       if(d._tempPath){window.bridge.cleanupTemp(d._tempPath);}
       d._tempPath=res.tempPath;
-      // Load from bridge-audio:// protocol (streaming with range support)
-      const _fakeBlob=await fetch('bridge-audio://'+encodeURIComponent(res.tempPath)).then(r=>r.blob()).catch(()=>null);
-      if(_fakeBlob){_initAudio(_fakeBlob);}
-      else{
-        // Fallback: create audio element directly with custom protocol URL
-        const _au=new Audio('bridge-audio://'+encodeURIComponent(res.tempPath));
-        d.au=_au;if(cfg.aoId)setOut(_au,cfg.aoId);
-        _au.preload='auto';
-        _au.addEventListener('loadedmetadata',()=>{d.dur=_au.duration*1000;d.bpm=0;d.ld=true;patchDeck(slot);});
-        _au.addEventListener('ended',()=>{d.pl=false;d.pos=d.dur||0;});
-      }
+      // Fetch decoded WAV as Blob via bridge-audio:// protocol
+      const blob=await fetch('bridge-audio://'+encodeURIComponent(res.tempPath)).then(r=>r.blob()).catch(()=>null);
+      if(blob){_initAudio(blob);}
     });
     return;
   }
@@ -2477,15 +2472,10 @@ function loadFile(slot,f){
 
 // ════ Deck actions ═══════════════════════════════════
 
-// Standard channel label maps
-const _CH_LABELS_STEREO=['L','R'];
-const _CH_LABELS_51=['L','R','C','LFE','Ls','Rs'];
-const _CH_LABELS_71=['L','R','C','LFE','Lss','Rss','Lrs','Rrs'];
-const _CH_LABELS_ATMOS=['L','R','C','LFE','Ls','Rs','Ltf','Rtf']; // 7.1.2
+// Channel labels: stereo = L/R, multi-channel = channel number
 function _chLabel(ch,total){
-  if(total===6)return _CH_LABELS_51[ch]||String(ch+1);
-  if(total>=7)return(total===8?_CH_LABELS_71:_CH_LABELS_ATMOS)[ch]||String(ch+1);
-  return _CH_LABELS_STEREO[ch]||String(ch+1);
+  if(total===2)return ch===0?'L':'R';
+  return String(ch+1);
 }
 
 // VU strip: 채널 수에 맞게 동적으로 채널 바 추가
