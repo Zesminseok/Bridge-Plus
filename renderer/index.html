@@ -366,8 +366,11 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
     <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
     <span style="font:400 11px var(--sn);color:var(--ylw)">START를 눌러 TCNet을 시작하세요</span>
   </div>
-  <div class="sl">OUTPUT LAYERS</div>
-  <div class="out-layers" id="outLayers"></div>
+  <div class="sl" id="outLayersHdr" onclick="toggleOutLayers()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
+    <span>OUTPUT LAYERS</span>
+    <span id="outLayersChevron" style="font-size:9px;color:var(--tx3);transition:transform .2s;display:inline-block;transform:rotate(0deg)">▼</span>
+  </div>
+  <div class="out-layers" id="outLayers" style="display:none"></div>
   <div class="mode-bar">
     <div class="mode-label">DECK MODE</div>
     <div class="mode-btns">
@@ -427,9 +430,25 @@ const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',tcnetIface:'',pdjlIface:'',tcnetM
 // Load persisted settings
 let cfg=Object.assign({},_CFG_DEF);
 try{const _s=localStorage.getItem('bridge_cfg');if(_s){const _p=JSON.parse(_s);Object.assign(cfg,_p);}}catch(_){}
+// OUTPUT LAYERS collapse state — default: collapsed (open only if user explicitly opened)
+;(function(){const open=localStorage.getItem('outLayersOpen')==='1';
+  const el=document.getElementById('outLayers');const ch=document.getElementById('outLayersChevron');
+  if(el)el.style.display=open?'':'none';
+  if(ch)ch.style.transform=open?'rotate(180deg)':'rotate(0deg)';
+})();
 // Migrate old long node names that exceed 8-char TCNet limit
 if(cfg.nm&&cfg.nm.endsWith('%%')&&cfg.nm.replace('%%','').length>6){cfg.nm='Bridge%%';}
 function _saveCfg(){try{localStorage.setItem('bridge_cfg',JSON.stringify(cfg));}catch(_){}}
+
+function toggleOutLayers(){
+  const el=document.getElementById('outLayers');
+  const ch=document.getElementById('outLayersChevron');
+  if(!el)return;
+  const isHidden=el.style.display==='none';
+  el.style.display=isHidden?'':'none';
+  if(ch)ch.style.transform=isHidden?'rotate(180deg)':'rotate(0deg)';
+  try{localStorage.setItem('outLayersOpen',isHidden?'1':'0');}catch(_){}
+}
 
 const MAX_DECKS=6;
 const DECKS={};
@@ -542,7 +561,7 @@ function _ltcStop(layer){
   console.log(`[LTC-${layer}] stopped`);
 }
 
-// ── MTC (MIDI Timecode) ─────────────────────────────
+// ── MTC (Master Timecode) ────────────────────────────
 let _midiAccess=null, _mtcOut=null;
 async function _mtcInit(){
   if(_midiAccess)return true;
@@ -662,7 +681,7 @@ function renderOutLayers(){
         <select class="ss olss" data-ol="${key}" style="width:80px;min-width:0;flex-shrink:1">${mkSrcOpts(key)}</select>
         <div class="olout">
           <button class="tcbtn${o.ltc?' ac-ltc':''}" data-ol="${key}" data-mode="ltc">LTC</button>
-          <button class="tcbtn${o.mtc?' ac-mtc':''}" data-ol="${key}" data-mode="mtc">MTC</button>
+          <button class="tcbtn${o.mtc?' ac-mtc':''}" data-ol="${key}" data-mode="mtc" title="Master Timecode">MTC</button>
           <button class="tcbtn${o.art?' ac-art':''}" data-ol="${key}" data-mode="art">ART</button>
         </div>
         <div style="display:flex;align-items:center;gap:3px;flex-shrink:0">
