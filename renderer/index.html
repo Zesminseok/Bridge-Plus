@@ -461,7 +461,7 @@ function createDeck(slot,type='virtual'){
     _wfCache:null,_wfCacheH:0,_wfCacheKey:'',
     key:'',vu:0,vuSrc:null,vuAn:null,vuBuf:null,artUrl:null,hwVu:0,beatInBar:1,
     zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,mtcMaster:false,
-    audioChs:2,_tempPath:null};
+    audioChs:2,_tempPath:null,_vuPoll:null,_vuMerge:null,_vuAllAns:null,_vuAllBufs:null};
 }
 
 async function getAudioDevs(){try{audioDevs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput');}catch(e){audioDevs=[];}}
@@ -2398,48 +2398,54 @@ function loadFile(slot,f){
       if(d.scratch)return; // ignore during scrub/drag
       d.pl=false;d.pos=d.dur||0; // stay at end, don't jump to start
     });
-    // VU meter: 멀티채널 지원 — ChannelSplitter로 실제 채널 수 감지
+    // VU meter: 8채널 고정 스플리터 + play 이후 신호 감지로 실제 채널 수 결정
+    // (MediaElementAudioSourceNode.channelCount는 실제 재생 전에는 2를 반환하므로 신호 감지 방식 사용)
     try{
       if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
+      if(d._vuMerge){try{d._vuMerge.disconnect();}catch(_){}d._vuMerge=null;}
       const ac=_getAuCtx();
       const src=ac.createMediaElementSource(d.au);
-      // loadedmetadata 시점에는 디코더가 채널 수를 아직 확정하지 않아 2를 반환할 수 있음
-      // 일단 초기 값으로 연결 후, canplaythrough 시점에 재확인
-      const _connectVuNodes=(nCh)=>{
-        // 기존 연결 해제
-        try{src.disconnect();}catch(_){}
-        if(d.vuChs)d.vuChs.forEach(a=>{try{a.disconnect();}catch(_){}});
-        const nChClamped=Math.min(Math.max(nCh,2),8);
-        const split=ac.createChannelSplitter(nChClamped);
-        const ans=[],bufs=[];
-        for(let i=0;i<nChClamped;i++){
-          const an=ac.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=0.65;
-          split.connect(an,i);ans.push(an);bufs.push(new Uint8Array(an.fftSize));
-        }
-        const merge=ac.createChannelMerger(nChClamped);
-        ans.forEach((an,i)=>an.connect(merge,0,Math.min(i,nChClamped-1)));
-        merge.connect(_getMasterGain());
-        src.connect(split);
-        d.vuSrc=src;d.vuChs=ans;d.vuBufs=bufs;d.vuChCount=nChClamped;
-        d.audioChs=nChClamped;
-        d.vuAnL=ans[0];d.vuAnR=ans[1]||ans[0];d.vuBufL=bufs[0];d.vuBufR=bufs[1]||bufs[0];
-        d.vuAn=ans[0];d.vuBuf=bufs[0];
-        _buildVuStrip(slot,nChClamped);
+      // 소스 노드가 최대 채널을 출력하도록 설정
+      src.channelCount=8;src.channelCountMode='max';src.channelInterpretation='discrete';
+      const _MAX=8;
+      const split=ac.createChannelSplitter(_MAX);
+      const _aAll=[],_bAll=[];
+      for(let i=0;i<_MAX;i++){
+        const an=ac.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=0.65;
+        split.connect(an,i);_aAll.push(an);_bAll.push(new Uint8Array(an.fftSize));
+      }
+      src.connect(split);
+      d.vuSrc=src;d._vuAllAns=_aAll;d._vuAllBufs=_bAll;
+      // 지정 채널 수로 merger 재구성 + VU strip 갱신
+      const _applyNch=(nCh)=>{
+        if(d._vuMerge){try{d._vuMerge.disconnect();}catch(_){}}
+        const nC=Math.min(Math.max(nCh,2),_MAX);
+        const mg=ac.createChannelMerger(nC);
+        for(let i=0;i<nC;i++)_aAll[i].connect(mg,0,i);
+        mg.connect(_getMasterGain());
+        d._vuMerge=mg;
+        d.vuChs=_aAll.slice(0,nC);d.vuBufs=_bAll.slice(0,nC);
+        d.vuChCount=nC;d.audioChs=nC;
+        d.vuAnL=_aAll[0];d.vuAnR=_aAll[1]||_aAll[0];d.vuBufL=_bAll[0];d.vuBufR=_bAll[1]||_bAll[0];
+        d.vuAn=_aAll[0];d.vuBuf=_bAll[0];
+        _buildVuStrip(slot,nC);
         _rebuildAuRoutingAuto();
       };
-      // 초기 연결
-      _connectVuNodes(src.channelCount||2);
-      // canplaythrough: 디코더가 채널 수를 확정한 시점에 재확인
-      const _recheckCh=()=>{
-        const actual=Math.min(Math.max(d.vuSrc?.channelCount||2,2),8);
-        if(actual!==d.vuChCount){
-          console.log(`[VU] ch recheck ${d.vuChCount}→${actual}`);
-          _connectVuNodes(actual);
-        }
+      _applyNch(2);
+      // play 시작 후 실제 신호를 감지해 채널 수 결정 (100ms 간격, 최대 15회 = 1.5초)
+      const _detectChs=()=>{
+        let mx=0;
+        _aAll.forEach((an,i)=>{an.getByteTimeDomainData(_bAll[i]);if(_bAll[i].some(v=>Math.abs(v-128)>4))mx=i+1;});
+        return Math.max(2,mx);
       };
-      d.au.addEventListener('canplaythrough',_recheckCh,{once:true});
-      // 300ms 폴백 (canplaythrough가 이미 발생했거나 늦게 오는 경우)
-      setTimeout(()=>{if(d.au&&!d.au.error)_recheckCh();},300);
+      d.au.addEventListener('play',()=>{
+        if(d._vuPoll)clearInterval(d._vuPoll);
+        let n=0;
+        d._vuPoll=setInterval(()=>{
+          n++;const nCh=_detectChs();
+          if(nCh>2||n>=15){clearInterval(d._vuPoll);d._vuPoll=null;if(nCh!==d.vuChCount)_applyNch(nCh);}
+        },100);
+      },{once:true});
     }catch(e){console.warn('[VU]',e);}
   };
   // Formats needing FFmpeg decode (not natively supported in Chromium)
@@ -2695,6 +2701,9 @@ function doEject(slot){
   d.audioChs=2;
   // VU strip 너비 초기화
   const _strip=document.getElementById('dvustrip'+slot);if(_strip)_strip.style.width='';
+  if(d._vuPoll){clearInterval(d._vuPoll);d._vuPoll=null;}
+  if(d._vuMerge){try{d._vuMerge.disconnect();}catch(_){}d._vuMerge=null;}
+  if(d._vuAllAns){d._vuAllAns.forEach(a=>{try{a.disconnect();}catch(_){}});d._vuAllAns=null;d._vuAllBufs=null;}
   if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
   Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,art:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
   if(E&&run)window.bridge.removeLayer(slot);
@@ -2993,7 +3002,7 @@ function tick(){
           arcEl.setAttribute('stroke',norm>0.05?'rgba(124,111,205,.9)':norm<-0.05?'rgba(255,100,100,.8)':'rgba(100,200,100,.7)');
         }
       });
-    } else if(d.vuChs&&d.vuChs.length>2){
+    } else if(d.vuChs&&d.vuChs.length>0){
       const CH_IDS=['L','R','3','4','5','6','7','8'];
       d.vuChs.forEach((an,i)=>_vuBar('dvu'+(CH_IDS[i]||String(i+1))+slot, an._lvl||0));
     } else {
