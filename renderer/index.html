@@ -461,7 +461,7 @@ function createDeck(slot,type='virtual'){
     _wfCache:null,_wfCacheH:0,_wfCacheKey:'',
     key:'',vu:0,vuSrc:null,vuAn:null,vuBuf:null,artUrl:null,hwVu:0,beatInBar:1,
     zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,mtcMaster:false,
-    audioChs:2,_tempPath:null,_vuPoll:null,_vuMerge:null,_vuAllAns:null,_vuAllBufs:null};
+    audioChs:2,_tempPath:null,_vuPoll:null,_vuMerge:null,_vuAllAns:null,_vuAllBufs:null,_applyNchFn:null};
 }
 
 async function getAudioDevs(){try{audioDevs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput');}catch(e){audioDevs=[];}}
@@ -2198,8 +2198,8 @@ async function analyzeBPM(blob){
     // Detect audio start at -69dB
     const startMs=detectAudioStart(ch,sr);
 
-    return {bpm, startMs};
-  }catch(e){console.warn('[BPM]',e);return {bpm:0,startMs:0};}
+    return {bpm, startMs, numberOfChannels: buf.numberOfChannels||2};
+  }catch(e){console.warn('[BPM]',e);return {bpm:0,startMs:0,numberOfChannels:2};}
 }
 
 function loadFile(slot,f){
@@ -2391,6 +2391,12 @@ function loadFile(slot,f){
           // Update BPM display in-place — avoids DOM rebuild / canvas context reset
           const _bpmEl=document.getElementById('wfbpm'+slot);
           if(_bpmEl&&d.bpm>0){const _b=d.baseBpm||d.bpm;const _bf=(v)=>{const int=Math.floor(v),dec=((v-int)*10+0.5|0)%10;return`${int}<span style="font-size:0.7em;opacity:0.7">.${dec}</span>`;};_bpmEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums">${_bf(_b)}</span><span style="font:500 11px var(--mn);color:var(--tx3)">±0.00%</span><span class="dk-bpm-cur">${_bf(d.bpm)}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;}else if(_bpmEl)_bpmEl.innerHTML='';
+          // decodeAudioData로 정확한 채널 수 감지 — MediaElementAudioSourceNode보다 신뢰성 높음
+          const detCh=result.numberOfChannels||2;
+          if(detCh>2&&d._applyNchFn&&detCh!==d.vuChCount){
+            console.log(`[VU] decodeAudioData 채널 감지: ${detCh}ch → VU strip 확장`);
+            d._applyNchFn(detCh);
+          }
         });
       },100); // 100ms delay — let audio element finish loading
     });
@@ -2417,6 +2423,7 @@ function loadFile(slot,f){
       src.connect(split);
       d.vuSrc=src;d._vuAllAns=_aAll;d._vuAllBufs=_bAll;
       // 지정 채널 수로 merger 재구성 + VU strip 갱신
+      // d._applyNchFn으로 외부(analyzeBPM 콜백 등)에서 호출 가능
       const _applyNch=(nCh)=>{
         if(d._vuMerge){try{d._vuMerge.disconnect();}catch(_){}}
         const nC=Math.min(Math.max(nCh,2),_MAX);
@@ -2431,6 +2438,7 @@ function loadFile(slot,f){
         _buildVuStrip(slot,nC);
         _rebuildAuRoutingAuto();
       };
+      d._applyNchFn=_applyNch; // analyzeBPM 결과에서 채널 수 받아 갱신하기 위해 노출
       _applyNch(2);
       // play 시작 후 실제 신호를 감지해 채널 수 결정 (100ms 간격, 최대 15회 = 1.5초)
       const _detectChs=()=>{
@@ -2704,6 +2712,7 @@ function doEject(slot){
   if(d._vuPoll){clearInterval(d._vuPoll);d._vuPoll=null;}
   if(d._vuMerge){try{d._vuMerge.disconnect();}catch(_){}d._vuMerge=null;}
   if(d._vuAllAns){d._vuAllAns.forEach(a=>{try{a.disconnect();}catch(_){}});d._vuAllAns=null;d._vuAllBufs=null;}
+  d._applyNchFn=null;
   if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
   Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,art:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
   if(E&&run)window.bridge.removeLayer(slot);
