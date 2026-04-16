@@ -1654,34 +1654,47 @@ class BridgeCore {
   }
 
   // ── DJM TCP probe — connect to DJM port 50003 when discovered ──
-  // DJM-900NXS2 has TCP port 50003 open; fader data might be here
+  // DJM-900NXS2 TCP 50003: connection accepted but DJM sends nothing first.
+  // Must send correct handshake. Try multiple approaches sequentially.
   _probeDjmTCP(djmIp){
     if(this._djmTcpProbed===djmIp) return;
     this._djmTcpProbed=djmIp;
-    for(const port of [50003, 50002]){
-      const sock=net.createConnection({host:djmIp,port,timeout:3000});
+    // Only probe TCP 50003 (50002 TCP is ECONNREFUSED on DJM-900NXS2)
+    const port=50003;
+    const tryHandshakes=[
+      // 1. Send nothing — passive listen (DJM might push data on its own after delay)
+      null,
+      // 2. Full PDJL keepalive (type 0x06) with magic bytes
+      ()=>{ const p=Buffer.alloc(11); PDJL.MAGIC.copy(p,0); p[10]=0x06; return p; },
+      // 3. PDJL opt-in subscribe (type 0x02 — used by CDJs to receive DJM status)
+      ()=>{ const p=Buffer.alloc(11); PDJL.MAGIC.copy(p,0); p[10]=0x02; return p; },
+      // 4. Raw 0x00 probe
+      ()=>Buffer.from([0x00]),
+    ];
+    let attempt=0;
+    const doAttempt=()=>{
+      if(attempt>=tryHandshakes.length) return;
+      const hs=tryHandshakes[attempt++];
+      const sock=net.createConnection({host:djmIp,port,timeout:10000});
       sock.on('connect',()=>{
-        console.log(`[DJM-TCP] connected to ${djmIp}:${port}`);
+        const hsDesc=hs?`hs#${attempt-1}`:'passive(no-send)';
+        console.log(`[DJM-TCP] connected ${djmIp}:${port} attempt=${hsDesc}`);
         sock.on('data',buf=>{
           const hex=buf.toString('hex');
-          console.log(`[DJM-TCP] data from ${djmIp}:${port} len=${buf.length} hex=${hex.slice(0,64)}`);
-          // Log all unique first occurrences
-          const key=`tcp_${port}_${buf[0]}_${buf.length}`;
+          console.log(`[DJM-TCP] DATA! ${djmIp}:${port} len=${buf.length} hex=${hex}`);
+          // Log every unique response
+          const key=`tcp_${port}_len${buf.length}_b0=${buf[0]}`;
           if(!this._djmSeenTypes.has(key)){
             this._djmSeenTypes.add(key);
-            console.log(`[DJM-TCP] NEW type key=${key} full_hex=${hex}`);
+            console.log(`[DJM-TCP] FIRST-SEEN key=${key}`);
           }
         });
-        // Try sending PDJL magic hello to see if DJM responds
-        try{
-          const hello=Buffer.alloc(11);
-          PDJL.MAGIC.copy(hello,0); hello[10]=0x06;
-          sock.write(hello);
-        }catch(_){}
+        if(hs){ try{ sock.write(hs()); }catch(_){} }
       });
-      sock.on('error',e=>console.log(`[DJM-TCP] ${djmIp}:${port} error: ${e.message}`));
-      sock.on('timeout',()=>{console.log(`[DJM-TCP] ${djmIp}:${port} timeout`);sock.destroy();});
-    }
+      sock.on('error',e=>{ console.log(`[DJM-TCP] ${djmIp}:${port} err: ${e.message}`); setTimeout(doAttempt,500); });
+      sock.on('timeout',()=>{ console.log(`[DJM-TCP] ${djmIp}:${port} timeout (no data)`); sock.destroy(); setTimeout(doAttempt,500); });
+    };
+    doAttempt();
   }
 
   // Pro DJ Link keep-alive announcement on 50000
