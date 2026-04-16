@@ -2973,7 +2973,7 @@ function tick(){
     // VU meter — ALWAYS for virtual, only run-gated for HW
     // Peak meter: returns instantaneous peak (0-1) from time domain buffer
     // -45dBFS 노이즈 게이트: AAC/MP4 코덱 노이즈 플로어 제거 (FLAC은 영향 없음)
-    const _NOISE_GATE=0.02; // ≈-34dBFS
+    const _NOISE_GATE=0.001; // ≈-60dBFS (최소화)
     const _getPeak=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i++){const v=Math.abs((buf[i]-128)/128);if(v>pk)pk=v;}return pk>_NOISE_GATE?pk:0;};
     if(d.type==='hw'){
       // HW: DJM on-air 미터 → VU, 페이더 값 → F
