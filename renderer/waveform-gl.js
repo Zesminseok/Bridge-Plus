@@ -15,6 +15,8 @@ class WaveformGL {
     this._wfTex = null;
     this._wfLen = 0;
     this._wfDurMs = 1;
+    this._dirty = true;
+    this._lastDrawKey = '';
     this._prog = this._compileProgram(_WGL_VS, _WGL_ZOOM_FS);
     this._initGeometry();
     this._locs = {
@@ -52,6 +54,8 @@ class WaveformGL {
     }
     this._wfLen = n;
     this._wfDurMs = wfDurMs || 1;
+    this._dirty = true;
+    this._lastDrawKey = '';
 
     const px = new Uint8Array(n * 4);
     for (let i = 0; i < n; i++) {
@@ -95,6 +99,8 @@ class WaveformGL {
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
+    const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${mode}`;
+    if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
     gl.bindVertexArray(this._vao);
@@ -108,9 +114,11 @@ class WaveformGL {
     gl.uniform1f(this._locs.centerX, centerX);
     gl.uniform1i(this._locs.mode,    mode | 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    this._dirty = false;
+    this._lastDrawKey = drawKey;
   }
 
-  resize(w, h) { const cv = this.gl.canvas; cv.width = w; cv.height = h; }
+  resize(w, h) { const cv = this.gl.canvas; cv.width = w; cv.height = h; this._dirty = true; this._lastDrawKey = ''; }
 
   destroy() {
     const gl = this.gl;
@@ -167,6 +175,8 @@ class OverviewGL {
     this.gl = gl;
     gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     this._wfTex = null;
+    this._dirty = true;
+    this._lastDrawKey = '';
     this._prog = this._compileProgram(_WGL_VS, _WGL_OV_FS);
     this._initGeometry();
     this._locs = {
@@ -196,6 +206,8 @@ class OverviewGL {
       } catch(e) { console.warn('[WGL] ovgl recover failed:', e.message); return; }
     }
     const px = new Uint8Array(n * 4);
+    this._dirty = true;
+    this._lastDrawKey = '';
     for (let i = 0; i < n; i++) {
       const p = wfData[i];
       const h = p.h || Math.max(Math.abs(p.mn||0), Math.abs(p.mx||0)) || 0;
@@ -235,6 +247,8 @@ class OverviewGL {
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
+    const drawKey = `${cv.width}x${cv.height}|${pos}|${mode}`;
+    if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
     gl.bindVertexArray(this._vao);
@@ -245,9 +259,11 @@ class OverviewGL {
     gl.uniform2f(this._locs.res,  cv.width, cv.height);
     gl.uniform1i(this._locs.mode, mode | 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    this._dirty = false;
+    this._lastDrawKey = drawKey;
   }
 
-  resize(w, h) { const cv = this.gl.canvas; cv.width = w; cv.height = h; }
+  resize(w, h) { const cv = this.gl.canvas; cv.width = w; cv.height = h; this._dirty = true; this._lastDrawKey = ''; }
 
   destroy() {
     const gl = this.gl;

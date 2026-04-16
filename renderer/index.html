@@ -1319,6 +1319,201 @@ function buildWaveformCache(slot){
   console.log(`[WFC] slot${slot} gradient cache: ${pts}×${H}px`);
 }
 
+function _getZoomCueStateKey(d){
+  const cues=(d.cuePoints||[]).map(c=>[
+    c.type||'',
+    c.timeMs||0,
+    c.loopEndMs||0,
+    c.hotCueNum||0,
+    c.colorId||0,
+    c.colorR||0,
+    c.colorG||0,
+    c.colorB||0,
+  ].join(':')).join('|');
+  return `${cues}#cp:${d.cp||0}`;
+}
+
+function _getZoomBeatStateKey(d){
+  const bg=d._beatGrid;
+  if(bg&&bg.length){
+    const first=bg[0],last=bg[bg.length-1];
+    return `grid:${bg.length}:${first?.timeMs||0}:${last?.timeMs||0}`;
+  }
+  return `bpm:${d.baseBpm||d.bpm||0}:anchor:${d._barAnchorMs||0}`;
+}
+
+function _ensureZoomScrollingCache(d, prop, key, W, H, viewL, viewR, msPerPx, drawFn){
+  const padPx=Math.max(W,256);
+  const startMs=viewL-padPx*msPerPx;
+  const endMs=viewR+padPx*msPerPx;
+  let cache=d[prop];
+  const needsRebuild=!cache
+    || cache.key!==key
+    || cache.w!==W
+    || cache.h!==H
+    || Math.abs(cache.msPerPx-msPerPx)>1e-6
+    || viewL<cache.startMs
+    || viewR>cache.endMs;
+  if(!needsRebuild)return cache;
+  const oc=document.createElement('canvas');
+  oc.width=Math.max(1,Math.ceil((endMs-startMs)/msPerPx));
+  oc.height=H;
+  const octx=oc.getContext('2d');
+  drawFn(octx,oc.width,H,startMs,endMs);
+  cache={key,w:W,h:H,msPerPx,startMs,endMs,canvas:oc};
+  d[prop]=cache;
+  return cache;
+}
+
+function _drawZoomScrollingCache(ctx, cache, viewL, msPerPx, W, H){
+  if(!cache?.canvas)return;
+  const sx=Math.max(0,Math.round((viewL-cache.startMs)/msPerPx));
+  const sw=Math.min(W,cache.canvas.width-sx);
+  if(sw<=0)return;
+  ctx.drawImage(cache.canvas,sx,0,sw,H,0,0,sw,H);
+}
+
+function _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX){
+  if(!d._isLooping||!d.cuePoints?.length)return;
+  for(const cue of d.cuePoints){
+    if(cue.type!=='loop'||cue.loopEndMs<=0)continue;
+    if(posMs<cue.timeMs-50||posMs>cue.loopEndMs+50)continue;
+    const cpx=Math.round((cue.timeMs-posMs)/msPerPx+cX);
+    const epx=Math.round((cue.loopEndMs-posMs)/msPerPx+cX);
+    if(epx<=Math.max(cpx,0)||cpx>=W)break;
+    const lx=Math.max(0,cpx),rx=Math.min(W,epx);
+    ctx.fillStyle='rgba(255,200,0,.15)';ctx.fillRect(lx,0,rx-lx,H);
+    ctx.fillStyle='rgba(255,200,0,.6)';ctx.fillRect(lx,0,1,H);ctx.fillRect(rx-1,0,1,H);
+    ctx.fillStyle='rgba(255,200,0,.35)';ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
+    break;
+  }
+}
+
+function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
+  const d=DECKS[slot];if(!d)return;
+  const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
+  if(clearFirst)ctx.clearRect(0,0,W,H);
+
+  const beatKey=`${_getZoomBeatStateKey(d)}#${W}x${H}#${msPerPx}`;
+  const beatCache=_ensureZoomScrollingCache(d,'_zoomBeatCache',beatKey,W,H,viewL,viewR,msPerPx,(octx,cw,ch,startMs,endMs)=>{
+    if(!(d.bpm>0&&d.dur>0))return;
+    if(d._beatGrid&&d._beatGrid.length>0){
+      const bg=d._beatGrid;
+      let lo=0,hi=bg.length-1;
+      while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<startMs)lo=mid2+1;else hi=mid2;}
+      for(let i=Math.max(0,lo-1);i<bg.length;i++){
+        const bt=bg[i];if(bt.timeMs>endMs)break;
+        const bpx=Math.round((bt.timeMs-startMs)/msPerPx);
+        if(bpx<1||bpx>=cw-1)continue;
+        if(bt.beatInBar===1){
+          octx.fillStyle='rgba(255,0,0,.25)';octx.fillRect(bpx-.5,0,1,ch);
+          octx.fillStyle='rgba(255,32,32,.8)';octx.fillRect(bpx-1,0,3,5);octx.fillRect(bpx-1,ch-5,3,5);
+        }else{
+          octx.fillStyle='rgba(255,255,255,.12)';octx.fillRect(bpx-.5,0,1,ch);
+          octx.fillStyle='rgba(255,255,255,.3)';octx.fillRect(bpx-1,0,3,3);octx.fillRect(bpx-1,ch-3,3,3);
+        }
+      }
+      return;
+    }
+    const beatMs=60000/(d.baseBpm||d.bpm);
+    const anchor=d._barAnchorMs||0;
+    const firstB=Math.ceil((startMs-anchor)/beatMs),lastB=Math.floor((endMs-anchor)/beatMs);
+    for(let b=firstB;b<=lastB;b++){
+      const bMs=anchor+b*beatMs;
+      const bpx=Math.round((bMs-startMs)/msPerPx);
+      if(bpx<1||bpx>=cw-1)continue;
+      const barNum=((b%4)+4)%4+1;
+      if(barNum===1){
+        octx.fillStyle='rgba(255,0,0,.25)';octx.fillRect(bpx-.5,0,1,ch);
+        octx.fillStyle='rgba(255,32,32,.8)';octx.fillRect(bpx-1,0,3,5);octx.fillRect(bpx-1,ch-5,3,5);
+      }else{
+        octx.fillStyle='rgba(255,255,255,.12)';octx.fillRect(bpx-.5,0,1,ch);
+        octx.fillStyle='rgba(255,255,255,.3)';octx.fillRect(bpx-1,0,3,3);octx.fillRect(bpx-1,ch-3,3,3);
+      }
+    }
+  });
+  _drawZoomScrollingCache(ctx,beatCache,viewL,msPerPx,W,H);
+  _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX);
+
+  const cueKey=`${_getZoomCueStateKey(d)}#${W}x${H}#${msPerPx}`;
+  const cueCache=_ensureZoomScrollingCache(d,'_zoomCueCache',cueKey,W,H,viewL,viewR,msPerPx,(octx,cw,ch,startMs)=>{
+    const _cueColorsZ={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
+    function _cueCol(cue){
+      if(cue.colorR||cue.colorG||cue.colorB)return`rgb(${cue.colorR},${cue.colorG},${cue.colorB})`;
+      if(cue.type==='hot')return _cueColorsZ[cue.colorId]||'#00e676';
+      if(cue.type==='loop')return '#ff8800';
+      return '#fff';
+    }
+    if(d.cuePoints&&d.dur>0){
+      octx.font='bold 8px "DM Mono",monospace';
+      for(const cue of d.cuePoints){
+        const cpx=Math.round((cue.timeMs-startMs)/msPerPx);
+        const col=_cueCol(cue);
+        if(cue.type==='loop'&&cue.loopEndMs>0){
+          const epx=Math.round((cue.loopEndMs-startMs)/msPerPx);
+          if(epx>Math.max(cpx,0)&&cpx<cw){
+            const lx=Math.max(0,cpx),rx=Math.min(cw,epx);
+            octx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.08)').replace('rgb(','rgba('):col+'14';
+            octx.fillRect(lx,0,rx-lx,ch);
+          }
+        }
+        if(cpx<-10||cpx>=cw+10)continue;
+        octx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.6)').replace('rgb(','rgba('):col+'99';
+        octx.fillRect(cpx-.5,0,1,ch);
+        if(cue.type==='hot'){
+          octx.fillStyle=col;octx.beginPath();octx.moveTo(cpx-4,0);octx.lineTo(cpx+4,0);octx.lineTo(cpx,5);octx.closePath();octx.fill();
+          if(cue.hotCueNum>0){
+            const lbl=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
+            octx.fillStyle='rgba(0,0,0,.75)';octx.fillRect(cpx+2,0,10,11);
+            octx.fillStyle=col;octx.fillText(lbl,cpx+3,9);
+          }
+        }else if(cue.type==='loop'){
+          octx.fillStyle=col;
+          octx.fillRect(cpx-1,0,2,6);octx.fillRect(cpx-1,0,5,2);
+          const lbl=cue.hotCueNum>0?String.fromCharCode(64+cue.hotCueNum):'L';
+          octx.fillStyle='rgba(0,0,0,.75)';octx.fillRect(cpx+2,0,10,11);
+          octx.fillStyle=col;octx.fillText(lbl,cpx+3,9);
+          if(cue.loopEndMs>0){
+            const epx=Math.round((cue.loopEndMs-startMs)/msPerPx);
+            if(epx>0&&epx<cw){
+              octx.fillStyle=col;
+              octx.fillRect(epx-1,0,2,6);octx.fillRect(epx-5,0,5,2);
+            }
+          }
+        }else{
+          octx.fillStyle=col;octx.beginPath();octx.moveTo(cpx,0);octx.lineTo(cpx+3,3);octx.lineTo(cpx,6);octx.lineTo(cpx-3,3);octx.closePath();octx.fill();
+          octx.fillStyle='rgba(0,0,0,.75)';octx.fillRect(cpx+2,0,10,11);
+          octx.fillStyle=col;octx.fillText('M',cpx+3,9);
+        }
+      }
+    }
+    if(d.cp>0&&d.dur>0){
+      const cpx=Math.round((d.cp*1000-startMs)/msPerPx);
+      if(cpx>=0&&cpx<cw){
+        octx.fillStyle='rgba(251,191,36,.9)';octx.fillRect(cpx-.5,0,1,ch);
+        octx.beginPath();octx.moveTo(cpx-3,0);octx.lineTo(cpx+3,0);octx.lineTo(cpx,4);octx.closePath();
+        octx.fillStyle='rgba(251,191,36,1)';octx.fill();
+      }
+    }
+  });
+  _drawZoomScrollingCache(ctx,cueCache,viewL,msPerPx,W,H);
+
+  const phGrd=ctx.createLinearGradient(cX-8,0,cX+8,0);
+  phGrd.addColorStop(0,'rgba(255,255,255,0)');
+  phGrd.addColorStop(.5,'rgba(255,255,255,.18)');
+  phGrd.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=phGrd;ctx.fillRect(cX-8,0,16,H);
+  ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
+
+  if(d._barBeat){
+    ctx.font='bold 10px "DM Mono",monospace';
+    const bw=ctx.measureText(d._barBeat).width;
+    const bx=cX-bw-8;
+    if(bx>=2){ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(bx-2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,bx,13);}
+    else{ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,4,13);}
+  }
+}
+
 function drawOverview(slot,prog){
   const d=DECKS[slot];if(!d)return;
   const pos=Math.max(0,Math.min(1,prog||0));
@@ -1546,64 +1741,7 @@ function drawZoomWaveform(slot,prog){
   const sx=Math.max(0,srcX),dx=sx-srcX;
   const sw=Math.min(cache.cw-sx,W-dx);
   if(sw>0)ctx.drawImage(cache.canvas,sx,0,sw,H,dx,0,sw,H);
-  // beat grid + cues + cursor (2D fallback)
-  if(d.bpm>0&&dur>0){
-    const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
-    if(d._beatGrid&&d._beatGrid.length>0){
-      const bg=d._beatGrid;let lo=0,hi=bg.length-1;
-      while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<viewL)lo=mid2+1;else hi=mid2;}
-      for(let i=Math.max(0,lo-1);i<bg.length;i++){
-        const bt=bg[i];if(bt.timeMs>viewR)break;
-        const bpx=Math.round((bt.timeMs-posMs)/msPerPx+cX);
-        if(bpx<1||bpx>=W-1)continue;
-        if(bt.beatInBar===1){
-          ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(bpx-1,0,3,5);ctx.fillRect(bpx-1,H-5,3,5);
-        }else{
-          ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);
-        }
-      }
-    }else{
-      const beatMs=60000/(d.baseBpm||d.bpm);const anchor=d._barAnchorMs||0;
-      const firstB=Math.ceil((posMs-cX*msPerPx-anchor)/beatMs),lastB=Math.floor((posMs+(W-cX)*msPerPx-anchor)/beatMs);
-      for(let b=firstB;b<=lastB;b++){
-        const bMs=anchor+b*beatMs;const bpx=Math.round((bMs-posMs)/msPerPx+cX);
-        if(bpx<1||bpx>=W-1)continue;
-        const barNum=((b%4)+4)%4+1;
-        if(barNum===1){
-          ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(bpx-1,0,3,5);ctx.fillRect(bpx-1,H-5,3,5);
-        }else{
-          ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);
-        }
-      }
-    }
-  }
-  const _cueColorsZ={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
-  if(d.cuePoints&&dur>0){
-    ctx.font='bold 8px "DM Mono",monospace';
-    for(const cue of d.cuePoints){
-      const cpx=Math.round((cue.timeMs-posMs)/msPerPx+cX);if(cpx<0||cpx>=W)continue;
-      const col=cue.type==='hot'?(_cueColorsZ[cue.colorId]||'#00e676'):'#fff';
-      ctx.fillStyle=col+'99';ctx.fillRect(cpx-.5,0,1,H);
-      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx-3,0);ctx.lineTo(cpx+3,0);ctx.lineTo(cpx,5);ctx.closePath();ctx.fill();
-    }
-  }
-  if(d.cp>0&&dur>0){const cpx=Math.round((d.cp*1000-posMs)/msPerPx+cX);if(cpx>=0&&cpx<W){ctx.fillStyle='rgba(251,191,36,.9)';ctx.fillRect(cpx-.5,0,1,H);}}
-  const phGrd=ctx.createLinearGradient(cX-8,0,cX+8,0);
-  phGrd.addColorStop(0,'rgba(255,255,255,0)');phGrd.addColorStop(.5,'rgba(255,255,255,.18)');phGrd.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=phGrd;ctx.fillRect(cX-8,0,16,H);
-  ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
-  // BAR.BEAT counter — left of playhead, Rekordbox cyan
-  if(d._barBeat){
-    ctx.font='bold 10px "DM Mono",monospace';
-    const bw=ctx.measureText(d._barBeat).width;
-    const bx=cX-bw-8;
-    if(bx>=2){ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(bx-2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,bx,13);}
-    else{ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,4,13);}
-  }
+  _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,false);
 }
 
 // Zoom overlay — beat grid, cue points, position cursor (transparent 2D canvas on top of WebGL)
@@ -1613,165 +1751,15 @@ function drawZoomOverlay(slot, prog){
   const W=wzov.width,H=wzov.height,ctx=d.wovCtx2;
   const pos=Math.max(0,Math.min(1,prog||0));
   const dur=d.dur,posMs=pos*dur;
-  const wfData=d?.rgbWfDetail||d?.rgbWf;
-  const wfDur=((wfData?.length||0)/150*1000)||1;
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
 
   // Skip redraw if playhead hasn't moved by ≥0.5px (saves GPU at 60fps)
   const overlayPx=Math.round(posMs/msPerPx*2)/2; // 0.5px resolution
-  const cueHash=(d.cuePoints?.length||0)+'_'+(d._isLooping?1:0);
+  const cueHash=_getZoomCueStateKey(d)+'_'+(d._isLooping?1:0);
   if(d._olLastPx===overlayPx&&d._olLastCue===cueHash&&d._olLastZoom===viewMs)return;
   d._olLastPx=overlayPx;d._olLastCue=cueHash;d._olLastZoom=viewMs;
-
-  ctx.clearRect(0,0,W,H);
-
-  // Beat grid
-  if(d.bpm>0&&dur>0){
-    const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
-    if(d._beatGrid&&d._beatGrid.length>0){
-      const bg=d._beatGrid;
-      let lo=0,hi=bg.length-1;
-      while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<viewL)lo=mid2+1;else hi=mid2;}
-      for(let i=Math.max(0,lo-1);i<bg.length;i++){
-        const bt=bg[i];if(bt.timeMs>viewR)break;
-        const bpx=Math.round((bt.timeMs-posMs)/msPerPx+cX);
-        if(bpx<1||bpx>=W-1)continue;
-        if(bt.beatInBar===1){
-          // CDJ-3000 style: red downbeat line
-          ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(bpx-1,0,3,5);ctx.fillRect(bpx-1,H-5,3,5);
-        }else{
-          ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);
-        }
-      }
-    }else if(d.bpm>0){
-      const beatMs=60000/(d.baseBpm||d.bpm);
-      const anchor=d._barAnchorMs||0;
-      const firstB=Math.ceil((posMs-cX*msPerPx-anchor)/beatMs);
-      const lastB=Math.floor((posMs+(W-cX)*msPerPx-anchor)/beatMs);
-      for(let b=firstB;b<=lastB;b++){
-        const bMs=anchor+b*beatMs;
-        const bpx=Math.round((bMs-posMs)/msPerPx+cX);
-        if(bpx<1||bpx>=W-1)continue;
-        const barNum=((b%4)+4)%4+1;
-        if(barNum===1){
-          ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(bpx-1,0,3,5);ctx.fillRect(bpx-1,H-5,3,5);
-        }else{
-          ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(bpx-.5,0,1,H);
-          ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(bpx-1,0,3,3);ctx.fillRect(bpx-1,H-3,3,3);
-        }
-      }
-    }
-  }
-
-  // Cue points (PCO2 RGB colors + loop overlay)
-  const _cueColorsZ={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
-  function _cueCol(cue){
-    // Use PCO2 RGB if available (non-zero), else fall back to colorId palette
-    if(cue.colorR||cue.colorG||cue.colorB){
-      return`rgb(${cue.colorR},${cue.colorG},${cue.colorB})`;
-    }
-    if(cue.type==='hot')return _cueColorsZ[cue.colorId]||'#00e676';
-    if(cue.type==='loop')return '#ff8800';
-    return '#fff';
-  }
-  if(d.cuePoints&&dur>0){
-    ctx.font='bold 8px "DM Mono",monospace';
-    // Check if CDJ is currently looping — find active loop cue
-    const isLooping=d._isLooping;
-    let activeLoop=null;
-    if(isLooping&&d.cuePoints){
-      for(const c of d.cuePoints){
-        if(c.type==='loop'&&c.loopEndMs>0&&posMs>=c.timeMs-50&&posMs<=c.loopEndMs+50){
-          activeLoop=c;break;
-        }
-      }
-    }
-    for(const cue of d.cuePoints){
-      const cpx=Math.round((cue.timeMs-posMs)/msPerPx+cX);
-      const col=_cueCol(cue);
-      // Loop body overlay
-      if(cue.type==='loop'&&cue.loopEndMs>0){
-        const epx=Math.round((cue.loopEndMs-posMs)/msPerPx+cX);
-        const isActive=(cue===activeLoop);
-        if(epx>Math.max(cpx,0)&&cpx<W){
-          const lx=Math.max(0,cpx),rx=Math.min(W,epx);
-          if(isActive){
-            // Active loop: yellow overlay (Rekordbox style)
-            ctx.fillStyle='rgba(255,200,0,.15)';ctx.fillRect(lx,0,rx-lx,H);
-            ctx.fillStyle='rgba(255,200,0,.6)';ctx.fillRect(lx,0,1,H);ctx.fillRect(rx-1,0,1,H);
-            ctx.fillStyle='rgba(255,200,0,.35)';ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
-          }else{
-            // Inactive loop: subtle overlay
-            ctx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.08)').replace('rgb(','rgba('):col+'14';
-            ctx.fillRect(lx,0,rx-lx,H);
-          }
-        }
-      }
-      if(cpx<-10||cpx>=W+10)continue;
-      // Vertical line
-      ctx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.6)').replace('rgb(','rgba('):col+'99';
-      ctx.fillRect(cpx-.5,0,1,H);
-      if(cue.type==='hot'){
-        // Hot cue: triangle marker + letter label (A-H)
-        ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx-4,0);ctx.lineTo(cpx+4,0);ctx.lineTo(cpx,5);ctx.closePath();ctx.fill();
-        if(cue.hotCueNum>0){
-          const lbl=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
-          ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(cpx+2,0,10,11);
-          ctx.fillStyle=col;ctx.fillText(lbl,cpx+3,9);
-        }
-      }else if(cue.type==='loop'){
-        // Loop cue: bracket marker + 'L' label (or hot cue letter if hot-loop)
-        ctx.fillStyle=col;
-        ctx.fillRect(cpx-1,0,2,6);ctx.fillRect(cpx-1,0,5,2); // ┌ bracket
-        const lbl=cue.hotCueNum>0?String.fromCharCode(64+cue.hotCueNum):'L';
-        ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(cpx+2,0,10,11);
-        ctx.fillStyle=col;ctx.fillText(lbl,cpx+3,9);
-        // End bracket
-        if(cue.loopEndMs>0){
-          const epx=Math.round((cue.loopEndMs-posMs)/msPerPx+cX);
-          if(epx>0&&epx<W){
-            ctx.fillStyle=col;
-            ctx.fillRect(epx-1,0,2,6);ctx.fillRect(epx-5,0,5,2); // ┐ bracket
-          }
-        }
-      }else{
-        // Memory cue: diamond marker + 'M' label
-        ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(cpx,0);ctx.lineTo(cpx+3,3);ctx.lineTo(cpx,6);ctx.lineTo(cpx-3,3);ctx.closePath();ctx.fill();
-        ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(cpx+2,0,10,11);
-        ctx.fillStyle=col;ctx.fillText('M',cpx+3,9);
-      }
-    }
-  }
-
-  // Main cue point
-  if(d.cp>0&&dur>0){
-    const cpx=Math.round((d.cp*1000-posMs)/msPerPx+cX);
-    if(cpx>=0&&cpx<W){
-      ctx.fillStyle='rgba(251,191,36,.9)';ctx.fillRect(cpx-.5,0,1,H);
-      ctx.beginPath();ctx.moveTo(cpx-3,0);ctx.lineTo(cpx+3,0);ctx.lineTo(cpx,4);ctx.closePath();ctx.fillStyle='rgba(251,191,36,1)';ctx.fill();
-    }
-  }
-
-  // Position cursor + glow
-  const phGrd=ctx.createLinearGradient(cX-8,0,cX+8,0);
-  phGrd.addColorStop(0,'rgba(255,255,255,0)');
-  phGrd.addColorStop(.5,'rgba(255,255,255,.18)');
-  phGrd.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=phGrd;ctx.fillRect(cX-8,0,16,H);
-  ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
-
-  // bar.beat overlay — left of playhead, Rekordbox cyan
-  if(d._barBeat){
-    ctx.font='bold 10px "DM Mono",monospace';
-    const bw=ctx.measureText(d._barBeat).width;
-    const bx=cX-bw-8;
-    if(bx>=2){ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(bx-2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,bx,13);}
-    else{ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(2,2,bw+4,14);ctx.fillStyle='#00BFFF';ctx.fillText(d._barBeat,4,13);}
-  }
+  _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,true);
 }
 
 // ════ Deck management ════════════════════════════════
@@ -2055,6 +2043,7 @@ function patchDeck(slot){
 function bindDeck(slot){
   const el=document.getElementById('dk'+slot);if(!el)return;
   const d=DECKS[slot];
+  _observeDeckCanvasContainers(slot);
   el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('dov');});
   el.addEventListener('dragleave',()=>el.classList.remove('dov'));
   el.addEventListener('drop',e=>{
@@ -2197,6 +2186,7 @@ function bindDeck(slot){
       if(!wov)return;
       const p=wov.parentElement;
       const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
+      d._ovTargetW=w;d._ovTargetH=h;
       // Destroy if canvas element changed (DOM rebuild) OR dimensions differ
       const ovCanvasChanged=d.ovgl&&d.ovgl.gl.canvas!==wov;
       if(ovCanvasChanged){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
@@ -2226,6 +2216,7 @@ function bindDeck(slot){
       if(!wzc)return;
       const p=wzc.parentElement;
       const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
+      d._wzTargetW=w;d._wzTargetH=h;
       // Destroy if canvas element changed (DOM rebuild) OR dimensions differ
       const wglCanvasChanged=d.wgl&&d.wgl.gl.canvas!==wzc;
       if(wglCanvasChanged){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
@@ -2549,6 +2540,7 @@ function loadFile(slot,f){
         if(wov){
           const p=wov.parentElement;
           const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
+          d._ovTargetW=w;d._ovTargetH=h;
           if(wov.width!==w||wov.height!==h){
             if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
             wov.width=w; wov.height=h;
@@ -2561,6 +2553,7 @@ function loadFile(slot,f){
         if(wzc){
           const p=wzc.parentElement;
           const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
+          d._wzTargetW=w;d._wzTargetH=h;
           if(wzc.width!==w||wzc.height!==h){
             if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
             wzc.width=w; wzc.height=h;
@@ -2931,11 +2924,58 @@ function _deckLayerAssigned(slot,lyr){
 }
 
 let _expandedSlot=null;
+const _deckCanvasResizeObserver=typeof ResizeObserver!=='undefined'
+  ? new ResizeObserver(entries=>{
+      for(const entry of entries){
+        const slot=+entry.target.dataset.slot;
+        const kind=entry.target.dataset.canvasKind;
+        const d=DECKS[slot];
+        if(!d||!Number.isFinite(slot)||!kind)continue;
+        const w=Math.round(entry.contentRect.width||0);
+        const h=Math.round(entry.contentRect.height||0);
+        if(w<1||h<1)continue;
+        if(kind==='overview'){
+          if(d._ovTargetW===w&&d._ovTargetH===h)continue;
+          d._ovTargetW=w;d._ovTargetH=h;
+        }else if(kind==='zoom'){
+          if(d._wzTargetW===w&&d._wzTargetH===h)continue;
+          d._wzTargetW=w;d._wzTargetH=h;
+        }else continue;
+        if(!d._canvasResizeQueued){
+          d._canvasResizeQueued=true;
+          requestAnimationFrame(()=>{
+            const d2=DECKS[slot];
+            if(!d2)return;
+            d2._canvasResizeQueued=false;
+            _resizeDeckCanvases(slot);
+          });
+        }
+      }
+    })
+  : null;
+
+function _observeDeckCanvasContainers(slot){
+  if(!_deckCanvasResizeObserver)return;
+  const ovWrap=document.getElementById('dwov'+slot);
+  if(ovWrap){
+    ovWrap.dataset.slot=slot;
+    ovWrap.dataset.canvasKind='overview';
+    _deckCanvasResizeObserver.observe(ovWrap);
+  }
+  const wzWrap=document.getElementById('dwz'+slot);
+  if(wzWrap){
+    wzWrap.dataset.slot=slot;
+    wzWrap.dataset.canvasKind='zoom';
+    _deckCanvasResizeObserver.observe(wzWrap);
+  }
+}
+
 function _resizeDeckCanvases(s){
   const d2=DECKS[s];if(!d2)return;
   const wov=document.getElementById('wov'+s);
-  if(wov){const p=wov.parentElement;const w=p?.offsetWidth||0,h=p?.offsetHeight||14;
+  if(wov){const p=wov.parentElement;const w=d2._ovTargetW||p?.offsetWidth||0,h=d2._ovTargetH||p?.offsetHeight||14;
     if(w>0){
+      d2._ovTargetW=w;d2._ovTargetH=h;
       if(d2.ovgl){try{d2.ovgl.destroy();}catch(_){}d2.ovgl=null;}
       wov.width=w; wov.height=h;
       try{d2.ovgl=new OverviewGL(wov);d2.wovCtx=null;}catch(e){d2.wovCtx=wov.getContext('2d');}
@@ -2945,8 +2985,9 @@ function _resizeDeckCanvases(s){
     }
   }
   const wzc=document.getElementById('wzc'+s);
-  if(wzc){const p=wzc.parentElement;const w=p?.offsetWidth||0,h=p?.offsetHeight||64;
+  if(wzc){const p=wzc.parentElement;const w=d2._wzTargetW||p?.offsetWidth||0,h=d2._wzTargetH||p?.offsetHeight||64;
     if(w>0){
+      d2._wzTargetW=w;d2._wzTargetH=h;
       if(d2.wgl){try{d2.wgl.destroy();}catch(_){}d2.wgl=null;}
       wzc.width=w; wzc.height=h;
       try{d2.wgl=new WaveformGL(wzc);d2.wzCtx=null;}catch(e){d2.wzCtx=wzc.getContext('2d');}
@@ -3359,8 +3400,7 @@ function tick(){
     // Overview GL recovery — runs even without waveform data (ensures canvas is initialized)
     const wov=document.getElementById('wov'+slot);
     if(wov){
-      const op=wov.parentElement;
-      const opW=op?.offsetWidth||0, opH=op?.offsetHeight||14;
+      const opW=d._ovTargetW||wov.width||0, opH=d._ovTargetH||wov.height||14;
       const ovStale=d.ovgl&&d.ovgl.gl.canvas!==wov;
       const ovCtxLost=d.ovgl&&(!d.ovgl._prog||(d.ovgl.gl.isContextLost&&d.ovgl.gl.isContextLost()));
       const ovMissing=!d.ovgl&&!d.wovCtx;
@@ -3368,6 +3408,7 @@ function tick(){
       if(ovStale||ovCtxLost||ovMissing||dimBad){
         if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
         if(opW>0){
+          d._ovTargetW=opW;d._ovTargetH=opH;
           wov.width=opW; wov.height=opH;
           try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}
           const wovol=document.getElementById('wovol'+slot);
@@ -3394,9 +3435,11 @@ function tick(){
         if(wglStale||ctx2Stale||(wzc.width===0)||wglCtxLost||wglMissing){
           // Reinit WGL on live canvas
           if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
-          const p=wzc.parentElement;
-          if(p&&p.offsetWidth>0){
-            wzc.width=p.offsetWidth; wzc.height=p.offsetHeight;
+          const targetW=d._wzTargetW||wzc.width||0;
+          const targetH=d._wzTargetH||wzc.height||64;
+          if(targetW>0){
+            d._wzTargetW=targetW;d._wzTargetH=targetH;
+            wzc.width=targetW; wzc.height=targetH;
             try{
               d.wgl=new WaveformGL(wzc); d.wzCtx=null;
               const wzov=document.getElementById('wzov'+slot);

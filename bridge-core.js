@@ -567,7 +567,7 @@ function parsePDJL(msg){
     // Note: pitchRaw stays non-zero even when paused — use state for play/stop detection
     const pitchMultiplier = pitchRaw / 0x100000;  // 1.0 = normal speed
     return{
-      kind:'cdj', playerNum:pNum, name, p1, state,
+      kind:'cdj', playerNum:pNum, name, deviceName:name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
       isPlaying: state===STATE.PLAYING || state===STATE.FFWD || state===STATE.FFRV,
       isLooping: state===STATE.LOOPING,
@@ -1909,6 +1909,7 @@ class BridgeCore {
         // CDJ-3000: Precise Position (0x0b) — direct ms, highest accuracy
         // CDJ-2000NXS2: Beat + BeatGrid + interpolation (beat-link method)
         const pp = this._precisePos?.[p.playerNum];
+        // `_precisePos` is populated only from parsePDJL kind==='precise_pos' (type 0x0b), which is already CDJ-3000-specific.
         const hasPrecise = pp && (Date.now()-pp.time)<500;
 
         // Get track length from any available source
@@ -1916,11 +1917,13 @@ class BridgeCore {
         const ppLen = this._precisePos?.[p.playerNum]?.trackLengthSec;
         const totalLenMs = ppLen ? Math.round(ppLen*1000) : prevLayerLen;
 
+        const isCdj3000=(p.name||p.deviceName||'').includes('CDJ-3000');
         if(hasPrecise){
           // CDJ-3000: direct ms from 0x0b packet (highest accuracy)
           timecodeMs = pp.playbackMs;
-        } else if(p.positionFraction > 0 && totalLenMs > 0 && (p.isPlaying || p.isLooping)){
+        } else if(!isCdj3000 && p.positionFraction > 0 && totalLenMs > 0 && (p.isPlaying || p.isLooping)){
           // CDJ-2000NXS2 position fraction (0x48 field) — most accurate for non-BPM tracks
+          // CDJ-3000 type 0x0a packets already have 0x0b precise_pos; treating 0x48 as a fraction there can corrupt position.
           // Re-anchor every status packet: fraction × total length = absolute ms position
           const fracMs = Math.round(p.positionFraction * totalLenMs);
           if(!acc) this._tcAcc[li] = acc = { prevBn:0, elapsedMs:0, trackId:p.trackId, dbgCount:0, metaRequested:false };
