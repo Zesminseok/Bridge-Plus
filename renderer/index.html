@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8"><title>BRIDGE+ | Professional DJ Bridge</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Space+Grotesk:wght@500;700&display=swap');
 @font-face{font-family:'Noto Sans KR';src:url('./fonts/NotoSansKR-VariableFont_wght.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:'DSEG7';src:url('./fonts/DSEG7Classic-Regular.woff2') format('woff2');font-display:swap}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -27,7 +27,17 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .tab{padding:0 14px;font:600 10px var(--lb);letter-spacing:.1em;cursor:pointer;border:none;background:0;color:rgba(226,226,232,.4);position:relative;transition:color .15s;text-transform:uppercase;height:100%;display:flex;align-items:center}
 .tab:hover{color:var(--tx2)}.tab.on{color:var(--key)}
 .tab.on::after{content:'';position:absolute;bottom:0;left:14px;right:14px;height:2px;background:var(--key);border-radius:2px 2px 0 0}
-.pg{padding:16px 20px 56px;overflow-y:auto;height:calc(100vh - 88px);scroll-behavior:smooth;-webkit-overflow-scrolling:touch;-webkit-app-region:no-drag}
+/* App layout: sidebar + content */
+.app-body{display:flex;height:calc(100vh - 52px);overflow:hidden}
+.sidebar{width:54px;background:var(--bg-lowest);border-right:1px solid var(--bdr);display:flex;flex-direction:column;align-items:center;padding:6px 0;flex-shrink:0;gap:2px;-webkit-app-region:no-drag;z-index:10}
+.sbi{width:42px;height:42px;border:none;background:transparent;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--tx4);transition:all .15s}
+.sbi:hover{background:rgba(255,255,255,.05);color:var(--tx2)}
+.sbi.on{background:rgba(135,135,255,.12);color:var(--key)}
+.sbi .sbi-ic{font-size:18px;line-height:1}
+.sbi .sbi-lb{font:700 6px var(--lb);letter-spacing:.06em;text-transform:uppercase}
+.sbi-spacer{flex:1}
+.content-area{flex:1;min-width:0;overflow:hidden;position:relative}
+.pg{padding:16px 20px 56px;overflow-y:auto;height:100%;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;-webkit-app-region:no-drag}
 .pg::-webkit-scrollbar{width:5px}.pg::-webkit-scrollbar-track{background:transparent}.pg::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}.pg::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
 .hide{display:none!important}
 .sbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
@@ -322,6 +332,36 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 @keyframes shimmer{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
 #masterVol::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--grn);cursor:pointer;border:none}
 #masterVol::-webkit-slider-thumb:hover{background:var(--grn2);box-shadow:0 0 6px rgba(52,211,153,.5)}
+/* History panel */
+.hist-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bdr)}
+.hist-title{font:700 13px var(--lb);color:var(--tx);letter-spacing:.02em}
+.hist-cnt{font:600 9px var(--mn);padding:2px 7px;border-radius:999px;background:rgba(135,135,255,.15);color:var(--key)}
+.hist-export{margin-left:auto;font:600 9px var(--lb);letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:5px;border:1px solid var(--bdr2);background:transparent;color:var(--tx3);cursor:pointer;transition:all .15s}
+.hist-export:hover{border-color:var(--key);color:var(--key)}
+.hist-session{font:400 10px var(--sn);color:var(--tx3)}
+.hist-list{display:flex;flex-direction:column;gap:1px}
+.hist-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;border-left:3px solid transparent;transition:background .1s}
+.hist-row:hover{background:rgba(255,255,255,.025)}
+.hist-row.full{border-left-color:var(--grn2)}.hist-row.short{border-left-color:var(--ylw2)}
+.hist-idx{font:500 10px var(--mn);color:var(--tx4);min-width:20px;text-align:right}
+.hist-art{width:34px;height:34px;border-radius:5px;background:var(--bg4);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font:700 13px var(--mn);color:var(--tx4)}
+.hist-art img{width:100%;height:100%;object-fit:cover;border-radius:5px}
+.hist-info{flex:1;min-width:0}
+.hist-tn{font:600 11px var(--sn);color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-ar{font:400 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-bpm{font:600 10px var(--mn);color:var(--key);min-width:46px;text-align:right;font-variant-numeric:tabular-nums}
+.hist-key{font:600 9px var(--mn);padding:2px 5px;border-radius:3px;background:rgba(90,240,179,.1);color:var(--grn);min-width:24px;text-align:center}
+.hist-deck{font:700 8px var(--lb);letter-spacing:.04em;padding:2px 6px;border-radius:3px;background:rgba(135,135,255,.1);color:var(--key-dim)}
+.hist-ts{font:500 10px var(--mn);color:var(--tx3);min-width:40px;text-align:right;font-variant-numeric:tabular-nums}
+.hist-dur{font:500 10px var(--mn);color:var(--tx4);min-width:32px;text-align:right;font-variant-numeric:tabular-nums}
+.hist-new{font:700 6px var(--mn);padding:1px 4px;border-radius:2px;background:rgba(90,240,179,.15);color:var(--grn);vertical-align:middle;margin-left:4px}
+.hist-footer{display:flex;gap:20px;padding:10px 10px 0;border-top:1px solid var(--bdr);margin-top:8px;flex-shrink:0}
+.hist-stat{display:flex;align-items:center;gap:6px}
+.hist-stat-lbl{font:500 8px var(--lb);color:var(--tx4);letter-spacing:.06em;text-transform:uppercase}
+.hist-stat-val{font:600 10px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums}
+.hist-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;gap:8px;color:var(--tx4)}
+.hist-empty .material-symbols-outlined{font-size:40px;opacity:.25}
+.hist-empty-tx{font:400 11px var(--sn)}
 </style>
 <script src="./waveform-gl.js"></script>
 </head><body>
@@ -346,14 +386,19 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
   </div>
 </div>
 
-<div class="tabs" id="tabs">
-  <button class="tab on" data-t="link">LINK</button>
-  <button class="tab" data-t="pdjl">PRO DJ LINK</button>
-  <button class="tab" data-t="tcnet">TCNet</button>
-  <button class="tab" data-t="settings">SETTINGS</button>
-</div>
+<div class="app-body">
+<aside class="sidebar" id="sidebar">
+  <button class="sbi on" data-t="link" title="DECKS"><span class="sbi-ic material-symbols-outlined">tune</span><span class="sbi-lb">DECKS</span></button>
+  <button class="sbi" data-t="mixer" title="MIXER"><span class="sbi-ic material-symbols-outlined">equalizer</span><span class="sbi-lb">MIXER</span></button>
+  <button class="sbi" data-t="history" title="HISTORY"><span class="sbi-ic material-symbols-outlined">history</span><span class="sbi-lb">HIST</span></button>
+  <button class="sbi" data-t="pdjl" title="PRO DJ LINK"><span class="sbi-ic material-symbols-outlined">device_hub</span><span class="sbi-lb">PDJL</span></button>
+  <button class="sbi" data-t="tcnet" title="TCNet"><span class="sbi-ic material-symbols-outlined">lan</span><span class="sbi-lb">TCNET</span></button>
+  <div class="sbi-spacer"></div>
+  <button class="sbi" data-t="settings" title="SETTINGS"><span class="sbi-ic material-symbols-outlined">settings</span><span class="sbi-lb">SET</span></button>
+</aside>
+<div class="content-area">
 
-<!-- LINK -->
+<!-- LINK (DECKS) -->
 <div class="pg" id="pgLink">
   <div class="sbar">
     <div class="sc"><div class="scl">TCNet</div><span class="bd br" id="stBadge">OFFLINE</span></div>
@@ -408,6 +453,36 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 
 <!-- Settings -->
 <div class="pg hide" id="pgSettings"></div>
+
+<!-- History -->
+<div class="pg hide" id="pgHistory">
+  <div style="display:flex;flex-direction:column;height:100%">
+    <div class="hist-hdr">
+      <span class="material-symbols-outlined" style="font-size:18px;color:var(--tx3)">history</span>
+      <span class="hist-title">HISTORY</span>
+      <span class="hist-session" id="histSession">—</span>
+      <span class="hist-cnt" id="histCount">0</span>
+      <button class="hist-export" onclick="_histExport()">EXPORT CSV</button>
+    </div>
+    <div class="hist-list" id="histList" style="flex:1;overflow-y:auto"></div>
+    <div class="hist-footer" id="histFooter">
+      <div class="hist-stat"><span class="hist-stat-lbl">재생 곡수</span><span class="hist-stat-val" id="histStatCount">0</span></div>
+      <div class="hist-stat"><span class="hist-stat-lbl">총 ON AIR</span><span class="hist-stat-val" id="histStatTime">0:00</span></div>
+      <div class="hist-stat"><span class="hist-stat-lbl">평균 BPM</span><span class="hist-stat-val" id="histStatBpm">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Mixer (placeholder) -->
+<div class="pg hide" id="pgMixer">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;gap:8px;color:var(--tx4)">
+    <span class="material-symbols-outlined" style="font-size:40px;opacity:.2">equalizer</span>
+    <span style="font:400 11px var(--sn)">MIXER 패널 — 준비 중</span>
+  </div>
+</div>
+
+</div><!-- /content-area -->
+</div><!-- /app-body -->
 
 <div class="bbar">
   <div style="display:flex;gap:11px" id="bDots"></div>
@@ -3458,17 +3533,81 @@ function renderSettings(){
   };}
 }
 
-// ════ Tab switching ════════════════════════════════════
-document.getElementById('tabs').onclick=e=>{
-  const t=e.target.closest('.tab');if(!t)return;
+// ════ History tracking ═══════════════════════════════
+const _histLog=[];
+let _histSessionStart=null;
+function _histStartSession(){if(!_histSessionStart){_histSessionStart=Date.now();document.getElementById('histSession').textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});}}
+function _histFinalizeOnAir(dk){
+  if(dk._histOnAirStart){dk._histOnAirMs=(dk._histOnAirMs||0)+(Date.now()-dk._histOnAirStart);dk._histOnAirStart=null;}
+}
+function _histAddEntry(slot,dk){
+  if(!dk.tn)return;
+  // 중복 체크: 같은 곡이 이미 마지막에 추가됐으면 skip
+  const last=_histLog[_histLog.length-1];
+  if(last&&last.slot===slot&&last.tn===dk.tn&&last.ar===dk.ar)return;
+  _histLog.push({slot,tn:dk.tn,ar:dk.ar||'',bpm:dk.bpm||0,key:dk.key||'',loadTime:dk._histLoadTime||Date.now(),onAirMs:dk._histOnAirMs||0,addedAt:Date.now()});
+  renderHistory();
+}
+function _histOnNewTrack(slot,dk){
+  _histFinalizeOnAir(dk);
+  if((dk._histOnAirMs||0)>=10000&&dk.tn)_histAddEntry(slot,dk);
+  dk._histOnAirMs=0;dk._histOnAirStart=null;dk._histLoadTime=Date.now();
+}
+function _histOnAirChange(slot,dk,wasOnAir,isOnAir){
+  if(!wasOnAir&&isOnAir&&dk.ld){dk._histOnAirStart=dk._histOnAirStart||Date.now();}
+  else if(wasOnAir&&!isOnAir&&dk._histOnAirStart){
+    dk._histOnAirMs=(dk._histOnAirMs||0)+(Date.now()-dk._histOnAirStart);dk._histOnAirStart=null;
+    if((dk._histOnAirMs||0)>=10000&&dk.tn)_histAddEntry(slot,dk);
+  }
+}
+function _histExport(){
+  if(!_histLog.length)return;
+  const hdr='#,TITLE,ARTIST,BPM,KEY,DECK,ON AIR(s),TIME\n';
+  const rows=_histLog.map((e,i)=>`${i+1},"${e.tn}","${e.ar}",${e.bpm},${e.key},DECK${e.slot+1},${Math.round(e.onAirMs/1000)},${new Date(e.addedAt).toLocaleTimeString('ko-KR')}`).join('\n');
+  const url=URL.createObjectURL(new Blob([hdr+rows],{type:'text/csv'}));
+  const a=document.createElement('a');a.href=url;a.download='bridge-history.csv';a.click();URL.revokeObjectURL(url);
+}
+function renderHistory(){
+  const list=document.getElementById('histList');if(!list)return;
+  document.getElementById('histCount').textContent=_histLog.length;
+  document.getElementById('histStatCount').textContent=_histLog.length;
+  const totalMs=_histLog.reduce((s,e)=>s+e.onAirMs,0);
+  document.getElementById('histStatTime').textContent=Math.floor(totalMs/60000)+'m'+Math.floor((totalMs%60000)/1000)+'s';
+  const bpms=_histLog.filter(e=>e.bpm>0);
+  document.getElementById('histStatBpm').textContent=bpms.length?(bpms.reduce((s,e)=>s+e.bpm,0)/bpms.length).toFixed(1):'—';
+  if(!_histLog.length){list.innerHTML=`<div class="hist-empty"><span class="material-symbols-outlined">music_off</span><span class="hist-empty-tx">아직 기록된 트랙이 없습니다</span><span style="font:400 10px var(--sn);color:var(--tx4)">ON AIR 10초 이상 재생된 트랙이 여기 표시됩니다</span></div>`;return;}
+  const now=Date.now();
+  list.innerHTML=[..._histLog].reverse().map((e,ri)=>{
+    const i=_histLog.length-ri;
+    const isNew=now-e.addedAt<300000;
+    const cls=e.onAirMs>=30000?'full':'short';
+    const ts=new Date(e.addedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    const dur=Math.floor(e.onAirMs/60000)+'m'+Math.floor((e.onAirMs%60000)/1000)+'s';
+    return`<div class="hist-row ${cls}">
+      <span class="hist-idx">${i}</span>
+      <div class="hist-art">♪</div>
+      <div class="hist-info"><div class="hist-tn">${e.tn}${isNew?'<span class="hist-new">NEW</span>':''}</div><div class="hist-ar">${e.ar}</div></div>
+      <span class="hist-bpm">${e.bpm?e.bpm.toFixed(1):'—'}</span>
+      <span class="hist-key">${e.key||'—'}</span>
+      <span class="hist-deck">DECK ${e.slot+1}</span>
+      <span class="hist-ts">${ts}</span>
+      <span class="hist-dur">${dur}</span>
+    </div>`;
+  }).join('');
+}
+
+// ════ Sidebar switching ════════════════════════════════
+document.getElementById('sidebar').onclick=e=>{
+  const t=e.target.closest('.sbi');if(!t)return;
   curTab=t.dataset.t;
-  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===curTab));
-  const m={link:'pgLink',pdjl:'pgPdjl',tcnet:'pgTcnet',settings:'pgSettings'};
+  document.querySelectorAll('.sbi').forEach(x=>x.classList.toggle('on',x.dataset.t===curTab));
+  const m={link:'pgLink',pdjl:'pgPdjl',tcnet:'pgTcnet',settings:'pgSettings',history:'pgHistory',mixer:'pgMixer'};
   Object.values(m).forEach(id=>document.getElementById(id)?.classList.add('hide'));
   document.getElementById(m[curTab])?.classList.remove('hide');
   if(curTab==='pdjl')renderPDJL();
   if(curTab==='tcnet')renderTcnet();
   if(curTab==='settings'){loadInterfaces();renderSettings();}
+  if(curTab==='history')renderHistory();
 };
 
 async function loadInterfaces(){
@@ -3623,6 +3762,8 @@ if(E){
     const wasLoaded=dk.ld;
     dk.ld=!!status.hasTrack;
     if(!wasLoaded&&dk.ld){
+      _histStartSession();
+      _histOnNewTrack(layerIndex,dk); // history: 새 트랙 로드 → 이전 트랙 finalizing
       patchDeck(layerIndex); // re-render only this deck when track loads
       // If no metadata yet after 2s, trigger refresh
       if(!dk._metaRetry){dk._metaRetry=setTimeout(()=>{
@@ -3638,7 +3779,8 @@ if(E){
       if(_abpm>0){const bMs=60000/_abpm;dk._barAnchorMs=(dk.pos||0)-(status.beatInBar-1)*bMs;}
     }
     if(status.beatNum>0)dk._beatNum=status.beatNum;
-    dk.onAir=!!status.isOnAir;
+    const _wasOnAir=dk.onAir; dk.onAir=!!status.isOnAir;
+    if(_wasOnAir!==dk.onAir)_histOnAirChange(layerIndex,dk,_wasOnAir,dk.onAir);
     dk.master=!!status.isMaster;
     dk.sync=!!status.isSync;
     dk.vinylMode=!!status.isVinylMode;
