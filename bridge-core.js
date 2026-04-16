@@ -642,7 +642,17 @@ function parsePDJL(msg){
       }
       return Math.min(255,Math.round(peak/9200*255));
     });
-    return{kind:'djm_meter',name,ch};
+    // 15-band spectrum raw data per channel (normalized 0-255)
+    const spectrum=[0,1,2,3].map(c=>{
+      const bands=[];
+      for(let b=0;b<15;b++){
+        const off=MBASE+c*MSTEP+b*2;
+        if(off+1<msg.length){bands.push(Math.min(255,Math.round(msg.readUInt16BE(off)/9200*255)));}
+        else bands.push(0);
+      }
+      return bands;
+    });
+    return{kind:'djm_meter',name,ch,spectrum};
   }
   // DJM Channels On-Air (type 0x03, 45B, port 50001)
   if(type===PDJL.DJM_ONAIR && msg.length>=0x2C){
@@ -1957,7 +1967,7 @@ class BridgeCore {
       this.onDJMStatus?.({channel:p.channel, eq:p.eq});
     }
     if(p.kind==='djm_meter'){
-      this.onDJMMeter?.(p.ch);
+      this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum});
     }
     // DJM Channels-On-Air (type 0x03 on port 50001)
     if(p.kind==='djm_onair'){
