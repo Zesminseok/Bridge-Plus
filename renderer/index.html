@@ -3656,8 +3656,8 @@ function updateMixer(){
       // No real EQ data — show knobs at neutral (center)
       prof.ids.forEach(id=>_mxKnobUpdate('mx'+id+i,0,KSZ));
     }
-    // Fader cap position: real fader data or VU meter as proxy
-    const fv=hasReal?(faders[i]||0)/255:meter;
+    // Fader cap position: real fader data, or on-air flag as binary (no fader data from DJM-900NXS2)
+    const fv=hasReal?(faders[i]||0)/255:(air?1:0);
     const fPct=fv*100;
     const cap=document.getElementById('mxFdrCap'+i);
     if(cap)cap.style.bottom='calc('+fPct+'% - 5px)';
