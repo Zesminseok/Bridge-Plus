@@ -882,6 +882,7 @@ class BridgeCore {
     this.devices = {};
     this.faders  = [0,0,0,0];
     this.onAir   = [0,0,0,0];  // DJM Channels-On-Air flags
+    this._hasRealFaders = false;
     this._tcAcc = new Array(8).fill(null);
 
     this.onNodeDiscovered = null;
@@ -1797,7 +1798,7 @@ class BridgeCore {
       pkt[0x25]=0x00;
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
       for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
-      pkt[0x30]=0x07; pkt[0x34]=0x05; pkt[0x35]=0x64;
+      pkt[0x30]=0x03; pkt[0x34]=0x05; pkt[0x35]=0x64;
       // Send to all broadcast addresses
       for(const bc of allBCs){
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
