@@ -1963,7 +1963,7 @@ function deckHTML(slot){
   /* SECTION 1: waveform panel + VU strip (right side, full height) */
   const sec1=`<div class="dk-wf-wrap">
     <div class="dk-wf-area">
-      <div class="dkart" id="dart${slot}" ${isLoaded?`data-a="eject" data-i="${slot}"`:''}>${artSrc?`<img src="${artSrc}" alt="" onerror="this.parentElement.innerHTML='<span class=\\'noart-icon\\'>♪</span>'">`:'<span class="noart-icon">♪</span>'}</div>
+      <div class="dkart" id="dart${slot}" ${isLoaded?`data-a="eject" data-i="${slot}"`:''}>${artSrc?`<img src="${artSrc}" alt="" onerror="this.src='assets/default-art.png'">`:`<img src="assets/default-art.png" alt="">`}</div>
       <div class="dk-wf-col">
         <div class="dwov" id="dwov${slot}" style="${isLoaded?'':'display:flex;align-items:center;justify-content:center'}">
           ${isLoaded?`<canvas id="wov${slot}"></canvas><canvas id="wovol${slot}" class="dwov-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;background:transparent"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
@@ -2477,7 +2477,7 @@ function loadFile(slot,f){
   d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;d._fileName=f.name;d._pwv7=false;d._ovCache=null;d._zmCache=null;
   // Immediately clear artwork UI
   const _dartReset=document.getElementById('dart'+slot);
-  if(_dartReset)_dartReset.innerHTML='<span class="noart-icon">♪</span>';
+  if(_dartReset)_dartReset.innerHTML='<img src="assets/default-art.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
   // filename parsing used as fallback only — ID3 tags take priority
   const n=f.name.replace(/\.[^.]+$/,'');
   if(n.includes(' - ')){const p=n.split(' - ');d.ar=p[0].trim();d.tn=p.slice(1).join(' - ').trim();}
@@ -2523,7 +2523,7 @@ function loadFile(slot,f){
       if(_art&&d.artUrl){
         const _existImg=_art.querySelector('img');
         if(_existImg){_existImg.src=d.artUrl;}
-        else{_art.innerHTML=`<img src="${d.artUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML='<span class=\\'noart-icon\\'>♪</span>'">`;}
+        else{_art.innerHTML=`<img src="${d.artUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.src='assets/default-art.png'">`;}
       }
       if(E&&run)window.bridge.updateLayer(slot,{trackName:d.tn||'',artistName:d.ar||''});
     });
@@ -4044,7 +4044,7 @@ function renderHistory(){
     const dur=Math.floor(e.onAirMs/60000)+'m'+Math.floor((e.onAirMs%60000)/1000)+'s';
     return`<div class="hist-row ${cls}">
       <span class="hist-idx">${i}</span>
-      <div class="hist-art">♪</div>
+      <div class="hist-art"><img src="assets/default-art.png" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>
       <div class="hist-info"><div class="hist-tn">${e.tn}${isNew?'<span class="hist-new">NEW</span>':''}</div><div class="hist-ar">${e.ar}</div></div>
       <span class="hist-bpm">${e.bpm?e.bpm.toFixed(1):'—'}</span>
       <span class="hist-key">${e.key||'—'}</span>
@@ -4170,7 +4170,7 @@ if(E){
         dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
         dk._trackId=newTid;dk._tidChangeCount=0;
         const _artEl=document.getElementById('dart'+layerIndex);
-        if(_artEl)_artEl.innerHTML='<span class="noart-icon">♪</span>';
+        if(_artEl)_artEl.innerHTML='<img src="assets/default-art.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
         // Update title/artist DOM
         const _tnEl=document.getElementById('dtn'+layerIndex);if(_tnEl)_tnEl.textContent='—';
         const _taEl=document.getElementById('dta'+layerIndex);if(_taEl)_taEl.textContent='';
@@ -4301,10 +4301,10 @@ if(E){
       if(d.art){
         const img=el.querySelector('img');
         if(img){img.src=d.art;}
-        else{el.innerHTML=`<img src="${d.art}" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML='<span class=\\'noart-icon\\'>♪</span>'">`;}
+        else{el.innerHTML=`<img src="${d.art}" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.src='assets/default-art.png'">`;}
       } else {
-        // 아트워크 없음 → 플레이스홀더로 복원
-        el.innerHTML='<span class="noart-icon">♪</span>';
+        // 아트워크 없음 → 기본 바이닐 이미지로 복원
+        el.innerHTML='<img src="assets/default-art.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
       }
     }
   });

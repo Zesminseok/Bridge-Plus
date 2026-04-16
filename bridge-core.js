@@ -9,6 +9,8 @@
 const dgram = require('dgram');
 const net   = require('net');
 const os    = require('os');
+const path  = require('path');
+const fs    = require('fs');
 
 // ─────────────────────────────────────────────
 // TCNet 상수
@@ -816,36 +818,16 @@ function parsePDJL(msg){
 }
 
 // ─────────────────────────────────────────────
-// 80x80 dark placeholder JPEG with music note — shown in Arena when no album art
-const BLANK_JPEG = Buffer.from(
-  '/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6AB'+
-  'AAMAAAABAAEAAKACAAQAAAABAAAAUKADAAQAAAABAAAAUAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklN'+
-  'BAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgAUABQAwEiAAIRAQMRAf/EAB8A'+
-  'AAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFB'+
-  'BhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldY'+
-  'WVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfI'+
-  'ycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYH'+
-  'CAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy'+
-  '0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWG'+
-  'h4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz'+
-  '9PX29/j5+v/bAEMAAQEBAQEBAgEBAgMCAgIDBAMDAwMEBgQEBAQEBgcGBgYGBgYHBwcHBwcHBwgICAgI'+
-  'CAkJCQkJCwsLCwsLCwsLC//bAEMBAgICAwMDBQMDBQsIBggLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsL'+
-  'CwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLC//dAAQABf/aAAwDAQACEQMRAD8A/h/oopQCTgV6BziU8ITU'+
-  'qJ2FTCMfWgCt5Y/z/wDro8sf5/8A11dEZ+lKYzQBnlD2plXmjH0qJk9aAK1FOKlabQB//9D+H+rCJ2FR'+
-  'IMnNW0HH1r0DnHonYdKsqmelCKDx6VZRO5oA9M+DXhzXtc+Imm3Hh6ze+fTJ4b+aNHRG8mGVCxHmOik'+
-  '8gAZ7+lfbP/DYnwz72Gqf9+ov8A47Xh37HqkfEu+P8A1DJf/RsVfKZQ9q6YVJUoJx63OGpRhWqyjNbJ'+
-  'fjc/V74a/Hvwf8UtdlhPen09pZGuGe4RFXZHGWIAL9zivyRdMfSvsP9jxQPibfH/AKhkv/o2GvkV1A5o'+
-  'rVHOEZS8/wBDDC0Y0qkox220/UzXTsarkYOKvOvUVUcd65juP//R/iETpV2Mc/SqSdKvRnmvQOctxjj6'+
-  '1dQc/SqUZ4HtX1n8E/2cJPiHpCeLvEt21ppsrMsMcG0zTBNys245CAOMDKktg8AYJuFOU3aJnVqxpx5pv'+
-  'Qufsgrj4kXx/6hkv/o2KvJfh98H/ABr8TJHbw7AqW0TbJLqdtkKNtLYyAWY9MhVbGRnAOa+/vhx8BtD+'+
-  'GHi2XxHoF9PNDLZtbGG4Cs25nVtwdQoxhQNu33z2rlf2ZPH3he+8B2Xgn7UkWqWTSqYJCFaQO7yhoxn5'+
-  'wFJ3Y5XByAME9iofDCp5/oeZLFv95UpK+3y3Of+BHwS8bfC/wCIVzqWviCa0m054xPbybl8xpUIQhgr5'+
-  'wpOdu33zxX50SDqK/YH4r/Fjw/8MvD9xcXNxE2qNETaWhO53dshGZAQRGCDubIGAQDuwD+P0h61nioxj'+
-  'ywj5m2AnOo5VJre34XKcnrVGQcGr0naqUh4Nch6J//S/iCQ84q2jcfSqNWUfvXoHOaSNj6Gvtz4AftFe'+
-  'G/CHhuDwJ41RraG2ZzBdxqXXa5aQiRRls7jhSqnORkDBJ+GkfH0qyr461pTqSg+aJlWoxqx5Zn6J/Fb9'+
-  'qbwsPD9xonw7klu7y7iKC6CvCkAfIYqW2v5ijlcAAEg5OCp/P0yen+f0qmJPQ0GT1NOrVlUd5E0MPCkr'+
-  'QJnfH1qq7dhQz9hVZ37CsjcY7dTVNz2qZ2z9KrE5OaAP//T/h/pyttNNor0DnLKP3FTLJ6VRBI6U8Set'+
-  'AGh5h7/AOf0o8z/AD/kVREgpTIPWgCy0nrULPn6VCZPT/P6UwknrQArNuptFFAH/9k=','base64');
+// Default album art — vinyl record JPEG loaded from file
+// Used in Arena display and TCNet LowResArtwork when no real album art
+const BLANK_JPEG = (() => {
+  try {
+    return fs.readFileSync(path.join(__dirname, 'renderer', 'assets', 'default-art.jpg'));
+  } catch (e) {
+    console.warn('[WARN] default-art.jpg not found, using 1x1 black JPEG fallback');
+    return Buffer.from('/9j/4AAQSkZJRgABAgAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6ery8/T19vf4+fr/xAAfAQADAQEBAQEBAQEBAAAAAAAAAQIDBAUGBwgJCgv/xAC1EQACAQIEBAMEBwUEBAABAncAAQIDEQQFITEGEkFRB2FxEyIygQgUQpGhscEJIzNS8BVictEKFiQ04SXxFxgZGiYnKCkqNTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2dri4+Tl5ufo6ery8/T19vf4+fr/2gAMAwEAAhEDEQA/AP0poA//2Q==', 'base64');
+  }
+})();
 
 // BridgeCore
 // ─────────────────────────────────────────────
@@ -1121,7 +1103,6 @@ class BridgeCore {
 
   // ── Raw Packet Capture (ALL PDJL traffic for protocol analysis) ──
   startDJMCapture(filePath){
-    const fs=require('fs');
     this._djmCaptureStream=fs.createWriteStream(filePath,{flags:'a'});
     this._djmCapture=true;
     // Write header with known device info
