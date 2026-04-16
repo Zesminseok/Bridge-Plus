@@ -2973,7 +2973,7 @@ function tick(){
     // VU meter — ALWAYS for virtual, only run-gated for HW
     // Peak meter: returns instantaneous peak (0-1) from time domain buffer
     // -45dBFS 노이즈 게이트: AAC/MP4 코덱 노이즈 플로어 제거 (FLAC은 영향 없음)
-    const _NOISE_GATE=0.006; // ≈-44dBFS
+    const _NOISE_GATE=0.02; // ≈-34dBFS
     const _getPeak=(an,buf)=>{if(!an||!buf)return 0;an.getByteTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i++){const v=Math.abs((buf[i]-128)/128);if(v>pk)pk=v;}return pk>_NOISE_GATE?pk:0;};
     if(d.type==='hw'){
       // HW: DJM on-air 미터 → VU, 페이더 값 → F
@@ -3003,7 +3003,9 @@ function tick(){
       d.vu=Math.max(peakL,peakR);
     }
     // dB scale: peak 1.0 → 0dB, -60dB floor, +6dB headroom so loud music fills to top
-    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-60;const h=Math.min(100,Math.max(0,(db+60)*100/60));el2.style.height=h+'%';el2.style.background=h>90?'var(--red)':h>70?'var(--ylw)':'var(--grn)';};
+    // dB scale: -45dBFS floor (조용한 소리는 낮게, 큰 소리만 높게)
+    // -30dBFS≈33%, -20dBFS≈56%, -10dBFS≈78%, 0dBFS=100%
+    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-45;const h=Math.min(100,Math.max(0,(db+45)*100/45));el2.style.height=h+'%';el2.style.background=h>90?'var(--red)':h>70?'var(--ylw)':'var(--grn)';};
     if(d.type==='hw'){
       _vuBar('dvuL'+slot,d.vuL||0);
       // Fader bar (linear, not dB)
