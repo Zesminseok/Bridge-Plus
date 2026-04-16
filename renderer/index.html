@@ -384,9 +384,9 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-ch-num{font:800 11px var(--lb);color:var(--tx)}
 .mx-ch-air{font:700 5.5px var(--mn);padding:1.5px 4px;border-radius:999px;letter-spacing:.06em;background:rgba(255,80,80,.12);color:var(--red);opacity:0;transition:opacity .2s}
 .mx-ch.on-air .mx-ch-air{opacity:1;animation:pulse-air 1.2s ease-in-out infinite}
-/* Vertical waveform — at top, above knobs */
-.mx-wf-wrap{width:100%;height:60px;padding:0 2px}
-.mx-wf-canvas{width:100%;height:60px;border-radius:3px;background:rgba(255,255,255,.02)}
+/* Vertical waveform — at top, above knobs, grows to fill */
+.mx-wf-wrap{width:100%;flex:1;min-height:60px;padding:0 2px}
+.mx-wf-canvas{width:100%;height:100%;border-radius:3px;background:rgba(255,255,255,.02)}
 /* SVG Knob */
 .mx-knob{display:flex;flex-direction:column;align-items:center;gap:0}
 .mx-knob svg{display:block;overflow:visible}
@@ -397,8 +397,8 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-cue{display:flex;justify-content:center;width:100%;padding:3px 0}
 .mx-cue-btn{padding:5px 0;width:85%;border-radius:4px;font:700 8px var(--mn);letter-spacing:.08em;text-align:center;border:1.5px solid rgba(239,194,10,.25);background:transparent;color:rgba(239,194,10,.35);transition:all .15s;cursor:default}
 .mx-cue-btn.on{border-color:var(--ylw2);color:var(--ylw2);background:rgba(239,194,10,.12);box-shadow:0 0 10px rgba(239,194,10,.2)}
-/* Fader area: fader + VU side-by-side — more gap */
-.mx-fdr-area{display:flex;gap:8px;flex:1;min-height:0;width:100%;justify-content:center;align-items:stretch;padding:0 4px}
+/* Fader area: fader + VU side-by-side — fixed height */
+.mx-fdr-area{display:flex;gap:8px;height:140px;flex-shrink:0;width:100%;justify-content:center;align-items:stretch;padding:0 4px}
 /* Fader column */
 .mx-fdr-col{position:relative;width:36px;flex-shrink:0}
 .mx-fdr-track{width:3px;height:100%;background:rgba(255,255,255,.08);border-radius:1.5px;position:absolute;left:50%;transform:translateX(-50%)}
@@ -416,12 +416,12 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-vu-pk{position:absolute;left:0;right:0;height:1.5px;background:var(--ylw2);border-radius:1px;transition:bottom .08s;bottom:0}
 /* Channel label */
 .mx-ch-lbl{font:800 8px var(--lb);color:var(--grn);letter-spacing:.08em;text-align:center;margin-top:2px}
-/* Crossfader */
-.mx-xfader{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(20,22,26,.6);border:1px solid var(--bdr);border-radius:8px;flex-shrink:0}
-.mx-xf-lbl{font:700 8px var(--lb);color:var(--tx2);letter-spacing:.06em;flex-shrink:0}
-.mx-xf-track{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;position:relative}
-.mx-xf-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:var(--tx2);border-radius:50%;border:2px solid var(--bg);transition:left .08s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
-.mx-xf-a,.mx-xf-b{font:700 9px var(--mn);color:var(--tx2)}
+/* Crossfader — compact, only spans body width */
+.mx-xfader{display:flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(20,22,26,.6);border:1px solid var(--bdr);border-radius:6px;flex-shrink:0;align-self:stretch}
+.mx-xf-lbl{font:700 7px var(--lb);color:var(--tx2);letter-spacing:.06em;flex-shrink:0}
+.mx-xf-track{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;position:relative}
+.mx-xf-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;background:var(--tx2);border-radius:50%;border:2px solid var(--bg);transition:left .08s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.mx-xf-a,.mx-xf-b{font:700 8px var(--mn);color:var(--tx2)}
 /* Master section */
 .mx-master{width:82px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 4px 6px;gap:4px;flex-shrink:0;align-items:center}
 .mx-master-lbl{font:800 9px var(--lb);color:var(--key);text-align:center;letter-spacing:.08em}
@@ -540,8 +540,8 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
     </div>
     <div class="mx-body" id="mxBody"></div>
     <div class="mx-xfader">
-      <span class="mx-xf-a">A</span>
       <span class="mx-xf-lbl">X-FADER</span>
+      <span class="mx-xf-a">A</span>
       <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
       <span class="mx-xf-b">B</span>
     </div>
@@ -574,7 +574,7 @@ let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
 let _djmSpectrum=[[],[],[],[],[],[]];
 let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]];
-let _djmXfader=127, _djmHpCue=0, _djmChCount=4;
+let _djmXfader=127, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=0;
 // 설정 — 인터페이스 포함
 const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
   tcFps:'25',wfColor:'3band',wfCenter:'left',
@@ -3480,7 +3480,7 @@ function _mxBuildBody(){
   for(let i=0;i<nCh;i++){
     html+=`<div class="mx-ch" id="mxCh${i}">
       <div class="mx-ch-hdr"><span class="mx-ch-num">${i+1}</span><span class="mx-ch-air">ON AIR</span></div>
-      <div class="mx-wf-wrap"><canvas class="mx-wf-canvas" id="mxWf${i}" width="80" height="60"></canvas></div>
+      <div class="mx-wf-wrap"><canvas class="mx-wf-canvas" id="mxWf${i}" width="60" height="160"></canvas></div>
       <div class="mx-knobs">
         <div class="mx-knob">${_mxKnobSVG('mxT'+i,KSZ)}<span class="mx-knob-lbl">TRIM</span></div>
         <div class="mx-knob">${_mxKnobSVG('mxH'+i,KSZ)}<span class="mx-knob-lbl">HI</span></div>
@@ -3502,13 +3502,14 @@ function _mxBuildBody(){
       <div class="mx-vu-col"><span class="mx-vu-lbl">L</span><div class="mx-vu-bar"><div class="mx-vu-fill" id="mxVuML"></div></div></div>
       <div class="mx-vu-col"><span class="mx-vu-lbl">R</span><div class="mx-vu-bar"><div class="mx-vu-fill" id="mxVuMR"></div></div></div>
     </div>
+    <div class="mx-knob" style="margin:2px 0">${_mxKnobSVG('mxMVol',KSZ)}<span class="mx-knob-lbl">M.VOL</span></div>
     <div class="mx-cue"><span class="mx-cue-btn" id="mxCueMaster">CUE</span></div>
     <div style="text-align:center"><span class="mx-knob-lbl">BPM</span><div style="font:700 13px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums" id="mxMasterBpm">—</div></div>
   </div>`;
   body.innerHTML=html;
   _mxBuilt=true;
   _mxWfBufs=[];
-  for(let i=0;i<nCh;i++)_mxWfBufs.push(new Float32Array(60));
+  for(let i=0;i<nCh;i++)_mxWfBufs.push(new Float32Array(160));
 }
 
 function updateMixer(){
@@ -3553,20 +3554,27 @@ function updateMixer(){
     // CUE button state from headphone CUE flags
     const cueBtn=document.getElementById('mxCue'+i);
     if(cueBtn)cueBtn.classList.toggle('on',!!(_djmHpCue&(1<<i)));
-    // Vertical waveform (scrolling VU history, bottom→top) — now above TRIM
+    // Vertical waveform (scrolling VU history, bottom→top) — above TRIM
     if(_mxWfBufs&&_mxWfBufs[i]){
       const buf=_mxWfBufs[i];
       buf.copyWithin(0,1);
       buf[buf.length-1]=meter;
       const cvs=document.getElementById('mxWf'+i);
       if(cvs){
+        // Sync canvas buffer to CSS size on first draw
+        const rect=cvs.getBoundingClientRect();
+        if(rect.width>0&&(cvs.width!==Math.round(rect.width)||cvs.height!==Math.round(rect.height))){
+          cvs.width=Math.round(rect.width);cvs.height=Math.round(rect.height);
+        }
         const ctx=cvs.getContext('2d');
         const w=cvs.width,h=cvs.height;
         ctx.clearRect(0,0,w,h);
+        const step=buf.length/h;
         for(let y=0;y<h;y++){
-          const v=buf[y];
+          const bi=Math.min(buf.length-1,Math.floor(y*step));
+          const v=buf[bi];
           if(v<0.01)continue;
-          const barW=Math.max(2,Math.round(v*w*0.9));
+          const barW=Math.max(2,Math.round(v*w*0.85));
           const x=(w-barW)/2;
           const r=Math.min(255,Math.round(v*v*200));
           const g=Math.min(255,Math.round(74+v*150));
@@ -3586,6 +3594,9 @@ function updateMixer(){
   const vuML=document.getElementById('mxVuML'),vuMR=document.getElementById('mxVuMR');
   if(vuML){const h=Math.min(100,mL*100);vuML.style.height=h+'%';vuML.style.background=h>90?'#ff6b6b':h>70?'var(--ylw2)':'var(--grn)';}
   if(vuMR){const h=Math.min(100,mR*100);vuMR.style.height=h+'%';vuMR.style.background=h>90?'#ff6b6b':h>70?'var(--ylw2)':'var(--grn)';}
+  // Master volume knob (from DJM masterLvl, 0-255 → normalized -1..+1 as rotation)
+  const mVolNorm=(_djmXfader!==undefined)?(((_djmMasterLvl||0)/127.5)-1):0;
+  _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),KSZ);
   const activeDk=Object.values(DECKS).find(d=>d.type==='hw'&&d.pl&&d.bpm>0);
   const mxBpm=document.getElementById('mxMasterBpm');
   if(mxBpm)mxBpm.textContent=activeDk?activeDk.bpm.toFixed(2):'—';
@@ -4171,6 +4182,7 @@ if(E){
     for(let i=0;i<f.length&&i<6;i++)faders[i]=f[i];
     if(d.eq){for(let i=0;i<d.eq.length&&i<6;i++)eqBands[i]=d.eq[i];}
     if(d.xfader!=null)_djmXfader=d.xfader;
+    if(d.masterLvl!=null)_djmMasterLvl=d.masterLvl;
     if(d.hpCueCh!=null)_djmHpCue=d.hpCueCh;
   });
   window.bridge.onDJMMeter?.(d=>{
