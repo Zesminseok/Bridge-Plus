@@ -2114,12 +2114,9 @@ class BridgeCore {
     // DJM Channels-On-Air (type 0x03 on port 50001)
     if(p.kind==='djm_onair'){
       this.onAir = p.onAir;
-      // DJM-900NXS2: use on-air state as fader proxy for TCNet until real faders detected
-      if(!this._hasRealFaders){
-        const faderProxy=p.onAir.map(v=>v?255:0);
-        this.faders=faderProxy; // TCNet mixer data will send these values to Arena
-        this.onDJMStatus?.({channel:faderProxy, onAir:p.onAir, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:false});
-      }
+      // on-air 값은 페이더로 쓰지 않음 — 아이콘 표시 전용
+      // fader는 type 0x39 (real analog) 도착 시에만 업데이트
+      this.onDJMStatus?.({channel:this.faders, onAir:p.onAir, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:this._hasRealFaders});
       if(!this.devices['djm']){
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);

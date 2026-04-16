@@ -3294,12 +3294,8 @@ function tick(){
         d.vuL=target>d.vuL?target:target*0.6+(d.vuL||0)*0.4;
         d.vu=d.vuL;
         d._djmMeter=Math.max(0,(d._djmMeter||0)*0.72);
-        // Fader bar: real fader data or on-air binary (no smoothing — raw values)
-        if(_djmHasRealFaders){
-          d._faderSmooth=(faders[slot]||0)/255;
-        } else {
-          d._faderSmooth=onAirCh[slot]?1:0;
-        }
+        // Fader bar: real fader data only — on-air is icon only, not fader proxy
+        d._faderSmooth=(faders[slot]||0)/255;
       }
     } else {
       // Virtual: L/R 스테레오
@@ -4422,7 +4418,7 @@ if(E){
     if(d.hasRealFaders!=null)_djmHasRealFaders=d.hasRealFaders;
     const f=d.channel||d.faders||[];  // bridge sends d.channel (d.faders was a bug)
     for(let i=0;i<f.length&&i<6;i++)faders[i]=f[i];
-    if(d.onAir){for(let i=0;i<d.onAir.length&&i<6;i++)onAirCh[i]=d.onAir[i]>127?1:0;}
+    if(d.onAir){for(let i=0;i<d.onAir.length&&i<6;i++)onAirCh[i]=d.onAir[i]?1:0;}
     if(d.eq){for(let i=0;i<d.eq.length&&i<6;i++)eqBands[i]=d.eq[i];}
     if(d.xfader!=null)_djmXfader=d.xfader;
     if(d.masterLvl!=null)_djmMasterLvl=d.masterLvl;
