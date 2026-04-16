@@ -3634,7 +3634,7 @@ function _mxKnobSVG(id,sz){
     <line id="${id}tick" x1="${cx}" y1="${cy-r+2}" x2="${cx}" y2="${cy-r+6}" stroke="rgba(255,255,255,.85)" stroke-width="1.5" stroke-linecap="round" transform="rotate(0,${cx},${cy})"/>
   </svg>`;
 }
-function _mxKnobUpdate(id,norm,sz){
+function _mxKnobUpdate(id,norm,sz,isLevel=false){
   // norm: -1 to +1 (0=center/12 o'clock)
   const r=sz/2-3,cx=sz/2,cy=sz/2;
   const deg=norm*135; // degrees CW from 12 o'clock (-135=7:30, 0=12:00, +135=4:30)
@@ -3642,19 +3642,28 @@ function _mxKnobUpdate(id,norm,sz){
   if(tickEl)tickEl.setAttribute('transform',`rotate(${deg},${cx},${cy})`);
   const arcEl=document.getElementById(id+'arc');
   if(!arcEl)return;
-  const absDeg=Math.abs(deg);
-  if(absDeg<2){arcEl.setAttribute('d','');return;}
-  // Arc between 12 o'clock (center detent) and current tick position
-  // Angle θ from 12 o'clock (CW+): x = cx + r*sin(θ), y = cy - r*cos(θ)
   const pt=(a)=>{const r2=a*Math.PI/180;return[cx+r*Math.sin(r2),cy-r*Math.cos(r2)];};
-  const [ox,oy]=pt(0);    // 12 o'clock
-  const [nx,ny]=pt(deg);  // current tick position
-  // Boost (norm≥0): sweep CW from 12 o'clock to current; Cut: sweep CW from current to 12
-  const d=norm>=0
-    ?`M${ox.toFixed(2)},${oy.toFixed(2)} A${r},${r} 0 0 1 ${nx.toFixed(2)},${ny.toFixed(2)}`
-    :`M${nx.toFixed(2)},${ny.toFixed(2)} A${r},${r} 0 0 1 ${ox.toFixed(2)},${oy.toFixed(2)}`;
-  arcEl.setAttribute('d',d);
-  arcEl.setAttribute('stroke',norm>0.05?'rgba(135,135,255,.7)':norm<-0.05?'rgba(255,100,100,.6)':'rgba(200,200,200,.4)');
+  if(isLevel){
+    // Level/Volume knob: arc from 7 o'clock (−∞, -135°) sweeping CW to current position
+    const span=deg-(-135); // 0 to 270°
+    if(span<2){arcEl.setAttribute('d','');return;}
+    const [sx,sy]=pt(-135);
+    const [nx,ny]=pt(deg);
+    const large=span>180?1:0;
+    arcEl.setAttribute('d',`M${sx.toFixed(2)},${sy.toFixed(2)} A${r},${r} 0 ${large} 1 ${nx.toFixed(2)},${ny.toFixed(2)}`);
+    arcEl.setAttribute('stroke','rgba(180,180,180,.55)');
+  } else {
+    // EQ knob: arc between 12 o'clock (center detent) and current — boost=blue, cut=red
+    const absDeg=Math.abs(deg);
+    if(absDeg<2){arcEl.setAttribute('d','');return;}
+    const [ox,oy]=pt(0);
+    const [nx,ny]=pt(deg);
+    const d=norm>=0
+      ?`M${ox.toFixed(2)},${oy.toFixed(2)} A${r},${r} 0 0 1 ${nx.toFixed(2)},${ny.toFixed(2)}`
+      :`M${nx.toFixed(2)},${ny.toFixed(2)} A${r},${r} 0 0 1 ${ox.toFixed(2)},${oy.toFixed(2)}`;
+    arcEl.setAttribute('d',d);
+    arcEl.setAttribute('stroke',norm>0.05?'rgba(135,135,255,.7)':norm<-0.05?'rgba(255,100,100,.6)':'rgba(200,200,200,.4)');
+  }
 }
 
 function _mxDetectProfile(djmDevs){
@@ -3749,12 +3758,15 @@ function updateMixer(){
       // Index map — confirmed via live user test (2026-04-17):
       // eq[0]=TRIM(+1), eq[1]=HI(+4), eq[2]=MID(+3), eq[3]=LOW(+6), eq[4]=COLOR(+7)
       const eqMap={T:0, H:1, M:2, L:3, C:4, HM:1, LM:2};
-      if(prof.ids.length>=6)Object.assign(eqMap,{T:0,H:1,HM:2,LM:3,L:4,C:null}); // V10 5-band (CLR unknown)
+      if(prof.ids.length>=6)Object.assign(eqMap,{T:0,H:1,HM:2,LM:3,L:4,C:null}); // V10 5-band
+      // T=TRIM, C=COLOR: level knob (-∞ to max, arc from 7 o'clock to current)
+      // H/M/L/HM/LM: EQ boost/cut knob (center=12 o'clock, arc shows deviation)
+      const _levelIds=new Set(['T','C']);
       prof.ids.forEach(id=>{
         const bi=eqMap[id];
-        // EQ values from DJM 0x39: 0-255, center=128 (12 o'clock = 0dB)
+        // raw 0-255, center=128; norm -1 to +1 for tick rotation (same for both types)
         const norm=bi!=null?(((eq[bi]??128)-128)/128):0;
-        _mxKnobUpdate('mx'+id+i,norm,KSZ);
+        _mxKnobUpdate('mx'+id+i,norm,KSZ,_levelIds.has(id));
       });
     } else {
       // No real EQ data — show knobs at neutral (center)
@@ -3832,7 +3844,7 @@ function updateMixer(){
   // Master volume knob: 0=−∞ (fully CCW, -1), 255=+5dB (fully CW, +1)
   const MSZ=44;
   const mVolNorm=hasReal?(((_djmMasterLvl||0)/127.5)-1):0;
-  _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),MSZ);
+  _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),MSZ,true);
   // A/B crossfader assign badges (placeholder — data from DJM protocol TBD)
   for(let i=0;i<nCh;i++){
     const abEl=document.getElementById('mxAb'+i);
