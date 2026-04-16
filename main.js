@@ -181,6 +181,13 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
   }catch(e){return{ok:false,err:e.message};}
 });
 ipcMain.handle('bridge:stop',async()=>{bridge?.stop();clearInterval(iv);return{ok:true};});
+ipcMain.handle('bridge:cpuUsage',()=>{
+  const metrics=app.getAppMetrics();
+  let cpu=0;
+  metrics.forEach(m=>{cpu+=m.cpu.percentCPUUsage;});
+  const mem=process.memoryUsage();
+  return{cpu:Math.round(cpu*10)/10, memMB:Math.round(mem.rss/1048576)};
+});
 ipcMain.handle('bridge:updateLayer',(_,{i,data})=>{bridge?.updateLayer(i,data);return{ok:true};});
 ipcMain.on('bridge:setFader',(_,{i,val})=>{if(bridge&&bridge.faders)bridge.faders[i]=Math.max(0,Math.min(255,val));});
 ipcMain.handle('bridge:removeLayer',(_,{i})=>{bridge?.removeLayer(i);return{ok:true};});

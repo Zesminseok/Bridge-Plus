@@ -38,4 +38,5 @@ contextBridge.exposeInMainWorld('bridge',{
   cleanupTemp:(tempPath)=>ipcRenderer.invoke('bridge:cleanupTemp',{tempPath}),
   onAudioProgress:(cb)=>ipcRenderer.on('bridge:audioProgress',(_,d)=>cb(d)),
   onQuitting:(cb)=>ipcRenderer.on('app:quitting',()=>cb()),
+  getCpuUsage:()=>ipcRenderer.invoke('bridge:cpuUsage'),
 });

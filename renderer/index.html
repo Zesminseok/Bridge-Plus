@@ -602,6 +602,9 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
     <div class="bbar-ind"><span class="bbar-lbl">ARENA</span><span class="bbar-val" id="stArena">0</span></div>
     <div class="bbar-ind"><span class="bbar-lbl">DECKS</span><span class="bbar-val" id="stDecks">0</span></div>
     <div class="bbar-ind"><span class="bbar-lbl">UP</span><span class="bbar-val" id="stUp">—</span></div>
+    <div class="bbar-sep"></div>
+    <div class="bbar-ind"><span class="bbar-lbl">CPU</span><span class="bbar-val" id="stCpu">—</span></div>
+    <div class="bbar-ind"><span class="bbar-lbl">MEM</span><span class="bbar-val" id="stMem">—</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div style="display:flex;gap:8px" id="bDots"></div>
@@ -3491,6 +3494,18 @@ function updateHeader(){
   if(bDotArt)bDotArt.style.background=artActive?'var(--grn)':'var(--red)';
   document.getElementById('stAlert').classList.toggle('hide',run);
 }
+// CPU/MEM monitoring — poll every 2s to avoid overhead
+let _cpuTimer=0;
+setInterval(async()=>{
+  if(!window.bridge?.getCpuUsage)return;
+  try{
+    const m=await window.bridge.getCpuUsage();
+    const cpuEl=document.getElementById('stCpu');
+    const memEl=document.getElementById('stMem');
+    if(cpuEl){cpuEl.textContent=m.cpu+'%';cpuEl.style.color=m.cpu>80?'var(--red)':m.cpu>40?'var(--ylw2)':'var(--tx3)';}
+    if(memEl)memEl.textContent=m.memMB+'MB';
+  }catch(_){}
+},2000);
 
 // ════ Mixer panel — real-time DJM data visualization ══════════
 let _mxPeaks=[0,0,0,0], _mxBuilt=false, _mxWfBufs=null;
