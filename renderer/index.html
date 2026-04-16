@@ -3578,7 +3578,7 @@ function tick(){
   updateMixer();
   // Status bar + TCNet stats: throttle to 1s (no need for 60fps)
   const _now=Date.now();
-  if(_now-_slowAt>=1000){
+  if(_now-_slowAt>=3000){
     _slowAt=_now;
     updateHeader();
     const slots=Object.keys(DECKS).map(Number).sort();
@@ -4215,7 +4215,7 @@ if(E){
     tcNodes[n.name+'@'+n.ip]={...n,lastSeen:Date.now()};
     if(curTab==='tcnet'&&!_tcnetRenderPending){
       _tcnetRenderPending=true;
-      setTimeout(()=>{_tcnetRenderPending=false;if(curTab==='tcnet')renderTcnet();},1000);
+      setTimeout(()=>{_tcnetRenderPending=false;if(curTab==='tcnet')renderTcnet();},3000);
     }
   });
   window.bridge.onCDJStatus?.(d=>{
