@@ -393,12 +393,13 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-knob-lbl{font:700 6px var(--mn);color:var(--tx2);letter-spacing:.04em}
 .mx-knob-val{font:600 6px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums}
 .mx-knobs{display:flex;flex-direction:column;gap:1px;align-items:center;width:100%}
+.mx-knob-row{display:flex;gap:2px;justify-content:center}
 /* CUE button — compact */
 .mx-cue{display:flex;justify-content:center;width:100%;padding:2px 0}
 .mx-cue-btn{padding:4px 8px;border-radius:3px;font:700 7px var(--mn);letter-spacing:.06em;text-align:center;border:1.5px solid rgba(239,194,10,.25);background:transparent;color:rgba(239,194,10,.35);transition:all .15s;cursor:default;white-space:nowrap}
 .mx-cue-btn.on{border-color:var(--ylw2);color:var(--ylw2);background:rgba(239,194,10,.12);box-shadow:0 0 10px rgba(239,194,10,.2)}
-/* Fader area: fader + VU side-by-side — fixed height */
-.mx-fdr-area{display:flex;gap:5px;height:140px;flex-shrink:0;width:100%;justify-content:center;align-items:stretch;padding:0 2px}
+/* Fader area: fader + VU side-by-side — fixed height, extra top margin */
+.mx-fdr-area{display:flex;gap:5px;height:140px;flex-shrink:0;width:100%;justify-content:center;align-items:stretch;padding:0 2px;margin-top:4px}
 /* Fader column */
 .mx-fdr-col{position:relative;width:28px;flex-shrink:0}
 .mx-fdr-track{width:2px;height:100%;background:rgba(255,255,255,.08);border-radius:1px;position:absolute;left:50%;transform:translateX(-50%)}
@@ -416,15 +417,24 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-vu-pk{position:absolute;left:0;right:0;height:1.5px;background:var(--ylw2);border-radius:1px;transition:bottom .08s;bottom:0}
 /* Channel label */
 .mx-ch-lbl{font:800 8px var(--lb);color:var(--grn);letter-spacing:.08em;text-align:center;margin-top:2px}
-/* Crossfader — small, centered */
-.mx-xfader{display:flex;align-items:center;gap:5px;padding:4px 8px;background:rgba(20,22,26,.5);border:1px solid var(--bdr);border-radius:5px;flex-shrink:0;max-width:280px;align-self:center}
-.mx-xf-lbl{font:600 6px var(--lb);color:var(--tx3);letter-spacing:.06em;flex-shrink:0}
-.mx-xf-track{flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;position:relative}
-.mx-xf-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;background:var(--tx2);border-radius:50%;border:1.5px solid var(--bg);transition:left .08s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
-.mx-xf-a,.mx-xf-b{font:600 7px var(--mn);color:var(--tx3)}
+/* Crossfader */
+.mx-xfader{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(20,22,26,.5);border:1px solid var(--bdr);border-radius:6px;flex-shrink:0;max-width:460px;align-self:center}
+.mx-xf-lbl{font:600 7px var(--lb);color:var(--tx3);letter-spacing:.06em;flex-shrink:0}
+.mx-xf-track{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;position:relative;min-width:80px}
+.mx-xf-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;background:var(--tx2);border-radius:50%;border:2px solid var(--bg);transition:left .08s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.mx-xf-a,.mx-xf-b{font:700 8px var(--mn);color:var(--tx2)}
+/* Channel A/B assign badge */
+.mx-ab{font:700 6px var(--mn);letter-spacing:.04em;padding:1px 4px;border-radius:2px;text-align:center;margin-top:1px}
+.mx-ab-a{color:rgba(135,135,255,.6);border:1px solid rgba(135,135,255,.15)}
+.mx-ab-b{color:rgba(255,140,60,.6);border:1px solid rgba(255,140,60,.15)}
+.mx-ab-thru{color:var(--tx4);border:1px solid rgba(255,255,255,.06)}
 /* Master section */
 .mx-master{width:62px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:6px 3px 5px;gap:3px;flex-shrink:0;align-items:center}
 .mx-master-lbl{font:800 9px var(--lb);color:var(--key);text-align:center;letter-spacing:.08em}
+/* DJM packet log */
+.mx-log-toggle{font:600 8px var(--mn);color:var(--tx3);cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;padding:2px 0}
+.mx-log-toggle:hover{color:var(--tx2)}
+.mx-log{max-height:180px;overflow-y:auto;background:rgba(12,14,18,.8);border:1px solid var(--bdr);border-radius:6px;padding:6px 8px;font:400 9px/1.5 var(--mn);color:var(--tx3);white-space:pre;tab-size:2}
 </style>
 <script src="./waveform-gl.js"></script>
 </head><body>
@@ -545,6 +555,8 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
       <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
       <span class="mx-xf-b">B</span>
     </div>
+    <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').textContent=_djmLogOpen?'▾':'▸'"><span>▸</span> DJM PACKET LOG</div>
+    <div class="mx-log" id="mxLogPanel" style="display:none"></div>
   </div>
 </div>
 
@@ -575,6 +587,7 @@ let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
 let _djmSpectrum=[[],[],[],[],[],[]];
 let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]];
 let _djmXfader=127, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=0;
+let _djmLog=[], _djmLogMax=80, _djmLogOpen=false;
 // 설정 — 인터페이스 포함
 const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
   tcFps:'25',wfColor:'3band',wfCenter:'left',
@@ -3483,16 +3496,21 @@ function _mxBuildBody(){
       <div class="mx-wf-wrap"><canvas class="mx-wf-canvas" id="mxWf${i}" width="60" height="160"></canvas></div>
       <div class="mx-knobs">
         <div class="mx-knob">${_mxKnobSVG('mxT'+i,KSZ)}<span class="mx-knob-lbl">TRIM</span></div>
-        <div class="mx-knob">${_mxKnobSVG('mxH'+i,KSZ)}<span class="mx-knob-lbl">HI</span></div>
-        <div class="mx-knob">${_mxKnobSVG('mxM'+i,KSZ)}<span class="mx-knob-lbl">MID</span></div>
-        <div class="mx-knob">${_mxKnobSVG('mxML'+i,KSZ)}<span class="mx-knob-lbl">M-LO</span></div>
-        <div class="mx-knob">${_mxKnobSVG('mxL'+i,KSZ)}<span class="mx-knob-lbl">LO</span></div>
+        <div class="mx-knob-row">
+          <div class="mx-knob">${_mxKnobSVG('mxH'+i,KSZ)}<span class="mx-knob-lbl">HI</span></div>
+          <div class="mx-knob">${_mxKnobSVG('mxM'+i,KSZ)}<span class="mx-knob-lbl">MID</span></div>
+        </div>
+        <div class="mx-knob-row">
+          <div class="mx-knob">${_mxKnobSVG('mxML'+i,KSZ)}<span class="mx-knob-lbl">M-LO</span></div>
+          <div class="mx-knob">${_mxKnobSVG('mxL'+i,KSZ)}<span class="mx-knob-lbl">LO</span></div>
+        </div>
       </div>
       <div class="mx-cue"><span class="mx-cue-btn" id="mxCue${i}">CUE</span></div>
       <div class="mx-fdr-area">
         <div class="mx-fdr-col"><div class="mx-fdr-track"></div><div class="mx-fdr-cap" id="mxFdrCap${i}" style="bottom:0"></div><div class="mx-fdr-marks">${markHtml}</div></div>
         <div class="mx-vu-col"><span class="mx-vu-lbl">VU</span><div class="mx-vu-bar"><div class="mx-vu-fill" id="mxVu${i}"></div><div class="mx-vu-pk" id="mxPk${i}"></div></div></div>
       </div>
+      <span class="mx-ab mx-ab-thru" id="mxAb${i}">THRU</span>
       <span class="mx-ch-lbl">CH${i+1}</span>
     </div>`;
   }
@@ -3597,9 +3615,19 @@ function updateMixer(){
   // Master volume knob (from DJM masterLvl, 0-255 → normalized -1..+1 as rotation)
   const mVolNorm=(_djmXfader!==undefined)?(((_djmMasterLvl||0)/127.5)-1):0;
   _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),KSZ);
+  // A/B crossfader assign badges (placeholder — data from DJM protocol TBD)
+  for(let i=0;i<nCh;i++){
+    const abEl=document.getElementById('mxAb'+i);
+    if(abEl){/* Future: set A/B/THRU from DJM crossfader assign byte */}
+  }
   const activeDk=Object.values(DECKS).find(d=>d.type==='hw'&&d.pl&&d.bpm>0);
   const mxBpm=document.getElementById('mxMasterBpm');
   if(mxBpm)mxBpm.textContent=activeDk?activeDk.bpm.toFixed(2):'—';
+  // DJM packet log panel rendering
+  if(_djmLogOpen&&_djmLog.length){
+    const logEl=document.getElementById('mxLogPanel');
+    if(logEl){logEl.textContent=_djmLog.slice(-40).join('\n');logEl.scrollTop=logEl.scrollHeight;}
+  }
 }
 
 // ════ Tab rendering ══════════════════════════════════
@@ -4184,6 +4212,18 @@ if(E){
     if(d.xfader!=null)_djmXfader=d.xfader;
     if(d.masterLvl!=null)_djmMasterLvl=d.masterLvl;
     if(d.hpCueCh!=null)_djmHpCue=d.hpCueCh;
+    // DJM packet log — collect raw data for protocol analysis
+    if(_djmLogOpen){
+      const ts=new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit',fractionalSecondDigits:2});
+      const fStr=f.map((v,i)=>`CH${i+1}:${v.toString().padStart(3)}`).join(' ');
+      const eqStr=(d.eq||[]).map((e,i)=>`CH${i+1}[H${(e[0]||0).toString(16).toUpperCase()} M${(e[1]||0).toString(16).toUpperCase()} L${(e[2]||0).toString(16).toUpperCase()}]`).join(' ');
+      const extra=[`XF:${_djmXfader}`,`MVol:${_djmMasterLvl}`,`HP:0x${_djmHpCue.toString(16).toUpperCase()}`];
+      if(d.boothLvl!=null)extra.push(`Booth:${d.boothLvl}`);
+      if(d.hpLevel!=null)extra.push(`HPLvl:${d.hpLevel}`);
+      if(d.chExtra)extra.push(`Extra:${JSON.stringify(d.chExtra)}`);
+      _djmLog.push(`[${ts}] FADERS ${fStr}\n         EQ ${eqStr}\n         ${extra.join(' | ')}`);
+      if(_djmLog.length>_djmLogMax)_djmLog.splice(0,_djmLog.length-_djmLogMax);
+    }
   });
   window.bridge.onDJMMeter?.(d=>{
     // d = {ch:[0..3], spectrum:[[15 bands]×4]} or legacy array

@@ -647,7 +647,7 @@ function parsePDJL(msg){
       parsePDJL._lastDjm=ch.slice();
       try{console.log(`[DJM] faders=[${ch}] onair=[${onAir}] eq=${JSON.stringify(eq)} xf=${xfader}`);}catch(_){}
     }
-    return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,boothLvl,hpLevel,hpCueCh};
+    return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,boothLvl,hpLevel,hpCueCh,chExtra};
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
   // 15-band spectrum per channel: base 0xA4, stride 0x3C, uint16BE per band
