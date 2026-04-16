@@ -273,8 +273,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 select.ss{background:var(--bg-lowest);border:1px solid var(--bdr);border-radius:6px;padding:4px 8px;color:var(--tx);font:400 11px var(--mn);outline:none;cursor:pointer;max-width:220px;transition:border-color .15s}
 select.ss:focus{border-color:rgba(160,160,255,.4)}
 .tbl{border:1px solid var(--bdr);border-radius:7px;overflow:hidden;margin-bottom:10px}
-.tblh{display:grid;padding:6px 12px;background:var(--bg3);border-bottom:1px solid var(--bdr)}
-.tblr{display:grid;padding:7px 12px;border-bottom:1px solid var(--bg3)}.tblr:last-child{border-bottom:none}
+.tblh{display:grid;padding:8px 16px;background:var(--bg3);border-bottom:1px solid var(--bdr);align-items:center;gap:8px}
+.tblr{display:grid;padding:9px 16px;border-bottom:1px solid var(--bg3);align-items:center;gap:8px}.tblr:last-child{border-bottom:none}
 .pgr{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
 .pgc{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:8px 10px;text-align:center}
 .dot{width:6px;height:6px;border-radius:50%;display:inline-block;vertical-align:middle}
@@ -377,52 +377,51 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-model{font:500 10px var(--mn);color:var(--tx3);padding:2px 8px;border-radius:999px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.15)}
 .mx-offline{font:400 10px var(--sn);color:var(--tx4);margin-left:auto}
 .mx-body{flex:1;display:flex;gap:6px;min-height:0;overflow-x:auto;padding-bottom:4px}
-/* Channel strip */
-.mx-ch{flex:1;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 6px 6px;gap:3px;min-width:92px;max-width:160px;align-items:center;transition:border-color .3s,box-shadow .3s}
+/* Channel strip — layout: header → waveform → knobs → CUE → fader+VU → label */
+.mx-ch{flex:1;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 6px 6px;gap:3px;min-width:72px;max-width:160px;align-items:center;transition:border-color .3s,box-shadow .3s}
 .mx-ch.on-air{border-color:rgba(255,80,80,.2);box-shadow:0 0 14px rgba(255,80,80,.06)}
 .mx-ch-hdr{display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 2px}
 .mx-ch-num{font:800 11px var(--lb);color:var(--tx)}
 .mx-ch-air{font:700 5.5px var(--mn);padding:1.5px 4px;border-radius:999px;letter-spacing:.06em;background:rgba(255,80,80,.12);color:var(--red);opacity:0;transition:opacity .2s}
 .mx-ch.on-air .mx-ch-air{opacity:1;animation:pulse-air 1.2s ease-in-out infinite}
+/* Vertical waveform — at top, above knobs */
+.mx-wf-wrap{width:100%;height:60px;padding:0 2px}
+.mx-wf-canvas{width:100%;height:60px;border-radius:3px;background:rgba(255,255,255,.02)}
 /* SVG Knob */
 .mx-knob{display:flex;flex-direction:column;align-items:center;gap:0}
 .mx-knob svg{display:block;overflow:visible}
-.mx-knob-lbl{font:700 5.5px var(--mn);color:var(--tx4);letter-spacing:.04em}
+.mx-knob-lbl{font:700 6px var(--mn);color:var(--tx2);letter-spacing:.04em}
 .mx-knob-val{font:600 6px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums}
 .mx-knobs{display:flex;flex-direction:column;gap:1px;align-items:center;width:100%}
-/* CUE button */
-.mx-cue{display:flex;justify-content:center;width:100%;padding:2px 0}
-.mx-cue-btn{padding:3px 0;width:80%;border-radius:4px;font:700 7px var(--mn);letter-spacing:.08em;text-align:center;border:1px solid rgba(239,194,10,.2);background:transparent;color:rgba(239,194,10,.3);transition:all .15s;cursor:default}
+/* CUE button — thicker */
+.mx-cue{display:flex;justify-content:center;width:100%;padding:3px 0}
+.mx-cue-btn{padding:5px 0;width:85%;border-radius:4px;font:700 8px var(--mn);letter-spacing:.08em;text-align:center;border:1.5px solid rgba(239,194,10,.25);background:transparent;color:rgba(239,194,10,.35);transition:all .15s;cursor:default}
 .mx-cue-btn.on{border-color:var(--ylw2);color:var(--ylw2);background:rgba(239,194,10,.12);box-shadow:0 0 10px rgba(239,194,10,.2)}
-/* Fader area: fader + VU + waveform side-by-side */
-.mx-fdr-area{display:flex;gap:3px;flex:1;min-height:0;width:100%;justify-content:center;align-items:stretch;padding:0 2px}
+/* Fader area: fader + VU side-by-side — more gap */
+.mx-fdr-area{display:flex;gap:8px;flex:1;min-height:0;width:100%;justify-content:center;align-items:stretch;padding:0 4px}
 /* Fader column */
 .mx-fdr-col{position:relative;width:36px;flex-shrink:0}
-.mx-fdr-track{width:3px;height:100%;background:rgba(255,255,255,.06);border-radius:1.5px;position:absolute;left:50%;transform:translateX(-50%)}
-.mx-fdr-cap{position:absolute;left:50%;transform:translateX(-50%);width:26px;height:10px;border-radius:3px;background:linear-gradient(to bottom,#999 0%,#666 25%,#444 50%,#666 75%,#999 100%);box-shadow:0 1px 4px rgba(0,0,0,.6);transition:bottom .06s;z-index:2}
+.mx-fdr-track{width:3px;height:100%;background:rgba(255,255,255,.08);border-radius:1.5px;position:absolute;left:50%;transform:translateX(-50%)}
+.mx-fdr-cap{position:absolute;left:50%;transform:translateX(-50%);width:26px;height:10px;border-radius:3px;background:linear-gradient(to bottom,#aaa 0%,#777 25%,#555 50%,#777 75%,#aaa 100%);box-shadow:0 1px 4px rgba(0,0,0,.6);transition:bottom .06s;z-index:2}
 .mx-fdr-cap::after{content:'';position:absolute;top:4px;left:4px;right:4px;height:1.5px;background:rgba(74,225,131,.5);border-radius:1px}
 .mx-fdr-marks{position:absolute;left:0;top:0;bottom:0;width:100%;pointer-events:none}
-.mx-fdr-mark{position:absolute;left:2px;display:flex;align-items:center;gap:1px}
-.mx-fdr-mark::before{content:'';width:4px;height:1px;background:rgba(255,255,255,.15)}
-.mx-fdr-mark-lbl{font:500 5px var(--mn);color:rgba(255,255,255,.2);font-variant-numeric:tabular-nums}
-/* VU meter column */
-.mx-vu-col{display:flex;flex-direction:column;align-items:center;width:8px;flex-shrink:0}
-.mx-vu-lbl{font:700 5px var(--mn);color:var(--tx4);letter-spacing:.02em;margin-bottom:1px}
-.mx-vu-bar{flex:1;width:6px;background:rgba(255,255,255,.04);border-radius:3px;overflow:hidden;position:relative}
+.mx-fdr-mark{position:absolute;left:1px;display:flex;align-items:center;gap:1px}
+.mx-fdr-mark::before{content:'';width:5px;height:1px;background:rgba(255,255,255,.2)}
+.mx-fdr-mark-lbl{font:500 6px var(--mn);color:rgba(255,255,255,.3);font-variant-numeric:tabular-nums}
+/* VU meter column — more visible */
+.mx-vu-col{display:flex;flex-direction:column;align-items:center;width:10px;flex-shrink:0}
+.mx-vu-lbl{font:700 6px var(--mn);color:var(--tx2);letter-spacing:.02em;margin-bottom:1px}
+.mx-vu-bar{flex:1;width:8px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;position:relative}
 .mx-vu-fill{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:3px;transition:height .06s}
 .mx-vu-pk{position:absolute;left:0;right:0;height:1.5px;background:var(--ylw2);border-radius:1px;transition:bottom .08s;bottom:0}
-/* Vertical waveform column */
-.mx-wf-col{display:flex;flex-direction:column;align-items:center;width:22px;flex-shrink:0}
-.mx-wf-lbl{font:700 5px var(--mn);color:var(--tx4);letter-spacing:.02em;margin-bottom:1px}
-.mx-wf-canvas{flex:1;width:22px;border-radius:2px;background:rgba(255,255,255,.02)}
 /* Channel label */
 .mx-ch-lbl{font:800 8px var(--lb);color:var(--grn);letter-spacing:.08em;text-align:center;margin-top:2px}
 /* Crossfader */
 .mx-xfader{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(20,22,26,.6);border:1px solid var(--bdr);border-radius:8px;flex-shrink:0}
-.mx-xf-lbl{font:700 8px var(--lb);color:var(--tx4);letter-spacing:.06em;flex-shrink:0}
+.mx-xf-lbl{font:700 8px var(--lb);color:var(--tx2);letter-spacing:.06em;flex-shrink:0}
 .mx-xf-track{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;position:relative}
 .mx-xf-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:var(--tx2);border-radius:50%;border:2px solid var(--bg);transition:left .08s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
-.mx-xf-a,.mx-xf-b{font:700 9px var(--mn);color:var(--tx3)}
+.mx-xf-a,.mx-xf-b{font:700 9px var(--mn);color:var(--tx2)}
 /* Master section */
 .mx-master{width:82px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 4px 6px;gap:4px;flex-shrink:0;align-items:center}
 .mx-master-lbl{font:800 9px var(--lb);color:var(--key);text-align:center;letter-spacing:.08em}
@@ -572,9 +571,10 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 const E=typeof window.bridge!=='undefined';
 let run=false,t0=0,up=0,pk=0,curTab='link',TC_NAME='BRIDGE+';
 let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
-let faders=[0,0,0,0],onAirCh=[0,0,0,0],pdjlPort=null;
-let _djmSpectrum=[[],[],[],[]];
-let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]]; // Hi/Mid/Lo per channel (0x40=0dB)
+let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
+let _djmSpectrum=[[],[],[],[],[],[]];
+let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]];
+let _djmXfader=127, _djmHpCue=0, _djmChCount=4;
 // 설정 — 인터페이스 포함
 const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
   tcFps:'25',wfColor:'3band',wfCenter:'left',
@@ -3473,12 +3473,14 @@ function _mxKnobUpdate(id,norm,sz){
 function _mxBuildBody(){
   const body=document.getElementById('mxBody');if(!body)return;
   const KSZ=26;
+  const nCh=_djmChCount;
   const marks=[{v:192,p:75},{v:128,p:50},{v:64,p:25},{v:0,p:0}];
   const markHtml=marks.map(m=>`<div class="mx-fdr-mark" style="bottom:${m.p}%"><span class="mx-fdr-mark-lbl">${m.v}</span></div>`).join('');
   let html='';
-  for(let i=0;i<4;i++){
+  for(let i=0;i<nCh;i++){
     html+=`<div class="mx-ch" id="mxCh${i}">
       <div class="mx-ch-hdr"><span class="mx-ch-num">${i+1}</span><span class="mx-ch-air">ON AIR</span></div>
+      <div class="mx-wf-wrap"><canvas class="mx-wf-canvas" id="mxWf${i}" width="80" height="60"></canvas></div>
       <div class="mx-knobs">
         <div class="mx-knob">${_mxKnobSVG('mxT'+i,KSZ)}<span class="mx-knob-lbl">TRIM</span></div>
         <div class="mx-knob">${_mxKnobSVG('mxH'+i,KSZ)}<span class="mx-knob-lbl">HI</span></div>
@@ -3490,14 +3492,13 @@ function _mxBuildBody(){
       <div class="mx-fdr-area">
         <div class="mx-fdr-col"><div class="mx-fdr-track"></div><div class="mx-fdr-cap" id="mxFdrCap${i}" style="bottom:0"></div><div class="mx-fdr-marks">${markHtml}</div></div>
         <div class="mx-vu-col"><span class="mx-vu-lbl">VU</span><div class="mx-vu-bar"><div class="mx-vu-fill" id="mxVu${i}"></div><div class="mx-vu-pk" id="mxPk${i}"></div></div></div>
-        <div class="mx-wf-col"><span class="mx-wf-lbl">WF</span><canvas class="mx-wf-canvas" id="mxWf${i}" width="22" height="200"></canvas></div>
       </div>
       <span class="mx-ch-lbl">CH${i+1}</span>
     </div>`;
   }
   // Master section
   html+=`<div class="mx-master"><span class="mx-master-lbl">MASTER</span>
-    <div style="display:flex;gap:3px;flex:1;min-height:0;width:100%;justify-content:center">
+    <div style="display:flex;gap:4px;flex:1;min-height:0;width:100%;justify-content:center">
       <div class="mx-vu-col"><span class="mx-vu-lbl">L</span><div class="mx-vu-bar"><div class="mx-vu-fill" id="mxVuML"></div></div></div>
       <div class="mx-vu-col"><span class="mx-vu-lbl">R</span><div class="mx-vu-bar"><div class="mx-vu-fill" id="mxVuMR"></div></div></div>
     </div>
@@ -3506,19 +3507,24 @@ function _mxBuildBody(){
   </div>`;
   body.innerHTML=html;
   _mxBuilt=true;
-  _mxWfBufs=[new Float32Array(200),new Float32Array(200),new Float32Array(200),new Float32Array(200)];
+  _mxWfBufs=[];
+  for(let i=0;i<nCh;i++)_mxWfBufs.push(new Float32Array(60));
 }
 
 function updateMixer(){
   if(curTab!=='mixer')return;
-  if(!_mxBuilt)_mxBuildBody();
+  // Detect 6-channel DJM (DJM-V10, DJM-A9) from device name
   const djmDevs=pdjlDevices.filter(d=>d.type==='DJM');
+  const is6ch=djmDevs.some(d=>/V10|A9|V10-LF/i.test(d.name));
+  const newCount=is6ch?6:4;
+  if(newCount!==_djmChCount){_djmChCount=newCount;_mxBuilt=false;}
+  if(!_mxBuilt)_mxBuildBody();
   const mxModel=document.getElementById('mxModel');
   const mxOffline=document.getElementById('mxOffline');
   if(mxModel)mxModel.textContent=djmDevs.length?djmDevs.map(d=>d.name).join(', '):'DJM 미연결';
   if(mxOffline)mxOffline.style.display=djmDevs.length?'none':'';
-  const KSZ=26;
-  for(let i=0;i<4;i++){
+  const KSZ=26, nCh=_djmChCount;
+  for(let i=0;i<nCh;i++){
     const fv=(faders[i]||0)/255;
     const air=!!onAirCh[i];
     const eq=eqBands[i]||[0x40,0x40,0x40];
@@ -3530,7 +3536,6 @@ function updateMixer(){
     ['H','M','L'].forEach((k,bi)=>{
       _mxKnobUpdate('mx'+k+i,(((eq[bi]??0x40)-0x40)/0x40),KSZ);
     });
-    // MID-LO & TRIM: no protocol data yet, show neutral
     _mxKnobUpdate('mxML'+i,0,KSZ);
     _mxKnobUpdate('mxT'+i,0,KSZ);
     // Fader cap position
@@ -3540,12 +3545,16 @@ function updateMixer(){
     // VU meter
     const vuFill=document.getElementById('mxVu'+i);
     if(vuFill){const h=Math.min(100,meter*100);vuFill.style.height=h+'%';vuFill.style.background=h>90?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 55%,#ff6b6b 100%)':h>70?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 100%)':'var(--grn)';}
+    if(!_mxPeaks[i])_mxPeaks[i]=0;
     if(meter>_mxPeaks[i])_mxPeaks[i]=meter;
     else _mxPeaks[i]=Math.max(meter,_mxPeaks[i]*0.97);
     const pkEl=document.getElementById('mxPk'+i);
     if(pkEl)pkEl.style.bottom=Math.min(100,_mxPeaks[i]*100)+'%';
-    // Vertical waveform (scrolling VU history, bottom→top)
-    if(_mxWfBufs){
+    // CUE button state from headphone CUE flags
+    const cueBtn=document.getElementById('mxCue'+i);
+    if(cueBtn)cueBtn.classList.toggle('on',!!(_djmHpCue&(1<<i)));
+    // Vertical waveform (scrolling VU history, bottom→top) — now above TRIM
+    if(_mxWfBufs&&_mxWfBufs[i]){
       const buf=_mxWfBufs[i];
       buf.copyWithin(0,1);
       buf[buf.length-1]=meter;
@@ -3557,17 +3566,20 @@ function updateMixer(){
         for(let y=0;y<h;y++){
           const v=buf[y];
           if(v<0.01)continue;
-          const barW=Math.max(1,Math.round(v*w));
+          const barW=Math.max(2,Math.round(v*w*0.9));
           const x=(w-barW)/2;
           const r=Math.min(255,Math.round(v*v*200));
           const g=Math.min(255,Math.round(74+v*150));
           const bl=Math.min(255,Math.round(131*(1-v)+100*v));
-          ctx.fillStyle=`rgba(${r},${g},${bl},${0.25+v*0.7})`;
+          ctx.fillStyle=`rgba(${r},${g},${bl},${0.3+v*0.65})`;
           ctx.fillRect(x,h-1-y,barW,1);
         }
       }
     }
   }
+  // Crossfader position
+  const xfKnob=document.getElementById('mxXfKnob');
+  if(xfKnob)xfKnob.style.left=(_djmXfader/255*100)+'%';
   // Master VU
   const mL=(DECKS[0]?._djmMeter||0)/255*0.7+(DECKS[2]?._djmMeter||0)/255*0.3;
   const mR=(DECKS[1]?._djmMeter||0)/255*0.7+(DECKS[3]?._djmMeter||0)/255*0.3;
@@ -3605,9 +3617,9 @@ function renderTcnet(){
     ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span><div><div style="font:500 11px var(--sn);color:var(--grn)">TCNet — ${TC_NAME||'BRIDGE+'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">Data: 브로드캐스트 + Resolume Arena 유니캐스트 동시</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">오프라인</span></div>`}
     <div class="sl">노드</div>
     <div class="tbl">
-      <div class="tblh" style="grid-template-columns:2fr 1fr 2fr 1fr;align-items:center">${['NODE','TYPE','VENDOR / DEVICE','IP'].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>
-      <div class="tblr" style="grid-template-columns:2fr 1fr 2fr 1fr;align-items:center"><div style="font:400 11px var(--mn);color:var(--tx)">${TC_NAME||'BRIDGE+'}</div><div><span class="bd bg">SERVER</span></div><div style="font:400 10px var(--mn);color:var(--tx3)">BRIDGE+</div><div style="font:400 10px var(--mn);color:var(--tx3)">active</div></div>
-      ${nodes.map(n=>{const vendorStr=(n.vendor&&n.device)?(n.vendor===n.device?n.vendor:n.vendor+' '+n.device):(n.vendor||n.device||'—');return`<div class="tblr" style="grid-template-columns:2fr 1fr 2fr 1fr;align-items:center"><div style="font:400 11px var(--mn);color:var(--tx)">${n.name}</div><div><span class="bd ${n.type===2?'bg':'bb'}">${n.type===2?'SERVER':'Client'}</span></div><div style="font:400 10px var(--mn);color:var(--tx3)">${vendorStr}</div><div style="font:400 10px var(--mn);color:var(--tx3)">${n.ip}</div></div>`;}).join('')}
+      <div class="tblh" style="grid-template-columns:140px 80px 1fr 120px">${['NODE','TYPE','VENDOR / DEVICE','IP'].map(h=>`<div style="font:600 10px var(--sn);color:var(--tx3);letter-spacing:.04em">${h}</div>`).join('')}</div>
+      <div class="tblr" style="grid-template-columns:140px 80px 1fr 120px"><div style="font:500 11px var(--mn);color:var(--tx)">${TC_NAME||'BRIDGE+'}</div><div><span class="bd bg">SERVER</span></div><div style="font:400 11px var(--mn);color:var(--tx3)">BRIDGE+</div><div style="font:400 11px var(--mn);color:var(--tx3)">active</div></div>
+      ${nodes.map(n=>{const vendorStr=(n.vendor&&n.device)?(n.vendor===n.device?n.vendor:n.vendor+' '+n.device):(n.vendor||n.device||'—');return`<div class="tblr" style="grid-template-columns:140px 80px 1fr 120px"><div style="font:500 11px var(--mn);color:var(--tx)">${n.name}</div><div><span class="bd ${n.type===2?'bg':'bb'}">${n.type===2?'SERVER':'Client'}</span></div><div style="font:400 11px var(--mn);color:var(--tx3)">${vendorStr}</div><div style="font:400 11px var(--mn);color:var(--tx3)">${n.ip}</div></div>`;}).join('')}
       ${nodes.length===0?'<div style="padding:9px 12px;color:var(--tx3);font:400 11px var(--sn)">Arena 미감지 — Arena에서 TCNet 활성화하세요</div>':''}
     </div>
     <div class="sl mt">통계</div>
@@ -4155,8 +4167,11 @@ if(E){
     const _sepEl=document.getElementById('dtsep'+li);if(_sepEl)_sepEl.style.display=dk.ar?'':'none';
   });
   window.bridge.onDJMStatus?.(d=>{
-    faders=d.faders;
-    if(d.eq){eqBands=d.eq;}
+    const f=d.faders||[];
+    for(let i=0;i<f.length&&i<6;i++)faders[i]=f[i];
+    if(d.eq){for(let i=0;i<d.eq.length&&i<6;i++)eqBands[i]=d.eq[i];}
+    if(d.xfader!=null)_djmXfader=d.xfader;
+    if(d.hpCueCh!=null)_djmHpCue=d.hpCueCh;
   });
   window.bridge.onDJMMeter?.(d=>{
     // d = {ch:[0..3], spectrum:[[15 bands]×4]} or legacy array

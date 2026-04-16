@@ -618,17 +618,36 @@ function parsePDJL(msg){
         base+2 < msg.length ? msg[base+2] : 0x40, // Lo EQ
       ];
     });
-    // Debug: log full channel blocks on first receive to verify EQ offsets
+    // Per-channel extra bytes (undocumented, +4 through +10)
+    // Candidates: +4=Color/Filter, +5=FX wet/dry, +6-10=unknown routing/params
+    const chExtra = [0,1,2,3].map(c => {
+      const base = CH_BASE + c * CH_STRIDE;
+      const extra = {};
+      for(let b=4;b<=10;b++){
+        if(base+b < msg.length) extra['b'+b] = msg[base+b];
+      }
+      return extra;
+    });
+    // Global mixer data (post-channel area, offset 0x84+)
+    // Potential: crossfader, master level, booth, headphone, CUE flags
+    const gBase = CH_BASE + 4*CH_STRIDE; // 0x84
+    const xfader = (gBase < msg.length) ? msg[gBase] : 127;     // crossfader position (0=A, 127=center, 255=B)
+    const masterLvl = (gBase+1 < msg.length) ? msg[gBase+1] : 0;
+    const boothLvl = (gBase+2 < msg.length) ? msg[gBase+2] : 0;
+    const hpLevel = (gBase+3 < msg.length) ? msg[gBase+3] : 0;
+    const hpCueCh = (gBase+4 < msg.length) ? msg[gBase+4] : 0;  // bit flags: ch1-4 headphone CUE
+    // Debug: dump full channel blocks + global area on first receive
     if(!parsePDJL._djmBlockLogged){
       parsePDJL._djmBlockLogged=true;
-      const hex=[0,1,2,3].map(c=>{const b=CH_BASE+c*CH_STRIDE;return`CH${c+1}[${Array.from(msg.slice(b,b+12)).map(x=>x.toString(16).padStart(2,'0')).join(' ')}]`;}).join(' ');
-      try{console.log(`[DJM-EQ-DBG] type=0x${type.toString(16)} len=${msg.length} ${hex}`);}catch(_){}
+      const hex=[0,1,2,3].map(c=>{const b=CH_BASE+c*CH_STRIDE;return`CH${c+1}[${Array.from(msg.slice(b,Math.min(b+24,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' ')}]`;}).join(' ');
+      const gHex=msg.length>gBase?Array.from(msg.slice(gBase,Math.min(gBase+32,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' '):'(none)';
+      try{console.log(`[DJM-FULL] type=0x${type.toString(16)} len=${msg.length}\n  ${hex}\n  GLOBAL@0x${gBase.toString(16)}=[${gHex}]`);}catch(_){}
     }
     if(!parsePDJL._lastDjm || parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
       parsePDJL._lastDjm=ch.slice();
-      try{console.log(`[DJM] faders=[${ch}] onair=[${onAir}] eq=${JSON.stringify(eq)}`);}catch(_){}
+      try{console.log(`[DJM] faders=[${ch}] onair=[${onAir}] eq=${JSON.stringify(eq)} xf=${xfader}`);}catch(_){}
     }
-    return{kind:'djm',name,channel:ch,onAir,eq};
+    return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,boothLvl,hpLevel,hpCueCh};
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
   // 15-band spectrum per channel: base 0xA4, stride 0x3C, uint16BE per band
@@ -1964,7 +1983,7 @@ class BridgeCore {
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
-      this.onDJMStatus?.({channel:p.channel, eq:p.eq});
+      this.onDJMStatus?.({channel:p.channel, eq:p.eq, xfader:p.xfader, masterLvl:p.masterLvl, hpCueCh:p.hpCueCh});
     }
     if(p.kind==='djm_meter'){
       this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum});
