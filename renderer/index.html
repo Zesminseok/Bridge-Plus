@@ -3137,7 +3137,7 @@ document.addEventListener('click',e=>{
 document.getElementById('addDeckBtn').addEventListener('click',addVirtualDeck);
 
 // ════ 33ms tick loop ═════════════════════════════════
-let _wfF=0;
+let _wfF=0,_slowAt=0; // _slowAt: 1s throttle for status bar + TCNet stats
 function tick(){
   _wfF++;
   tcTick();
@@ -3575,14 +3575,19 @@ function tick(){
     }
   });
 
-  updateHeader();
   updateMixer();
-  const slots=Object.keys(DECKS).map(Number).sort();
-  document.getElementById('bDots').innerHTML=slots.map(s=>{
-    const d=DECKS[s],c=d.type==='hw'?'var(--pur)':d.pl?'var(--grn)':d.cu?'var(--ylw)':d.ld?'rgba(52,211,153,.4)':'var(--tx4)';
-    return`<div style="display:flex;align-items:center;gap:4px"><span class="dot${d.pl?' dpu':''}" style="background:${c}"></span><span style="font:400 9px var(--mn);color:var(--tx3)">${s+1}</span></div>`;
-  }).join('');
-  if(run)document.getElementById('bPk').textContent='TX: '+pk.toLocaleString();
+  // Status bar + TCNet stats: throttle to 1s (no need for 60fps)
+  const _now=Date.now();
+  if(_now-_slowAt>=1000){
+    _slowAt=_now;
+    updateHeader();
+    const slots=Object.keys(DECKS).map(Number).sort();
+    document.getElementById('bDots').innerHTML=slots.map(s=>{
+      const d=DECKS[s],c=d.type==='hw'?'var(--pur)':d.pl?'var(--grn)':d.cu?'var(--ylw)':d.ld?'rgba(52,211,153,.4)':'var(--tx4)';
+      return`<div style="display:flex;align-items:center;gap:4px"><span class="dot${d.pl?' dpu':''}" style="background:${c}"></span><span style="font:400 9px var(--mn);color:var(--tx3)">${s+1}</span></div>`;
+    }).join('');
+    if(run)document.getElementById('bPk').textContent='TX: '+pk.toLocaleString();
+  }
 }
 // 60fps cap via requestAnimationFrame + time gate
 let _lastTickT=0;
@@ -4205,7 +4210,14 @@ if(E){
     if(d.pdjlPort!=null)pdjlPort=d.pdjlPort;
     if(d.devices){pdjlDevices=d.devices;if(curTab==='pdjl')renderPDJL();}
   });
-  window.bridge.onTcnetNode?.(n=>{tcNodes[n.name+'@'+n.ip]={...n,lastSeen:Date.now()};if(curTab==='tcnet')renderTcnet();});
+  let _tcnetRenderPending=false;
+  window.bridge.onTcnetNode?.(n=>{
+    tcNodes[n.name+'@'+n.ip]={...n,lastSeen:Date.now()};
+    if(curTab==='tcnet'&&!_tcnetRenderPending){
+      _tcnetRenderPending=true;
+      setTimeout(()=>{_tcnetRenderPending=false;if(curTab==='tcnet')renderTcnet();},1000);
+    }
+  });
   window.bridge.onCDJStatus?.(d=>{
     const{layerIndex,status}=d;
     // Beat packet (0x28) — update beatInBar for display
