@@ -1827,6 +1827,18 @@ class BridgeCore {
         }catch(_){}
       }
     }
+    // Log unrecognized DJM packets to help identify correct byte offsets
+    if(!p && msg.length>=0x1B){
+      const devName=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
+      if(devName.includes('DJM')){
+        if(!this._djmUnkLog)this._djmUnkLog=0;
+        if(this._djmUnkLog<10){
+          this._djmUnkLog++;
+          const hex=Array.from(msg.slice(0,Math.min(msg.length,128))).map(x=>x.toString(16).padStart(2,'0')).join(' ');
+          console.log(`[DJM-UNK] type=0x${msg[10]?.toString(16)} len=${msg.length} name=${devName}\n  ${hex}`);
+        }
+      }
+    }
     if(!p) return;
     // Skip own packets (bridge spoofed device)
     if(p.name==='BRIDGE+'||rinfo.address==='127.0.0.1') return;
@@ -1987,7 +1999,12 @@ class BridgeCore {
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
-      this.onDJMStatus?.({channel:p.channel, onAir:p.onAir, eq:p.eq, xfader:p.xfader, masterLvl:p.masterLvl, boothLvl:p.boothLvl, hpLevel:p.hpLevel, hpCueCh:p.hpCueCh, chExtra:p.chExtra});
+      // Forward raw hex dump for first 128 bytes for protocol debugging in UI log panel
+      let rawHex=null;
+      if(msg.length>0x20){
+        rawHex=Array.from(msg.slice(0,Math.min(msg.length,128))).map(x=>x.toString(16).padStart(2,'0')).join(' ');
+      }
+      this.onDJMStatus?.({channel:p.channel, onAir:p.onAir, eq:p.eq, xfader:p.xfader, masterLvl:p.masterLvl, boothLvl:p.boothLvl, hpLevel:p.hpLevel, hpCueCh:p.hpCueCh, chExtra:p.chExtra, hasRealFaders:true, pktType:msg[10], pktLen:msg.length, rawHex});
     }
     if(p.kind==='djm_meter'){
       this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum});
@@ -1996,13 +2013,9 @@ class BridgeCore {
     if(p.kind==='djm_onair'){
       this.onAir = p.onAir;
       // DJM-900NXS2 does not send type 0x29/0x39 mixer status with fader positions.
-      // Use on-air flags as binary fader proxy (0→0, 1→255) when no real fader data.
+      // Forward on-air state; renderer decides how to display when no real fader data.
       if(!this._hasRealFaders){
-        const onAirFaders = p.onAir.map(v => v ? 255 : 0);
-        if(this.faders.some((v,i) => v !== onAirFaders[i])){
-          this.faders = onAirFaders;
-          this.onDJMStatus?.(onAirFaders);
-        }
+        this.onDJMStatus?.({channel:p.onAir.map(v=>v?255:0), onAir:p.onAir, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:false});
       }
       if(!this.devices['djm']){
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};

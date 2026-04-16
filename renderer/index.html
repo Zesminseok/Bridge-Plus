@@ -620,7 +620,7 @@ let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
 let _djmSpectrum=[[],[],[],[],[],[]];
 let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]];
-let _djmXfader=127, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=0;
+let _djmXfader=127, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=0, _djmHasRealFaders=false;
 let _djmLog=[], _djmLogMax=80, _djmLogOpen=false;
 // DJM mixer profiles — model-specific UI configuration
 const _DJM_PROFILES={
@@ -3635,23 +3635,29 @@ function updateMixer(){
   if(mxContent){if(connected)mxContent.classList.add('mx-content-on');else{mxContent.classList.remove('mx-content-on');mxContent.style.display='none';}}
   if(!connected)return;
   const KSZ=26, prof=_djmProfile, nCh=prof.ch;
+  const hasReal=_djmHasRealFaders;
   for(let i=0;i<nCh;i++){
-    const fv=(faders[i]||0)/255;
     const air=!!onAirCh[i];
-    const eq=eqBands[i]||[0x40,0x40,0x40];
     const meter=(DECKS[i]?._djmMeter||0)/255;
     // ON AIR
     const chEl=document.getElementById('mxCh'+i);
     if(chEl)chEl.classList.toggle('on-air',air);
-    // EQ knobs: update based on profile; eq[0]=HI, eq[1]=MID, eq[2]=LO
-    const eqMap={T:null,H:0,M:1,HM:0,LM:2,L:2}; // map profile ids to eq band index
-    if(prof.ids.length===5)Object.assign(eqMap,{H:0,HM:1,LM:1,L:2}); // V10: HI=0, HI MID~MID=1, LOW MID~MID=1, LOW=2
-    prof.ids.forEach(id=>{
-      const bi=eqMap[id];
-      const norm=bi!=null?(((eq[bi]??0x40)-0x40)/0x40):0;
-      _mxKnobUpdate('mx'+id+i,norm,KSZ);
-    });
-    // Fader cap position
+    // EQ knobs: only show real values when mixer sends fader/eq data
+    if(hasReal){
+      const eq=eqBands[i]||[0x40,0x40,0x40];
+      const eqMap={T:null,H:0,M:1,HM:0,LM:2,L:2};
+      if(prof.ids.length===5)Object.assign(eqMap,{H:0,HM:1,LM:1,L:2});
+      prof.ids.forEach(id=>{
+        const bi=eqMap[id];
+        const norm=bi!=null?(((eq[bi]??0x40)-0x40)/0x40):0;
+        _mxKnobUpdate('mx'+id+i,norm,KSZ);
+      });
+    } else {
+      // No real EQ data — show knobs at neutral (center)
+      prof.ids.forEach(id=>_mxKnobUpdate('mx'+id+i,0,KSZ));
+    }
+    // Fader cap position: real fader data or VU meter as proxy
+    const fv=hasReal?(faders[i]||0)/255:meter;
     const fPct=fv*100;
     const cap=document.getElementById('mxFdrCap'+i);
     if(cap)cap.style.bottom='calc('+fPct+'% - 5px)';
@@ -3697,9 +3703,9 @@ function updateMixer(){
       }
     }
   }
-  // Crossfader position
+  // Crossfader position (only when real data available, else center)
   const xfKnob=document.getElementById('mxXfKnob');
-  if(xfKnob)xfKnob.style.left=(_djmXfader/255*100)+'%';
+  if(xfKnob)xfKnob.style.left=(hasReal?(_djmXfader/255*100):50)+'%';
   // Master VU — LED dots (12 per side: 0-7=green, 8-10=amber, 11=red/clip)
   const mL=(DECKS[0]?._djmMeter||0)/255*0.7+(DECKS[2]?._djmMeter||0)/255*0.3;
   const mR=(DECKS[1]?._djmMeter||0)/255*0.7+(DECKS[3]?._djmMeter||0)/255*0.3;
@@ -3720,7 +3726,7 @@ function updateMixer(){
   if(clipEl)clipEl.classList.toggle('on',clipping);
   // Master volume knob: 0=−∞ (fully CCW, -1), 255=+5dB (fully CW, +1)
   const MSZ=44;
-  const mVolNorm=((_djmMasterLvl||0)/127.5)-1;
+  const mVolNorm=hasReal?(((_djmMasterLvl||0)/127.5)-1):0;
   _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),MSZ);
   // A/B crossfader assign badges (placeholder — data from DJM protocol TBD)
   for(let i=0;i<nCh;i++){
@@ -4313,6 +4319,7 @@ if(E){
     const _sepEl=document.getElementById('dtsep'+li);if(_sepEl)_sepEl.style.display=dk.ar?'':'none';
   });
   window.bridge.onDJMStatus?.(d=>{
+    if(d.hasRealFaders!=null)_djmHasRealFaders=d.hasRealFaders;
     const f=d.faders||[];
     for(let i=0;i<f.length&&i<6;i++)faders[i]=f[i];
     if(d.onAir){for(let i=0;i<d.onAir.length&&i<6;i++)onAirCh[i]=d.onAir[i]>127?1:0;}
@@ -4323,13 +4330,17 @@ if(E){
     // DJM packet log — collect raw data for protocol analysis
     if(_djmLogOpen){
       const ts=new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit',fractionalSecondDigits:2});
+      const pktInfo=d.pktType!=null?`type=0x${d.pktType.toString(16)} len=${d.pktLen}`:'';
       const fStr=f.map((v,i)=>`CH${i+1}:${v.toString().padStart(3)}`).join(' ');
       const eqStr=(d.eq||[]).map((e,i)=>`CH${i+1}[H${(e[0]||0).toString(16).toUpperCase()} M${(e[1]||0).toString(16).toUpperCase()} L${(e[2]||0).toString(16).toUpperCase()}]`).join(' ');
       const extra=[`XF:${_djmXfader}`,`MVol:${_djmMasterLvl}`,`HP:0x${_djmHpCue.toString(16).toUpperCase()}`];
       if(d.boothLvl!=null)extra.push(`Booth:${d.boothLvl}`);
       if(d.hpLevel!=null)extra.push(`HPLvl:${d.hpLevel}`);
       if(d.chExtra)extra.push(`Extra:${JSON.stringify(d.chExtra)}`);
-      _djmLog.push(`[${ts}] FADERS ${fStr}\n         EQ ${eqStr}\n         ${extra.join(' | ')}`);
+      let logLine=`[${ts}] ${pktInfo} FADERS ${fStr}\n         EQ ${eqStr}\n         ${extra.join(' | ')}`;
+      // Show raw hex dump for first 5 log entries to identify correct byte offsets
+      if(d.rawHex&&_djmLog.length<5)logLine+=`\n         RAW: ${d.rawHex}`;
+      _djmLog.push(logLine);
       if(_djmLog.length>_djmLogMax)_djmLog.splice(0,_djmLog.length-_djmLogMax);
     }
   });
