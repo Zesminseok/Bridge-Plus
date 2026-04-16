@@ -392,8 +392,10 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-knob svg{display:block;overflow:visible}
 .mx-knob-lbl{font:700 6px var(--mn);color:var(--tx2);letter-spacing:.04em}
 .mx-knob-val{font:600 6px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums}
-.mx-knobs{display:flex;flex-direction:column;gap:1px;align-items:center;width:100%}
+.mx-knobs{display:flex;flex-direction:column;gap:0;width:100%}
 .mx-knob-row{display:flex;gap:2px;justify-content:center}
+.mx-knob-L{align-self:flex-start;margin-left:2px}
+.mx-knob-R{align-self:flex-end;margin-right:2px}
 /* CUE button — compact */
 .mx-cue{display:flex;justify-content:center;width:100%;padding:2px 0}
 .mx-cue-btn{padding:4px 8px;border-radius:3px;font:700 7px var(--mn);letter-spacing:.06em;text-align:center;border:1.5px solid rgba(239,194,10,.25);background:transparent;color:rgba(239,194,10,.35);transition:all .15s;cursor:default;white-space:nowrap}
@@ -415,19 +417,19 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-vu-bar{flex:1;width:8px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;position:relative}
 .mx-vu-fill{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:3px;transition:height .06s}
 .mx-vu-pk{position:absolute;left:0;right:0;height:1.5px;background:var(--ylw2);border-radius:1px;transition:bottom .08s;bottom:0}
-/* Channel label */
-.mx-ch-lbl{font:800 8px var(--lb);color:var(--grn);letter-spacing:.08em;text-align:center;margin-top:2px}
+/* Channel label — at top of strip */
+.mx-ch-lbl{font:800 8px var(--lb);color:var(--grn);letter-spacing:.08em;text-align:center}
 /* Crossfader */
 .mx-xfader{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(20,22,26,.5);border:1px solid var(--bdr);border-radius:6px;flex-shrink:0;max-width:460px;align-self:center}
 .mx-xf-lbl{font:600 7px var(--lb);color:var(--tx3);letter-spacing:.06em;flex-shrink:0}
 .mx-xf-track{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;position:relative;min-width:80px}
 .mx-xf-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;background:var(--tx2);border-radius:50%;border:2px solid var(--bg);transition:left .08s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .mx-xf-a,.mx-xf-b{font:700 8px var(--mn);color:var(--tx2)}
-/* Channel A/B assign badge */
-.mx-ab{font:700 6px var(--mn);letter-spacing:.04em;padding:1px 4px;border-radius:2px;text-align:center;margin-top:1px}
-.mx-ab-a{color:rgba(135,135,255,.6);border:1px solid rgba(135,135,255,.15)}
-.mx-ab-b{color:rgba(255,140,60,.6);border:1px solid rgba(255,140,60,.15)}
-.mx-ab-thru{color:var(--tx4);border:1px solid rgba(255,255,255,.06)}
+/* Channel A/B assign badge — CUE-like size */
+.mx-ab{font:700 7px var(--mn);letter-spacing:.06em;padding:3px 8px;border-radius:3px;text-align:center;margin-top:3px;white-space:nowrap}
+.mx-ab-a{color:rgba(135,135,255,.7);border:1.5px solid rgba(135,135,255,.25);background:rgba(135,135,255,.06)}
+.mx-ab-b{color:rgba(255,140,60,.7);border:1.5px solid rgba(255,140,60,.25);background:rgba(255,140,60,.06)}
+.mx-ab-thru{color:var(--tx3);border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02)}
 /* Master section */
 .mx-master{width:62px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:6px 3px 5px;gap:3px;flex-shrink:0;align-items:center}
 .mx-master-lbl{font:800 9px var(--lb);color:var(--key);text-align:center;letter-spacing:.08em}
@@ -3492,18 +3494,14 @@ function _mxBuildBody(){
   let html='';
   for(let i=0;i<nCh;i++){
     html+=`<div class="mx-ch" id="mxCh${i}">
-      <div class="mx-ch-hdr"><span class="mx-ch-num">${i+1}</span><span class="mx-ch-air">ON AIR</span></div>
+      <div class="mx-ch-hdr"><span class="mx-ch-lbl">CH${i+1}</span><span class="mx-ch-air">ON AIR</span></div>
       <div class="mx-wf-wrap"><canvas class="mx-wf-canvas" id="mxWf${i}" width="60" height="160"></canvas></div>
       <div class="mx-knobs">
-        <div class="mx-knob">${_mxKnobSVG('mxT'+i,KSZ)}<span class="mx-knob-lbl">TRIM</span></div>
-        <div class="mx-knob-row">
-          <div class="mx-knob">${_mxKnobSVG('mxH'+i,KSZ)}<span class="mx-knob-lbl">HI</span></div>
-          <div class="mx-knob">${_mxKnobSVG('mxM'+i,KSZ)}<span class="mx-knob-lbl">MID</span></div>
-        </div>
-        <div class="mx-knob-row">
-          <div class="mx-knob">${_mxKnobSVG('mxML'+i,KSZ)}<span class="mx-knob-lbl">M-LO</span></div>
-          <div class="mx-knob">${_mxKnobSVG('mxL'+i,KSZ)}<span class="mx-knob-lbl">LO</span></div>
-        </div>
+        <div class="mx-knob" style="align-self:center">${_mxKnobSVG('mxT'+i,KSZ)}<span class="mx-knob-lbl">TRIM</span></div>
+        <div class="mx-knob mx-knob-L">${_mxKnobSVG('mxH'+i,KSZ)}<span class="mx-knob-lbl">HI</span></div>
+        <div class="mx-knob mx-knob-R">${_mxKnobSVG('mxM'+i,KSZ)}<span class="mx-knob-lbl">MID</span></div>
+        <div class="mx-knob mx-knob-L">${_mxKnobSVG('mxML'+i,KSZ)}<span class="mx-knob-lbl">M-LO</span></div>
+        <div class="mx-knob mx-knob-R">${_mxKnobSVG('mxL'+i,KSZ)}<span class="mx-knob-lbl">LO</span></div>
       </div>
       <div class="mx-cue"><span class="mx-cue-btn" id="mxCue${i}">CUE</span></div>
       <div class="mx-fdr-area">
@@ -3511,7 +3509,6 @@ function _mxBuildBody(){
         <div class="mx-vu-col"><span class="mx-vu-lbl">VU</span><div class="mx-vu-bar"><div class="mx-vu-fill" id="mxVu${i}"></div><div class="mx-vu-pk" id="mxPk${i}"></div></div></div>
       </div>
       <span class="mx-ab mx-ab-thru" id="mxAb${i}">THRU</span>
-      <span class="mx-ch-lbl">CH${i+1}</span>
     </div>`;
   }
   // Master section
