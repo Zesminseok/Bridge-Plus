@@ -1256,6 +1256,15 @@ class BridgeCore {
       } else if(this.broadcastAddr!=='255.255.255.255'){
         try{ this.txSocket.send(buf, 0, buf.length, port, '255.255.255.255'); }catch(_){}
       }
+      // dataSocket (bound 0.0.0.0)로 나머지 인터페이스 브로드캐스트 — DJM이 link-local에서도 TCNet 수신하도록
+      if(this._dataSocket){
+        const mainBC=this.broadcastAddr;
+        for(const iface of getAllInterfaces()){
+          if(!iface.internal && iface.broadcast && iface.broadcast!==mainBC && iface.broadcast!=='127.255.255.255'){
+            try{ this._dataSocket.send(buf, 0, buf.length, port, iface.broadcast); }catch(_){}
+          }
+        }
+      }
       if(this.localAddr){
         try{ this.txSocket.send(buf, 0, buf.length, port, this.localAddr); }catch(_){}
       }
@@ -1763,7 +1772,7 @@ class BridgeCore {
           const p=Buffer.alloc(37);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
-          Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(p,0x0C,0,15);
+          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15); // pcap: DJM requires TCS-SHOWKONTROL in hello too
           for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
           console.log(`[PDJL] bridge hello #${h+1}`);
         }, h*300);
@@ -1774,7 +1783,7 @@ class BridgeCore {
           const p=Buffer.alloc(50);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x02; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x32;
-          Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(p,0x0C,0,15);
+          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15); // pcap: DJM requires TCS-SHOWKONTROL in claim too
           for(let i=0;i<4;i++) p[0x24+i]=ipParts[i];
           for(let i=0;i<6;i++) p[0x28+i]=macBytes[i]||0;
           p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
@@ -1785,23 +1794,40 @@ class BridgeCore {
     };
     _bridgeJoin();
 
+    // helper: build 54B keepalive with specified IP/MAC
+    const buildAnnPkt=(annIP, annMAC)=>{
+      const p=Buffer.alloc(54);
+      PDJL.MAGIC.copy(p,0);
+      p[0x0A]=0x06; p[0x0B]=0x00;
+      Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
+      p[0x20]=0x01; p[0x21]=0x01; p[0x22]=0x00; p[0x23]=0x36;
+      p[0x24]=0x9E; // lighting/bridge device type
+      p[0x25]=0x00;
+      const mb=annMAC.split(':').map(h=>parseInt(h,16));
+      for(let i=0;i<6;i++) p[0x26+i]=mb[i]||0;
+      const ip=annIP.split('.').map(Number);
+      for(let i=0;i<4;i++) p[0x2C+i]=ip[i];
+      p[0x30]=0x07; p[0x34]=0x05; p[0x35]=0x20; // orig-bridge pcap values
+      return p;
+    };
+
     const sendAnn=()=>{
-      // 54B bridge keepalive (0x06)
-      // pcap analysis: original PRO DJ LINK Bridge uses 0x9E (device type) + 0x07 (b0x30)
-      // DJM-900NXS2 only sends type 0x39 (fader) / 0x58 (meter) to devices with type 0x9E
-      const pkt=Buffer.alloc(54);
-      PDJL.MAGIC.copy(pkt,0);
-      pkt[0x0A]=0x06; pkt[0x0B]=0x00;
-      Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,0x0C,0,15);
-      pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x22]=0x00; pkt[0x23]=0x36;
-      pkt[0x24]=0x9E; // lighting/bridge device type — DJM type 0x39 트리거 (0x30=0x03 유지 시 CDJ 정상)
-      pkt[0x25]=0x00;
-      for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
-      for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
-      pkt[0x30]=0x03; pkt[0x34]=0x05; pkt[0x35]=0x64;
-      // Send to all broadcast addresses
-      for(const bc of allBCs){
-        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
+      // 54B bridge keepalive (0x06) — per-interface so each subnet sees correct source IP.
+      // CRITICAL for DJM on link-local 169.254.x.x: payload IP must be reachable from DJM.
+      // If we advertise WiFi IP (192.168.0.x), DJM cannot route type 0x39 unicast back to us.
+      // Solution: send separate keepalive per interface with that interface's own IP in payload.
+      const seenBC=new Set();
+      for(const iface of getAllInterfaces()){
+        if(iface.internal || !iface.broadcast || iface.broadcast==='127.255.255.255') continue;
+        if(seenBC.has(iface.broadcast)) continue;
+        seenBC.add(iface.broadcast);
+        const pkt=buildAnnPkt(iface.address, iface.mac||pdjlMAC);
+        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,iface.broadcast);}catch(_){}
+      }
+      // also send to 255.255.255.255 with primary IP (for nodes not in allBCs)
+      if(!seenBC.has('255.255.255.255')){
+        const pkt=buildAnnPkt(pdjlIP, pdjlMAC);
+        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,'255.255.255.255');}catch(_){}
       }
     };
 
@@ -1840,46 +1866,10 @@ class BridgeCore {
     this._pdjlAnnTimer=setInterval(()=>{sendAnn();sendDbKeepalive();},1500);
     this._timers.push(this._pdjlAnnTimer);
 
-    // DJM subscribe (0x57) — triggers fader + VU meter delivery
-    // STC ref: must be sent from a SEPARATE socket (bridgeSock, ephemeral port)
-    // NOT from the beat socket (50001). DJM may reject subscribe from a port it sends data to.
-    // Must be delayed ~3s+ after first keepalive (DJM needs to register bridge identity first)
-    this._djmSubSock = dgram.createSocket({type:'udp4',reuseAddr:true});
-    this._djmSubSock.on('error',()=>{});
-    this._djmSubSock.bind(0,()=>{try{this._djmSubSock.setBroadcast(true);}catch(_){}});
-    const _mkDjmSub=()=>{
-      const pkt=Buffer.alloc(40);
-      PDJL.MAGIC.copy(pkt,0);
-      pkt[10]=0x57; // subscribe type
-      Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,11,0,15);
-      pkt[31]=0x01; pkt[32]=0x00;
-      pkt[33]=process.platform==='darwin'?0xFE:0x87; // macOS=0xFE, Windows=0x87
-      pkt[34]=0x00; pkt[35]=0x04; pkt[36]=0x01; // subtype=4, subscribe=1
-      return pkt;
-    };
-    const sendDJMSub = ()=>{
-      const pkt=_mkDjmSub();
-      let sent=0;
-      for(const[k,dev] of Object.entries(this.devices)){
-        if(dev.type==='DJM'||k==='djm'){
-          try{this._djmSubSock.send(pkt,0,pkt.length,50001,dev.ip);sent++;}catch(_){}
-        }
-      }
-      if(sent) console.log(`[DJM-SUB] 0x57 unicast → ${sent} DJM(s)`);
-    };
-    const sendDJMSubBC = ()=>{
-      const pkt=_mkDjmSub();
-      for(const bc of allBCs){
-        try{this._djmSubSock.send(pkt,0,pkt.length,50001,bc);}catch(_){}
-      }
-      console.log(`[DJM-SUB] 0x57 broadcast → 50001`);
-    };
-    // Delay: join sequence takes ~6s, then wait 2s more for DJM to register
-    setTimeout(sendDJMSubBC, 8000);
-    setTimeout(sendDJMSub, 10000);
-    // Re-subscribe every 2s (STC uses kBridgeSubInterval=2.0)
-    const djmSubTimer = setInterval(()=>{sendDJMSub();sendDJMSubBC();}, 2000);
-    this._timers.push(djmSubTimer);
+    // DJM subscribe (0x57) — DISABLED
+    // orig-bridge.pcap 분석: 실제 동작하는 브리지는 0x57을 전혀 보내지 않음.
+    // keepalive(0x06) name="TCS-SHOWKONTROL" + deviceType=0x9E 만으로 DJM이 0x39를 트리거함.
+    // 잘못된 0x57을 계속 보내면 DJM이 오히려 꼬일 수 있어서 완전 중단.
 
     // Virtual CDJ status broadcast every 500ms — keeps Arena updated on virtual decks
     // Real CDJs broadcast status packets ~every 500ms; Arena stops querying if it stops seeing them
@@ -1944,7 +1934,7 @@ class BridgeCore {
       return;
     }
     // Skip own packets (bridge spoofed device)
-    if(p.name==='BRIDGE+'||rinfo.address==='127.0.0.1') return;
+    if(p.name==='BRIDGE+'||p.name==='TCS-SHOWKONTROL'||rinfo.address==='127.0.0.1') return;
     if(p.kind==='cdj'){
       const li = p.playerNum-1;
       const key = `cdj${p.playerNum}`;
