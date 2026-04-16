@@ -641,30 +641,43 @@ function parsePDJL(msg){
     const onAir=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
     const eq=[0,1,2,3].map(c=>{
       const base=CH_BASE+c*CH_STRIDE;
-      // [Hi(+1), Mid(+3), Lo(+4)] — all 0-255, center=128
-      return[ base+1<msg.length?msg[base+1]:0x80, base+3<msg.length?msg[base+3]:0x80, base+4<msg.length?msg[base+4]:0x80 ];
+      // [Hi(+1), Mid(+4), Lo(+3), Color/Filter(+6)] — all 0-255, center=128
+      // Byte+3=Lo, byte+4=Mid confirmed via live user test (2026-04-17)
+      // Byte+6=Color/Filter knob (center=128, near-constant unless knob moved)
+      return[
+        base+1<msg.length?msg[base+1]:0x80,  // Hi EQ
+        base+4<msg.length?msg[base+4]:0x80,  // Mid EQ
+        base+3<msg.length?msg[base+3]:0x80,  // Lo EQ
+        base+6<msg.length?msg[base+6]:0x80,  // Color / Filter knob
+      ];
     });
     const chExtra=[0,1,2,3].map(c=>{
       const base=CH_BASE+c*CH_STRIDE; const extra={};
       for(let b=4;b<=23;b++){if(base+b<msg.length)extra['b'+b]=msg[base+b];}
       return extra;
     });
+    // Note: byte+6 (Color/Filter knob) is included as eq[3] in the eq array above
     const gBase=CH_BASE+4*CH_STRIDE; // 0x84
-    const xfader=(gBase<msg.length)?msg[gBase]:127;
-    const masterLvl=(gBase+1<msg.length)?msg[gBase+1]:0;
-    const boothLvl=(gBase+2<msg.length)?msg[gBase+2]:0;
-    const hpLevel=(gBase+3<msg.length)?msg[gBase+3]:0;
+    // Corrected offsets confirmed via pcap analysis (2026-04-17):
+    //   global+59 = master output level (131 ≈ 0dB in capture)
+    //   global+71 = headphone volume (variable 1~155)
+    //   global+75 = crossfader position (128 = center)
+    //   global+94 = booth output level (161 in capture)
+    const xfader=(gBase+75<msg.length)?msg[gBase+75]:128;
+    const masterLvl=(gBase+59<msg.length)?msg[gBase+59]:128;
+    const boothLvl=(gBase+94<msg.length)?msg[gBase+94]:128;
+    const hpLevel=(gBase+71<msg.length)?msg[gBase+71]:0;
     const hpCueCh=(gBase+4<msg.length)?msg[gBase+4]:0;
-    // Debug hex dump: first receive + periodically
+    // Debug hex dump: first receive + extended global view
     if(!parsePDJL._djm39Logged){
       parsePDJL._djm39Logged=true;
       const hex=[0,1,2,3].map(c=>{const b=CH_BASE+c*CH_STRIDE;return`CH${c+1}[${Array.from(msg.slice(b,Math.min(b+24,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' ')}]`;}).join(' ');
-      const gHex=msg.length>gBase?Array.from(msg.slice(gBase,Math.min(gBase+32,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' '):'(none)';
+      const gHex=msg.length>gBase?Array.from(msg.slice(gBase,Math.min(gBase+100,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' '):'(none)';
       try{console.log(`[DJM-0x39] len=${msg.length}\n  ${hex}\n  GLOBAL@0x${gBase.toString(16)}=[${gHex}]`);}catch(_){}
     }
     if(!parsePDJL._lastDjm||parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
       parsePDJL._lastDjm=ch.slice();
-      try{console.log(`[DJM-0x39] faders=[${ch}] onair=[${onAir}] eq=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl}`);}catch(_){}
+      try{console.log(`[DJM-0x39] faders=[${ch}] eq(Hi/Mid/Lo/CLR)=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl} booth=${boothLvl}`);}catch(_){}
     }
     return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,boothLvl,hpLevel,hpCueCh,chExtra};
   }
@@ -2106,7 +2119,7 @@ class BridgeCore {
       if(msg.length>0x20){
         rawHex=Array.from(msg.slice(0,Math.min(msg.length,128))).map(x=>x.toString(16).padStart(2,'0')).join(' ');
       }
-      this.onDJMStatus?.({channel:p.channel, onAir:p.onAir, eq:p.eq, xfader:p.xfader, masterLvl:p.masterLvl, boothLvl:p.boothLvl, hpLevel:p.hpLevel, hpCueCh:p.hpCueCh, chExtra:p.chExtra, hasRealFaders:true, pktType:msg[10], pktLen:msg.length, rawHex});
+      this.onDJMStatus?.({channel:p.channel, onAir:p.onAir, eq:p.eq, vuLevel:p.vuLevel, xfader:p.xfader, masterLvl:p.masterLvl, boothLvl:p.boothLvl, hpLevel:p.hpLevel, hpCueCh:p.hpCueCh, chExtra:p.chExtra, hasRealFaders:true, pktType:msg[10], pktLen:msg.length, rawHex});
     }
     if(p.kind==='djm_meter'){
       this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum});

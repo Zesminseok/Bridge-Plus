@@ -623,8 +623,9 @@ let run=false,t0=0,up=0,pk=0,curTab='link',TC_NAME='BRIDGE+';
 let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
 let _djmSpectrum=[[],[],[],[],[],[]];
-let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]];
-let _djmXfader=127, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=0, _djmHasRealFaders=false;
+let eqBands=[[128,128,128,128],[128,128,128,128],[128,128,128,128],[128,128,128,128],[128,128,128,128],[128,128,128,128]]; // [Hi, Mid, Lo, Color/Filter]
+let _djmChVu=[0,0,0,0,0,0]; // per-channel VU level 0-255 (from 0x39 byte+6 or 0x58 meter)
+let _djmXfader=128, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=128, _djmHasRealFaders=false;
 let _djmLog=[], _djmLogMax=80, _djmLogOpen=false, _djmCapturing=false, _djmAutoCapStarted=false;
 async function _toggleDjmCapture(){
   const btn=document.getElementById('mxCaptureBtn');
@@ -642,16 +643,18 @@ async function _toggleDjmCapture(){
   }
 }
 // DJM mixer profiles — model-specific UI configuration
+// eq[] = display labels, ids[] = knob ID keys (matched in eqMap below)
+// EQ data from 0x39 packet: index 0=Hi(+1), 1=Mid(+4), 2=Lo(+3), 3=Color/Filter(+6)
 const _DJM_PROFILES={
-  'V10':     {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW'], ids:['T','H','HM','LM','L'], comp:true},
-  'V10-LF':  {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW'], ids:['T','H','HM','LM','L'], comp:true},
-  'A9':      {ch:6, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
-  '900NXS2': {ch:4, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
-  '900NXS':  {ch:4, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
-  '750MK2':  {ch:4, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
-  '450':     {ch:2, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
-  '250MK2':  {ch:2, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
-  'default': {ch:4, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
+  'V10':     {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW','CLR'], ids:['T','H','HM','LM','L','C'], comp:true},
+  'V10-LF':  {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW','CLR'], ids:['T','H','HM','LM','L','C'], comp:true},
+  'A9':      {ch:6, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
+  '900NXS2': {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
+  '900NXS':  {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
+  '750MK2':  {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
+  '450':     {ch:2, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
+  '250MK2':  {ch:2, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
+  'default': {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
 };
 let _djmProfile=_DJM_PROFILES['default'], _djmModelKey='default';
 // 설정 — 인터페이스 포함
@@ -3730,18 +3733,20 @@ function updateMixer(){
   const hasReal=_djmHasRealFaders;
   for(let i=0;i<nCh;i++){
     const air=!!onAirCh[i];
-    const meter=(DECKS[i]?._djmMeter||0)/255;
+    const meter=(_djmChVu[i]||0)/255;
     // ON AIR
     const chEl=document.getElementById('mxCh'+i);
     if(chEl)chEl.classList.toggle('on-air',air);
     // EQ knobs: only show real values when mixer sends fader/eq data
     if(hasReal){
-      const eq=eqBands[i]||[0x40,0x40,0x40];
-      const eqMap={T:null,H:0,M:1,HM:0,LM:2,L:2};
-      if(prof.ids.length===5)Object.assign(eqMap,{H:0,HM:1,LM:1,L:2});
+      const eq=eqBands[i]||[128,128,128,128];
+      // Index map: H=0(Hi), M=1(Mid), L=2(Lo), C=3(Color/Filter) — all from 0x39 byte offsets
+      const eqMap={T:null, H:0, M:1, L:2, C:3, HM:0, LM:2};
+      if(prof.ids.length>=6)Object.assign(eqMap,{H:0,HM:1,LM:2,L:3,C:4}); // V10 5-band
       prof.ids.forEach(id=>{
         const bi=eqMap[id];
-        const norm=bi!=null?(((eq[bi]??0x40)-0x40)/0x40):0;
+        // EQ values from DJM 0x39: 0-255, center=128 (12 o'clock = 0dB)
+        const norm=bi!=null?(((eq[bi]??128)-128)/128):0;
         _mxKnobUpdate('mx'+id+i,norm,KSZ);
       });
     } else {
@@ -3799,8 +3804,9 @@ function updateMixer(){
   const xfKnob=document.getElementById('mxXfKnob');
   if(xfKnob)xfKnob.style.left=(hasReal?(_djmXfader/255*100):50)+'%';
   // Master VU — LED dots (12 per side: 0-7=green, 8-10=amber, 11=red/clip)
-  const mL=(DECKS[0]?._djmMeter||0)/255*0.7+(DECKS[2]?._djmMeter||0)/255*0.3;
-  const mR=(DECKS[1]?._djmMeter||0)/255*0.7+(DECKS[3]?._djmMeter||0)/255*0.3;
+  // Use _djmChVu which is fed from 0x58 meter packets (accurate) or 0x39 byte+6 (estimate)
+  const mL=(_djmChVu[0]||0)/255*0.6+(_djmChVu[2]||0)/255*0.4;
+  const mR=(_djmChVu[1]||0)/255*0.6+(_djmChVu[3]||0)/255*0.4;
   let clipping=false;
   ['L','R'].forEach((side,si)=>{
     const lv=si===0?mL:mR;
@@ -4420,6 +4426,7 @@ if(E){
     for(let i=0;i<f.length&&i<6;i++)faders[i]=f[i];
     if(d.onAir){for(let i=0;i<d.onAir.length&&i<6;i++)onAirCh[i]=d.onAir[i]?1:0;}
     if(d.eq){for(let i=0;i<d.eq.length&&i<6;i++)eqBands[i]=d.eq[i];}
+    if(d.vuLevel){for(let i=0;i<d.vuLevel.length&&i<6;i++)_djmChVu[i]=d.vuLevel[i];}
     if(d.xfader!=null)_djmXfader=d.xfader;
     if(d.masterLvl!=null)_djmMasterLvl=d.masterLvl;
     if(d.hpCueCh!=null)_djmHpCue=d.hpCueCh;
@@ -4443,7 +4450,11 @@ if(E){
   window.bridge.onDJMMeter?.(d=>{
     // d = {ch:[0..3], spectrum:[[15 bands]×4]} or legacy array
     const ch=Array.isArray(d)?d:(d.ch||[]);
-    ch.forEach((v,i)=>{if(DECKS[i]){DECKS[i].hwVu=v/255;DECKS[i]._djmMeter=v;}});
+    ch.forEach((v,i)=>{
+      if(DECKS[i]){DECKS[i].hwVu=v/255;DECKS[i]._djmMeter=v;}
+      // 0x58 meter packet provides dedicated VU data — override byte+6 estimate
+      _djmChVu[i]=v;
+    });
     if(d.spectrum)_djmSpectrum=d.spectrum;
   });
   window.bridge.onDevices?.(devs=>{
