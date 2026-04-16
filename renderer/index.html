@@ -3748,8 +3748,8 @@ function updateMixer(){
       // No real EQ data — show knobs at neutral (center)
       prof.ids.forEach(id=>_mxKnobUpdate('mx'+id+i,0,KSZ));
     }
-    // Fader cap position: real fader data, or on-air flag as binary (no fader data from DJM-900NXS2)
-    const fv=hasReal?(faders[i]||0)/255:(air?1:0);
+    // Fader cap position: faders[] 직접 사용 (on-air 폴백 제거, type 0x39 전 기본값 255)
+    const fv=(faders[i]||0)/255;
     const fPct=fv*100;
     const cap=document.getElementById('mxFdrCap'+i);
     if(cap)cap.style.bottom='calc('+fPct+'% - 5px)';

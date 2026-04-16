@@ -2118,6 +2118,8 @@ class BridgeCore {
       // fader는 type 0x39 (real analog) 도착 시에만 업데이트
       this.onDJMStatus?.({channel:this.faders, onAir:p.onAir, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:this._hasRealFaders});
       if(!this.devices['djm']){
+        // 첫 DJM 감지 시 기본 페이더값 255 초기화 (type 0x39 도착 전 TCNet에 0 보내지 않도록)
+        if(!this._hasRealFaders) this.faders=[255,255,255,255];
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
         // Probe DJM TCP ports when first discovered — fader data might be on TCP 50003
