@@ -427,18 +427,28 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-ab-a{color:rgba(135,135,255,.7);border:1.5px solid rgba(135,135,255,.25);background:rgba(135,135,255,.06)}
 .mx-ab-b{color:rgba(255,140,60,.7);border:1.5px solid rgba(255,140,60,.25);background:rgba(255,140,60,.06)}
 .mx-ab-thru{color:var(--tx3);border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02)}
-/* Master section — DJM-V10 style */
-.mx-master{width:80px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 4px 6px;gap:4px;flex-shrink:0;align-items:center}
+/* Master section */
+.mx-master{width:94px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 5px 6px;gap:4px;flex-shrink:0;align-items:center}
 .mx-master-lbl{font:800 10px var(--lb);color:var(--tx);text-align:center;letter-spacing:.1em;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:4px;width:100%}
 .mx-master-sub{font:700 7px var(--mn);color:var(--tx3);letter-spacing:.06em;text-align:center}
-.mx-master-vu-dots{display:flex;gap:6px;justify-content:center;padding:2px 4px}
+/* VU LED dots — tall vertical columns */
+.mx-master-vu-dots{display:flex;gap:8px;justify-content:center;padding:4px 0}
 .mx-master-dot-col{display:flex;flex-direction:column-reverse;gap:2px;align-items:center}
-.mx-master-dot{width:6px;height:3px;border-radius:1px;background:rgba(255,255,255,.08)}
-.mx-master-dot.lit-g{background:var(--grn);box-shadow:0 0 4px rgba(74,225,131,.3)}
-.mx-master-dot.lit-y{background:var(--ylw2);box-shadow:0 0 4px rgba(239,194,10,.3)}
-.mx-master-dot.lit-r{background:#ff6b6b;box-shadow:0 0 4px rgba(255,107,107,.3)}
-.mx-master-scale{display:flex;justify-content:space-between;width:100%;padding:0 4px}
-.mx-master-scale span{font:600 6px var(--mn);color:var(--tx4)}
+.mx-master-dot{width:10px;height:4px;border-radius:1px;background:rgba(255,255,255,.07)}
+.mx-master-dot.lit-g{background:var(--grn);box-shadow:0 0 5px rgba(74,225,131,.35)}
+.mx-master-dot.lit-y{background:var(--ylw2);box-shadow:0 0 5px rgba(239,194,10,.35)}
+.mx-master-dot.lit-r{background:#ff6b6b;box-shadow:0 0 6px rgba(255,107,107,.4)}
+/* Knob with scale labels */
+.mx-master-knob-wrap{position:relative;width:54px;height:54px;margin:2px 0}
+.mx-master-knob-wrap .mx-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+.mx-master-sc{position:absolute;font:600 6px var(--mn);color:var(--tx4);white-space:nowrap}
+.mx-master-sc.sc-inf{bottom:2px;left:-2px}
+.mx-master-sc.sc-0db{top:-1px;right:-2px;color:var(--tx2)}
+.mx-master-sc.sc-5db{bottom:2px;right:-4px}
+/* CLIP indicator */
+.mx-clip{padding:2px 10px;border-radius:2px;font:700 8px var(--mn);letter-spacing:.08em;text-align:center;border:1.5px solid rgba(255,60,60,.15);color:rgba(255,60,60,.25);background:transparent;transition:all .15s}
+.mx-clip.on{border-color:rgba(255,60,60,.7);color:#ff4444;background:rgba(255,60,60,.1);box-shadow:0 0 10px rgba(255,60,60,.2);animation:clip-flash .3s ease-in-out}
+@keyframes clip-flash{0%,100%{opacity:1}50%{opacity:.5}}
 /* DJM packet log */
 .mx-log-toggle{font:600 8px var(--mn);color:var(--tx3);cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;padding:2px 0}
 .mx-log-toggle:hover{color:var(--tx2)}
@@ -3539,18 +3549,23 @@ function _mxBuildBody(){
       <span class="mx-ab mx-ab-thru" id="mxAb${i}">THRU</span>
     </div>`;
   }
-  // Master section: MASTER → LED VU dots (vertical L/R) → LEVEL knob → scale → CUE → BPM
-  const MSZ=38;
+  // Master section: MASTER → LED VU (12 dots L/R) → LEVEL label → knob with -∞/0dB/+5dB → CLIP → CUE → BPM
+  const MSZ=44;
   const vuDots=(side)=>{
-    let h='';for(let j=0;j<8;j++)h+=`<div class="mx-master-dot" id="mxMDot${side}${j}"></div>`;
+    let h='';for(let j=0;j<12;j++)h+=`<div class="mx-master-dot" id="mxMDot${side}${j}"></div>`;
     return`<div class="mx-master-dot-col"><span class="mx-vu-lbl">${side}</span>${h}</div>`;
   };
   html+=`<div class="mx-master">
     <span class="mx-master-lbl">MASTER</span>
     <div class="mx-master-vu-dots">${vuDots('L')}${vuDots('R')}</div>
     <span class="mx-master-sub">LEVEL</span>
-    <div class="mx-knob">${_mxKnobSVG('mxMVol',MSZ)}</div>
-    <div class="mx-master-scale"><span>-∞</span><span>0</span></div>
+    <div class="mx-master-knob-wrap">
+      <div class="mx-knob">${_mxKnobSVG('mxMVol',MSZ)}</div>
+      <span class="mx-master-sc sc-inf">-∞</span>
+      <span class="mx-master-sc sc-0db">0dB</span>
+      <span class="mx-master-sc sc-5db">+5dB</span>
+    </div>
+    <span class="mx-clip" id="mxClip">CLIP</span>
     <div class="mx-cue"><span class="mx-cue-btn" id="mxCueMaster">CUE</span></div>
     <div style="text-align:center;margin-top:2px"><span class="mx-knob-lbl">BPM</span><div style="font:700 14px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums" id="mxMasterBpm">—</div></div>
   </div>`;
@@ -3637,22 +3652,27 @@ function updateMixer(){
   // Crossfader position
   const xfKnob=document.getElementById('mxXfKnob');
   if(xfKnob)xfKnob.style.left=(_djmXfader/255*100)+'%';
-  // Master VU — LED dot style (8 dots per side: 0-4=green, 5-6=amber, 7=red)
+  // Master VU — LED dots (12 per side: 0-7=green, 8-10=amber, 11=red/clip)
   const mL=(DECKS[0]?._djmMeter||0)/255*0.7+(DECKS[2]?._djmMeter||0)/255*0.3;
   const mR=(DECKS[1]?._djmMeter||0)/255*0.7+(DECKS[3]?._djmMeter||0)/255*0.3;
+  let clipping=false;
   ['L','R'].forEach((side,si)=>{
     const lv=si===0?mL:mR;
-    const lit=Math.round(lv*8);
-    for(let j=0;j<8;j++){
+    const lit=Math.round(lv*12);
+    if(lv>0.92)clipping=true;
+    for(let j=0;j<12;j++){
       const dot=document.getElementById('mxMDot'+side+j);
       if(!dot)continue;
-      const cls=j>=7?'lit-r':j>=5?'lit-y':'lit-g';
+      const cls=j>=11?'lit-r':j>=8?'lit-y':'lit-g';
       dot.className='mx-master-dot'+(j<lit?' '+cls:'');
     }
   });
-  // Master volume knob (from DJM masterLvl, 0-255 → normalized -1..+1 as rotation)
-  const MSZ=38;
-  const mVolNorm=(_djmXfader!==undefined)?(((_djmMasterLvl||0)/127.5)-1):0;
+  // CLIP indicator
+  const clipEl=document.getElementById('mxClip');
+  if(clipEl)clipEl.classList.toggle('on',clipping);
+  // Master volume knob: 0=−∞ (fully CCW, -1), 255=+5dB (fully CW, +1)
+  const MSZ=44;
+  const mVolNorm=((_djmMasterLvl||0)/127.5)-1;
   _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),MSZ);
   // A/B crossfader assign badges (placeholder — data from DJM protocol TBD)
   for(let i=0;i<nCh;i++){
