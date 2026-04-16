@@ -392,10 +392,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-knob svg{display:block;overflow:visible}
 .mx-knob-lbl{font:700 6px var(--mn);color:var(--tx2);letter-spacing:.04em}
 .mx-knob-val{font:600 6px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums}
-.mx-knobs{display:flex;flex-direction:column;gap:0;width:100%}
-.mx-knob-row{display:flex;gap:2px;justify-content:center}
-.mx-knob-L{align-self:flex-start;margin-left:2px}
-.mx-knob-R{align-self:flex-end;margin-right:2px}
+.mx-knobs{display:flex;flex-direction:column;gap:1px;align-items:center;width:100%}
 /* CUE button — compact */
 .mx-cue{display:flex;justify-content:center;width:100%;padding:2px 0}
 .mx-cue-btn{padding:4px 8px;border-radius:3px;font:700 7px var(--mn);letter-spacing:.06em;text-align:center;border:1.5px solid rgba(239,194,10,.25);background:transparent;color:rgba(239,194,10,.35);transition:all .15s;cursor:default;white-space:nowrap}
@@ -426,7 +423,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-xf-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;background:var(--tx2);border-radius:50%;border:2px solid var(--bg);transition:left .08s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .mx-xf-a,.mx-xf-b{font:700 8px var(--mn);color:var(--tx2)}
 /* Channel A/B assign badge — CUE-like size */
-.mx-ab{font:700 7px var(--mn);letter-spacing:.06em;padding:3px 8px;border-radius:3px;text-align:center;margin-top:3px;white-space:nowrap}
+.mx-ab{font:700 7px var(--mn);letter-spacing:.06em;padding:3px 8px;border-radius:3px;text-align:center;margin-top:8px;white-space:nowrap}
 .mx-ab-a{color:rgba(135,135,255,.7);border:1.5px solid rgba(135,135,255,.25);background:rgba(135,135,255,.06)}
 .mx-ab-b{color:rgba(255,140,60,.7);border:1.5px solid rgba(255,140,60,.25);background:rgba(255,140,60,.06)}
 .mx-ab-thru{color:var(--tx3);border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02)}
@@ -434,9 +431,9 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-master{width:80px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 4px 6px;gap:4px;flex-shrink:0;align-items:center}
 .mx-master-lbl{font:800 10px var(--lb);color:var(--tx);text-align:center;letter-spacing:.1em;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:4px;width:100%}
 .mx-master-sub{font:700 7px var(--mn);color:var(--tx3);letter-spacing:.06em;text-align:center}
-.mx-master-vu-dots{display:flex;gap:3px;justify-content:center;align-items:flex-end;height:28px;padding:0 2px}
-.mx-master-dot-col{display:flex;flex-direction:column;gap:1px;align-items:center;width:6px}
-.mx-master-dot{width:5px;height:3px;border-radius:1px;background:rgba(255,255,255,.06)}
+.mx-master-vu-dots{display:flex;gap:6px;justify-content:center;padding:2px 4px}
+.mx-master-dot-col{display:flex;flex-direction:column-reverse;gap:2px;align-items:center}
+.mx-master-dot{width:6px;height:3px;border-radius:1px;background:rgba(255,255,255,.08)}
 .mx-master-dot.lit-g{background:var(--grn);box-shadow:0 0 4px rgba(74,225,131,.3)}
 .mx-master-dot.lit-y{background:var(--ylw2);box-shadow:0 0 4px rgba(239,194,10,.3)}
 .mx-master-dot.lit-r{background:#ff6b6b;box-shadow:0 0 4px rgba(255,107,107,.3)}
@@ -599,6 +596,19 @@ let _djmSpectrum=[[],[],[],[],[],[]];
 let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]];
 let _djmXfader=127, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=0;
 let _djmLog=[], _djmLogMax=80, _djmLogOpen=false;
+// DJM mixer profiles — model-specific UI configuration
+const _DJM_PROFILES={
+  'V10':     {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW'], ids:['T','H','HM','LM','L'], comp:true},
+  'V10-LF':  {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW'], ids:['T','H','HM','LM','L'], comp:true},
+  'A9':      {ch:6, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
+  '900NXS2': {ch:4, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
+  '900NXS':  {ch:4, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
+  '750MK2':  {ch:4, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
+  '450':     {ch:2, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
+  '250MK2':  {ch:2, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
+  'default': {ch:4, eq:['TRIM','HI','MID','LOW'], ids:['T','H','M','L']},
+};
+let _djmProfile=_DJM_PROFILES['default'], _djmModelKey='default';
 // 설정 — 인터페이스 포함
 const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
   tcFps:'25',wfColor:'3band',wfCenter:'left',
@@ -3494,24 +3504,33 @@ function _mxKnobUpdate(id,norm,sz){
   arcEl.setAttribute('stroke',norm>0.05?'rgba(135,135,255,.7)':norm<-0.05?'rgba(255,100,100,.6)':'rgba(200,200,200,.4)');
 }
 
+function _mxDetectProfile(djmDevs){
+  for(const d of djmDevs){
+    const n=d.name||'';
+    for(const [key,prof] of Object.entries(_DJM_PROFILES)){
+      if(key==='default')continue;
+      if(n.toUpperCase().includes(key.toUpperCase()))return{key,prof};
+    }
+  }
+  return{key:'default',prof:_DJM_PROFILES['default']};
+}
 function _mxBuildBody(){
   const body=document.getElementById('mxBody');if(!body)return;
-  const KSZ=26;
-  const nCh=_djmChCount;
+  const KSZ=26, prof=_djmProfile;
+  const nCh=prof.ch;
   const marks=[{v:192,p:75},{v:128,p:50},{v:64,p:25},{v:0,p:0}];
   const markHtml=marks.map(m=>`<div class="mx-fdr-mark" style="bottom:${m.p}%"><span class="mx-fdr-mark-lbl">${m.v}</span></div>`).join('');
   let html='';
   for(let i=0;i<nCh;i++){
+    // Build EQ knobs from profile (all centered, single column)
+    let knobsHtml='';
+    prof.eq.forEach((lbl,ki)=>{
+      knobsHtml+=`<div class="mx-knob">${_mxKnobSVG('mx'+prof.ids[ki]+i,KSZ)}<span class="mx-knob-lbl">${lbl}</span></div>`;
+    });
     html+=`<div class="mx-ch" id="mxCh${i}">
       <div class="mx-ch-hdr"><span class="mx-ch-lbl">CH${i+1}</span><span class="mx-ch-air">ON AIR</span></div>
       <div class="mx-wf-wrap"><canvas class="mx-wf-canvas" id="mxWf${i}" width="60" height="160"></canvas></div>
-      <div class="mx-knobs">
-        <div class="mx-knob" style="align-self:center">${_mxKnobSVG('mxT'+i,KSZ)}<span class="mx-knob-lbl">TRIM</span></div>
-        <div class="mx-knob mx-knob-L">${_mxKnobSVG('mxH'+i,KSZ)}<span class="mx-knob-lbl">HI</span></div>
-        <div class="mx-knob mx-knob-R">${_mxKnobSVG('mxM'+i,KSZ)}<span class="mx-knob-lbl">MID</span></div>
-        <div class="mx-knob mx-knob-L">${_mxKnobSVG('mxML'+i,KSZ)}<span class="mx-knob-lbl">M-LO</span></div>
-        <div class="mx-knob mx-knob-R">${_mxKnobSVG('mxL'+i,KSZ)}<span class="mx-knob-lbl">LO</span></div>
-      </div>
+      <div class="mx-knobs">${knobsHtml}</div>
       <div class="mx-cue"><span class="mx-cue-btn" id="mxCue${i}">CUE</span></div>
       <div class="mx-fdr-area">
         <div class="mx-fdr-col"><div class="mx-fdr-track"></div><div class="mx-fdr-cap" id="mxFdrCap${i}" style="bottom:0"></div><div class="mx-fdr-marks">${markHtml}</div></div>
@@ -3520,10 +3539,10 @@ function _mxBuildBody(){
       <span class="mx-ab mx-ab-thru" id="mxAb${i}">THRU</span>
     </div>`;
   }
-  // Master section — DJM-V10 style: MASTER → LED VU dots → LEVEL knob → scale → BPM
+  // Master section: MASTER → LED VU dots (vertical L/R) → LEVEL knob → scale → CUE → BPM
   const MSZ=38;
   const vuDots=(side)=>{
-    let h='';for(let j=0;j<8;j++)h+=`<div class="mx-master-dot" id="mxMDot${side}${7-j}"></div>`;
+    let h='';for(let j=0;j<8;j++)h+=`<div class="mx-master-dot" id="mxMDot${side}${j}"></div>`;
     return`<div class="mx-master-dot-col"><span class="mx-vu-lbl">${side}</span>${h}</div>`;
   };
   html+=`<div class="mx-master">
@@ -3543,17 +3562,16 @@ function _mxBuildBody(){
 
 function updateMixer(){
   if(curTab!=='mixer')return;
-  // Detect 6-channel DJM (DJM-V10, DJM-A9) from device name
+  // Detect DJM model and apply profile
   const djmDevs=pdjlDevices.filter(d=>d.type==='DJM');
-  const is6ch=djmDevs.some(d=>/V10|A9|V10-LF/i.test(d.name));
-  const newCount=is6ch?6:4;
-  if(newCount!==_djmChCount){_djmChCount=newCount;_mxBuilt=false;}
+  const det=_mxDetectProfile(djmDevs);
+  if(det.key!==_djmModelKey){_djmModelKey=det.key;_djmProfile=det.prof;_djmChCount=det.prof.ch;_mxBuilt=false;}
   if(!_mxBuilt)_mxBuildBody();
   const mxModel=document.getElementById('mxModel');
   const mxOffline=document.getElementById('mxOffline');
   if(mxModel)mxModel.textContent=djmDevs.length?djmDevs.map(d=>d.name).join(', '):'DJM 미연결';
   if(mxOffline)mxOffline.style.display=djmDevs.length?'none':'';
-  const KSZ=26, nCh=_djmChCount;
+  const KSZ=26, prof=_djmProfile, nCh=prof.ch;
   for(let i=0;i<nCh;i++){
     const fv=(faders[i]||0)/255;
     const air=!!onAirCh[i];
@@ -3562,12 +3580,14 @@ function updateMixer(){
     // ON AIR
     const chEl=document.getElementById('mxCh'+i);
     if(chEl)chEl.classList.toggle('on-air',air);
-    // EQ knobs: HI, MID, LO
-    ['H','M','L'].forEach((k,bi)=>{
-      _mxKnobUpdate('mx'+k+i,(((eq[bi]??0x40)-0x40)/0x40),KSZ);
+    // EQ knobs: update based on profile; eq[0]=HI, eq[1]=MID, eq[2]=LO
+    const eqMap={T:null,H:0,M:1,HM:0,LM:2,L:2}; // map profile ids to eq band index
+    if(prof.ids.length===5)Object.assign(eqMap,{H:0,HM:1,LM:1,L:2}); // V10: HI=0, HI MID~MID=1, LOW MID~MID=1, LOW=2
+    prof.ids.forEach(id=>{
+      const bi=eqMap[id];
+      const norm=bi!=null?(((eq[bi]??0x40)-0x40)/0x40):0;
+      _mxKnobUpdate('mx'+id+i,norm,KSZ);
     });
-    _mxKnobUpdate('mxML'+i,0,KSZ);
-    _mxKnobUpdate('mxT'+i,0,KSZ);
     // Fader cap position
     const fPct=fv*100;
     const cap=document.getElementById('mxFdrCap'+i);
