@@ -188,6 +188,18 @@ ipcMain.handle('bridge:cpuUsage',()=>{
   const mem=process.memoryUsage();
   return{cpu:Math.round(cpu*10)/10, memMB:Math.round(mem.rss/1048576)};
 });
+// DJM packet capture for protocol analysis
+ipcMain.handle('bridge:djmCaptureStart',()=>{
+  if(!bridge)return{ok:false,err:'bridge not running'};
+  const path=require('path');
+  const filePath=path.join(app.getPath('desktop'),`djm-capture-${Date.now()}.txt`);
+  bridge.startDJMCapture(filePath);
+  return{ok:true,path:filePath};
+});
+ipcMain.handle('bridge:djmCaptureStop',()=>{
+  bridge?.stopDJMCapture();
+  return{ok:true};
+});
 ipcMain.handle('bridge:updateLayer',(_,{i,data})=>{bridge?.updateLayer(i,data);return{ok:true};});
 ipcMain.on('bridge:setFader',(_,{i,val})=>{if(bridge&&bridge.faders)bridge.faders[i]=Math.max(0,Math.min(255,val));});
 ipcMain.handle('bridge:removeLayer',(_,{i})=>{bridge?.removeLayer(i);return{ok:true};});

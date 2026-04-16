@@ -39,4 +39,6 @@ contextBridge.exposeInMainWorld('bridge',{
   onAudioProgress:(cb)=>ipcRenderer.on('bridge:audioProgress',(_,d)=>cb(d)),
   onQuitting:(cb)=>ipcRenderer.on('app:quitting',()=>cb()),
   getCpuUsage:()=>ipcRenderer.invoke('bridge:cpuUsage'),
+  djmCaptureStart:()=>ipcRenderer.invoke('bridge:djmCaptureStart'),
+  djmCaptureStop:()=>ipcRenderer.invoke('bridge:djmCaptureStop'),
 });

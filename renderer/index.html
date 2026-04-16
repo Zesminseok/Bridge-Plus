@@ -585,7 +585,10 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
         <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
         <span class="mx-xf-b">B</span>
       </div>
-      <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').textContent=_djmLogOpen?'▾':'▸'"><span>▸</span> DJM PACKET LOG</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').textContent=_djmLogOpen?'▾':'▸'" style="flex:1"><span>▸</span> DJM PACKET LOG</div>
+        <button id="mxCaptureBtn" style="font:600 9px var(--mn);padding:2px 8px;border-radius:3px;border:1px solid rgba(255,80,80,.4);background:rgba(255,80,80,.1);color:#ff8080;cursor:pointer" onclick="_toggleDjmCapture()">● REC</button>
+      </div>
       <div class="mx-log" id="mxLogPanel" style="display:none"></div>
     </div>
   </div>
@@ -621,7 +624,22 @@ let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
 let _djmSpectrum=[[],[],[],[],[],[]];
 let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]];
 let _djmXfader=127, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=0, _djmHasRealFaders=false;
-let _djmLog=[], _djmLogMax=80, _djmLogOpen=false;
+let _djmLog=[], _djmLogMax=80, _djmLogOpen=false, _djmCapturing=false;
+async function _toggleDjmCapture(){
+  const btn=document.getElementById('mxCaptureBtn');
+  if(_djmCapturing){
+    await window.bridge.djmCaptureStop();
+    _djmCapturing=false;
+    if(btn){btn.textContent='● REC';btn.style.background='rgba(255,80,80,.1)';btn.style.color='#ff8080';}
+  } else {
+    const r=await window.bridge.djmCaptureStart();
+    if(r.ok){
+      _djmCapturing=true;
+      if(btn){btn.textContent='■ STOP';btn.style.background='rgba(255,40,40,.6)';btn.style.color='#fff';}
+      _djmLog.push(`[CAPTURE] 저장 경로: ${r.path}`);
+    }
+  }
+}
 // DJM mixer profiles — model-specific UI configuration
 const _DJM_PROFILES={
   'V10':     {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW'], ids:['T','H','HM','LM','L'], comp:true},
@@ -1258,14 +1276,7 @@ function buildWaveformCache(slot){
     if(p.h<0.01)continue;
     const h=Math.max(1,Math.round(p.h*mid*0.95));
     let R,G,B;
-    if(d.type==='hw'&&!d._pwv7){
-      // HW native CDJ colors — display as-is, normalize brightness
-      const mx=Math.max(p.r,p.g,p.b,0.001);const sc=255/mx;
-      R=Math.min(255,Math.round(p.r*sc))|0; G=Math.min(255,Math.round(p.g*sc))|0; B=Math.min(255,Math.round(p.b*sc))|0;
-    }else{
-      // Virtual or HW PWV7 — apply color mode blend
-      [R,G,B]=_wfBlend(p.r,p.g,p.b,1);
-    }
+    [R,G,B]=_wfBlend(p.r,p.g,p.b,1);
     // Vertical gradient: center=100% bright → edge=25% bright
     const invH=1/h;
     for(let dy=-h;dy<=h;dy++){
@@ -1315,13 +1326,7 @@ function drawOverview(slot,prog){
         r/=cnt;g/=cnt;b/=cnt;
         const h=Math.max(1,Math.round(pk*mid*0.95));
         if(h<1)continue;
-        let R,G,B;
-        if(d.type==='hw'&&!d._pwv7){
-          const mx2=Math.max(r,g,b,0.001);const sc2=255/mx2;
-          R=Math.min(255,r*sc2)|0; G=Math.min(255,g*sc2)|0; B=Math.min(255,b*sc2)|0;
-        }else{
-          [R,G,B]=_wfBlend(r,g,b,1);
-        }
+        const [R,G,B]=_wfBlend(r,g,b,1);
         const invH=1/h;
         for(let dy=-h;dy<=h;dy++){
           const y=mid+dy;if(y<0||y>=H)continue;
@@ -1460,7 +1465,7 @@ function drawZoomWaveform(slot,prog){
     }
     if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;} // no data yet
     const modeMap={'rgb':0,'3band':1,'blue':2};
-    const mode=d.type==='hw'?3:(modeMap[cfg.wfColor]??1);
+    const mode=d.type==='hw'&&!d._pwv7?3:(modeMap[cfg.wfColor]??1);
     const cX=cfg.wfCenter==='left'?0.25:0.5;
     d.wgl.draw(pos*d.dur, d.zoomMs||8000, cX, mode);
     drawZoomOverlay(slot,prog);
@@ -1497,11 +1502,7 @@ function drawZoomWaveform(slot,prog){
         const r=p0.r+((p1?.r||0)-p0.r)*f;
         const g=p0.g+((p1?.g||0)-p0.g)*f;
         const b=p0.b+((p1?.b||0)-p0.b)*f;
-        let R,G,B;
-        if(d.type==='hw'&&!d._pwv7){
-          const mx2=Math.max(r,g,b,0.001);const sc2=255/mx2;
-          R=Math.min(255,r*sc2)|0;G=Math.min(255,g*sc2)|0;B=Math.min(255,b*sc2)|0;
-        }else{[R,G,B]=_wfBlend(r,g,b,1);}
+        const [R,G,B]=_wfBlend(r,g,b,1);
         _gc2.push({t:px/(cacheW-1),c:`rgb(${R},${G},${B})`});
       }
     }
@@ -3218,10 +3219,14 @@ function tick(){
         d.vuL=target>d.vuL?target:target*0.6+(d.vuL||0)*0.4;
         d.vu=d.vuL;
         d._djmMeter=Math.max(0,(d._djmMeter||0)*0.72);
-        // Fader bar
-        const fv=faders[slot]||0;
-        const ft=fv/255;
-        d._faderSmooth=ft>(d._faderSmooth||0)?ft:ft*0.3+(d._faderSmooth||0)*0.7;
+        // Fader bar: real fader data or on-air binary
+        if(_djmHasRealFaders){
+          const fv=faders[slot]||0;
+          const ft=fv/255;
+          d._faderSmooth=ft>(d._faderSmooth||0)?ft:ft*0.3+(d._faderSmooth||0)*0.7;
+        } else {
+          d._faderSmooth=onAirCh[slot]?1:0;
+        }
       }
     } else {
       // Virtual: L/R 스테레오

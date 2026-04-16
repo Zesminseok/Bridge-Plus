@@ -1100,6 +1100,20 @@ class BridgeCore {
     console.log('[BridgeCore] stop: all sockets and connections closed');
   }
 
+  // ── DJM Packet Capture (raw dump to file for protocol analysis) ──
+  startDJMCapture(filePath){
+    const fs=require('fs');
+    this._djmCaptureStream=fs.createWriteStream(filePath,{flags:'a'});
+    this._djmCapture=true;
+    console.log(`[DJM] packet capture started → ${filePath}`);
+    return filePath;
+  }
+  stopDJMCapture(){
+    this._djmCapture=false;
+    if(this._djmCaptureStream){this._djmCaptureStream.end();this._djmCaptureStream=null;}
+    console.log('[DJM] packet capture stopped');
+  }
+
   // ── Live rebind: TCNet interface ──
   async rebindTCNet(newAddr){
     if(!this.running) return;
@@ -1810,6 +1824,14 @@ class BridgeCore {
 
   _onPDJL(msg, rinfo){
     const p = parsePDJL(msg);
+    // DJM packet capture: dump ALL packets from DJM IP to file for fader byte analysis
+    if(this._djmCapture && this.devices['djm'] && rinfo.address===this.devices['djm'].ip){
+      const ts=Date.now();
+      const type=msg.length>10?msg[10]:0;
+      const port=rinfo.port;
+      const hex=msg.toString('hex');
+      try{this._djmCaptureStream.write(`${ts} port=${port} type=0x${type.toString(16)} len=${msg.length} ${hex}\n`);}catch(_){}
+    }
     // Debug: log first occurrence of each PDJL packet type per source
     if(!this._pdjlDbg){this._pdjlDbg={};try{console.log('[PDJL] listening on',this.pdjlBindAddr||'0.0.0.0');}catch(_){}}
     const dbgK=rinfo.address+':'+msg[10];
