@@ -162,7 +162,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dvu-strip{display:flex;flex-direction:row;gap:2px;align-items:stretch;width:28px;flex-shrink:0;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.2);border-left:none;border-radius:0 4px 4px 0;padding:3px 3px 3px 2px}
 .dvu-strip.dvu-mono{width:18px}
 .dvu-ch{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;height:100%}
-.dvu-lbl{font:700 6px var(--mn);color:#fff;height:7px;line-height:7px;flex-shrink:0}
+.dvu-lbl{font:700 7px var(--mn);color:#fff;height:8px;line-height:8px;flex-shrink:0;letter-spacing:-.3px}
 .dvu-hbar{flex:1;width:100%;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;position:relative}
 .dvu-hfill{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:2px;transition:height .05s}
 .dvu-fader{cursor:ns-resize}.dvu-fader .dvu-hbar{cursor:ns-resize}
@@ -1653,7 +1653,7 @@ function deckHTML(slot){
   // VU strip — Virtual: L/R 스테레오, HW: VU(DJM 미터) + Fader 별도
   const vuStrip=isHW
     ?`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">VU</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur)"></div></div></div></div>`
-    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}"></div></div></div><div class="dvu-ch dvu-fader" data-slot="${slot}"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur);height:100%"></div></div></div></div>`;
+    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}" style="background:#5af"></div></div></div><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}" style="background:#5af"></div></div></div><div class="dvu-ch dvu-fader" data-slot="${slot}"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur);height:100%"></div></div></div></div>`;
   // EQ knob strip — HW mode only, 3-band (Hi/Mid/Lo) from DJM mixer status packet
   // Knob SVG: outer track + colored arc + center indicator dot
   const _mkKnob=(id,lbl)=>`<div class="deq-knob"><svg id="${id}" viewBox="-14 -14 28 28" width="28" height="28">
@@ -2498,10 +2498,29 @@ function loadFile(slot,f){
 
 // ════ Deck actions ═══════════════════════════════════
 
-// Channel labels: stereo = L/R, multi-channel = channel number
+/// Channel labels: stereo = L/R, 5.1 = FL/FR/C/LF/SL/SR, others = numbered
+const _CH_LABELS={
+  2:['L','R'],
+  4:['FL','FR','SL','SR'],
+  6:['FL','FR','C','LF','SL','SR'],
+  8:['FL','FR','C','LF','RL','RR','SL','SR'],
+};
+// Channel colors: front=blue, center=white, LFE=amber, surround=green
+const _CH_COLORS={
+  2:['#5af','#5af'],
+  4:['#5af','#5af','#4c8','#4c8'],
+  6:['#5af','#5af','#ddd','#f90','#4c8','#4c8'],
+  8:['#5af','#5af','#ddd','#f90','#f85','#f85','#4c8','#4c8'],
+};
 function _chLabel(ch,total){
-  if(total===2)return ch===0?'L':'R';
+  const labels=_CH_LABELS[total];
+  if(labels)return labels[ch]??String(ch+1);
   return String(ch+1);
+}
+function _chColor(ch,total){
+  const cols=_CH_COLORS[total];
+  if(cols)return cols[ch]??'#fff';
+  return '#fff';
 }
 
 // VU strip: 채널 수에 맞게 동적으로 채널 바 + 너비 조정
@@ -2516,7 +2535,8 @@ function _buildVuStrip(slot,numCh){
   const CH_IDS=['L','R','3','4','5','6','7','8'];
   for(let i=0;i<numCh;i++){
     const id='dvu'+(CH_IDS[i]||String(i+1))+slot;
-    strip.innerHTML+=`<div class="dvu-ch"><span class="dvu-lbl">${_chLabel(i,numCh)}</span><div class="dvu-hbar"><div class="dvu-hfill" id="${id}"></div></div></div>`;
+    const col=_chColor(i,numCh);
+    strip.innerHTML+=`<div class="dvu-ch"><span class="dvu-lbl" style="color:${col}">${_chLabel(i,numCh)}</span><div class="dvu-hbar"><div class="dvu-hfill" id="${id}" style="background:${col}"></div></div></div>`;
   }
 }
 
