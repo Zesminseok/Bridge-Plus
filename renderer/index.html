@@ -1915,9 +1915,7 @@ function deckHTML(slot){
   const _showEqLbl=_nEqBands<=3;
   const _mkKnob=(id,lbl)=>`<div class="deq-knob"><svg id="${id}" viewBox="-12 -12 24 24" width="22" height="22">
     <circle r="9" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="2"/>
-    <circle r="9" fill="none" stroke="rgba(124,111,205,.6)" stroke-width="2"
-      stroke-dasharray="0 56.55" stroke-dashoffset="0" stroke-linecap="round"
-      id="${id}arc" transform="rotate(-135)"/>
+    <path id="${id}arc" fill="none" stroke="rgba(124,111,205,.6)" stroke-width="2" stroke-linecap="round" d=""/>
     <line x1="0" y1="-3.5" x2="0" y2="-8" stroke="rgba(255,255,255,.9)" stroke-width="1.5" stroke-linecap="round" id="${id}tick"/>
   </svg>${_showEqLbl?`<span class="deq-lbl">${lbl}</span>`:''}</div>`;
   const eqStrip=isHW
@@ -3334,15 +3332,22 @@ function tick(){
         const deg=norm*135;          // -135° to +135°
         const tickEl=document.getElementById(pfx+slot+'tick');
         if(tickEl)tickEl.setAttribute('transform',`rotate(${deg})`);
-        // Arc: circumference=2π×9≈56.55, draw portion proportional to |norm|
+        // Arc: polar coords (viewBox "-12 -12 24 24", r=9, center=origin, θ=0 at 12 o'clock CW)
         const arcEl=document.getElementById(pfx+slot+'arc');
         if(arcEl){
-          const circ=56.55;
-          const arc=Math.abs(norm)*circ*0.75; // max arc = 270°/360° of circumference
-          const offset=norm>=0?0:-arc;
-          arcEl.setAttribute('stroke-dasharray',`${arc} ${circ-arc}`);
-          arcEl.setAttribute('stroke-dashoffset',`${-circ*(-135/360)+offset}`);
-          arcEl.setAttribute('stroke',norm>0.05?'rgba(124,111,205,.9)':norm<-0.05?'rgba(255,100,100,.8)':'rgba(100,200,100,.7)');
+          const r=9;
+          const absDeg=Math.abs(deg);
+          if(absDeg<2){arcEl.setAttribute('d','');arcEl.setAttribute('stroke','rgba(124,111,205,.6)');}
+          else{
+            const pt=(a)=>{const rad=a*Math.PI/180;return[r*Math.sin(rad),-r*Math.cos(rad)];};
+            const [ox,oy]=pt(0);
+            const [nx,ny]=pt(deg);
+            const d=norm>=0
+              ?`M${ox.toFixed(2)},${oy.toFixed(2)} A${r},${r} 0 0 1 ${nx.toFixed(2)},${ny.toFixed(2)}`
+              :`M${nx.toFixed(2)},${ny.toFixed(2)} A${r},${r} 0 0 1 ${ox.toFixed(2)},${oy.toFixed(2)}`;
+            arcEl.setAttribute('d',d);
+            arcEl.setAttribute('stroke',norm>0.05?'rgba(124,111,205,.9)':norm<-0.05?'rgba(255,100,100,.8)':'rgba(100,200,100,.7)');
+          }
         }
       });
     } else if(d.vuChs&&d.vuChs.length>0){

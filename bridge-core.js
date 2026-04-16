@@ -680,9 +680,45 @@ function parsePDJL(msg){
       const gHex=msg.length>gBase?Array.from(msg.slice(gBase,Math.min(gBase+100,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' '):'(none)';
       try{console.log(`[DJM-0x39] len=${msg.length}\n  ${hex}\n  GLOBAL@0x${gBase.toString(16)}=[${gHex}]`);}catch(_){}
     }
+    // Full packet byte-diff tracker: log every byte that changes (for discovering unknown fields)
+    const _knownOffsets=new Set([
+      // ch1-4 known bytes
+      ...[0,1,2,3].flatMap(c=>[0,1,3,4,6,7,11].map(b=>CH_BASE+c*CH_STRIDE+b)),
+      gBase+4, gBase+59, gBase+71, gBase+75, gBase+94
+    ]);
+    if(!parsePDJL._djm39Prev){
+      parsePDJL._djm39Prev=new Uint8Array(msg);
+    } else {
+      const prev=parsePDJL._djm39Prev;
+      const diffs=[];
+      for(let i=0;i<Math.min(msg.length,248);i++){
+        if(msg[i]!==prev[i]){
+          // calculate label
+          let lbl='';
+          const relG=i-gBase;
+          if(i>=CH_BASE&&i<gBase){
+            const c=Math.floor((i-CH_BASE)/CH_STRIDE);
+            const b=(i-CH_BASE)%CH_STRIDE;
+            const BNAMES={0:'status',1:'TRIM',3:'MID',4:'HI',6:'LOW',7:'COLOR',11:'FADER'};
+            lbl=`CH${c+1}+${b}${BNAMES[b]?'('+BNAMES[b]+')':''}`;
+          } else if(relG>=0){
+            const GNAMES={4:'hpCueCh',59:'masterLvl',71:'hpLevel',75:'xfader',94:'boothLvl'};
+            lbl=`G+${relG}${GNAMES[relG]?'('+GNAMES[relG]+')':''}`;
+          } else {
+            lbl=`@0x${i.toString(16)}`;
+          }
+          const known=_knownOffsets.has(i)?'':'★NEW';
+          diffs.push(`${lbl}:${prev[i]}→${msg[i]}${known}`);
+        }
+      }
+      if(diffs.length>0){
+        try{console.log(`[DJM-0x39 DIFF] ${diffs.join('  ')}`);}catch(_){}
+      }
+      parsePDJL._djm39Prev=new Uint8Array(msg);
+    }
     if(!parsePDJL._lastDjm||parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
       parsePDJL._lastDjm=ch.slice();
-      try{console.log(`[DJM-0x39] faders=[${ch}] eq(T/Hi/Mid/Lo)=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl} booth=${boothLvl}`);}catch(_){}
+      try{console.log(`[DJM-0x39] faders=[${ch}] eq(T/Hi/Mid/Lo/Clr)=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl} booth=${boothLvl} hp=${hpLevel}`);}catch(_){}
     }
     return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,boothLvl,hpLevel,hpCueCh,chExtra};
   }
