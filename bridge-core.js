@@ -1983,7 +1983,7 @@ class BridgeCore {
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
       } else this.devices['djm'].lastSeen=Date.now();
-      this.onDJMStatus?.({channel:p.channel, eq:p.eq, xfader:p.xfader, masterLvl:p.masterLvl, hpCueCh:p.hpCueCh});
+      this.onDJMStatus?.({channel:p.channel, onAir:p.onAir, eq:p.eq, xfader:p.xfader, masterLvl:p.masterLvl, boothLvl:p.boothLvl, hpLevel:p.hpLevel, hpCueCh:p.hpCueCh, chExtra:p.chExtra});
     }
     if(p.kind==='djm_meter'){
       this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum});

@@ -180,9 +180,9 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dvu-hfill{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:2px;transition:height .05s}
 .dvu-fader{cursor:ns-resize}.dvu-fader .dvu-hbar{cursor:ns-resize}
 /* EQ knob strip: HW mode only, right of VU strip */
-.deq-strip{display:flex;flex-direction:column;justify-content:space-around;align-items:center;width:34px;flex-shrink:0;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-left:none;border-radius:0 6px 6px 0;padding:4px 2px}
+.deq-strip{display:flex;flex-direction:column;justify-content:space-around;align-items:center;width:30px;flex-shrink:0;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-left:none;border-radius:0 6px 6px 0;padding:2px 1px;overflow:hidden}
 .deq-knob{display:flex;flex-direction:column;align-items:center;gap:1px;cursor:default}
-.deq-knob svg{display:block;overflow:visible}
+.deq-knob svg{display:block;overflow:hidden}
 .deq-lbl{font:700 5px var(--mn);color:var(--tx4);line-height:1;letter-spacing:.03em}
 /* Beat phasor: 2×2 square grid — row-major = TL→TR→BL→BR (clockwise) */
 .dphs{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);grid-auto-flow:row;gap:2px;width:22px;height:22px;flex-shrink:0}
@@ -1887,12 +1887,12 @@ function deckHTML(slot){
     :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}" style="background:#5af"></div></div></div><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}" style="background:#5af"></div></div></div><div class="dvu-ch dvu-fader" data-slot="${slot}"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur);height:100%"></div></div></div></div>`;
   // EQ knob strip — HW mode only, 3-band (Hi/Mid/Lo) from DJM mixer status packet
   // Knob SVG: outer track + colored arc + center indicator dot
-  const _mkKnob=(id,lbl)=>`<div class="deq-knob"><svg id="${id}" viewBox="-14 -14 28 28" width="28" height="28">
-    <circle r="10" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="2.5"/>
-    <circle r="10" fill="none" stroke="rgba(124,111,205,.6)" stroke-width="2.5"
-      stroke-dasharray="0 62.83" stroke-dashoffset="0" stroke-linecap="round"
+  const _mkKnob=(id,lbl)=>`<div class="deq-knob"><svg id="${id}" viewBox="-12 -12 24 24" width="22" height="22">
+    <circle r="9" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="2"/>
+    <circle r="9" fill="none" stroke="rgba(124,111,205,.6)" stroke-width="2"
+      stroke-dasharray="0 56.55" stroke-dashoffset="0" stroke-linecap="round"
       id="${id}arc" transform="rotate(-135)"/>
-    <line x1="0" y1="-4" x2="0" y2="-9" stroke="rgba(255,255,255,.9)" stroke-width="1.5" stroke-linecap="round" id="${id}tick"/>
+    <line x1="0" y1="-3.5" x2="0" y2="-8" stroke="rgba(255,255,255,.9)" stroke-width="1.5" stroke-linecap="round" id="${id}tick"/>
   </svg><span class="deq-lbl">${lbl}</span></div>`;
   const eqStrip=isHW
     ?`<div class="deq-strip" id="deqstrip${slot}">${_mkKnob('deqH'+slot,'HI')}${_mkKnob('deqM'+slot,'MID')}${_mkKnob('deqL'+slot,'LO')}</div>`
@@ -3253,13 +3253,14 @@ function tick(){
         const deg=norm*135;          // -135° to +135°
         const tickEl=document.getElementById(pfx+slot+'tick');
         if(tickEl)tickEl.setAttribute('transform',`rotate(${deg})`);
-        // Arc: circumference=2π×10≈62.83, draw portion proportional to |norm|
+        // Arc: circumference=2π×9≈56.55, draw portion proportional to |norm|
         const arcEl=document.getElementById(pfx+slot+'arc');
         if(arcEl){
-          const arc=Math.abs(norm)*62.83*0.75; // max arc = 270°/360° of circumference
+          const circ=56.55;
+          const arc=Math.abs(norm)*circ*0.75; // max arc = 270°/360° of circumference
           const offset=norm>=0?0:-arc;
-          arcEl.setAttribute('stroke-dasharray',`${arc} ${62.83-arc}`);
-          arcEl.setAttribute('stroke-dashoffset',`${-62.83*(-135/360)+offset}`);
+          arcEl.setAttribute('stroke-dasharray',`${arc} ${circ-arc}`);
+          arcEl.setAttribute('stroke-dashoffset',`${-circ*(-135/360)+offset}`);
           arcEl.setAttribute('stroke',norm>0.05?'rgba(124,111,205,.9)':norm<-0.05?'rgba(255,100,100,.8)':'rgba(100,200,100,.7)');
         }
       });
@@ -4311,6 +4312,7 @@ if(E){
   window.bridge.onDJMStatus?.(d=>{
     const f=d.faders||[];
     for(let i=0;i<f.length&&i<6;i++)faders[i]=f[i];
+    if(d.onAir){for(let i=0;i<d.onAir.length&&i<6;i++)onAirCh[i]=d.onAir[i]>127?1:0;}
     if(d.eq){for(let i=0;i<d.eq.length&&i<6;i++)eqBands[i]=d.eq[i];}
     if(d.xfader!=null)_djmXfader=d.xfader;
     if(d.masterLvl!=null)_djmMasterLvl=d.masterLvl;
