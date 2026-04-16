@@ -3740,9 +3740,10 @@ function updateMixer(){
     // EQ knobs: only show real values when mixer sends fader/eq data
     if(hasReal){
       const eq=eqBands[i]||[128,128,128,128];
-      // Index map: H=0(Hi), M=1(Mid), L=2(Lo), C=3(Color/Filter) — all from 0x39 byte offsets
-      const eqMap={T:null, H:0, M:1, L:2, C:3, HM:0, LM:2};
-      if(prof.ids.length>=6)Object.assign(eqMap,{H:0,HM:1,LM:2,L:3,C:4}); // V10 5-band
+      // Index map — confirmed via live user test (2026-04-17):
+      // eq[0]=TRIM(+1), eq[1]=HI(+4), eq[2]=MID(+3), eq[3]=LOW(+6), C=unknown(stays center)
+      const eqMap={T:0, H:1, M:2, L:3, C:null, HM:1, LM:2};
+      if(prof.ids.length>=6)Object.assign(eqMap,{T:0,H:1,HM:2,LM:3,L:4,C:null}); // V10 5-band
       prof.ids.forEach(id=>{
         const bi=eqMap[id];
         // EQ values from DJM 0x39: 0-255, center=128 (12 o'clock = 0dB)

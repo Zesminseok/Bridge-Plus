@@ -641,14 +641,17 @@ function parsePDJL(msg){
     const onAir=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
     const eq=[0,1,2,3].map(c=>{
       const base=CH_BASE+c*CH_STRIDE;
-      // [Hi(+1), Mid(+4), Lo(+3), Color/Filter(+6)] — all 0-255, center=128
-      // Byte+3=Lo, byte+4=Mid confirmed via live user test (2026-04-17)
-      // Byte+6=Color/Filter knob (center=128, near-constant unless knob moved)
+      // Layout confirmed via live user testing (2026-04-17):
+      //   byte+1 = TRIM (gain knob, 128=0dB center)
+      //   byte+4 = HI EQ  (128=center, 0=kill, 255=boost)
+      //   byte+3 = MID EQ (128=center, 0=kill, 255=boost)
+      //   byte+6 = LOW EQ (128=center, 0=kill, 255=boost) ← fully cut when mixing in
+      // Order: [TRIM, HI, MID, LOW] — matches profile ids=['T','H','M','L','C']
       return[
-        base+1<msg.length?msg[base+1]:0x80,  // Hi EQ
-        base+4<msg.length?msg[base+4]:0x80,  // Mid EQ
-        base+3<msg.length?msg[base+3]:0x80,  // Lo EQ
-        base+6<msg.length?msg[base+6]:0x80,  // Color / Filter knob
+        base+1<msg.length?msg[base+1]:0x80,  // TRIM (index 0)
+        base+4<msg.length?msg[base+4]:0x80,  // HI EQ (index 1)
+        base+3<msg.length?msg[base+3]:0x80,  // MID EQ (index 2)
+        base+6<msg.length?msg[base+6]:0x80,  // LOW EQ (index 3)
       ];
     });
     const chExtra=[0,1,2,3].map(c=>{
@@ -677,7 +680,7 @@ function parsePDJL(msg){
     }
     if(!parsePDJL._lastDjm||parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
       parsePDJL._lastDjm=ch.slice();
-      try{console.log(`[DJM-0x39] faders=[${ch}] eq(Hi/Mid/Lo/CLR)=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl} booth=${boothLvl}`);}catch(_){}
+      try{console.log(`[DJM-0x39] faders=[${ch}] eq(T/Hi/Mid/Lo)=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl} booth=${boothLvl}`);}catch(_){}
     }
     return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,boothLvl,hpLevel,hpCueCh,chExtra};
   }
