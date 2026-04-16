@@ -1785,20 +1785,19 @@ class BridgeCore {
     _bridgeJoin();
 
     const sendAnn=()=>{
-      // 54B bridge keepalive (0x06) — DJM recognizes player=0xF9 as bridge device
-      // STC reference: pkt[0x24]=0xF9(macOS)/0xC1(other), pkt[0x30]=0x03, pkt[0x35]=0x20
+      // 54B bridge keepalive (0x06)
+      // pcap analysis: original PRO DJ LINK Bridge uses 0x9E (device type) + 0x07 (b0x30)
+      // DJM-900NXS2 only sends type 0x39 (fader) / 0x58 (meter) to devices with type 0x9E
       const pkt=Buffer.alloc(54);
       PDJL.MAGIC.copy(pkt,0);
       pkt[0x0A]=0x06; pkt[0x0B]=0x00;
       Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,0x0C,0,15);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x22]=0x00; pkt[0x23]=0x36;
-      pkt[0x24]=process.platform==='darwin'?0xF9:0xC1; // bridge device type (macOS=0xF9)
+      pkt[0x24]=0x9E; // lighting/bridge device type — triggers DJM fader+meter delivery
       pkt[0x25]=0x00;
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
       for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
-      // ROLLBACK: was pkt[0x35]=0x20
-      // prolink-connect: CDJ-3000 requires 0x35=0x64 (incorrect values cause network kicks)
-      pkt[0x30]=0x03; pkt[0x34]=0x05; pkt[0x35]=0x64;
+      pkt[0x30]=0x07; pkt[0x34]=0x05; pkt[0x35]=0x64;
       // Send to all broadcast addresses
       for(const bc of allBCs){
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
