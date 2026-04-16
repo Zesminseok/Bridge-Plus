@@ -376,6 +376,11 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-title{font:700 13px var(--lb);color:var(--tx);letter-spacing:.02em}
 .mx-model{font:500 10px var(--mn);color:var(--tx3);padding:2px 8px;border-radius:999px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.15)}
 .mx-offline{font:400 10px var(--sn);color:var(--tx4);margin-left:auto}
+.mx-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;color:var(--tx4);min-height:200px}
+.mx-empty .material-symbols-outlined{font-size:48px;opacity:.2}
+.mx-empty-tx{font:400 12px var(--sn);text-align:center;line-height:1.6}
+.mx-empty-sub{font:400 10px var(--mn);color:var(--tx4);opacity:.6}
+.mx-content-on{display:flex!important;flex:1;flex-direction:column;gap:8px;min-height:0}
 .mx-body{flex:1;display:flex;gap:6px;min-height:0;overflow-x:auto;padding-bottom:4px}
 /* Channel strip — layout: header → waveform → knobs → CUE → fader+VU → A/B */
 .mx-ch{flex:1;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:6px 3px 5px;gap:3px;min-width:48px;max-width:100px;align-items:center;transition:border-color .3s,box-shadow .3s}
@@ -566,15 +571,22 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
       <span class="mx-model" id="mxModel">DJM 미연결</span>
       <span class="mx-offline" id="mxOffline">하드웨어 연결 시 실시간 데이터 표시</span>
     </div>
-    <div class="mx-body" id="mxBody"></div>
-    <div class="mx-xfader">
-      <span class="mx-xf-lbl">X-FADER</span>
-      <span class="mx-xf-a">A</span>
-      <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
-      <span class="mx-xf-b">B</span>
+    <div class="mx-empty" id="mxEmpty">
+      <span class="material-symbols-outlined">settings_input_hdmi</span>
+      <span class="mx-empty-tx">DJM 믹서가 연결되지 않았습니다</span>
+      <span class="mx-empty-sub">Pro DJ Link 네트워크에 DJM을 연결하면<br>실시간 믹서 데이터가 표시됩니다</span>
     </div>
-    <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').textContent=_djmLogOpen?'▾':'▸'"><span>▸</span> DJM PACKET LOG</div>
-    <div class="mx-log" id="mxLogPanel" style="display:none"></div>
+    <div id="mxContent" style="display:none">
+      <div class="mx-body" id="mxBody"></div>
+      <div class="mx-xfader">
+        <span class="mx-xf-lbl">X-FADER</span>
+        <span class="mx-xf-a">A</span>
+        <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
+        <span class="mx-xf-b">B</span>
+      </div>
+      <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').textContent=_djmLogOpen?'▾':'▸'"><span>▸</span> DJM PACKET LOG</div>
+      <div class="mx-log" id="mxLogPanel" style="display:none"></div>
+    </div>
   </div>
 </div>
 
@@ -3584,8 +3596,14 @@ function updateMixer(){
   if(!_mxBuilt)_mxBuildBody();
   const mxModel=document.getElementById('mxModel');
   const mxOffline=document.getElementById('mxOffline');
-  if(mxModel)mxModel.textContent=djmDevs.length?djmDevs.map(d=>d.name).join(', '):'DJM 미연결';
-  if(mxOffline)mxOffline.style.display=djmDevs.length?'none':'';
+  const connected=djmDevs.length>0;
+  if(mxModel)mxModel.textContent=connected?djmDevs.map(d=>d.name).join(', '):'DJM 미연결';
+  if(mxOffline)mxOffline.style.display=connected?'none':'';
+  const mxEmpty=document.getElementById('mxEmpty');
+  const mxContent=document.getElementById('mxContent');
+  if(mxEmpty)mxEmpty.style.display=connected?'none':'';
+  if(mxContent){if(connected)mxContent.classList.add('mx-content-on');else{mxContent.classList.remove('mx-content-on');mxContent.style.display='none';}}
+  if(!connected)return;
   const KSZ=26, prof=_djmProfile, nCh=prof.ch;
   for(let i=0;i<nCh;i++){
     const fv=(faders[i]||0)/255;
