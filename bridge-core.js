@@ -681,19 +681,21 @@ function parsePDJL(msg){
   if(type===PDJL.DJM_ONAIR && msg.length>=0x2C){
     const name2 = msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
     if(name2.includes('DJM')){
-      // Debug: hex dump on-air packet to find all available data
-      if(!parsePDJL._onairDumped){
-        parsePDJL._onairDumped=true;
-        try{
-          const hex=msg.toString('hex').match(/.{2}/g).join(' ');
-          console.log(`[DJM] on-air packet len=${msg.length}: ${hex}`);
-        }catch(_){}
-      }
       // On-air flags at consecutive bytes: CH1=0x24, CH2=0x25, CH3=0x26, CH4=0x27
       // Confirmed via beat-link source: data[0x23 + channel] for channel 1-4
       // DJM-V10 (6ch): additionally CH5=0x2D, CH6=0x2E (packet length 0x35)
       return{kind:'djm_onair',name:name2,
         onAir:[msg[0x24]?1:0, msg[0x25]?1:0, msg[0x26]?1:0, msg[0x27]?1:0]};
+    }
+  }
+  // Type 0x02 = Fader Start (DJM → CDJ, port 50001, ~50B)
+  // Commands: 0x00=start, 0x01=stop+cue, 0x02=maintain
+  if(type===0x02 && msg.length>=42){
+    const name2=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
+    // Fader start: logged once per session via _pdjlDbg above
+    // Per docs: bytes 42-45 = C1,C2,C3,C4 commands
+    if(msg.length>=46){
+      return{kind:'fader_start',name:name2,ch:[msg[42],msg[43],msg[44],msg[45]]};
     }
   }
   // Type 0x28 = Beat packet (96B on port 50001) — beat timing + position data
@@ -1005,13 +1007,13 @@ class BridgeCore {
     // DATA packets cycle through layers: MetricsData + MetaData per layer
     // Sent via dedicated _dataSocket (separate from txSocket) — matches official Bridge architecture
     const t4 = setInterval(()=>this._sendDataCycle(), 170);
-    // Mixer Data (Type 150) — fader levels to Arena at 60fps for smooth control
+    // Mixer Data (Type 150) — fader levels to Arena at 10fps (on-air is binary, no need for 60fps)
     const t5 = setInterval(()=>{
       if(!this.running) return;
       const djm = Object.values(this.devices).find(d=>d.type==='DJM');
       const pkt = mkMixerData(this.faders, djm?.name);
       this._sendDataToArenas(pkt);
-    }, 16);
+    }, 100);
 
     this._timers = [t1, t2, t3, t4, t5];
     this._startTCNetRx();
@@ -1081,6 +1083,8 @@ class BridgeCore {
       this._pdjlAnnSock=null;
       try{this._dbKaSock?.close();}catch(_){}
       this._dbKaSock=null;
+      try{this._djmSubSock?.close();}catch(_){}
+      this._djmSubSock=null;
       console.log('[BridgeCore] sockets closed');
     };
     setTimeout(closeSockets, 100);
@@ -1093,6 +1097,8 @@ class BridgeCore {
       try{s.removeAllListeners();s.destroy();}catch(_){}
     }
     this._dbConns={};
+    // stop DJM capture if active
+    if(this._djmCapture) this.stopDJMCapture();
     // remove all callbacks to prevent post-stop activity
     this.onNodeDiscovered=null; this.onCDJStatus=null; this.onDJMStatus=null;
     this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null; this.onWaveformDetail=null; this.onCuePoints=null; this.onBeatGrid=null;
@@ -1792,7 +1798,6 @@ class BridgeCore {
       for(const[k,dev] of Object.entries(this.devices)){
         if(dev.type==='DJM'||k==='djm'){
           try{this._djmSubSock.send(pkt,0,pkt.length,50001,dev.ip);}catch(_){}
-          console.log(`[PDJL] DJM subscribe 0x57 → ${dev.ip}:50001`);
         }
       }
     };
@@ -1832,34 +1837,19 @@ class BridgeCore {
       const hex=msg.toString('hex');
       try{this._djmCaptureStream.write(`${ts} port=${port} type=0x${type.toString(16)} len=${msg.length} ${hex}\n`);}catch(_){}
     }
-    // Debug: log first occurrence of each PDJL packet type per source
-    if(!this._pdjlDbg){this._pdjlDbg={};try{console.log('[PDJL] listening on',this.pdjlBindAddr||'0.0.0.0');}catch(_){}}
+    // DJM packet capture (when enabled via UI REC button)
+    if(this._djmCapture && this.devices['djm'] && rinfo.address===this.devices['djm'].ip){
+      const ts=Date.now();
+      const type=msg.length>10?msg[10]:0;
+      const hex=msg.toString('hex');
+      try{this._djmCaptureStream.write(`${ts} type=0x${type.toString(16)} len=${msg.length} ${hex}\n`);}catch(_){}
+    }
+    // Log first occurrence of each PDJL packet type per source (one-time only)
+    if(!this._pdjlDbg) this._pdjlDbg={};
     const dbgK=rinfo.address+':'+msg[10];
     if(!this._pdjlDbg[dbgK]){
       this._pdjlDbg[dbgK]=true;
-      try{console.log(`[PDJL] packet type=0x${msg[10]?.toString(16)} from ${rinfo.address}:${rinfo.port} len=${msg.length} parsed=${p?.kind||'null'}`);}catch(_){}
-      // Extra debug: if from DJM IP (non-CDJ), dump hex header for analysis
-      if(!p || p.kind==='djm_onair'){
-        try{
-          const devName=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
-          if(devName.includes('DJM')){
-            console.log(`[DJM-DBG] type=0x${msg[10]?.toString(16)} len=${msg.length} name=${devName}`);
-            if(msg.length>0x24) console.log(`[DJM-DBG] hex@0x20: ${msg.slice(0x20,Math.min(0x30,msg.length)).toString('hex')}`);
-          }
-        }catch(_){}
-      }
-    }
-    // Log unrecognized DJM packets to help identify correct byte offsets
-    if(!p && msg.length>=0x1B){
-      const devName=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
-      if(devName.includes('DJM')){
-        if(!this._djmUnkLog)this._djmUnkLog=0;
-        if(this._djmUnkLog<10){
-          this._djmUnkLog++;
-          const hex=Array.from(msg.slice(0,Math.min(msg.length,128))).map(x=>x.toString(16).padStart(2,'0')).join(' ');
-          console.log(`[DJM-UNK] type=0x${msg[10]?.toString(16)} len=${msg.length} name=${devName}\n  ${hex}`);
-        }
-      }
+      try{console.log(`[PDJL] type=0x${msg[10]?.toString(16)} from ${rinfo.address} len=${msg.length} kind=${p?.kind||'null'}`);}catch(_){}
     }
     if(!p) return;
     // Skip own packets (bridge spoofed device)
@@ -2035,9 +2025,11 @@ class BridgeCore {
     if(p.kind==='djm_onair'){
       this.onAir = p.onAir;
       // DJM-900NXS2 does not send type 0x29/0x39 mixer status with fader positions.
-      // Forward on-air state; renderer decides how to display when no real fader data.
+      // Use on-air state as fader proxy for TCNet (0=off, 255=on)
       if(!this._hasRealFaders){
-        this.onDJMStatus?.({channel:p.onAir.map(v=>v?255:0), onAir:p.onAir, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:false});
+        const faderProxy=p.onAir.map(v=>v?255:0);
+        this.faders=faderProxy; // TCNet mixer data will send these values to Arena
+        this.onDJMStatus?.({channel:faderProxy, onAir:p.onAir, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:false});
       }
       if(!this.devices['djm']){
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
@@ -2733,7 +2725,7 @@ class BridgeCore {
     });
   }
 
-  _dbReadFullResponse(sock){
+  _dbReadFullResponse(sock, idleMs=300){
     return new Promise((res,rej)=>{
       const chunks = [];
       let timer = null;
@@ -2744,7 +2736,7 @@ class BridgeCore {
         timer = setTimeout(()=>{
           sock.removeListener('data', onData);
           res(Buffer.concat(chunks));
-        }, 300); // 300ms idle = response complete
+        }, idleMs);
       };
       sock.on('data', onData);
       sock.once('error', e=>{if(timer)clearTimeout(timer);rej(e);});
@@ -2835,6 +2827,7 @@ class BridgeCore {
       const menuAvail = await this._dbReadResponse(sock);
       console.log(`[DBSRV] P${playerNum} META_RESP: ${menuAvail.length}B hex=${menuAvail.slice(0,40).toString('hex')}`);
       // Send RENDER_MENU_REQ (type 0x3000) to get all items
+      // CRITICAL: must use txId+1 (different from metadata req) — CDJ requires sequential txIds
       const renderReq = this._dbBuildMsg(txId+1, 0x3000, [
         rmst, this._dbArg4(0), this._dbArg4(64),
         this._dbArg4(0), this._dbArg4(64), this._dbArg4(0)
@@ -2845,7 +2838,7 @@ class BridgeCore {
       // Parse menu items
       const items = this._dbParseItems(fullResp);
       console.log(`[DBSRV] P${playerNum} render resp: ${fullResp.length}B, items=${items.length}`);
-      if(items.length===0) console.log(`[DBSRV] P${playerNum} resp hex(first 80): ${fullResp.slice(0,80).toString('hex')}`);
+      if(items.length===0) console.log(`[DBSRV] P${playerNum} render 0 items, hex(80): ${fullResp.slice(0,80).toString('hex')}`);
       const meta = {};
       for(const item of items){
         if(item.msgType===0x4101){
