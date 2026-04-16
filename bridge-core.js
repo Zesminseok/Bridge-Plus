@@ -1794,7 +1794,7 @@ class BridgeCore {
       pkt[0x0A]=0x06; pkt[0x0B]=0x00;
       Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,0x0C,0,15);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x22]=0x00; pkt[0x23]=0x36;
-      pkt[0x24]=0xF9; // macOS bridge device type — CDJ-compatible (0x9E breaks CDJ link)
+      pkt[0x24]=0x9E; // lighting/bridge device type — DJM type 0x39 트리거 (0x30=0x03 유지 시 CDJ 정상)
       pkt[0x25]=0x00;
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
       for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
@@ -1859,17 +1859,20 @@ class BridgeCore {
     };
     const sendDJMSub = ()=>{
       const pkt=_mkDjmSub();
+      let sent=0;
       for(const[k,dev] of Object.entries(this.devices)){
         if(dev.type==='DJM'||k==='djm'){
-          try{this._djmSubSock.send(pkt,0,pkt.length,50001,dev.ip);}catch(_){}
+          try{this._djmSubSock.send(pkt,0,pkt.length,50001,dev.ip);sent++;}catch(_){}
         }
       }
+      if(sent) console.log(`[DJM-SUB] 0x57 unicast → ${sent} DJM(s)`);
     };
     const sendDJMSubBC = ()=>{
       const pkt=_mkDjmSub();
       for(const bc of allBCs){
         try{this._djmSubSock.send(pkt,0,pkt.length,50001,bc);}catch(_){}
       }
+      console.log(`[DJM-SUB] 0x57 broadcast → 50001`);
     };
     // Delay: join sequence takes ~6s, then wait 2s more for DJM to register
     setTimeout(sendDJMSubBC, 8000);
