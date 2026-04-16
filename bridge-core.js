@@ -799,6 +799,19 @@ function parsePDJL(msg){
       };
     }
   }
+  // Catch-all: return unknown packet with raw info for DJM protocol analysis
+  if(msg.length>=0x1B){
+    const devName=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
+    if(devName.includes('DJM')){
+      if(!parsePDJL._unkDjm)parsePDJL._unkDjm={};
+      const uk=type+'_'+msg.length;
+      if(!parsePDJL._unkDjm[uk]){
+        parsePDJL._unkDjm[uk]=true;
+        console.log(`[DJM-UNK] type=0x${type.toString(16)} len=${msg.length} name=${devName} hex=${msg.slice(0,Math.min(64,msg.length)).toString('hex')}`);
+      }
+      return{kind:'djm_unknown',name:devName,type,rawLen:msg.length};
+    }
+  }
   return null;
 }
 
@@ -1106,18 +1119,21 @@ class BridgeCore {
     console.log('[BridgeCore] stop: all sockets and connections closed');
   }
 
-  // ── DJM Packet Capture (raw dump to file for protocol analysis) ──
+  // ── Raw Packet Capture (ALL PDJL traffic for protocol analysis) ──
   startDJMCapture(filePath){
     const fs=require('fs');
     this._djmCaptureStream=fs.createWriteStream(filePath,{flags:'a'});
     this._djmCapture=true;
-    console.log(`[DJM] packet capture started → ${filePath}`);
+    // Write header with known device info
+    const devInfo=JSON.stringify(this.devices);
+    this._djmCaptureStream.write(`# PDJL Raw Capture started ${new Date().toISOString()} devices=${devInfo}\n`);
+    console.log(`[CAPTURE] ALL PDJL packet capture started → ${filePath}`);
     return filePath;
   }
   stopDJMCapture(){
     this._djmCapture=false;
     if(this._djmCaptureStream){this._djmCaptureStream.end();this._djmCaptureStream=null;}
-    console.log('[DJM] packet capture stopped');
+    console.log('[CAPTURE] packet capture stopped');
   }
 
   // ── Live rebind: TCNet interface ──
@@ -1829,20 +1845,13 @@ class BridgeCore {
 
   _onPDJL(msg, rinfo){
     const p = parsePDJL(msg);
-    // DJM packet capture: dump ALL packets from DJM IP to file for fader byte analysis
-    if(this._djmCapture && this.devices['djm'] && rinfo.address===this.devices['djm'].ip){
+    // Raw packet capture: dump ALL packets from ALL sources for protocol analysis
+    if(this._djmCapture && this._djmCaptureStream){
       const ts=Date.now();
       const type=msg.length>10?msg[10]:0;
-      const port=rinfo.port;
+      const name=msg.length>0x1B?msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim():'?';
       const hex=msg.toString('hex');
-      try{this._djmCaptureStream.write(`${ts} port=${port} type=0x${type.toString(16)} len=${msg.length} ${hex}\n`);}catch(_){}
-    }
-    // DJM packet capture (when enabled via UI REC button)
-    if(this._djmCapture && this.devices['djm'] && rinfo.address===this.devices['djm'].ip){
-      const ts=Date.now();
-      const type=msg.length>10?msg[10]:0;
-      const hex=msg.toString('hex');
-      try{this._djmCaptureStream.write(`${ts} type=0x${type.toString(16)} len=${msg.length} ${hex}\n`);}catch(_){}
+      try{this._djmCaptureStream.write(`${ts} ${rinfo.address}:${rinfo.port} type=0x${type.toString(16).padStart(2,'0')} len=${msg.length} name=${name} kind=${p?.kind||'?'} ${hex}\n`);}catch(_){}
     }
     // Log first occurrence of each PDJL packet type per source (one-time only)
     if(!this._pdjlDbg) this._pdjlDbg={};
@@ -2024,8 +2033,7 @@ class BridgeCore {
     // DJM Channels-On-Air (type 0x03 on port 50001)
     if(p.kind==='djm_onair'){
       this.onAir = p.onAir;
-      // DJM-900NXS2 does not send type 0x29/0x39 mixer status with fader positions.
-      // Use on-air state as fader proxy for TCNet (0=off, 255=on)
+      // DJM-900NXS2: use on-air state as fader proxy for TCNet until real faders detected
       if(!this._hasRealFaders){
         const faderProxy=p.onAir.map(v=>v?255:0);
         this.faders=faderProxy; // TCNet mixer data will send these values to Arena

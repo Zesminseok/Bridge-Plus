@@ -188,11 +188,11 @@ ipcMain.handle('bridge:cpuUsage',()=>{
   const mem=process.memoryUsage();
   return{cpu:Math.round(cpu*10)/10, memMB:Math.round(mem.rss/1048576)};
 });
-// DJM packet capture for protocol analysis
+// Raw PDJL packet capture for protocol analysis (ALL sources, ALL types)
 ipcMain.handle('bridge:djmCaptureStart',()=>{
   if(!bridge)return{ok:false,err:'bridge not running'};
   const path=require('path');
-  const filePath=path.join(app.getPath('desktop'),`djm-capture-${Date.now()}.txt`);
+  const filePath=path.join(app.getPath('desktop'),`pdjl-raw-capture-${Date.now()}.txt`);
   bridge.startDJMCapture(filePath);
   return{ok:true,path:filePath};
 });
