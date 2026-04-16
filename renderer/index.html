@@ -1303,32 +1303,36 @@ function drawOverview(slot,prog){
     if(!wfOv)return;
     const cv=document.getElementById('wov'+slot);if(!cv||!cv.width)return;
     const W=cv.width,H=cv.height,ctx=d.wovCtx;
-    const pts=wfOv.length,mid=H/2;
-    const ovImg=ctx.createImageData(W,H);
-    const ovBuf=ovImg.data;
-    for(let px=0;px<W;px++){
-      const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
-      let r=0,g=0,b=0,pk=0;const cnt=Math.max(1,i1-i0+1);
-      for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;if(p.h>pk)pk=p.h;}
-      r/=cnt;g/=cnt;b/=cnt;
-      const h=Math.max(1,Math.round(pk*mid*0.95));
-      if(h<1)continue;
-      let R,G,B;
-      if(d.type==='hw'&&!d._pwv7){
-        const mx2=Math.max(r,g,b,0.001);const sc2=255/mx2;
-        R=Math.min(255,r*sc2)|0; G=Math.min(255,g*sc2)|0; B=Math.min(255,b*sc2)|0;
-      }else{
-        [R,G,B]=_wfBlend(r,g,b,1);
+    // Cache: render overview once, reuse until data/size changes
+    if(!d._ovCache||d._ovCache.w!==W||d._ovCache.h!==H||d._ovCache.len!==wfOv.length||d._ovCache.wfc!==cfg.wfColor){
+      const pts=wfOv.length,mid=H/2;
+      const ovImg=ctx.createImageData(W,H);
+      const ovBuf=ovImg.data;
+      for(let px=0;px<W;px++){
+        const i0=Math.floor(px*pts/W),i1=Math.min(pts-1,Math.floor((px+1)*pts/W));
+        let r=0,g=0,b=0,pk=0;const cnt=Math.max(1,i1-i0+1);
+        for(let i=i0;i<=i1;i++){const p=wfOv[i];r+=p.r;g+=p.g;b+=p.b;if(p.h>pk)pk=p.h;}
+        r/=cnt;g/=cnt;b/=cnt;
+        const h=Math.max(1,Math.round(pk*mid*0.95));
+        if(h<1)continue;
+        let R,G,B;
+        if(d.type==='hw'&&!d._pwv7){
+          const mx2=Math.max(r,g,b,0.001);const sc2=255/mx2;
+          R=Math.min(255,r*sc2)|0; G=Math.min(255,g*sc2)|0; B=Math.min(255,b*sc2)|0;
+        }else{
+          [R,G,B]=_wfBlend(r,g,b,1);
+        }
+        const invH=1/h;
+        for(let dy=-h;dy<=h;dy++){
+          const y=mid+dy;if(y<0||y>=H)continue;
+          const br=1.0-Math.abs(dy)*invH*0.75;
+          const off=(y*W+px)<<2;
+          ovBuf[off]=R*br|0;ovBuf[off+1]=G*br|0;ovBuf[off+2]=B*br|0;ovBuf[off+3]=255;
+        }
       }
-      const invH=1/h;
-      for(let dy=-h;dy<=h;dy++){
-        const y=mid+dy;if(y<0||y>=H)continue;
-        const br=1.0-Math.abs(dy)*invH*0.75;
-        const off=(y*W+px)<<2;
-        ovBuf[off]=R*br|0;ovBuf[off+1]=G*br|0;ovBuf[off+2]=B*br|0;ovBuf[off+3]=255;
-      }
+      d._ovCache={w:W,h:H,len:wfOv.length,wfc:cfg.wfColor,img:ovImg};
     }
-    ctx.putImageData(ovImg,0,0);
+    ctx.putImageData(d._ovCache.img,0,0);
   }
 
   // Overview overlay — cue points, loops, playhead (works for both WebGL and 2D modes)
@@ -1463,7 +1467,7 @@ function drawZoomWaveform(slot,prog){
     return;
   }
 
-  // CPU 2D canvas fallback
+  // CPU 2D canvas fallback — with offscreen waveform cache
   if(!d.wzCtx)return;
   const cv=document.getElementById('wzc'+slot);if(!cv||!cv.width)return;
   const W=cv.width,H=cv.height,ctx=d.wzCtx;
@@ -1472,44 +1476,50 @@ function drawZoomWaveform(slot,prog){
   const wfDur=(pts/150*1000)||1;
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
-  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  const pxPerMs=pts/wfDur;
-  const mid=H/2;
-  const hs=new Float32Array(W);
-  const _gc=[];
-  const step=Math.max(1,W>>8);
-  for(let px=0;px<W;px++){
-    const ms=posMs+(px-cX)*msPerPx;
-    const di=ms*pxPerMs;
-    const i0=Math.max(0,Math.min(pts-1,di|0));
-    const i1=Math.min(pts-1,i0+1);
-    const f=di-i0;
-    const p0=wfData[i0],p1=wfData[i1];
-    if(!p0){hs[px]=0;continue;}
-    hs[px]=((p0.h||0)+(((p1?.h||0)-(p0.h||0))*f))*mid*0.95;
-    if(px%step===0||px===W-1){
-      const r=p0.r+((p1?.r||0)-p0.r)*f;
-      const g=p0.g+((p1?.g||0)-p0.g)*f;
-      const b=p0.b+((p1?.b||0)-p0.b)*f;
-      let R,G,B;
-      if(d.type==='hw'&&!d._pwv7){
-        // HW native CDJ colors — display as-is
-        const mx2=Math.max(r,g,b,0.001); const sc2=255/mx2;
-        R=Math.min(255,r*sc2)|0; G=Math.min(255,g*sc2)|0; B=Math.min(255,b*sc2)|0;
-      }else{
-        // Virtual or HW PWV7 — use _wfBlend with user color mode
-        [R,G,B]=d.type==='hw'?_wfBlend(r,g,b,1):_wfBlend(r,g,b,1);
+  // Build offscreen cache: full waveform at zoom resolution (1px per msPerPx)
+  const cacheW=Math.min(16384,Math.ceil(wfDur/msPerPx));
+  if(!d._zmCache||d._zmCache.len!==pts||d._zmCache.h!==H||d._zmCache.cw!==cacheW||d._zmCache.wfc!==cfg.wfColor){
+    const oc=document.createElement('canvas');oc.width=cacheW;oc.height=H;
+    const octx=oc.getContext('2d');
+    const pxPerMs2=pts/wfDur,mid=H/2;
+    const hs2=new Float32Array(cacheW);
+    const _gc2=[];const step2=Math.max(1,cacheW>>10);
+    for(let px=0;px<cacheW;px++){
+      const ms=px*msPerPx;
+      const di=ms*pxPerMs2;
+      const i0=Math.max(0,Math.min(pts-1,di|0));
+      const i1=Math.min(pts-1,i0+1);
+      const f=di-i0;
+      const p0=wfData[i0],p1=wfData[i1];
+      if(!p0){hs2[px]=0;continue;}
+      hs2[px]=((p0.h||0)+(((p1?.h||0)-(p0.h||0))*f))*mid*0.95;
+      if(px%step2===0||px===cacheW-1){
+        const r=p0.r+((p1?.r||0)-p0.r)*f;
+        const g=p0.g+((p1?.g||0)-p0.g)*f;
+        const b=p0.b+((p1?.b||0)-p0.b)*f;
+        let R,G,B;
+        if(d.type==='hw'&&!d._pwv7){
+          const mx2=Math.max(r,g,b,0.001);const sc2=255/mx2;
+          R=Math.min(255,r*sc2)|0;G=Math.min(255,g*sc2)|0;B=Math.min(255,b*sc2)|0;
+        }else{[R,G,B]=_wfBlend(r,g,b,1);}
+        _gc2.push({t:px/(cacheW-1),c:`rgb(${R},${G},${B})`});
       }
-      _gc.push({t:px/(W-1),c:`rgb(${R},${G},${B})`});
     }
+    octx.beginPath();octx.moveTo(0,mid-hs2[0]);
+    for(let px=1;px<cacheW;px++)octx.lineTo(px,mid-hs2[px]);
+    for(let px=cacheW-1;px>=0;px--)octx.lineTo(px,mid+hs2[px]);
+    octx.closePath();octx.save();octx.clip();
+    if(_gc2.length>1){const grad=octx.createLinearGradient(0,0,cacheW,0);for(const s of _gc2)grad.addColorStop(s.t,s.c);octx.fillStyle=grad;}else{octx.fillStyle='#4ae183';}
+    octx.fillRect(0,0,cacheW,H);octx.restore();
+    d._zmCache={len:pts,h:H,cw:cacheW,msPerPx:msPerPx,wfc:cfg.wfColor,canvas:oc};
   }
-  ctx.beginPath();ctx.moveTo(0,mid-hs[0]);
-  for(let px=1;px<W;px++) ctx.lineTo(px,mid-hs[px]);
-  for(let px=W-1;px>=0;px--) ctx.lineTo(px,mid+hs[px]);
-  ctx.closePath();ctx.save();ctx.clip();
-  const grad=ctx.createLinearGradient(0,0,W,0);
-  for(const s of _gc) grad.addColorStop(s.t,s.c);
-  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);ctx.restore();
+  // Blit cached viewport
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  const srcX=Math.round(posMs/msPerPx)-cX;
+  const cache=d._zmCache;
+  const sx=Math.max(0,srcX),dx=sx-srcX;
+  const sw=Math.min(cache.cw-sx,W-dx);
+  if(sw>0)ctx.drawImage(cache.canvas,sx,0,sw,H,dx,0,sw,H);
   // beat grid + cues + cursor (2D fallback)
   if(d.bpm>0&&dur>0){
     const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
@@ -2436,7 +2446,7 @@ function loadFile(slot,f){
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
   d.art=null;         // clear dbserver-fetched artwork (HW/virtual)
   d._artRawB64=null;  // clear stale artwork from previous track
-  d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;d._fileName=f.name;d._pwv7=false;
+  d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;d._fileName=f.name;d._pwv7=false;d._ovCache=null;d._zmCache=null;
   // Immediately clear artwork UI
   const _dartReset=document.getElementById('dart'+slot);
   if(_dartReset)_dartReset.innerHTML='<span class="noart-icon">♪</span>';
@@ -2976,7 +2986,7 @@ async function doToggleHW(slot){
     if(E&&run)await window.bridge.removeLayer(slot);
     await new Promise(r=>setTimeout(r,66));
     d.type='hw';
-    d.ld=false;d.tn='';d.ar='';d.dur=0;d.pos=0;d.bpm=0;d.cp=0;d.wf=null;
+    d.ld=false;d.tn='';d.ar='';d.dur=0;d.pos=0;d.bpm=0;d.cp=0;d.wf=null;d._ovCache=null;d._zmCache=null;
     if(d.au){URL.revokeObjectURL(d.au.src);d.au=null;}
     if(E)window.bridge.setHWMode(slot,true);
 
@@ -2993,7 +3003,7 @@ async function doToggleHW(slot){
     // 3) Virtual 모드 (빈 상태)
     d.type='virtual';
     d.pl=false;d.cu=false;d.ld=false;
-    d.tn='';d.ar='';d.dur=0;d.pos=0;d.bpm=0;d.cp=0;d.wf=null;
+    d.tn='';d.ar='';d.dur=0;d.pos=0;d.bpm=0;d.cp=0;d.wf=null;d._ovCache=null;d._zmCache=null;
   }
 
   patchDeck(slot);
@@ -4203,7 +4213,7 @@ if(E){
       }
       // Don't override duration if we have a real value from metadata
       if(!dk.dur||dk.dur<=0) dk.dur=dk.rgbWf.length*30;
-      dk._wfCache=null; // invalidate cache
+      dk._wfCache=null;dk._ovCache=null;dk._zmCache=null; // invalidate cache
       buildWaveformCache(li);
       const _wfD=dk.rgbWfDetail||dk.rgbWf;
       if(dk.wgl&&_wfD)dk.wgl.setData(_wfD,(_wfD.length/150*1000)||1);
@@ -4268,7 +4278,7 @@ if(E){
       // Duration from detail waveform: pts / 150 segments per second * 1000ms
       const detailDur=Math.round(d.pts.length/150*1000);
       if(!dk.dur||dk.dur<=0||Math.abs(dk.dur-detailDur)>5000) dk.dur=detailDur;
-      dk._wfCache=null; // invalidate cache — detail waveform replaces preview
+      dk._wfCache=null;dk._ovCache=null;dk._zmCache=null; // invalidate cache — detail waveform replaces preview
       buildWaveformCache(li);
       const _wfD2=dk.rgbWfDetail||dk.rgbWf;
       if(dk.wgl&&_wfD2)dk.wgl.setData(_wfD2,(_wfD2.length/150*1000)||1);
