@@ -528,18 +528,6 @@ function parsePDJL(msg){
     // ROLLBACK: was `const pNum = msg[0x24]` only
     let pNum = msg[0x21]; if(pNum<1||pNum>6) pNum = msg[0x24];
     if(pNum<1||pNum>6) return null;
-    // Debug: dump wider range to find media color field
-    if(!parsePDJL._cdjDump)parsePDJL._cdjDump={};
-    if(!parsePDJL._cdjDump[pNum]){
-      parsePDJL._cdjDump[pNum]=true;
-      // Search for value 0x02 (Red) in the packet — USB color should be consistent
-      const hits=[];
-      for(let i=0xC0;i<msg.length;i++){if(msg[i]===0x02)hits.push('0x'+i.toString(16));}
-      console.log(`[CDJ] P${pNum} len=${msg.length} val=2 at: ${hits.join(',')}`);
-      if(msg.length>0x110){
-        console.log(`[CDJ] P${pNum} hex@0xC0: ${msg.slice(0xC0,0x110).toString('hex')}`);
-      }
-    }
     const p1   = msg[0x7B];
     const state= P1_TO_STATE[p1] ?? STATE.IDLE;
     // BPM: uint16BE at 0x92–0x93 = TRACK BPM (original, no pitch) × 100
@@ -571,12 +559,6 @@ function parsePDJL(msg){
     // Vinyl/CDJ jog mode at 0x9D (P3)
     const p3 = msg.length>0x9D ? msg[0x9D] : 0;
     const isVinylMode = (p3===0x09 || p3===0x0A); // forward/backward vinyl
-    // Debug (first 3 packets per player)
-    if(!parsePDJL._syncDbg)parsePDJL._syncDbg={};
-    if(!parsePDJL._syncDbg[pNum]||parsePDJL._syncDbg[pNum]<3){
-      parsePDJL._syncDbg[pNum]=(parsePDJL._syncDbg[pNum]||0)+1;
-      console.log(`[CDJ] P${pNum} flags@89=0x${flags.toString(16)} sync=${isSync} master=${isMaster} onAir=${isOnAir} trackBpm=${trackBpm} bpmEff=${bpmEff} pitch=${pitch.toFixed(3)} p3=0x${p3.toString(16)} vinyl=${isVinylMode}`);
-    }
     // Speed multiplier from Pitch 1: pitchRaw/0x100000 (beat-link method)
     // Note: pitchRaw stays non-zero even when paused — use state for play/stop detection
     const pitchMultiplier = pitchRaw / 0x100000;  // 1.0 = normal speed
@@ -686,6 +668,29 @@ function parsePDJL(msg){
       // On-air flags at consecutive bytes: CH1=0x24, CH2=0x25, CH3=0x26, CH4=0x27
       // Confirmed via beat-link source: data[0x23 + channel] for channel 1-4
       // DJM-V10 (6ch): additionally CH5=0x2D, CH6=0x2E (packet length 0x35)
+
+      // ── FADER HUNT: log ALL bytes in packet, track any variation ──
+      // We're looking for analog fader values (0-255 range) beyond the binary on-air flags
+      if(!parsePDJL._djm03First){
+        parsePDJL._djm03First=true;
+        const hex=Array.from(msg).map((b,i)=>`[0x${i.toString(16).padStart(2,'0')}]=0x${b.toString(16).padStart(2,'0')}`).join(' ');
+        console.log(`[DJM-0x03] FULL DUMP len=${msg.length}: ${hex}`);
+      }
+      // Track any byte that changes value — indicates potential fader/level data
+      if(!parsePDJL._djm03Baseline) parsePDJL._djm03Baseline=Buffer.from(msg);
+      else {
+        const changed=[];
+        for(let i=0x1B;i<Math.min(msg.length,parsePDJL._djm03Baseline.length);i++){
+          if(msg[i]!==parsePDJL._djm03Baseline[i]){
+            changed.push(`0x${i.toString(16)}:${parsePDJL._djm03Baseline[i]}→${msg[i]}`);
+          }
+        }
+        if(changed.length){
+          parsePDJL._djm03Baseline=Buffer.from(msg);
+          console.log(`[DJM-0x03] BYTE CHANGE: ${changed.join(' ')}`);
+        }
+      }
+
       return{kind:'djm_onair',name:name2,
         onAir:[msg[0x24]?1:0, msg[0x25]?1:0, msg[0x26]?1:0, msg[0x27]?1:0]};
     }
@@ -777,20 +782,7 @@ function parsePDJL(msg){
                 && Math.abs(pitchRaw2) < 5000;
       if(!sane){
         // Not a valid CDJ-3000 precise_pos — skip silently
-        if(!parsePDJL._0bReject) parsePDJL._0bReject={};
-        if(!parsePDJL._0bReject[pNum]){
-          parsePDJL._0bReject[pNum]=true;
-          console.log(`[0x0b] P${pNum} REJECTED (not CDJ-3000): len=${trackLenSec}s head=${playheadRaw} bpm=${bpmCheck} pitch=${pitchRaw2}`);
-        }
         return null;
-      }
-      // Debug: hex dump first valid 0x0b packet per player
-      if(!parsePDJL._0bDumped) parsePDJL._0bDumped={};
-      if(!parsePDJL._0bDumped[pNum]){
-        parsePDJL._0bDumped[pNum]=true;
-        const hex=msg.slice(32,60).toString('hex').match(/.{2}/g).join(' ');
-        console.log(`[0x0b] P${pNum} raw bytes[32-59]: ${hex}`);
-        console.log(`[0x0b] P${pNum} trackLenSec=${trackLenSec} playheadMs=${playheadRaw} bpmRaw=${bpmRaw10} pitch=${pitchRaw2}`);
       }
       return{
         kind:'precise_pos', playerNum:pNum, name,
@@ -1825,23 +1817,41 @@ class BridgeCore {
   }
 
   _onPDJL(msg, rinfo){
-    const p = parsePDJL(msg);
-    // Raw packet capture: dump ALL packets from ALL sources for protocol analysis
+    // ── BROAD CAPTURE: record ALL packets from ALL sources BEFORE any parsing ──
+    // This captures non-PDJL-magic packets too (unknown DJM protocols, etc.)
     if(this._djmCapture && this._djmCaptureStream){
       const ts=Date.now();
+      const hasMagic=msg.length>=11&&msg[0]===0x51&&msg[1]===0x73&&msg[2]===0x31&&msg[3]===0x2E&&msg[4]===0x30;
       const type=msg.length>10?msg[10]:0;
-      const name=msg.length>0x1B?msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim():'?';
+      const name=(hasMagic&&msg.length>0x1B)?msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim():'?';
       const hex=msg.toString('hex');
-      try{this._djmCaptureStream.write(`${ts} ${rinfo.address}:${rinfo.port} type=0x${type.toString(16).padStart(2,'0')} len=${msg.length} name=${name} kind=${p?.kind||'?'} ${hex}\n`);}catch(_){}
+      const magic=hasMagic?'pdjl':'RAW';
+      try{this._djmCaptureStream.write(`${ts} ${rinfo.address}:${rinfo.port} ${magic} type=0x${type.toString(16).padStart(2,'0')} len=${msg.length} name=${name} ${hex}\n`);}catch(_){}
     }
-    // Log first occurrence of each PDJL packet type per source (one-time only)
+    const p = parsePDJL(msg);
+    // Log first occurrence of each packet type per source — skip CDJ status (too noisy)
     if(!this._pdjlDbg) this._pdjlDbg={};
     const dbgK=rinfo.address+':'+msg[10];
     if(!this._pdjlDbg[dbgK]){
       this._pdjlDbg[dbgK]=true;
-      try{console.log(`[PDJL] type=0x${msg[10]?.toString(16)} from ${rinfo.address} len=${msg.length} kind=${p?.kind||'null'}`);}catch(_){}
+      const kind=p?.kind||'null';
+      if(kind!=='cdj'&&kind!=='precise_pos'&&kind!=='beat'&&kind!=='cdj_wf'){
+        try{console.log(`[PDJL] type=0x${msg[10]?.toString(16)} from ${rinfo.address} len=${msg.length} kind=${kind}`);}catch(_){}
+      }
     }
-    if(!p) return;
+    // Non-PDJL packet (no magic) from known DJM IP — could be unknown mixer protocol
+    if(!p){
+      const djmIp=this.devices['djm']?.ip;
+      if(djmIp&&rinfo.address===djmIp){
+        if(!this._nonPdjlDjm)this._nonPdjlDjm={};
+        const nk=msg.length+'_'+msg[0];
+        if(!this._nonPdjlDjm[nk]){
+          this._nonPdjlDjm[nk]=true;
+          console.log(`[DJM-NONPDJL] ip=${rinfo.address} port=${rinfo.port} len=${msg.length} first16=${msg.slice(0,16).toString('hex')}`);
+        }
+      }
+      return;
+    }
     // Skip own packets (bridge spoofed device)
     if(p.name==='BRIDGE+'||rinfo.address==='127.0.0.1') return;
     if(p.kind==='cdj'){
