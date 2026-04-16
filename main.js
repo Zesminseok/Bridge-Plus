@@ -165,6 +165,7 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onCDJStatus=(li,s)=>_send('bridge:cdj',{layerIndex:li,status:s});
     bridge.onDJMStatus=f=>_send('bridge:djm',{faders:f.channel||f, onAir:f.onAir, eq:f.eq, hasRealFaders:f.hasRealFaders, xfader:f.xfader, masterLvl:f.masterLvl, boothLvl:f.boothLvl, hpLevel:f.hpLevel, hpCueCh:f.hpCueCh, chExtra:f.chExtra, pktType:f.pktType, pktLen:f.pktLen, rawHex:f.rawHex});
     bridge.onDJMMeter=d=>_send('bridge:djmmeter',d);
+    bridge.onTCMixerVU=d=>_send('bridge:tcmixervu',d);
     bridge.onDeviceList=devs=>_send('pdjl:devices',Object.values(devs));
     bridge.onWaveformPreview=(pn,wf)=>_send('bridge:wfpreview',{playerNum:pn,...wf});
     bridge.onWaveformDetail=(pn,wf)=>_send('bridge:wfdetail',{playerNum:pn,...wf});

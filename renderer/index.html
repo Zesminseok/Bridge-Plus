@@ -624,7 +624,10 @@ let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
 let _djmSpectrum=[[],[],[],[],[],[]];
 let eqBands=[[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128]]; // [TRIM, HI, MID, LOW, COLOR]
-let _djmChVu=[0,0,0,0,0,0]; // per-channel VU level 0-255 (from 0x39 byte+6 or 0x58 meter)
+let _djmChVu=[0,0,0,0,0,0]; // per-channel VU level 0-255 (from TCNet MixerData or 0x58 meter)
+let _djmMasterVu=0; // master audio level 0-255 (from TCNet MixerData byte 61)
+let _djmChCueA=[0,0,0,0,0,0],_djmChCueB=[0,0,0,0,0,0]; // CUE A/B per channel (0=off,1=on)
+let _djmChXfAssign=[0,0,0,0,0,0]; // crossfader assign per channel (0=THRU,1=A,2=B)
 let _djmXfader=128, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=128, _djmHasRealFaders=false;
 let _djmLog=[], _djmLogMax=80, _djmLogOpen=false, _djmCapturing=false, _djmAutoCapStarted=false;
 async function _toggleDjmCapture(){
@@ -3823,9 +3826,12 @@ function updateMixer(){
   const xfKnob=document.getElementById('mxXfKnob');
   if(xfKnob)xfKnob.style.left=(hasReal?(_djmXfader/255*100):50)+'%';
   // Master VU — LED dots (12 per side: 0-7=green, 8-10=amber, 11=red/clip)
-  // Use _djmChVu which is fed from 0x58 meter packets (accurate) or 0x39 byte+6 (estimate)
-  const mL=(_djmChVu[0]||0)/255*0.6+(_djmChVu[2]||0)/255*0.4;
-  const mR=(_djmChVu[1]||0)/255*0.6+(_djmChVu[3]||0)/255*0.4;
+  // Primary: TCNet MixerData masterAudio (byte 61) — dedicated master output level
+  // Fallback: mix of channel VU levels when no TCNet master data
+  const hasMasterVu=_djmMasterVu>0;
+  const masterVuNorm=_djmMasterVu/255;
+  const mL=hasMasterVu?masterVuNorm:(_djmChVu[0]||0)/255*0.6+(_djmChVu[2]||0)/255*0.4;
+  const mR=hasMasterVu?masterVuNorm:(_djmChVu[1]||0)/255*0.6+(_djmChVu[3]||0)/255*0.4;
   let clipping=false;
   ['L','R'].forEach((side,si)=>{
     const lv=si===0?mL:mR;
@@ -3845,10 +3851,17 @@ function updateMixer(){
   const MSZ=44;
   const mVolNorm=hasReal?(((_djmMasterLvl||0)/127.5)-1):0;
   _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),MSZ,true);
-  // A/B crossfader assign badges (placeholder — data from DJM protocol TBD)
+  // A/B crossfader assign badges — from TCNet MixerData chXfAssign (0=THRU,1=A,2=B)
   for(let i=0;i<nCh;i++){
     const abEl=document.getElementById('mxAb'+i);
-    if(abEl){/* Future: set A/B/THRU from DJM crossfader assign byte */}
+    if(abEl){
+      const asgn=_djmChXfAssign[i]||0;
+      abEl.textContent=asgn===1?'A':asgn===2?'B':'THRU';
+      abEl.className='mx-ab '+(asgn===1?'mx-ab-a':asgn===2?'mx-ab-b':'mx-ab-thru');
+    }
+    // CUE button highlight
+    const cueEl=document.getElementById('mxCue'+i);
+    if(cueEl)cueEl.classList.toggle('on',!!(_djmChCueA[i]||_djmChCueB[i]));
   }
   const activeDk=Object.values(DECKS).find(d=>d.type==='hw'&&d.pl&&d.bpm>0);
   const mxBpm=document.getElementById('mxMasterBpm');
@@ -4475,6 +4488,26 @@ if(E){
       _djmChVu[i]=v;
     });
     if(d.spectrum)_djmSpectrum=d.spectrum;
+  });
+  // TCNet MixerData (DataType 150) — real-time Audio Level per channel + master
+  // Audio Level (CH+1) pulses 0-255 with music — this is the VU meter source
+  window.ipcRenderer?.on('bridge:tcmixervu',(e,d)=>{
+    if(!d)return;
+    // Per-channel Audio Level → VU bars
+    if(d.chAudio){
+      d.chAudio.forEach((v,i)=>{
+        _djmChVu[i]=v;
+        if(DECKS[i]){DECKS[i].hwVu=v/255;DECKS[i]._djmMeter=v;}
+      });
+    }
+    // Master Audio Level → master LED dots
+    if(d.masterAudio!=null)_djmMasterVu=d.masterAudio;
+    // CUE & crossfader assign per channel
+    if(d.chCueA)d.chCueA.forEach((v,i)=>{_djmChCueA[i]=v;});
+    if(d.chCueB)d.chCueB.forEach((v,i)=>{_djmChCueB[i]=v;});
+    if(d.chXfAssign)d.chXfAssign.forEach((v,i)=>{_djmChXfAssign[i]=v;});
+    // Crossfader position from Mixer Data (overridden by 0x39 if both present)
+    if(d.xfader!=null&&!_djmHasRealFaders)_djmXfader=d.xfader;
   });
   window.bridge.onDevices?.(devs=>{
     pdjlDevices=devs;

@@ -36,6 +36,7 @@ const TC = {
   DT_METRICS: 0x02,  // MetricsData: fader, gain, pitch, BPM, status per layer
   DT_META:    0x04,  // MetaData: track name, artist, waveform, artwork per layer
   DT_ARTWORK: 0x80,  // LowResArtworkFile (128) — JPEG artwork per layer
+  DT_MIXER:   0x96,  // MixerData (150) — per-channel fader/EQ/VU + master
 };
 
 // TCNet V3.5.1B LayerStatus values — these ARE the protocol values, send directly
@@ -1540,6 +1541,36 @@ class BridgeCore {
       const metricsPkt = mkDataMetrics(layerReq, layerData, faderVal);
       this._uc(metricsPkt, rinfo.port, rinfo.address);
       // MetaResp log suppressed (too frequent, causes FPS drop)
+    }
+    // 0xC8 Data Packet — parse incoming MixerData (DataType 150) for VU meters
+    // TCNet v3.5.1B spec: Audio Level = real-time channel VU (0-255, pulses with music)
+    if(type===TC.DATA && msg.length>=TC.H+2){
+      const body = msg.slice(TC.H);
+      const dataType = body[0];
+      if(dataType===TC.DT_MIXER && body.length>=246){
+        // Master Audio Level: body+37 (byte 61), Master Fader: body+38 (byte 62)
+        const masterAudio = body[37];
+        const masterFader = body[38];
+        // Cross Fader: body+75 (byte 99)
+        const xfader = body[75];
+        // Per-channel blocks: body offset = 101 + ch*24 (byte 125 + ch*24), 6 channels max
+        const chAudio=[],chFader=[],chCueA=[],chCueB=[],chXfAssign=[];
+        for(let ch=0;ch<6;ch++){
+          const off=101+ch*24;
+          chAudio.push(off+1<body.length?body[off+1]:0);     // Audio Level (VU, 0-255)
+          chFader.push(off+2<body.length?body[off+2]:0);     // Fader Level (position)
+          chCueA.push(off+11<body.length?body[off+11]:0);    // CUE A (0=off, 1=on)
+          chCueB.push(off+12<body.length?body[off+12]:0);    // CUE B (0=off, 1=on)
+          chXfAssign.push(off+13<body.length?body[off+13]:0);// Crossfader Assign (0=THRU,1=A,2=B)
+        }
+        // Throttled log: once every 2s
+        const now=Date.now();
+        if(!this._tcMixerLogAt||now-this._tcMixerLogAt>2000){
+          this._tcMixerLogAt=now;
+          try{console.log(`[TCNet MixerData] from=${rinfo.address} masterAudio=${masterAudio} chAudio=[${chAudio}] cueA=[${chCueA}] xfAssign=[${chXfAssign}]`);}catch(_){}
+        }
+        this.onTCMixerVU?.({masterAudio,masterFader,xfader,chAudio,chFader,chCueA,chCueB,chXfAssign,from:rinfo.address});
+      }
     }
   }
 
