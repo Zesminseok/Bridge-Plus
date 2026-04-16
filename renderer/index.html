@@ -3252,7 +3252,9 @@ function tick(){
           const ft=fv/255;
           d._faderSmooth=ft>(d._faderSmooth||0)?ft:ft*0.3+(d._faderSmooth||0)*0.7;
         } else {
-          d._faderSmooth=onAirCh[slot]?1:0;
+          // On-air binary proxy: smooth transitions to avoid flickering at threshold
+          const onTarget=onAirCh[slot]?1:0;
+          d._faderSmooth=onTarget>(d._faderSmooth||0)?onTarget:onTarget*0.3+(d._faderSmooth||0)*0.7;
         }
       }
     } else {
@@ -3406,12 +3408,16 @@ function tick(){
       const progPx=Math.round(prog*10000); // ~0.01% precision
       if(progPx!==d._lastProgPx||d._wfDirty){
         d._lastProgPx=progPx;
-        // Zoom waveform: 30fps (every tick)
-        const wzc2=document.getElementById('wzc'+slot);
-        if(wzc2&&wzc2.width>0)drawZoomWaveform(slot,prog);
-        // Overview waveform: ~10fps (every 3rd tick) — playhead barely moves
+        // Zoom waveform: 30fps (every 2nd tick at 60fps base) — saves 50% GPU
+        if(!d._zoomTick)d._zoomTick=0;
+        if(d._wfDirty||++d._zoomTick>=2){
+          d._zoomTick=0;
+          const wzc2=document.getElementById('wzc'+slot);
+          if(wzc2&&wzc2.width>0)drawZoomWaveform(slot,prog);
+        }
+        // Overview waveform: ~10fps (every 6th tick) — playhead barely moves
         if(!d._ovTick)d._ovTick=0;
-        if(d._wfDirty||++d._ovTick>=3){
+        if(d._wfDirty||++d._ovTick>=6){
           d._ovTick=0;
           if(wov&&wov.width>0)drawOverview(slot,prog);
         }
