@@ -378,14 +378,14 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-offline{font:400 10px var(--sn);color:var(--tx4);margin-left:auto}
 .mx-body{flex:1;display:flex;gap:6px;min-height:0;overflow-x:auto;padding-bottom:4px}
 /* Channel strip — layout: header → waveform → knobs → CUE → fader+VU → label */
-.mx-ch{flex:1;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 6px 6px;gap:3px;min-width:72px;max-width:160px;align-items:center;transition:border-color .3s,box-shadow .3s}
+.mx-ch{flex:1;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:6px 3px 5px;gap:3px;min-width:56px;max-width:110px;align-items:center;transition:border-color .3s,box-shadow .3s}
 .mx-ch.on-air{border-color:rgba(255,80,80,.2);box-shadow:0 0 14px rgba(255,80,80,.06)}
 .mx-ch-hdr{display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 2px}
 .mx-ch-num{font:800 11px var(--lb);color:var(--tx)}
 .mx-ch-air{font:700 5.5px var(--mn);padding:1.5px 4px;border-radius:999px;letter-spacing:.06em;background:rgba(255,80,80,.12);color:var(--red);opacity:0;transition:opacity .2s}
 .mx-ch.on-air .mx-ch-air{opacity:1;animation:pulse-air 1.2s ease-in-out infinite}
 /* Vertical waveform — at top, above knobs, grows to fill */
-.mx-wf-wrap{width:100%;flex:1;min-height:60px;padding:0 2px}
+.mx-wf-wrap{width:100%;flex:1;min-height:50px;padding:0 1px}
 .mx-wf-canvas{width:100%;height:100%;border-radius:3px;background:rgba(255,255,255,.02)}
 /* SVG Knob */
 .mx-knob{display:flex;flex-direction:column;align-items:center;gap:0}
@@ -393,17 +393,17 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-knob-lbl{font:700 6px var(--mn);color:var(--tx2);letter-spacing:.04em}
 .mx-knob-val{font:600 6px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums}
 .mx-knobs{display:flex;flex-direction:column;gap:1px;align-items:center;width:100%}
-/* CUE button — thicker */
-.mx-cue{display:flex;justify-content:center;width:100%;padding:3px 0}
-.mx-cue-btn{padding:5px 0;width:85%;border-radius:4px;font:700 8px var(--mn);letter-spacing:.08em;text-align:center;border:1.5px solid rgba(239,194,10,.25);background:transparent;color:rgba(239,194,10,.35);transition:all .15s;cursor:default}
+/* CUE button — compact */
+.mx-cue{display:flex;justify-content:center;width:100%;padding:2px 0}
+.mx-cue-btn{padding:4px 8px;border-radius:3px;font:700 7px var(--mn);letter-spacing:.06em;text-align:center;border:1.5px solid rgba(239,194,10,.25);background:transparent;color:rgba(239,194,10,.35);transition:all .15s;cursor:default;white-space:nowrap}
 .mx-cue-btn.on{border-color:var(--ylw2);color:var(--ylw2);background:rgba(239,194,10,.12);box-shadow:0 0 10px rgba(239,194,10,.2)}
 /* Fader area: fader + VU side-by-side — fixed height */
-.mx-fdr-area{display:flex;gap:8px;height:140px;flex-shrink:0;width:100%;justify-content:center;align-items:stretch;padding:0 4px}
+.mx-fdr-area{display:flex;gap:5px;height:140px;flex-shrink:0;width:100%;justify-content:center;align-items:stretch;padding:0 2px}
 /* Fader column */
-.mx-fdr-col{position:relative;width:36px;flex-shrink:0}
-.mx-fdr-track{width:3px;height:100%;background:rgba(255,255,255,.08);border-radius:1.5px;position:absolute;left:50%;transform:translateX(-50%)}
-.mx-fdr-cap{position:absolute;left:50%;transform:translateX(-50%);width:26px;height:10px;border-radius:3px;background:linear-gradient(to bottom,#aaa 0%,#777 25%,#555 50%,#777 75%,#aaa 100%);box-shadow:0 1px 4px rgba(0,0,0,.6);transition:bottom .06s;z-index:2}
-.mx-fdr-cap::after{content:'';position:absolute;top:4px;left:4px;right:4px;height:1.5px;background:rgba(74,225,131,.5);border-radius:1px}
+.mx-fdr-col{position:relative;width:28px;flex-shrink:0}
+.mx-fdr-track{width:2px;height:100%;background:rgba(255,255,255,.08);border-radius:1px;position:absolute;left:50%;transform:translateX(-50%)}
+.mx-fdr-cap{position:absolute;left:50%;transform:translateX(-50%);width:20px;height:8px;border-radius:2px;background:linear-gradient(to bottom,#aaa 0%,#777 25%,#555 50%,#777 75%,#aaa 100%);box-shadow:0 1px 3px rgba(0,0,0,.6);transition:bottom .06s;z-index:2}
+.mx-fdr-cap::after{content:'';position:absolute;top:3px;left:3px;right:3px;height:1px;background:rgba(74,225,131,.5);border-radius:1px}
 .mx-fdr-marks{position:absolute;left:0;top:0;bottom:0;width:100%;pointer-events:none}
 .mx-fdr-mark{position:absolute;left:1px;display:flex;align-items:center;gap:1px}
 .mx-fdr-mark::before{content:'';width:5px;height:1px;background:rgba(255,255,255,.2)}
@@ -416,14 +416,14 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-vu-pk{position:absolute;left:0;right:0;height:1.5px;background:var(--ylw2);border-radius:1px;transition:bottom .08s;bottom:0}
 /* Channel label */
 .mx-ch-lbl{font:800 8px var(--lb);color:var(--grn);letter-spacing:.08em;text-align:center;margin-top:2px}
-/* Crossfader — compact, only spans body width */
-.mx-xfader{display:flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(20,22,26,.6);border:1px solid var(--bdr);border-radius:6px;flex-shrink:0;align-self:stretch}
-.mx-xf-lbl{font:700 7px var(--lb);color:var(--tx2);letter-spacing:.06em;flex-shrink:0}
-.mx-xf-track{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;position:relative}
-.mx-xf-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;background:var(--tx2);border-radius:50%;border:2px solid var(--bg);transition:left .08s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
-.mx-xf-a,.mx-xf-b{font:700 8px var(--mn);color:var(--tx2)}
+/* Crossfader — small, centered */
+.mx-xfader{display:flex;align-items:center;gap:5px;padding:4px 8px;background:rgba(20,22,26,.5);border:1px solid var(--bdr);border-radius:5px;flex-shrink:0;max-width:280px;align-self:center}
+.mx-xf-lbl{font:600 6px var(--lb);color:var(--tx3);letter-spacing:.06em;flex-shrink:0}
+.mx-xf-track{flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;position:relative}
+.mx-xf-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;background:var(--tx2);border-radius:50%;border:1.5px solid var(--bg);transition:left .08s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.mx-xf-a,.mx-xf-b{font:600 7px var(--mn);color:var(--tx3)}
 /* Master section */
-.mx-master{width:82px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 4px 6px;gap:4px;flex-shrink:0;align-items:center}
+.mx-master{width:62px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:6px 3px 5px;gap:3px;flex-shrink:0;align-items:center}
 .mx-master-lbl{font:800 9px var(--lb);color:var(--key);text-align:center;letter-spacing:.08em}
 </style>
 <script src="./waveform-gl.js"></script>
