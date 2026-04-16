@@ -646,12 +646,14 @@ function parsePDJL(msg){
       //   byte+4 = HI EQ  (128=center, 0=kill, 255=boost)
       //   byte+3 = MID EQ (128=center, 0=kill, 255=boost)
       //   byte+6 = LOW EQ (128=center, 0=kill, 255=boost) ← fully cut when mixing in
-      // Order: [TRIM, HI, MID, LOW] — matches profile ids=['T','H','M','L','C']
+      // Order: [TRIM, HI, MID, LOW, COLOR] — matches profile ids=['T','H','M','L','C']
+      // byte+7 = Color/Filter knob (128=center/off; 0=max CCW, 255=max CW)
       return[
         base+1<msg.length?msg[base+1]:0x80,  // TRIM (index 0)
         base+4<msg.length?msg[base+4]:0x80,  // HI EQ (index 1)
         base+3<msg.length?msg[base+3]:0x80,  // MID EQ (index 2)
         base+6<msg.length?msg[base+6]:0x80,  // LOW EQ (index 3)
+        base+7<msg.length?msg[base+7]:0x80,  // COLOR / Filter knob (index 4)
       ];
     });
     const chExtra=[0,1,2,3].map(c=>{

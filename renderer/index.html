@@ -623,7 +623,7 @@ let run=false,t0=0,up=0,pk=0,curTab='link',TC_NAME='BRIDGE+';
 let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
 let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
 let _djmSpectrum=[[],[],[],[],[],[]];
-let eqBands=[[128,128,128,128],[128,128,128,128],[128,128,128,128],[128,128,128,128],[128,128,128,128],[128,128,128,128]]; // [Hi, Mid, Lo, Color/Filter]
+let eqBands=[[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128]]; // [TRIM, HI, MID, LOW, COLOR]
 let _djmChVu=[0,0,0,0,0,0]; // per-channel VU level 0-255 (from 0x39 byte+6 or 0x58 meter)
 let _djmXfader=128, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=128, _djmHasRealFaders=false;
 let _djmLog=[], _djmLogMax=80, _djmLogOpen=false, _djmCapturing=false, _djmAutoCapStarted=false;
@@ -3741,9 +3741,9 @@ function updateMixer(){
     if(hasReal){
       const eq=eqBands[i]||[128,128,128,128];
       // Index map — confirmed via live user test (2026-04-17):
-      // eq[0]=TRIM(+1), eq[1]=HI(+4), eq[2]=MID(+3), eq[3]=LOW(+6), C=unknown(stays center)
-      const eqMap={T:0, H:1, M:2, L:3, C:null, HM:1, LM:2};
-      if(prof.ids.length>=6)Object.assign(eqMap,{T:0,H:1,HM:2,LM:3,L:4,C:null}); // V10 5-band
+      // eq[0]=TRIM(+1), eq[1]=HI(+4), eq[2]=MID(+3), eq[3]=LOW(+6), eq[4]=COLOR(+7)
+      const eqMap={T:0, H:1, M:2, L:3, C:4, HM:1, LM:2};
+      if(prof.ids.length>=6)Object.assign(eqMap,{T:0,H:1,HM:2,LM:3,L:4,C:null}); // V10 5-band (CLR unknown)
       prof.ids.forEach(id=>{
         const bi=eqMap[id];
         // EQ values from DJM 0x39: 0-255, center=128 (12 o'clock = 0dB)
