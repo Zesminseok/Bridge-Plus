@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.8.0 — 2026-04-17
+
+### DJM-900NXS2 믹서 데이터 완전 파싱 + TCNet VU 미터
+
+#### DJM 0x39 패킷 파싱 개선
+- **EQ 바이트 오프셋 확정** (라이브 물리 테스트 기반)
+  - TRIM: byte+1, COLOR/Filter: byte+2, HI: byte+3, MID: byte+4, LOW: byte+6, FADER: byte+11
+  - HI↔MID 스왑 수정, COLOR 오프셋 +7→+2 수정
+- **글로벌 파라미터 오프셋 확정** (pcap 분석)
+  - xfader: gBase+75, masterLvl: gBase+59, boothLvl: gBase+94, hpLevel: gBase+71
+- **전체 패킷 바이트 변화 추적 로그** — 미분류 바이트 발견용 ★NEW 표시
+
+#### 믹서 UI 노브 아크 수정
+- **EQ 노브** (HI/MID/LOW): 12시 기준 Boost=파란 호, Cut=빨간 호
+- **레벨 노브** (TRIM, COLOR, MASTER): 7시(-∞)에서 현재 위치까지 회색 호
+- **덱 EQ 아크**: `<circle>` dasharray → `<path>` 극좌표 방식으로 교체, 믹서와 동일 렌더링
+
+#### TCNet Mixer Data (DataType 150) 수신 파싱
+- **채널 Audio Level** (CH+1, 0-255): 음악에 따라 변동하는 실시간 VU 소스
+- **Master Audio Level** (byte 61): 마스터 VU LED 점등
+- **CUE A/B** (CH+11/12): 채널별 CUE 버튼 하이라이트
+- **Crossfader Assign** (CH+13): A/THRU/B 배지 실시간 표시
+- `onTCMixerVU` 콜백 → `bridge:tcmixervu` IPC → renderer
+
+#### 성능 개선
+- 상태바 TX 카운터, ARENA/UP 등 갱신 주기: 60fps → 3초
+- TCNet 메뉴 통계 패널 갱신: 즉시 → 3초 디바운스
+
+---
+
 ## v0.7.0 — 2025-04-06
 
 ### BRIDGE+ Onyx Studio 디자인 시스템 리뉴얼
