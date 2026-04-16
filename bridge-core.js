@@ -1794,7 +1794,7 @@ class BridgeCore {
       pkt[0x0A]=0x06; pkt[0x0B]=0x00;
       Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,0x0C,0,15);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x22]=0x00; pkt[0x23]=0x36;
-      pkt[0x24]=0x9E; // lighting/bridge device type — triggers DJM fader+meter delivery
+      pkt[0x24]=0xF9; // macOS bridge device type — CDJ-compatible (0x9E breaks CDJ link)
       pkt[0x25]=0x00;
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
       for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];

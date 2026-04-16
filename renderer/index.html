@@ -3294,15 +3294,11 @@ function tick(){
         d.vuL=target>d.vuL?target:target*0.6+(d.vuL||0)*0.4;
         d.vu=d.vuL;
         d._djmMeter=Math.max(0,(d._djmMeter||0)*0.72);
-        // Fader bar: real fader data or on-air binary
+        // Fader bar: real fader data or on-air binary (no smoothing — raw values)
         if(_djmHasRealFaders){
-          const fv=faders[slot]||0;
-          const ft=fv/255;
-          d._faderSmooth=ft>(d._faderSmooth||0)?ft:ft*0.3+(d._faderSmooth||0)*0.7;
+          d._faderSmooth=(faders[slot]||0)/255;
         } else {
-          // On-air binary proxy: smooth transitions to avoid flickering at threshold
-          const onTarget=onAirCh[slot]?1:0;
-          d._faderSmooth=onTarget>(d._faderSmooth||0)?onTarget:onTarget*0.3+(d._faderSmooth||0)*0.7;
+          d._faderSmooth=onAirCh[slot]?1:0;
         }
       }
     } else {
