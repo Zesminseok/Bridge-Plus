@@ -641,24 +641,24 @@ function parsePDJL(msg){
     const onAir=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
     const eq=[0,1,2,3].map(c=>{
       const base=CH_BASE+c*CH_STRIDE;
-      // Layout confirmed via live user testing (2026-04-17):
+      // Layout — updated 2026-04-17 (physical channel strip order: TRIM→COLOR→HI→MID→LOW):
       //   byte+1 = TRIM (gain knob, 128=0dB center)
-      //   byte+4 = HI EQ  (128=center, 0=kill, 255=boost)
-      //   byte+3 = MID EQ (128=center, 0=kill, 255=boost)
-      //   byte+6 = LOW EQ (128=center, 0=kill, 255=boost) ← fully cut when mixing in
+      //   byte+2 = COLOR/Filter knob (128=center/off; 0=max CCW, 255=max CW)
+      //   byte+3 = HI EQ  (128=center, 0=kill, 255=boost)
+      //   byte+4 = MID EQ (128=center, 0=kill, 255=boost)
+      //   byte+6 = LOW EQ (128=center, 0=kill, 255=boost)
       // Order: [TRIM, HI, MID, LOW, COLOR] — matches profile ids=['T','H','M','L','C']
-      // byte+7 = Color/Filter knob (128=center/off; 0=max CCW, 255=max CW)
       return[
         base+1<msg.length?msg[base+1]:0x80,  // TRIM (index 0)
-        base+4<msg.length?msg[base+4]:0x80,  // HI EQ (index 1)
-        base+3<msg.length?msg[base+3]:0x80,  // MID EQ (index 2)
+        base+3<msg.length?msg[base+3]:0x80,  // HI EQ (index 1)
+        base+4<msg.length?msg[base+4]:0x80,  // MID EQ (index 2)
         base+6<msg.length?msg[base+6]:0x80,  // LOW EQ (index 3)
-        base+7<msg.length?msg[base+7]:0x80,  // COLOR / Filter knob (index 4)
+        base+2<msg.length?msg[base+2]:0x80,  // COLOR / Filter knob (index 4)
       ];
     });
     const chExtra=[0,1,2,3].map(c=>{
       const base=CH_BASE+c*CH_STRIDE; const extra={};
-      for(let b=4;b<=23;b++){if(base+b<msg.length)extra['b'+b]=msg[base+b];}
+      for(let b=2;b<=23;b++){if(base+b<msg.length)extra['b'+b]=msg[base+b];}
       return extra;
     });
     // Note: byte+6 (Color/Filter knob) is included as eq[3] in the eq array above
@@ -682,8 +682,8 @@ function parsePDJL(msg){
     }
     // Full packet byte-diff tracker: log every byte that changes (for discovering unknown fields)
     const _knownOffsets=new Set([
-      // ch1-4 known bytes
-      ...[0,1,2,3].flatMap(c=>[0,1,3,4,6,7,11].map(b=>CH_BASE+c*CH_STRIDE+b)),
+      // ch1-4 known bytes: +1=TRIM,+2=COLOR,+3=HI,+4=MID,+6=LOW,+11=FADER
+      ...[0,1,2,3].flatMap(c=>[0,1,2,3,4,6,11].map(b=>CH_BASE+c*CH_STRIDE+b)),
       gBase+4, gBase+59, gBase+71, gBase+75, gBase+94
     ]);
     if(!parsePDJL._djm39Prev){
@@ -699,7 +699,7 @@ function parsePDJL(msg){
           if(i>=CH_BASE&&i<gBase){
             const c=Math.floor((i-CH_BASE)/CH_STRIDE);
             const b=(i-CH_BASE)%CH_STRIDE;
-            const BNAMES={0:'status',1:'TRIM',3:'MID',4:'HI',6:'LOW',7:'COLOR',11:'FADER'};
+            const BNAMES={0:'status',1:'TRIM',2:'COLOR',3:'HI',4:'MID',6:'LOW',11:'FADER'};
             lbl=`CH${c+1}+${b}${BNAMES[b]?'('+BNAMES[b]+')':''}`;
           } else if(relG>=0){
             const GNAMES={4:'hpCueCh',59:'masterLvl',71:'hpLevel',75:'xfader',94:'boothLvl'};
