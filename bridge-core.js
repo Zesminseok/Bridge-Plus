@@ -1634,13 +1634,14 @@ class BridgeCore {
     // macOS: ALL PDJL ports bind to INADDR_ANY (0.0.0.0)
     // to receive both broadcast and unicast packets from CDJs and DJMs.
     // Binding 50002 to specific IP blocks DJM mixer status packets from other interfaces.
-    for(const port of [50000, 50001, 50002]){
+    // Standard PDJL ports + extra Pioneer ports (fader data might arrive on unknown port)
+    for(const port of [50000, 50001, 50002, 50003, 50004]){
       try{
         const sock = dgram.createSocket({type:'udp4', reuseAddr:true});
         const bindAddr = undefined; // always INADDR_ANY for all ports
         await new Promise((res,rej)=>{
           sock.on('error',rej);
-          sock.bind(port, bindAddr, ()=>{ sock.setBroadcast(true); res(); });
+          sock.bind(port, bindAddr, ()=>{ try{sock.setBroadcast(true);}catch(_){} res(); });
         });
         sock.on('message',(msg,rinfo)=>this._onPDJL(msg,rinfo));
         sock.on('error',()=>{});
@@ -1650,6 +1651,37 @@ class BridgeCore {
       }catch(e){ console.warn(`[PDJL] port ${port} fail: ${e.message}`); }
     }
     if(this._pdjlSockets.length===0) console.warn('[PDJL] all ports failed');
+  }
+
+  // ── DJM TCP probe — connect to DJM port 50003 when discovered ──
+  // DJM-900NXS2 has TCP port 50003 open; fader data might be here
+  _probeDjmTCP(djmIp){
+    if(this._djmTcpProbed===djmIp) return;
+    this._djmTcpProbed=djmIp;
+    for(const port of [50003, 50002]){
+      const sock=net.createConnection({host:djmIp,port,timeout:3000});
+      sock.on('connect',()=>{
+        console.log(`[DJM-TCP] connected to ${djmIp}:${port}`);
+        sock.on('data',buf=>{
+          const hex=buf.toString('hex');
+          console.log(`[DJM-TCP] data from ${djmIp}:${port} len=${buf.length} hex=${hex.slice(0,64)}`);
+          // Log all unique first occurrences
+          const key=`tcp_${port}_${buf[0]}_${buf.length}`;
+          if(!this._djmSeenTypes.has(key)){
+            this._djmSeenTypes.add(key);
+            console.log(`[DJM-TCP] NEW type key=${key} full_hex=${hex}`);
+          }
+        });
+        // Try sending PDJL magic hello to see if DJM responds
+        try{
+          const hello=Buffer.alloc(11);
+          PDJL.MAGIC.copy(hello,0); hello[10]=0x06;
+          sock.write(hello);
+        }catch(_){}
+      });
+      sock.on('error',e=>console.log(`[DJM-TCP] ${djmIp}:${port} error: ${e.message}`));
+      sock.on('timeout',()=>{console.log(`[DJM-TCP] ${djmIp}:${port} timeout`);sock.destroy();});
+    }
   }
 
   // Pro DJ Link keep-alive announcement on 50000
@@ -2078,6 +2110,8 @@ class BridgeCore {
       if(!this.devices['djm']){
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
+        // Probe DJM TCP ports when first discovered — fader data might be on TCP 50003
+        this._probeDjmTCP(rinfo.address);
       } else this.devices['djm'].lastSeen=Date.now();
     }
     // Beat packet (0x28, port 50001) — beat timing from CDJ
