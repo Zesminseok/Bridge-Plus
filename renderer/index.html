@@ -274,6 +274,7 @@ select.ss{background:var(--bg-lowest);border:1px solid var(--bdr);border-radius:
 select.ss:focus{border-color:rgba(160,160,255,.4)}
 .tbl{border:1px solid var(--bdr);border-radius:7px;overflow:hidden;margin-bottom:10px}
 .tblh{display:grid;padding:8px 16px;background:var(--bg3);border-bottom:1px solid var(--bdr);align-items:center;gap:8px}
+.tblh>div,.tblr>div{display:flex;align-items:center}
 .tblr{display:grid;padding:9px 16px;border-bottom:1px solid var(--bg3);align-items:center;gap:8px}.tblr:last-child{border-bottom:none}
 .pgr{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
 .pgc{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:8px 10px;text-align:center}
@@ -1766,7 +1767,7 @@ function switchMode(mode){
     });
     document.getElementById('modeHW').classList.remove('ac');
     document.getElementById('modeVt').classList.add('ac');
-    document.getElementById('modeHint').textContent='파일 드래그로 덱 추가';
+    document.getElementById('modeHint').textContent='＋ 버튼으로 덱 추가 후 파일 로드';
   }
   renderDecks();
 }
@@ -1846,7 +1847,7 @@ function renderDecks(){
   }
 
   document.getElementById('addDeckBtn').style.display=(!isHWMode&&slots.length<MAX_DECKS)?'':'none';
-  document.getElementById('vtLabel').textContent=vtS.length?'VIRTUAL DECKS':'VIRTUAL DECKS — 덱 추가 버튼을 눌러 추가하세요';
+  document.getElementById('vtLabel').textContent=vtS.length?'VIRTUAL DECKS':'VIRTUAL DECKS — 아래 ＋ 버튼으로 덱을 추가하세요';
 
   // DJM 연결 상태를 mode-bar에 표시
   const djmDevs=pdjlDevices.filter(d=>d.type==='DJM');
