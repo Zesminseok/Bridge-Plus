@@ -377,8 +377,8 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-model{font:500 10px var(--mn);color:var(--tx3);padding:2px 8px;border-radius:999px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.15)}
 .mx-offline{font:400 10px var(--sn);color:var(--tx4);margin-left:auto}
 .mx-body{flex:1;display:flex;gap:6px;min-height:0;overflow-x:auto;padding-bottom:4px}
-/* Channel strip — layout: header → waveform → knobs → CUE → fader+VU → label */
-.mx-ch{flex:1;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:6px 3px 5px;gap:3px;min-width:56px;max-width:110px;align-items:center;transition:border-color .3s,box-shadow .3s}
+/* Channel strip — layout: header → waveform → knobs → CUE → fader+VU → A/B */
+.mx-ch{flex:1;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:6px 3px 5px;gap:3px;min-width:48px;max-width:100px;align-items:center;transition:border-color .3s,box-shadow .3s}
 .mx-ch.on-air{border-color:rgba(255,80,80,.2);box-shadow:0 0 14px rgba(255,80,80,.06)}
 .mx-ch-hdr{display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 2px}
 .mx-ch-num{font:800 11px var(--lb);color:var(--tx)}
@@ -430,9 +430,18 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-ab-a{color:rgba(135,135,255,.7);border:1.5px solid rgba(135,135,255,.25);background:rgba(135,135,255,.06)}
 .mx-ab-b{color:rgba(255,140,60,.7);border:1.5px solid rgba(255,140,60,.25);background:rgba(255,140,60,.06)}
 .mx-ab-thru{color:var(--tx3);border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02)}
-/* Master section */
-.mx-master{width:62px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:6px 3px 5px;gap:3px;flex-shrink:0;align-items:center}
-.mx-master-lbl{font:800 9px var(--lb);color:var(--key);text-align:center;letter-spacing:.08em}
+/* Master section — DJM-V10 style */
+.mx-master{width:80px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:8px 4px 6px;gap:4px;flex-shrink:0;align-items:center}
+.mx-master-lbl{font:800 10px var(--lb);color:var(--tx);text-align:center;letter-spacing:.1em;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:4px;width:100%}
+.mx-master-sub{font:700 7px var(--mn);color:var(--tx3);letter-spacing:.06em;text-align:center}
+.mx-master-vu-dots{display:flex;gap:3px;justify-content:center;align-items:flex-end;height:28px;padding:0 2px}
+.mx-master-dot-col{display:flex;flex-direction:column;gap:1px;align-items:center;width:6px}
+.mx-master-dot{width:5px;height:3px;border-radius:1px;background:rgba(255,255,255,.06)}
+.mx-master-dot.lit-g{background:var(--grn);box-shadow:0 0 4px rgba(74,225,131,.3)}
+.mx-master-dot.lit-y{background:var(--ylw2);box-shadow:0 0 4px rgba(239,194,10,.3)}
+.mx-master-dot.lit-r{background:#ff6b6b;box-shadow:0 0 4px rgba(255,107,107,.3)}
+.mx-master-scale{display:flex;justify-content:space-between;width:100%;padding:0 4px}
+.mx-master-scale span{font:600 6px var(--mn);color:var(--tx4)}
 /* DJM packet log */
 .mx-log-toggle{font:600 8px var(--mn);color:var(--tx3);cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;padding:2px 0}
 .mx-log-toggle:hover{color:var(--tx2)}
@@ -3511,15 +3520,20 @@ function _mxBuildBody(){
       <span class="mx-ab mx-ab-thru" id="mxAb${i}">THRU</span>
     </div>`;
   }
-  // Master section
-  html+=`<div class="mx-master"><span class="mx-master-lbl">MASTER</span>
-    <div style="display:flex;gap:4px;flex:1;min-height:0;width:100%;justify-content:center">
-      <div class="mx-vu-col"><span class="mx-vu-lbl">L</span><div class="mx-vu-bar"><div class="mx-vu-fill" id="mxVuML"></div></div></div>
-      <div class="mx-vu-col"><span class="mx-vu-lbl">R</span><div class="mx-vu-bar"><div class="mx-vu-fill" id="mxVuMR"></div></div></div>
-    </div>
-    <div class="mx-knob" style="margin:2px 0">${_mxKnobSVG('mxMVol',KSZ)}<span class="mx-knob-lbl">M.VOL</span></div>
+  // Master section — DJM-V10 style: MASTER → LED VU dots → LEVEL knob → scale → BPM
+  const MSZ=38;
+  const vuDots=(side)=>{
+    let h='';for(let j=0;j<8;j++)h+=`<div class="mx-master-dot" id="mxMDot${side}${7-j}"></div>`;
+    return`<div class="mx-master-dot-col"><span class="mx-vu-lbl">${side}</span>${h}</div>`;
+  };
+  html+=`<div class="mx-master">
+    <span class="mx-master-lbl">MASTER</span>
+    <div class="mx-master-vu-dots">${vuDots('L')}${vuDots('R')}</div>
+    <span class="mx-master-sub">LEVEL</span>
+    <div class="mx-knob">${_mxKnobSVG('mxMVol',MSZ)}</div>
+    <div class="mx-master-scale"><span>-∞</span><span>0</span></div>
     <div class="mx-cue"><span class="mx-cue-btn" id="mxCueMaster">CUE</span></div>
-    <div style="text-align:center"><span class="mx-knob-lbl">BPM</span><div style="font:700 13px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums" id="mxMasterBpm">—</div></div>
+    <div style="text-align:center;margin-top:2px"><span class="mx-knob-lbl">BPM</span><div style="font:700 14px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums" id="mxMasterBpm">—</div></div>
   </div>`;
   body.innerHTML=html;
   _mxBuilt=true;
@@ -3603,15 +3617,23 @@ function updateMixer(){
   // Crossfader position
   const xfKnob=document.getElementById('mxXfKnob');
   if(xfKnob)xfKnob.style.left=(_djmXfader/255*100)+'%';
-  // Master VU
+  // Master VU — LED dot style (8 dots per side: 0-4=green, 5-6=amber, 7=red)
   const mL=(DECKS[0]?._djmMeter||0)/255*0.7+(DECKS[2]?._djmMeter||0)/255*0.3;
   const mR=(DECKS[1]?._djmMeter||0)/255*0.7+(DECKS[3]?._djmMeter||0)/255*0.3;
-  const vuML=document.getElementById('mxVuML'),vuMR=document.getElementById('mxVuMR');
-  if(vuML){const h=Math.min(100,mL*100);vuML.style.height=h+'%';vuML.style.background=h>90?'#ff6b6b':h>70?'var(--ylw2)':'var(--grn)';}
-  if(vuMR){const h=Math.min(100,mR*100);vuMR.style.height=h+'%';vuMR.style.background=h>90?'#ff6b6b':h>70?'var(--ylw2)':'var(--grn)';}
+  ['L','R'].forEach((side,si)=>{
+    const lv=si===0?mL:mR;
+    const lit=Math.round(lv*8);
+    for(let j=0;j<8;j++){
+      const dot=document.getElementById('mxMDot'+side+j);
+      if(!dot)continue;
+      const cls=j>=7?'lit-r':j>=5?'lit-y':'lit-g';
+      dot.className='mx-master-dot'+(j<lit?' '+cls:'');
+    }
+  });
   // Master volume knob (from DJM masterLvl, 0-255 → normalized -1..+1 as rotation)
+  const MSZ=38;
   const mVolNorm=(_djmXfader!==undefined)?(((_djmMasterLvl||0)/127.5)-1):0;
-  _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),KSZ);
+  _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),MSZ);
   // A/B crossfader assign badges (placeholder — data from DJM protocol TBD)
   for(let i=0;i<nCh;i++){
     const abEl=document.getElementById('mxAb'+i);
