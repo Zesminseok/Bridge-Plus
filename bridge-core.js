@@ -630,12 +630,19 @@ function parsePDJL(msg){
   }
   if(type===PDJL.DJM && msg.length>=0x80){
     // Type 0x39 — block layout: 4ch × 24B starting at 0x24
+    // Confirmed via live byte-diff logging (2026-04-17):
+    //   byte+11 = channel FADER (0=bottom/closed, 255=top/fully open) ← actual fader
+    //   byte+3  = EQ Mid knob (128=center, <128=cut, >128=boost)     ← was wrongly "fader"
+    //   byte+1  = EQ Hi knob (128=center)
+    //   byte+4  = EQ Lo knob (128=center)
     const CH_BASE=0x24, CH_STRIDE=0x18;
-    const ch=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+3; return off<msg.length?msg[off]:0; });
+    const ch=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
+    // onAir: from fader level (>0 = channel has signal flowing) — definitive on-air comes from type 0x03
     const onAir=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
     const eq=[0,1,2,3].map(c=>{
       const base=CH_BASE+c*CH_STRIDE;
-      return[ base<msg.length?msg[base]:0x40, base+1<msg.length?msg[base+1]:0x40, base+2<msg.length?msg[base+2]:0x40 ];
+      // [Hi(+1), Mid(+3), Lo(+4)] — all 0-255, center=128
+      return[ base+1<msg.length?msg[base+1]:0x80, base+3<msg.length?msg[base+3]:0x80, base+4<msg.length?msg[base+4]:0x80 ];
     });
     const chExtra=[0,1,2,3].map(c=>{
       const base=CH_BASE+c*CH_STRIDE; const extra={};
