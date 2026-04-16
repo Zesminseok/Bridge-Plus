@@ -3324,12 +3324,13 @@ function tick(){
       const fEl=document.getElementById('dvuF'+slot);
       if(fEl){const h=Math.round((d._faderSmooth||0)*100);fEl.style.height=h+'%';fEl.style.background='var(--pur)';}
       // EQ knobs: rotate indicator tick + draw arc based on DJM EQ values
-      // Range: 0x00(min=-135°) → 0x40(center=0°) → 0x7F(max=+135°), total sweep=270°
-      const eq=eqBands[slot]||[0x40,0x40,0x40];
+      // eq array: [0=TRIM, 1=HI, 2=MID, 3=LOW, 4=COLOR] — center=128 (0dB)
+      const eq=eqBands[slot]||[128,128,128,128,128];
       const _knobIDs=['deqH','deqM','deqL'];
+      const _eqIdx=[1,2,3]; // Hi=1, Mid=2, Lo=3
       _knobIDs.forEach((pfx,i)=>{
-        const raw=eq[i]??0x40;
-        const norm=(raw-0x40)/0x40; // -1 to +1
+        const raw=eq[_eqIdx[i]]??128;
+        const norm=(raw-128)/128; // 0-255, center=128
         const deg=norm*135;          // -135° to +135°
         const tickEl=document.getElementById(pfx+slot+'tick');
         if(tickEl)tickEl.setAttribute('transform',`rotate(${deg})`);
@@ -3629,25 +3630,25 @@ function _mxKnobSVG(id,sz){
   </svg>`;
 }
 function _mxKnobUpdate(id,norm,sz){
-  // norm: -1 to +1 (0=center)
+  // norm: -1 to +1 (0=center/12 o'clock)
   const r=sz/2-3,cx=sz/2,cy=sz/2;
-  const deg=norm*135; // -135 to +135
+  const deg=norm*135; // degrees CW from 12 o'clock (-135=7:30, 0=12:00, +135=4:30)
   const tickEl=document.getElementById(id+'tick');
   if(tickEl)tickEl.setAttribute('transform',`rotate(${deg},${cx},${cy})`);
   const arcEl=document.getElementById(id+'arc');
   if(!arcEl)return;
   const absDeg=Math.abs(deg);
   if(absDeg<2){arcEl.setAttribute('d','');return;}
-  const startA=norm>0?-135*Math.PI/180:((-135+deg)*Math.PI/180);
-  const endA=norm>0?((-135+deg)*Math.PI/180):(-135*Math.PI/180);
-  // Draw arc from center (top, -135°=7.5 o'clock) to current position
-  const ctrA=-135*Math.PI/180;
-  const curA=(-135+deg)*Math.PI/180;
-  const sA=norm>=0?ctrA:curA, eA=norm>=0?curA:ctrA;
-  const sx=cx+r*Math.cos(sA-Math.PI/2),sy=cy+r*Math.sin(sA-Math.PI/2);
-  const ex=cx+r*Math.cos(eA-Math.PI/2),ey=cy+r*Math.sin(eA-Math.PI/2);
-  const large=absDeg>180?1:0;
-  arcEl.setAttribute('d',`M${sx},${sy} A${r},${r} 0 ${large} 1 ${ex},${ey}`);
+  // Arc between 12 o'clock (center detent) and current tick position
+  // Angle θ from 12 o'clock (CW+): x = cx + r*sin(θ), y = cy - r*cos(θ)
+  const pt=(a)=>{const r2=a*Math.PI/180;return[cx+r*Math.sin(r2),cy-r*Math.cos(r2)];};
+  const [ox,oy]=pt(0);    // 12 o'clock
+  const [nx,ny]=pt(deg);  // current tick position
+  // Boost (norm≥0): sweep CW from 12 o'clock to current; Cut: sweep CW from current to 12
+  const d=norm>=0
+    ?`M${ox.toFixed(2)},${oy.toFixed(2)} A${r},${r} 0 0 1 ${nx.toFixed(2)},${ny.toFixed(2)}`
+    :`M${nx.toFixed(2)},${ny.toFixed(2)} A${r},${r} 0 0 1 ${ox.toFixed(2)},${oy.toFixed(2)}`;
+  arcEl.setAttribute('d',d);
   arcEl.setAttribute('stroke',norm>0.05?'rgba(135,135,255,.7)':norm<-0.05?'rgba(255,100,100,.6)':'rgba(200,200,200,.4)');
 }
 
