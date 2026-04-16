@@ -625,7 +625,7 @@ let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
 let _djmSpectrum=[[],[],[],[],[],[]];
 let eqBands=[[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40],[0x40,0x40,0x40]];
 let _djmXfader=127, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=0, _djmHasRealFaders=false;
-let _djmLog=[], _djmLogMax=80, _djmLogOpen=false, _djmCapturing=false;
+let _djmLog=[], _djmLogMax=80, _djmLogOpen=false, _djmCapturing=false, _djmAutoCapStarted=false;
 async function _toggleDjmCapture(){
   const btn=document.getElementById('mxCaptureBtn');
   if(_djmCapturing){
@@ -4375,6 +4375,11 @@ if(E){
     const _sepEl=document.getElementById('dtsep'+li);if(_sepEl)_sepEl.style.display=dk.ar?'':'none';
   });
   window.bridge.onDJMStatus?.(d=>{
+    // Auto-start packet capture on first DJM status — for protocol analysis
+    if(!_djmCapturing&&!_djmAutoCapStarted){
+      _djmAutoCapStarted=true;
+      _toggleDjmCapture().catch(()=>{});
+    }
     if(d.hasRealFaders!=null)_djmHasRealFaders=d.hasRealFaders;
     const f=d.faders||[];
     for(let i=0;i<f.length&&i<6;i++)faders[i]=f[i];

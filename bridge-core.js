@@ -550,6 +550,10 @@ function parsePDJL(msg){
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
     const barsRemain = msg.length>0xA5 ? msg.readUInt16BE(0xA4) : 0;
     const trackBeats = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
+    // Playback position fraction 0x48-0x4B (prolink-connect confirmed): uint32BE / 1000 = 0.0~1.0
+    // Available on CDJ-2000NXS2 and CDJ-3000 — gives absolute position for any track including BPM-less
+    const posFracRaw = msg.length>0x4B ? msg.readUInt32BE(0x48) : 0;
+    const positionFraction = (posFracRaw>0 && posFracRaw<=1000) ? posFracRaw/1000 : 0;
     // Flags byte F at 0x89 (Deep Symmetry spec):
     //   bit 6 = playing, bit 5 = master, bit 4 = sync, bit 3 = on-air
     const flags = msg.length>0x89 ? msg[0x89] : 0;
@@ -577,6 +581,7 @@ function parsePDJL(msg){
       beatNum, beatInBar, barsRemain, trackBeats,
       firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
       isOnAir, isMaster, isSync, isVinylMode,
+      positionFraction, // 0.0-1.0 absolute playback position (0x48 field)
     };
   }
   // ── DJM Mixer Status ──
@@ -1906,18 +1911,37 @@ class BridgeCore {
         const pp = this._precisePos?.[p.playerNum];
         const hasPrecise = pp && (Date.now()-pp.time)<500;
 
+        // Get track length from any available source
+        const prevLayerLen = this.layers[li]?.totalLength || 0;
+        const ppLen = this._precisePos?.[p.playerNum]?.trackLengthSec;
+        const totalLenMs = ppLen ? Math.round(ppLen*1000) : prevLayerLen;
+
         if(hasPrecise){
-          // CDJ-3000: direct ms from 0x0b packet
+          // CDJ-3000: direct ms from 0x0b packet (highest accuracy)
           timecodeMs = pp.playbackMs;
+        } else if(p.positionFraction > 0 && totalLenMs > 0 && (p.isPlaying || p.isLooping)){
+          // CDJ-2000NXS2 position fraction (0x48 field) — most accurate for non-BPM tracks
+          // Re-anchor every status packet: fraction × total length = absolute ms position
+          const fracMs = Math.round(p.positionFraction * totalLenMs);
+          if(!acc) this._tcAcc[li] = acc = { prevBn:0, elapsedMs:0, trackId:p.trackId, dbgCount:0, metaRequested:false };
+          // Only update anchor when fraction changes (avoid jitter from repeated same value)
+          if(!acc._fracMs || Math.abs(fracMs - acc._fracMs) > 50){
+            acc._fracMs = fracMs;
+            acc._fracAnchorTime = Date.now();
+            acc._anchorMs = fracMs;
+            acc._anchorTime = Date.now();
+          }
+          // Interpolate between fraction anchors using pitch multiplier
+          const elapsed = acc._fracAnchorTime ? Date.now() - acc._fracAnchorTime : 0;
+          timecodeMs = Math.round((acc._anchorMs||fracMs) + elapsed * p.pitchMultiplier);
         } else if(p.isPlaying || p.isLooping){
-          // NXS2 (or CDJ-3000 without recent 0x0b): beat-link style interpolation
+          // Fallback: beat-link style interpolation (NXS2 without track length, or track length unknown)
           if(!acc) this._tcAcc[li] = acc = { prevBn:0, elapsedMs:0, trackId:p.trackId, dbgCount:0, metaRequested:false };
           const bg = this._beatGrids?.[p.playerNum];
-          const beatNum = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0; // filter invalid
+          const beatNum = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
           const beatIdx = beatNum - 1;
 
           if(beatNum > 0 && acc.prevBn !== beatNum){
-            // New beat arrived — definitive position anchor
             if(bg && beatIdx >= 0 && beatIdx < bg.length){
               timecodeMs = bg[beatIdx].timeMs;
             } else {
@@ -1927,47 +1951,31 @@ class BridgeCore {
             acc._anchorMs = timecodeMs;
             acc._anchorTime = Date.now();
             acc.prevBn = beatNum;
-            if(acc.dbgCount < 20){
-              acc.dbgCount++;
-              try{console.log(`[TC] P${p.playerNum} beat=${beatNum} ms=${timecodeMs} bpm=${p.bpm} ${bg?'(grid)':'(calc)'}`);}catch(_){}
-            }
           } else if(acc._anchorMs != null){
-            // Between beats — interpolate from last anchor using pitch multiplier (beat-link method)
             const elapsed = Date.now() - acc._anchorTime;
             timecodeMs = Math.round(acc._anchorMs + elapsed * p.pitchMultiplier);
           } else if(beatNum > 0 && p.bpm > 0){
-            // First status with no anchor yet
             const baseBpm = p.bpmTrack || p.bpm;
             timecodeMs = baseBpm > 0 ? Math.round((beatNum - 1) * 60000 / baseBpm) : 0;
-            acc._anchorMs = timecodeMs;
-            acc._anchorTime = Date.now();
-            acc.prevBn = beatNum;
+            acc._anchorMs = timecodeMs; acc._anchorTime = Date.now(); acc.prevBn = beatNum;
           } else {
-            // No valid beat data (BPM-less tracks): use pitch multiplier wall-clock interpolation
+            // BPM-less + no track length: wall-clock from last known position
             if(p.pitchMultiplier > 0){
               if(acc._noBeatAnchorTime == null){
-                // Start wall-clock tracking from now
                 acc._noBeatAnchorTime = Date.now();
                 acc._noBeatAnchorMs = (this.layers[li]?.timecodeMs) || 0;
-                console.log(`[TC] P${p.playerNum} no-beat start: speed=${p.pitchMultiplier.toFixed(3)} anchor=${acc._noBeatAnchorMs}ms`);
               }
               const elapsed = Date.now() - acc._noBeatAnchorTime;
               timecodeMs = Math.round(acc._noBeatAnchorMs + elapsed * p.pitchMultiplier);
-              // Re-anchor periodically to prevent drift
-              if(elapsed > 2000){
-                acc._noBeatAnchorTime = Date.now();
-                acc._noBeatAnchorMs = timecodeMs;
-              }
+              if(elapsed > 2000){ acc._noBeatAnchorTime=Date.now(); acc._noBeatAnchorMs=timecodeMs; }
             } else {
-              const prevLayer = this.layers[li];
-              timecodeMs = prevLayer?.timecodeMs || 0;
+              timecodeMs = this.layers[li]?.timecodeMs || 0;
             }
           }
         } else {
           // Stopped/paused: preserve previous position
-          const prevLayer = this.layers[li];
-          if(prevLayer && prevLayer.timecodeMs > 0) timecodeMs = prevLayer.timecodeMs;
-          if(acc){ acc._playStart = 0; acc._anchorMs = null; acc._anchorTime = null; acc._noBeatAnchorTime = null; acc._noBeatAnchorMs = null; }
+          if(this.layers[li]?.timecodeMs > 0) timecodeMs = this.layers[li].timecodeMs;
+          if(acc){ acc._playStart=0; acc._anchorMs=null; acc._anchorTime=null; acc._noBeatAnchorTime=null; acc._noBeatAnchorMs=null; acc._fracMs=null; acc._fracAnchorTime=null; }
         }
 
         const prev = this.layers[li];
@@ -1976,16 +1984,12 @@ class BridgeCore {
         const beatChanged  = !prev || prev.beatPhase !== beatPhase;
 
         if(stateChanged || bpmChanged || trackChanged || beatChanged){
-          // totalLength: use precise position's trackLengthSec if available, else preserve previous
-          const ppLen = this._precisePos?.[p.playerNum]?.trackLengthSec;
-          const prevLen = prev?.totalLength || 0;
-          const totalLen = ppLen ? Math.round(ppLen*1000) : prevLen;
           this.updateLayer(li, {
             state:       p.state,
             timecodeMs,
             bpm:         p.bpm,
             trackId:     p.trackId,
-            totalLength: totalLen,
+            totalLength: totalLenMs || prev?.totalLength || 0,
             beatPhase,
             deviceName:  p.name,
             _pitch:      p.pitch || 0,
