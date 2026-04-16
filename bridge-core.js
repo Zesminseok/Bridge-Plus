@@ -715,8 +715,13 @@ function parsePDJL(msg){
         }
       }
 
+      // Bytes 0x29-0x2B: independent binary flags — captured analysis shows these
+      // differ from on-air state; likely headphone CUE selection per channel (CH2-CH4)
+      // (DJM-900NXS2 never sends type 0x39, so these are the only per-channel extras)
+      const cueCh=[0, msg.length>0x29?msg[0x29]:0, msg.length>0x2A?msg[0x2A]:0, msg.length>0x2B?msg[0x2B]:0];
       return{kind:'djm_onair',name:name2,
-        onAir:[msg[0x24]?1:0, msg[0x25]?1:0, msg[0x26]?1:0, msg[0x27]?1:0]};
+        onAir:[msg[0x24]?1:0, msg[0x25]?1:0, msg[0x26]?1:0, msg[0x27]?1:0],
+        cueCh};
     }
   }
   // Type 0x02 = Fader Start (DJM → CDJ, port 50001, ~50B)
