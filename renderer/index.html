@@ -4424,7 +4424,7 @@ if(E){
       _toggleDjmCapture().catch(()=>{});
     }
     if(d.hasRealFaders!=null)_djmHasRealFaders=d.hasRealFaders;
-    const f=d.faders||[];
+    const f=d.channel||d.faders||[];  // bridge sends d.channel (d.faders was a bug)
     for(let i=0;i<f.length&&i<6;i++)faders[i]=f[i];
     if(d.onAir){for(let i=0;i<d.onAir.length&&i<6;i++)onAirCh[i]=d.onAir[i]>127?1:0;}
     if(d.eq){for(let i=0;i<d.eq.length&&i<6;i++)eqBands[i]=d.eq[i];}

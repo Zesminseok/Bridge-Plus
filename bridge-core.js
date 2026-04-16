@@ -163,6 +163,19 @@ function detectBroadcastFor(bindAddr){
   return '255.255.255.255';
 }
 
+function hasPDJLMagic(msg){
+  if(!msg || msg.length < PDJL.MAGIC.length) return false;
+  for(let i=0;i<PDJL.MAGIC.length;i++) if(msg[i]!==PDJL.MAGIC[i]) return false;
+  return true;
+}
+
+function readPDJLNameField(msg){
+  if(!msg || msg.length <= 0x0B) return '';
+  const end = Math.min(0x1B, msg.length);
+  if(end <= 0x0B) return '';
+  return msg.slice(0x0B, end).toString('ascii').replace(/\0/g,'').trim();
+}
+
 // ─────────────────────────────────────────────
 // TCNet 패킷 빌더
 // ─────────────────────────────────────────────
@@ -518,9 +531,15 @@ function mkLowResArtwork(layerIdx, jpegBuf){
 // ─────────────────────────────────────────────
 function parsePDJL(msg){
   if(msg.length<11) return null;
-  for(let i=0;i<10;i++) if(msg[i]!==PDJL.MAGIC[i]) return null;
+  const hasMagic = hasPDJLMagic(msg);
   const type = msg[10];
-  const name = msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
+  const name = readPDJLNameField(msg);
+  const isKnownDjmShape =
+    (type===PDJL.DJM && msg.length>=0x80) ||
+    (type===PDJL.DJM2 && msg.length>=0x24) ||
+    (type===PDJL.DJM_ONAIR && msg.length>=0x2C) ||
+    (type===PDJL.DJM_METER && msg.length>=0x180);
+  if(!hasMagic && !isKnownDjmShape) return null;
 
   if(type===PDJL.CDJ && msg.length>=0x90){
     // Deep Symmetry: device number at 0x21 (NXS2), also at 0x24 (CDJ-3000)
@@ -876,6 +895,7 @@ class BridgeCore {
     this._virtualArt = {};  // slot -> Buffer (JPEG data for virtual deck artwork)
     this._dbSrv = null;  // virtual dbserver (TCP 12523 emulation)
     this._lastVdbTrackId = 0;  // last trackId from 0x2002 (cross-connection fallback)
+    this._djmSeenTypes = new Set();
   }
 
   _resolveBroadcast(){
@@ -1822,13 +1842,27 @@ class BridgeCore {
   }
 
   _onPDJL(msg, rinfo){
+    const hasMagic = hasPDJLMagic(msg);
+    const typeByte = msg.length>10 ? msg[10] : 0;
+    const nameField = readPDJLNameField(msg);
+    const djmIp = this.devices['djm']?.ip;
+    const isDjmSource = (djmIp && rinfo.address===djmIp) || nameField.includes('DJM');
+    if(isDjmSource){
+      const seenKey = `0x${typeByte.toString(16).padStart(2,'0')}`;
+      if(!this._djmSeenTypes.has(seenKey)){
+        this._djmSeenTypes.add(seenKey);
+        const hex = msg.slice(0, Math.min(32, msg.length)).toString('hex');
+        try{
+          console.log(`[DJM-RAW] type=${seenKey} len=${msg.length} src=${rinfo.address}:${rinfo.port} magic=${hasMagic?'yes':'no'} hex=${hex}`);
+        }catch(_){}
+      }
+    }
     // ── BROAD CAPTURE: record ALL packets from ALL sources BEFORE any parsing ──
     // This captures non-PDJL-magic packets too (unknown DJM protocols, etc.)
     if(this._djmCapture && this._djmCaptureStream){
       const ts=Date.now();
-      const hasMagic=msg.length>=11&&msg[0]===0x51&&msg[1]===0x73&&msg[2]===0x31&&msg[3]===0x2E&&msg[4]===0x30;
-      const type=msg.length>10?msg[10]:0;
-      const name=(hasMagic&&msg.length>0x1B)?msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim():'?';
+      const type=typeByte;
+      const name=(hasMagic&&nameField)?nameField:'?';
       const hex=msg.toString('hex');
       const magic=hasMagic?'pdjl':'RAW';
       try{this._djmCaptureStream.write(`${ts} ${rinfo.address}:${rinfo.port} ${magic} type=0x${type.toString(16).padStart(2,'0')} len=${msg.length} name=${name} ${hex}\n`);}catch(_){}
@@ -1846,7 +1880,6 @@ class BridgeCore {
     }
     // Non-PDJL packet (no magic) from known DJM IP — could be unknown mixer protocol
     if(!p){
-      const djmIp=this.devices['djm']?.ip;
       if(djmIp&&rinfo.address===djmIp){
         if(!this._nonPdjlDjm)this._nonPdjlDjm={};
         const nk=msg.length+'_'+msg[0];
