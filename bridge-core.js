@@ -1852,55 +1852,59 @@ class BridgeCore {
     const macBytes=pdjlMAC.split(':').map(h=>parseInt(h,16));
     const ipParts=pdjlIP.split('.').map(Number);
 
-    // Use port 50000 socket for keepalive broadcast (DJM requires keepalives from port 50000)
-    // STC reference: keepaliveSock is the port 50000 socket, not an ephemeral port.
-    // DJM only recognizes bridge identity from broadcasts originating on port 50000.
-    this._pdjlAnnSock = this._pdjlSockets?.[0] || null;
-    if(!this._pdjlAnnSock){
-      // Fallback: create new socket if port 50000 socket not available
-      this._pdjlAnnSock=dgram.createSocket({type:'udp4',reuseAddr:true});
-      this._pdjlAnnSock.on('error',()=>{});
-      this._pdjlAnnSock.bind(0, ()=>{try{this._pdjlAnnSock.setBroadcast(true);}catch(_){}});
-    }
+    // PDJL announce 소켓을 pdjlIP에 바인딩 → macOS가 올바른 인터페이스(en9)로 라우팅
+    // 0.0.0.0 바인딩 시 macOS가 169.254.255.255 broadcast를 REJECT하는 문제 해결
+    // reuseAddr:true → 수신 소켓(0.0.0.0:50000)과 공존 가능
+    // 비동기 바인딩: bind 완료 후 _bridgeJoin 실행
+    const pdjlBC = (() => {
+      for(const iface of getAllInterfaces())
+        if(iface.address===pdjlIP) return iface.broadcast;
+      return '255.255.255.255';
+    })();
+    console.log(`[PDJL] ann socket: bind ${pdjlIP}:50000 → bc=${pdjlBC}`);
 
-    // Bridge join sequence — DJM needs hello + claims before activating fader delivery
-    // STC reference: 2 hellos (0x0A, 37B) + 11 IP claims (0x02, 50B)
     const spoofPlayer=5;
-    const _unicastTargets=()=>{
-      const out=new Set();
-      try{ for(const dev of Object.values(this.devices||{})){ if(dev && dev.ip && dev.ip!=='127.0.0.1') out.add(dev.ip); } }catch(_){}
-      return [...out];
+
+    // helper: build 54B keepalive
+    const buildAnnPkt=()=>{
+      const p=Buffer.alloc(54);
+      PDJL.MAGIC.copy(p,0);
+      p[0x0A]=0x06; p[0x0B]=0x00;
+      Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
+      p[0x20]=0x01; p[0x21]=0x01; p[0x22]=0x00; p[0x23]=0x36;
+      p[0x24]=0x9E;
+      p[0x25]=0x00;
+      for(let i=0;i<6;i++) p[0x26+i]=macBytes[i]||0;
+      for(let i=0;i<4;i++) p[0x2C+i]=ipParts[i];
+      p[0x30]=0x07; p[0x34]=0x05; p[0x35]=0x20;
+      return p;
     };
-    // CRITICAL: claim 패킷에 박히는 IP는 수신자(DJM)가 unicast로 응답할 수 있어야 함.
-    // pdjlIP가 WiFi(192.168.x.x)이고 DJM이 link-local(169.254.x.x)이면,
-    // DJM이 192.168.x.x로 0x39를 보내도 도달 불가능 → 0x39 수신 실패.
-    // 해결: 대상이 169.254.x.x이면 우리의 169.254.x.x 인터페이스 IP 사용.
-    const _claimIPForTarget=(targetIP)=>{
-      if(targetIP&&targetIP.startsWith('169.254.')){
-        for(const iface of getAllInterfaces()){
-          if(!iface.internal&&iface.address.startsWith('169.254.'))
-            return{ip:iface.address,mac:iface.mac||pdjlMAC};
-        }
-      }
-      return{ip:pdjlIP,mac:pdjlMAC};
+
+    const sendAnn=()=>{
+      if(!this._pdjlAnnSock) return;
+      const pkt=buildAnnPkt();
+      // PDJL 인터페이스 subnet broadcast만 사용 (다른 인터페이스로 PDJL 패킷 누출 방지)
+      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,pdjlBC);}catch(_){}
     };
+
     const _bridgeJoin=()=>{
-      // Hello (0x0A) — 37B
+      if(!this._pdjlAnnSock) return;
+      // Hello (0x0A) — 37B × 2
       for(let h=0;h<2;h++){
         setTimeout(()=>{
+          if(!this._pdjlAnnSock) return;
           const p=Buffer.alloc(37);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
           Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
-          for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
-          for(const ip of _unicastTargets()){try{this._pdjlAnnSock.send(p,0,p.length,50000,ip);}catch(_){}}
-          console.log(`[PDJL] bridge hello #${h+1} (pdjlIP=${pdjlIP})`);
+          try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
+          console.log(`[PDJL] bridge hello #${h+1} ip=${pdjlIP} bc=${pdjlBC}`);
         }, h*300);
       }
       // Claim (0x02) — 50B × 11
       for(let n=1;n<=11;n++){
         setTimeout(()=>{
-          // Broadcast claim — use pdjlIP
+          if(!this._pdjlAnnSock) return;
           const p=Buffer.alloc(50);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x02; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x32;
@@ -1909,77 +1913,29 @@ class BridgeCore {
           for(let i=0;i<6;i++) p[0x28+i]=macBytes[i]||0;
           p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
           p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
-          for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
-          // Unicast claim — embed IP reachable from that specific device
-          for(const targetIP of _unicastTargets()){
-            const{ip:cIP,mac:cMAC}=_claimIPForTarget(targetIP);
-            const pp=Buffer.from(p); // copy
-            const cParts=cIP.split('.').map(Number);
-            const cMacB=cMAC.split(':').map(h=>parseInt(h,16));
-            for(let i=0;i<4;i++) pp[0x24+i]=cParts[i];
-            for(let i=0;i<6;i++) pp[0x28+i]=cMacB[i]||0;
-            pp[0x2E]=(cMacB[5]||0)^(n*3+0xFB);
-            try{this._pdjlAnnSock.send(pp,0,pp.length,50000,targetIP);}catch(_){}
-            if(n===1)console.log(`[PDJL] unicast claim→${targetIP} claimIP=${cIP}`);
-          }
+          try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
         }, 600+n*500);
       }
     };
-    _bridgeJoin();
-    // DJM/CDJ가 뒤늦게 발견되면 다시 한 번 bridgeJoin 실행 (30초 뒤)
-    setTimeout(()=>{ if(Object.keys(this.devices||{}).length>0) _bridgeJoin(); }, 30000);
-    this._bridgeJoinFn = _bridgeJoin;
 
-    // helper: build 54B keepalive with specified IP/MAC
-    const buildAnnPkt=(annIP, annMAC)=>{
-      const p=Buffer.alloc(54);
-      PDJL.MAGIC.copy(p,0);
-      p[0x0A]=0x06; p[0x0B]=0x00;
-      Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
-      p[0x20]=0x01; p[0x21]=0x01; p[0x22]=0x00; p[0x23]=0x36;
-      p[0x24]=0x9E; // lighting/bridge device type
-      p[0x25]=0x00;
-      const mb=annMAC.split(':').map(h=>parseInt(h,16));
-      for(let i=0;i<6;i++) p[0x26+i]=mb[i]||0;
-      const ip=annIP.split('.').map(Number);
-      for(let i=0;i<4;i++) p[0x2C+i]=ip[i];
-      p[0x30]=0x07; p[0x34]=0x05; p[0x35]=0x20; // orig-bridge pcap values
-      return p;
-    };
-
-    const sendAnn=()=>{
-      // 54B bridge keepalive (0x06) — per-interface so each subnet sees correct source IP.
-      // CRITICAL for DJM on link-local 169.254.x.x: payload IP must be reachable from DJM.
-      // If we advertise WiFi IP (192.168.0.x), DJM cannot route type 0x39 unicast back to us.
-      // Solution: send separate keepalive per interface with that interface's own IP in payload.
-      const seenBC=new Set();
-      for(const iface of getAllInterfaces()){
-        if(iface.internal || !iface.broadcast || iface.broadcast==='127.255.255.255') continue;
-        if(seenBC.has(iface.broadcast)) continue;
-        seenBC.add(iface.broadcast);
-        const pkt=buildAnnPkt(iface.address, iface.mac||pdjlMAC);
-        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,iface.broadcast);}catch(_){}
-      }
-      // also send to 255.255.255.255 with primary IP (for nodes not in allBCs)
-      if(!seenBC.has('255.255.255.255')){
-        const pkt=buildAnnPkt(pdjlIP, pdjlMAC);
-        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,'255.255.255.255');}catch(_){}
-      }
-      // macOS 169.254.255.255 broadcast REJECT 우회: 알려진 장치 IP로 직접 unicast
-      // 대상 IP 서브넷에 맞는 로컬 IP로 패킷 구성 (DJM이 응답 IP 추적에 사용)
-      for(const ip of _unicastTargets()){
-        const{ip:aIP,mac:aMAC}=_claimIPForTarget(ip);
-        const pkt=buildAnnPkt(aIP,aMAC);
-        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,ip);}catch(_){}
-      }
-    };
+    // announce 소켓 바인딩 후 join 시작
+    const annSock = dgram.createSocket({type:'udp4', reuseAddr:true});
+    annSock.on('error', e=>console.warn(`[PDJL] annSock err: ${e.message}`));
+    annSock.bind(50000, pdjlIP, ()=>{
+      try{annSock.setBroadcast(true);}catch(_){}
+      this._pdjlAnnSock = annSock;
+      _bridgeJoin();
+      setTimeout(()=>{ if(Object.keys(this.devices||{}).length>0) _bridgeJoin(); }, 30000);
+      this._bridgeJoinFn = _bridgeJoin;
+      console.log(`[PDJL] annSock ready: ${pdjlIP}:50000 → bc=${pdjlBC}`);
+    });
 
     // 95B dbserver keepalive — UNICAST to CDJs only (not broadcast!)
     // STC: CDJ-3000 validates "PIONEER DJ CORP" / "PRODJLINK BRIDGE" strings
     // CRITICAL: DJM must NOT see this packet (player=5 conflicts with bridge player=0xF9)
     this._dbKaSock = dgram.createSocket({type:'udp4',reuseAddr:true});
     this._dbKaSock.on('error',()=>{});
-    this._dbKaSock.bind(0,()=>{try{this._dbKaSock.setBroadcast(true);}catch(_){}});
+    this._dbKaSock.bind(0, pdjlIP, ()=>{});
     const _dbKeepaliveSocket = this._dbKaSock;
     const sendDbKeepalive=()=>{
       const pkt=Buffer.alloc(95);
