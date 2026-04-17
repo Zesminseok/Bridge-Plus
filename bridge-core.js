@@ -543,12 +543,9 @@ function parsePDJL(msg){
   if(!hasMagic && !isKnownDjmShape) return null;
 
   if(type===PDJL.CDJ && msg.length>=0x90){
-    // CDJ-3000 / CDJ-2000NXS2(미디어 있음): 0x1F=0x01, player# at 0x24
-    // CDJ-2000NXS2(미디어 없음/대기): 0x1F=0x00, layout +1 shift → player# at 0x25
-    // 0x21은 device count 필드로 1~6 범위와 겹쳐 오판 가능 — 최후 폴백만 사용
-    let pNum = msg[0x24];
-    if(pNum<1||pNum>6) pNum = msg[0x25];
-    if(pNum<1||pNum>6) pNum = msg[0x21];
+    // Deep Symmetry: device number at 0x21 (NXS2), also at 0x24 (CDJ-3000)
+    // Try 0x21 first (works for both NXS2 and CDJ-3000), fallback to 0x24
+    let pNum = msg[0x21]; if(pNum<1||pNum>6) pNum = msg[0x24];
     if(pNum<1||pNum>6) return null;
     const p1   = msg[0x7B];
     const state= P1_TO_STATE[p1] ?? STATE.IDLE;
