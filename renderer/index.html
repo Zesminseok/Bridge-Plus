@@ -4448,7 +4448,8 @@ if(E){
     if(d.title)dk.tn=d.title;
     if(d.artist)dk.ar=d.artist;
     if(d.key)dk.key=_toCamelot(d.key);
-    if(d.duration>0)dk.dur=d.duration*1000; // seconds→ms
+    if(d.durationMs>0)dk.dur=d.durationMs; // precise ms (beat-based if available)
+    else if(d.duration>0)dk.dur=d.duration*1000;
     if(d.bpm>0){dk.baseBpm=d.bpm;dk._metaBaseBpm=true;} // metadata BPM is authoritative
     if(d.album)dk.album=d.album;
     console.log(`[UI] P${d.playerNum} meta: "${d.title}" by "${d.artist}"`);

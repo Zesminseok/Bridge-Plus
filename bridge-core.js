@@ -3131,9 +3131,11 @@ class BridgeCore {
         console.log(`[DBSRV] P${playerNum} stored metadata → layer ${li}: "${meta.title}" / "${meta.artist}"`);
       }
 
-      // Emit metadata
+      // Emit metadata — include durationMs (precise ms) so renderer can skip integer*1000 conversion
       if(meta.title||meta.artist){
-        this.onTrackMetadata?.(playerNum, meta);
+        const layerLen = (li >= 0 && li < 8 && this.layers[li]?.totalLength) || 0;
+        const durationMs = layerLen > 0 ? layerLen : (meta.duration > 0 ? meta.duration * 1000 : 0);
+        this.onTrackMetadata?.(playerNum, {...meta, durationMs});
       }
 
       // Teardown metadata connection
