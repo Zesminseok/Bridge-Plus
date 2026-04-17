@@ -2155,6 +2155,12 @@ class BridgeCore {
               const elapsed = Date.now() - acc._noBeatAnchorTime;
               timecodeMs = Math.round(acc._noBeatAnchorMs + elapsed * p.pitchMultiplier);
               if(elapsed > 2000){ acc._noBeatAnchorTime=Date.now(); acc._noBeatAnchorMs=timecodeMs; }
+              // Loop detection: if timecode exceeds known track length, wrap back to 0
+              if(totalLenMs > 0 && timecodeMs >= totalLenMs){
+                timecodeMs = timecodeMs % totalLenMs;
+                acc._noBeatAnchorTime = Date.now();
+                acc._noBeatAnchorMs = timecodeMs;
+              }
             } else {
               timecodeMs = this.layers[li]?.timecodeMs || 0;
             }
