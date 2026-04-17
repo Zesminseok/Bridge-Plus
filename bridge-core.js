@@ -630,48 +630,55 @@ function parsePDJL(msg){
     return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,boothLvl:0,hpLevel,hpCueCh,chExtra:[]};
   }
   if(type===PDJL.DJM && msg.length>=0x80){
-    // Type 0x39 — block layout: 4ch × 24B starting at 0x24
-    // Confirmed via live byte-diff logging (2026-04-17):
-    //   byte+11 = channel FADER (0=bottom/closed, 255=top/fully open) ← actual fader
-    //   byte+3  = EQ Mid knob (128=center, <128=cut, >128=boost)     ← was wrongly "fader"
-    //   byte+1  = EQ Hi knob (128=center)
-    //   byte+4  = EQ Lo knob (128=center)
+    // Type 0x39 — 248-byte layout (DJM-900NXS2)
+    // CH_BASE=0x24, CH_STRIDE=0x18 (24B/ch), but note crossfader at abs 0x47 sits
+    // inside the CH2 block slot — DJM repurposes that byte for global xfader.
+    // Per-channel offsets (PCAP CONFIRMED 2026-04-17 full_4cdj_djm.pcapng):
+    //   +1  = TRIM (128=0dB center)
+    //   +3  = HI EQ (128=center)
+    //   +4  = MID EQ (128=center)
+    //   +6  = LOW EQ (128=center)
+    //   +7  = COLOR/Filter knob (128=center)     ⭐ was wrongly mapped to +2
+    //   +9  = CUE button (0/1)
+    //   +11 = channel FADER (0=closed)
+    //   +12 = X-Fader Assign (0=A, 1=Thru, 2=B)
     const CH_BASE=0x24, CH_STRIDE=0x18;
     const ch=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
-    // onAir: from fader level (>0 = channel has signal flowing) — definitive on-air comes from type 0x03
     const onAir=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
+    const cueBtn=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+9; return off<msg.length?msg[off]:0; });
+    const xfAssign=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+12; return off<msg.length?msg[off]:0; });
     const eq=[0,1,2,3].map(c=>{
       const base=CH_BASE+c*CH_STRIDE;
-      // Layout — updated 2026-04-17 (physical channel strip order: TRIM→COLOR→HI→MID→LOW):
-      //   byte+1 = TRIM (gain knob, 128=0dB center)
-      //   byte+2 = COLOR/Filter knob (128=center/off; 0=max CCW, 255=max CW)
-      //   byte+3 = HI EQ  (128=center, 0=kill, 255=boost)
-      //   byte+4 = MID EQ (128=center, 0=kill, 255=boost)
-      //   byte+6 = LOW EQ (128=center, 0=kill, 255=boost)
       // Order: [TRIM, HI, MID, LOW, COLOR] — matches profile ids=['T','H','M','L','C']
       return[
         base+1<msg.length?msg[base+1]:0x80,  // TRIM (index 0)
         base+3<msg.length?msg[base+3]:0x80,  // HI EQ (index 1)
         base+4<msg.length?msg[base+4]:0x80,  // MID EQ (index 2)
         base+6<msg.length?msg[base+6]:0x80,  // LOW EQ (index 3)
-        base+2<msg.length?msg[base+2]:0x80,  // COLOR / Filter knob (index 4)
+        base+7<msg.length?msg[base+7]:0x80,  // COLOR / Filter knob (index 4)  ⭐ was +2
       ];
     });
     const chExtra=[0,1,2,3].map(c=>{
-      const base=CH_BASE+c*CH_STRIDE; const extra={};
+      const base=CH_BASE+c*CH_STRIDE; const extra={cue:cueBtn[c], xfa:xfAssign[c]};
       for(let b=2;b<=23;b++){if(base+b<msg.length)extra['b'+b]=msg[base+b];}
       return extra;
     });
-    // Note: byte+6 (Color/Filter knob) is included as eq[3] in the eq array above
     const gBase=CH_BASE+4*CH_STRIDE; // 0x84
-    // Corrected offsets confirmed via pcap analysis (2026-04-17):
-    //   global+59 = master output level (131 ≈ 0dB in capture)
-    //   global+71 = headphone volume (variable 1~155)
-    //   global+75 = crossfader position (128 = center)
-    //   global+94 = booth output level (161 in capture)
-    const xfader=(gBase+75<msg.length)?msg[gBase+75]:128;
-    const masterLvl=(gBase+59<msg.length)?msg[gBase+59]:128;
-    const boothLvl=(gBase+94<msg.length)?msg[gBase+94]:128;
+    // Global/master offsets (PCAP CONFIRMED 2026-04-17):
+    //   abs 0x47    = Crossfader (0-255, 0=A, 128=center, 255=B)  ⭐ sits in CH2 slot
+    //   gBase+48 (0xb4) = Master Volume
+    //   gBase+49 (0xb5) = EQ Curve (0=ISOLATOR, 1=STANDARD, 2=HOT EQ)
+    //   gBase+50 (0xb6) = Fader Curve (0/1/2)
+    //   gBase+51 (0xb7) = Master CUE level
+    //   gBase+53 (0xb9) = Booth Monitor on/off (0/1)
+    //   gBase+59 (0xbf) = Master Balance (128=center)
+    const xfader=(0x47<msg.length)?msg[0x47]:128;
+    const masterLvl=(gBase+48<msg.length)?msg[gBase+48]:128;
+    const eqCurve=(gBase+49<msg.length)?msg[gBase+49]:0;
+    const faderCurve=(gBase+50<msg.length)?msg[gBase+50]:0;
+    const masterCue=(gBase+51<msg.length)?msg[gBase+51]:0;
+    const boothLvl=(gBase+53<msg.length)?msg[gBase+53]:0;
+    const masterBalance=(gBase+59<msg.length)?msg[gBase+59]:128;
     const hpLevel=(gBase+71<msg.length)?msg[gBase+71]:0;
     const hpCueCh=(gBase+4<msg.length)?msg[gBase+4]:0;
     // Debug hex dump: first receive + extended global view
@@ -683,9 +690,10 @@ function parsePDJL(msg){
     }
     // Full packet byte-diff tracker: log every byte that changes (for discovering unknown fields)
     const _knownOffsets=new Set([
-      // ch1-4 known bytes: +1=TRIM,+2=COLOR,+3=HI,+4=MID,+6=LOW,+11=FADER
-      ...[0,1,2,3].flatMap(c=>[0,1,2,3,4,6,11].map(b=>CH_BASE+c*CH_STRIDE+b)),
-      gBase+4, gBase+59, gBase+71, gBase+75, gBase+94
+      // ch1-4 known bytes: +1=TRIM,+3=HI,+4=MID,+6=LOW,+7=COLOR,+9=CUE,+11=FADER,+12=XFA
+      ...[0,1,2,3].flatMap(c=>[0,1,3,4,6,7,9,11,12].map(b=>CH_BASE+c*CH_STRIDE+b)),
+      0x21, 0x47,               // VU, Crossfader
+      gBase+4, gBase+48, gBase+49, gBase+50, gBase+51, gBase+53, gBase+59, gBase+71
     ]);
     if(!parsePDJL._djm39Prev){
       parsePDJL._djm39Prev=new Uint8Array(msg);
@@ -694,16 +702,17 @@ function parsePDJL(msg){
       const diffs=[];
       for(let i=0;i<Math.min(msg.length,248);i++){
         if(msg[i]!==prev[i]){
-          // calculate label
           let lbl='';
           const relG=i-gBase;
-          if(i>=CH_BASE&&i<gBase){
+          if(i===0x47){ lbl='XFADER'; }
+          else if(i===0x21){ lbl='VU'; }
+          else if(i>=CH_BASE&&i<gBase){
             const c=Math.floor((i-CH_BASE)/CH_STRIDE);
             const b=(i-CH_BASE)%CH_STRIDE;
-            const BNAMES={0:'status',1:'TRIM',2:'COLOR',3:'HI',4:'MID',6:'LOW',11:'FADER'};
+            const BNAMES={0:'status',1:'TRIM',3:'HI',4:'MID',6:'LOW',7:'COLOR',9:'CUE',11:'FADER',12:'XFA'};
             lbl=`CH${c+1}+${b}${BNAMES[b]?'('+BNAMES[b]+')':''}`;
           } else if(relG>=0){
-            const GNAMES={4:'hpCueCh',59:'masterLvl',71:'hpLevel',75:'xfader',94:'boothLvl'};
+            const GNAMES={4:'hpCueCh',48:'masterLvl',49:'eqCurve',50:'faderCurve',51:'masterCue',53:'boothOn',59:'masterBal',71:'hpLevel'};
             lbl=`G+${relG}${GNAMES[relG]?'('+GNAMES[relG]+')':''}`;
           } else {
             lbl=`@0x${i.toString(16)}`;
@@ -719,9 +728,9 @@ function parsePDJL(msg){
     }
     if(!parsePDJL._lastDjm||parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
       parsePDJL._lastDjm=ch.slice();
-      try{console.log(`[DJM-0x39] faders=[${ch}] eq(T/Hi/Mid/Lo/Clr)=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl} booth=${boothLvl} hp=${hpLevel}`);}catch(_){}
+      try{console.log(`[DJM-0x39] faders=[${ch}] eq(T/Hi/Mid/Lo/Clr)=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl} bal=${masterBalance} mCue=${masterCue} booth=${boothLvl} eqCv=${eqCurve} fCv=${faderCurve} hp=${hpLevel}`);}catch(_){}
     }
-    return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,boothLvl,hpLevel,hpCueCh,chExtra};
+    return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,masterBalance,masterCue,eqCurve,faderCurve,boothLvl,hpLevel,hpCueCh,cueBtn,xfAssign,chExtra};
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
   // 15-band spectrum per channel: base 0xA4, stride 0x3C, uint16BE per band
@@ -751,9 +760,10 @@ function parsePDJL(msg){
   if(type===PDJL.DJM_ONAIR && msg.length>=0x2C){
     const name2 = msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
     if(name2.includes('DJM')){
-      // On-air flags at consecutive bytes: CH1=0x24, CH2=0x25, CH3=0x26, CH4=0x27
-      // Confirmed via beat-link source: data[0x23 + channel] for channel 1-4
-      // DJM-V10 (6ch): additionally CH5=0x2D, CH6=0x2E (packet length 0x35)
+      // 각 채널은 2바이트 페어로 상태 표현 (pcap 확정):
+      //   CH1=(0x24,0x25)  CH2=(0x26,0x27)  CH3=(0x28,0x29)  CH4=(0x2A,0x2B)
+      //   각 페어 내 두 바이트는 X-Fader A/B assign 또는 단독 on-air 비트 (DJM 내부 상태)
+      //   페어 OR로 "채널 활성" 판정 → 단일 바이트만 읽으면 CH4 깜빡임 발생(이전 버그)
 
       // ── FADER HUNT: log ALL bytes in packet, track any variation ──
       // We're looking for analog fader values (0-255 range) beyond the binary on-air flags
@@ -777,12 +787,11 @@ function parsePDJL(msg){
         }
       }
 
-      // Bytes 0x29-0x2B: independent binary flags — captured analysis shows these
-      // differ from on-air state; likely headphone CUE selection per channel (CH2-CH4)
-      // (DJM-900NXS2 never sends type 0x39, so these are the only per-channel extras)
-      const cueCh=[0, msg.length>0x29?msg[0x29]:0, msg.length>0x2A?msg[0x2A]:0, msg.length>0x2B?msg[0x2B]:0];
+      // CUE info comes from 0x39 packet (preferred) or TCNet MixerData — not from 0x03
+      const cueCh=[0,0,0,0];
+      const onA=(a,b)=> (msg[a]||msg[b]) ? 1 : 0;
       return{kind:'djm_onair',name:name2,
-        onAir:[msg[0x24]?1:0, msg[0x25]?1:0, msg[0x26]?1:0, msg[0x27]?1:0],
+        onAir:[onA(0x24,0x25), onA(0x26,0x27), onA(0x28,0x29), onA(0x2A,0x2B)],
         cueCh};
     }
   }
@@ -1857,34 +1866,69 @@ class BridgeCore {
     // Bridge join sequence — DJM needs hello + claims before activating fader delivery
     // STC reference: 2 hellos (0x0A, 37B) + 11 IP claims (0x02, 50B)
     const spoofPlayer=5;
+    const _unicastTargets=()=>{
+      const out=new Set();
+      try{ for(const dev of Object.values(this.devices||{})){ if(dev && dev.ip && dev.ip!=='127.0.0.1') out.add(dev.ip); } }catch(_){}
+      return [...out];
+    };
+    // CRITICAL: claim 패킷에 박히는 IP는 수신자(DJM)가 unicast로 응답할 수 있어야 함.
+    // pdjlIP가 WiFi(192.168.x.x)이고 DJM이 link-local(169.254.x.x)이면,
+    // DJM이 192.168.x.x로 0x39를 보내도 도달 불가능 → 0x39 수신 실패.
+    // 해결: 대상이 169.254.x.x이면 우리의 169.254.x.x 인터페이스 IP 사용.
+    const _claimIPForTarget=(targetIP)=>{
+      if(targetIP&&targetIP.startsWith('169.254.')){
+        for(const iface of getAllInterfaces()){
+          if(!iface.internal&&iface.address.startsWith('169.254.'))
+            return{ip:iface.address,mac:iface.mac||pdjlMAC};
+        }
+      }
+      return{ip:pdjlIP,mac:pdjlMAC};
+    };
     const _bridgeJoin=()=>{
-      // Hello (0x0A) — 37B broadcast × 2
+      // Hello (0x0A) — 37B
       for(let h=0;h<2;h++){
         setTimeout(()=>{
           const p=Buffer.alloc(37);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
-          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15); // pcap: DJM requires TCS-SHOWKONTROL in hello too
+          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
           for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
-          console.log(`[PDJL] bridge hello #${h+1}`);
+          for(const ip of _unicastTargets()){try{this._pdjlAnnSock.send(p,0,p.length,50000,ip);}catch(_){}}
+          console.log(`[PDJL] bridge hello #${h+1} (pdjlIP=${pdjlIP})`);
         }, h*300);
       }
-      // Claim (0x02) — 50B broadcast × 11
+      // Claim (0x02) — 50B × 11
       for(let n=1;n<=11;n++){
         setTimeout(()=>{
+          // Broadcast claim — use pdjlIP
           const p=Buffer.alloc(50);
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x02; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x32;
-          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15); // pcap: DJM requires TCS-SHOWKONTROL in claim too
+          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
           for(let i=0;i<4;i++) p[0x24+i]=ipParts[i];
           for(let i=0;i<6;i++) p[0x28+i]=macBytes[i]||0;
           p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
           p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
           for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
+          // Unicast claim — embed IP reachable from that specific device
+          for(const targetIP of _unicastTargets()){
+            const{ip:cIP,mac:cMAC}=_claimIPForTarget(targetIP);
+            const pp=Buffer.from(p); // copy
+            const cParts=cIP.split('.').map(Number);
+            const cMacB=cMAC.split(':').map(h=>parseInt(h,16));
+            for(let i=0;i<4;i++) pp[0x24+i]=cParts[i];
+            for(let i=0;i<6;i++) pp[0x28+i]=cMacB[i]||0;
+            pp[0x2E]=(cMacB[5]||0)^(n*3+0xFB);
+            try{this._pdjlAnnSock.send(pp,0,pp.length,50000,targetIP);}catch(_){}
+            if(n===1)console.log(`[PDJL] unicast claim→${targetIP} claimIP=${cIP}`);
+          }
         }, 600+n*500);
       }
     };
     _bridgeJoin();
+    // DJM/CDJ가 뒤늦게 발견되면 다시 한 번 bridgeJoin 실행 (30초 뒤)
+    setTimeout(()=>{ if(Object.keys(this.devices||{}).length>0) _bridgeJoin(); }, 30000);
+    this._bridgeJoinFn = _bridgeJoin;
 
     // helper: build 54B keepalive with specified IP/MAC
     const buildAnnPkt=(annIP, annMAC)=>{
@@ -1920,6 +1964,13 @@ class BridgeCore {
       if(!seenBC.has('255.255.255.255')){
         const pkt=buildAnnPkt(pdjlIP, pdjlMAC);
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,'255.255.255.255');}catch(_){}
+      }
+      // macOS 169.254.255.255 broadcast REJECT 우회: 알려진 장치 IP로 직접 unicast
+      // 대상 IP 서브넷에 맞는 로컬 IP로 패킷 구성 (DJM이 응답 IP 추적에 사용)
+      for(const ip of _unicastTargets()){
+        const{ip:aIP,mac:aMAC}=_claimIPForTarget(ip);
+        const pkt=buildAnnPkt(aIP,aMAC);
+        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,ip);}catch(_){}
       }
     };
 
@@ -2182,10 +2233,13 @@ class BridgeCore {
       this._hasRealFaders=true;
       this.faders=p.channel;
       if(p.onAir) this.onAir = p.onAir.map(v => v > 127 ? 1 : 0);
-      if(!this.devices['djm']){
-        this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
+      // rekordbox도 0x29(djm)를 broadcast함 → name에 'DJM' 들어간 실제 믹서만 등록
+      const isRealDjm = p.name && p.name.includes('DJM');
+      if(isRealDjm && !this.devices['djm']){
+        this.devices['djm']={type:'DJM',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
-      } else this.devices['djm'].lastSeen=Date.now();
+        if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
+      } else if(isRealDjm){ this.devices['djm'].lastSeen=Date.now(); }
       // Forward raw hex dump for first 128 bytes for protocol debugging in UI log panel
       let rawHex=null;
       if(msg.length>0x20){
@@ -2198,10 +2252,18 @@ class BridgeCore {
     }
     // DJM Channels-On-Air (type 0x03 on port 50001)
     if(p.kind==='djm_onair'){
-      this.onAir = p.onAir;
-      // on-air 값은 페이더로 쓰지 않음 — 아이콘 표시 전용
-      // fader는 type 0x39 (real analog) 도착 시에만 업데이트
-      this.onDJMStatus?.({channel:this.faders, onAir:p.onAir, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:this._hasRealFaders});
+      // On-air 깜빡임 방지: OR-hold (한번 on이면 500ms 유지)
+      const now=Date.now();
+      if(!this._onAirLastOn) this._onAirLastOn=[0,0,0,0];
+      for(let i=0;i<4;i++) if(p.onAir[i]) this._onAirLastOn[i]=now;
+      const held=[0,1,2,3].map(i=> (now-this._onAirLastOn[i]<500)?1:0 );
+      const prev=this.onAir||[0,0,0,0];
+      const changed = prev[0]!==held[0] || prev[1]!==held[1] ||
+                      prev[2]!==held[2] || prev[3]!==held[3];
+      if(changed){
+        this.onAir = held;
+        this.onDJMStatus?.({channel:this.faders, onAir:held, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:this._hasRealFaders});
+      }
       if(!this.devices['djm']){
         // 첫 DJM 감지 시 기본 페이더값 255 초기화 (type 0x39 도착 전 TCNet에 0 보내지 않도록)
         if(!this._hasRealFaders) this.faders=[255,255,255,255];
@@ -2209,6 +2271,9 @@ class BridgeCore {
         this.onDeviceList?.(this.devices);
         // Probe DJM TCP ports when first discovered — fader data might be on TCP 50003
         this._probeDjmTCP(rinfo.address);
+        // CRITICAL: DJM 처음 발견 시 hello+claim을 즉시 재전송 (unicast 포함)
+        // macOS broadcast 라우팅이 REJECT된 경우에도 DJM이 bridge 등록하도록 강제
+        if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
       } else this.devices['djm'].lastSeen=Date.now();
     }
     // Beat packet (0x28, port 50001) — beat timing from CDJ
@@ -2275,6 +2340,20 @@ class BridgeCore {
       const pn = p.playerNum;
       // Skip self-announce (bridge device) — double-check name and IP
       if(p.name==='BRIDGE+'||p.name==='TCS-SHOWKONTROL'||rinfo.address==='127.0.0.1') return;
+      // DJM announce (name contains "DJM") — register before CDJ check
+      if(p.name && p.name.includes('DJM')){
+        if(!this.devices['djm']){
+          this.devices['djm']={type:'DJM',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
+          console.log(`[PDJL] DJM keepalive detected: ${p.name}@${rinfo.address}`);
+          this.onDeviceList?.(this.devices);
+          // DJM 처음 발견 시 hello+claim 즉시 재전송 (broadcast REJECT 우회)
+          if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
+        } else {
+          this.devices['djm'].lastSeen=Date.now();
+          this.devices['djm'].ip=rinfo.address;
+        }
+        return;
+      }
       // Register as CDJ device if playerNum is valid (1-6)
       if(pn>0 && pn<=6){
         const key = `cdj${pn}`;

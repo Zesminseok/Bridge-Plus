@@ -4468,7 +4468,8 @@ if(E){
     if(d.hasRealFaders!=null)_djmHasRealFaders=d.hasRealFaders;
     const f=d.channel||d.faders||[];  // bridge sends d.channel (d.faders was a bug)
     for(let i=0;i<f.length&&i<6;i++)faders[i]=f[i];
-    if(d.onAir){for(let i=0;i<d.onAir.length&&i<6;i++)onAirCh[i]=d.onAir[i]?1:0;}
+    // on-air: 0x03 패킷(pktType null)에서만 업데이트 — 0x39 fader값이 on-air를 덮어쓰지 않도록
+    if(d.onAir&&d.pktType==null){for(let i=0;i<d.onAir.length&&i<6;i++)onAirCh[i]=d.onAir[i]?1:0;}
     if(d.eq){for(let i=0;i<d.eq.length&&i<6;i++)eqBands[i]=d.eq[i];}
     if(d.vuLevel){for(let i=0;i<d.vuLevel.length&&i<6;i++)_djmChVu[i]=d.vuLevel[i];}
     if(d.xfader!=null)_djmXfader=d.xfader;
