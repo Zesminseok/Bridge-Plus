@@ -1917,18 +1917,24 @@ class BridgeCore {
         }, h*320);
       }
       // Claim (0x02) — 50B × 11, hello 완료(7×320=2240ms) 후 900ms 대기, 이후 300ms 간격
+      // Per-interface: embed matching IP so DJM can unicast 0x39 back to the correct interface
       for(let n=1;n<=11;n++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
-          const p=Buffer.alloc(50);
-          PDJL.MAGIC.copy(p,0);
-          p[0x0A]=0x02; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x32;
-          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
-          for(let i=0;i<4;i++) p[0x24+i]=ipParts[i];
-          for(let i=0;i<6;i++) p[0x28+i]=macBytes[i]||0;
-          p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
-          p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
-          for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
+          const ifaces = getAllInterfaces().filter(i=>!i.internal&&i.broadcast&&i.broadcast!=='127.255.255.255');
+          for(const iface of ifaces){
+            const cIP = iface.address.split('.').map(Number);
+            const cMAC = (iface.mac||pdjlMAC).split(':').map(h=>parseInt(h,16));
+            const p=Buffer.alloc(50);
+            PDJL.MAGIC.copy(p,0);
+            p[0x0A]=0x02; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x32;
+            Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
+            for(let i=0;i<4;i++) p[0x24+i]=cIP[i];
+            for(let i=0;i<6;i++) p[0x28+i]=cMAC[i]||0;
+            p[0x2E]=(cMAC[5]||0)^(n*3+0xFB); p[0x2F]=n;
+            p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
+            try{this._pdjlAnnSock.send(p,0,p.length,50000,iface.broadcast);}catch(_){}
+          }
           if(n===11){
             setTimeout(()=>{ this._joinInProgress=false; console.log('[PDJL] bridge join sequence complete'); }, 1000);
           }
