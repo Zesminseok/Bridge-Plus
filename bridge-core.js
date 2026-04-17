@@ -2183,8 +2183,8 @@ class BridgeCore {
               const beatIdx = cueBeat - 1;
               if(bg && beatIdx >= 0 && beatIdx < bg.length){
                 timecodeMs = bg[beatIdx].timeMs;
-              } else if(p.bpm > 0){
-                timecodeMs = Math.round((cueBeat - 1) * 60000 / p.bpm);
+              } else if(p.bpmTrack > 0){
+                timecodeMs = Math.round((cueBeat - 1) * 60000 / p.bpmTrack);
               } else {
                 timecodeMs = 0;
               }
