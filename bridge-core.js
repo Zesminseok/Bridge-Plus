@@ -584,9 +584,9 @@ function parsePDJL(msg){
     // Vinyl/CDJ jog mode at 0x9D (P3)
     const p3 = msg.length>0x9D ? msg[0x9D] : 0;
     const isVinylMode = (p3===0x09 || p3===0x0A); // forward/backward vinyl
-    // Speed multiplier from Pitch 1: pitchRaw/0x100000 (beat-link method)
-    // Note: pitchRaw stays non-zero even when paused — use state for play/stop detection
-    const pitchMultiplier = pitchRaw / 0x100000;  // 1.0 = normal speed
+    // Speed multiplier: effective pitch (0x99) includes jog/platter nudge — more accurate than fader-only (0x8D)
+    // For BPM-less wall-clock interpolation and between-beat interpolation, platter movement matters
+    const pitchMultiplier = effPitchRaw / 0x100000;  // 1.0 = normal speed
     return{
       kind:'cdj', playerNum:pNum, name, deviceName:name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
@@ -2179,7 +2179,7 @@ class BridgeCore {
             totalLength: totalLenMs || prev?.totalLength || 0,
             beatPhase,
             deviceName:  p.name,
-            _pitch:      p.pitch || 0,
+            _pitch:      p.effectivePitch || p.pitch || 0,
           });
         } else if(prev){
           prev._pitch = p.pitch || 0;
