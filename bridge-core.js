@@ -644,7 +644,7 @@ function parsePDJL(msg){
     //   +12 = X-Fader Assign (0=A, 1=Thru, 2=B)
     const CH_BASE=0x24, CH_STRIDE=0x18;
     const ch=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
-    const onAir=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
+    // onAir는 0x03 패킷(djm_onair)에서 관리 — 0x39 fader값으로 on-air 판단하지 않음
     const cueBtn=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+9; return off<msg.length?msg[off]:0; });
     const xfAssign=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+12; return off<msg.length?msg[off]:0; });
     const eq=[0,1,2,3].map(c=>{
@@ -730,7 +730,7 @@ function parsePDJL(msg){
       parsePDJL._lastDjm=ch.slice();
       try{console.log(`[DJM-0x39] faders=[${ch}] eq(T/Hi/Mid/Lo/Clr)=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl} bal=${masterBalance} mCue=${masterCue} booth=${boothLvl} eqCv=${eqCurve} fCv=${faderCurve} hp=${hpLevel}`);}catch(_){}
     }
-    return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,masterBalance,masterCue,eqCurve,faderCurve,boothLvl,hpLevel,hpCueCh,cueBtn,xfAssign,chExtra};
+    return{kind:'djm',name,channel:ch,eq,xfader,masterLvl,masterBalance,masterCue,eqCurve,faderCurve,boothLvl,hpLevel,hpCueCh,cueBtn,xfAssign,chExtra};
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
   // 15-band spectrum per channel: base 0xA4, stride 0x3C, uint16BE per band
@@ -1895,7 +1895,7 @@ class BridgeCore {
         return;
       }
       this._joinInProgress = true;
-      // Hello (0x0A) — 37B × 2
+      // Hello (0x0A) — 37B × 2  (1초 간격 — DJM이 느린 state machine에 맞게)
       for(let h=0;h<2;h++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
@@ -1905,9 +1905,9 @@ class BridgeCore {
           Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
           try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
           console.log(`[PDJL] bridge hello #${h+1} ip=${pdjlIP} bc=${pdjlBC}`);
-        }, h*300);
+        }, h*1000);
       }
-      // Claim (0x02) — 50B × 11
+      // Claim (0x02) — 50B × 11  (hello 2회 후 1.5초 대기, 이후 800ms 간격)
       for(let n=1;n<=11;n++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
@@ -1921,10 +1921,10 @@ class BridgeCore {
           p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
           try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
           if(n===11){
-            // 마지막 claim 후 500ms 뒤 플래그 해제 → 이후 재시도 허용
-            setTimeout(()=>{ this._joinInProgress=false; console.log('[PDJL] bridge join sequence complete'); }, 500);
+            // 마지막 claim 후 1000ms 뒤 플래그 해제 → 이후 재시도 허용
+            setTimeout(()=>{ this._joinInProgress=false; console.log('[PDJL] bridge join sequence complete'); }, 1000);
           }
-        }, 600+n*500);
+        }, 2500+n*800);
       }
     };
 
@@ -2198,7 +2198,7 @@ class BridgeCore {
     if(p.kind==='djm'){
       this._hasRealFaders=true;
       this.faders=p.channel;
-      if(p.onAir) this.onAir = p.onAir.map(v => v > 127 ? 1 : 0);
+      // onAir는 0x03(djm_onair)에서만 관리 — 0x39 fader값으로 덮어쓰지 않음
       // rekordbox도 0x29(djm)를 broadcast함 → name에 'DJM' 들어간 실제 믹서만 등록
       const isRealDjm = p.name && p.name.includes('DJM');
       if(isRealDjm && !this.devices['djm']){
