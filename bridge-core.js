@@ -1853,21 +1853,23 @@ class BridgeCore {
     const macBytes=pdjlMAC.split(':').map(h=>parseInt(h,16));
     const ipParts=pdjlIP.split('.').map(Number);
 
-    // PDJL announce 소켓을 pdjlIP에 바인딩 → macOS가 올바른 인터페이스(en9)로 라우팅
-    // 0.0.0.0 바인딩 시 macOS가 169.254.255.255 broadcast를 REJECT하는 문제 해결
-    // reuseAddr:true → 수신 소켓(0.0.0.0:50000)과 공존 가능
-    // 비동기 바인딩: bind 완료 후 _bridgeJoin 실행
-    const pdjlBC = (() => {
-      for(const iface of getAllInterfaces())
-        if(iface.address===pdjlIP) return iface.broadcast;
-      return '255.255.255.255';
-    })();
-    console.log(`[PDJL] ann socket: bind ${pdjlIP}:50000 → bc=${pdjlBC}`);
-
     const spoofPlayer=5;
 
-    // helper: build 54B keepalive
-    const buildAnnPkt=()=>{
+    // annSock: 이미 열려있는 _pdjlSockets[0] (port 50000) 공유 소켓 우선 사용
+    // → 비동기 바인딩 없이 즉시 사용 가능, DJM이 port 50000에서 hello/claim 수신
+    // fallback: 새 소켓을 ephemeral port(0)에 바인딩 (port 충돌 없음)
+    this._pdjlAnnSock = this._pdjlSockets?.[0] || null;
+    if(!this._pdjlAnnSock){
+      const s=dgram.createSocket({type:'udp4',reuseAddr:true});
+      s.on('error',()=>{});
+      s.bind(0,()=>{ try{s.setBroadcast(true);}catch(_){} });
+      this._pdjlAnnSock=s;
+    }
+
+    // helper: build 54B keepalive — IP/MAC per-interface로 커스터마이즈 가능
+    const buildAnnPkt=(annIP, annMAC)=>{
+      const aIP=(annIP||pdjlIP).split('.').map(Number);
+      const aMAC=(annMAC||pdjlMAC).split(':').map(h=>parseInt(h,16));
       const p=Buffer.alloc(54);
       PDJL.MAGIC.copy(p,0);
       p[0x0A]=0x06; p[0x0B]=0x00;
@@ -1875,29 +1877,31 @@ class BridgeCore {
       p[0x20]=0x01; p[0x21]=0x01; p[0x22]=0x00; p[0x23]=0x36;
       p[0x24]=0x9E;
       p[0x25]=0x00;
-      for(let i=0;i<6;i++) p[0x26+i]=macBytes[i]||0;
-      for(let i=0;i<4;i++) p[0x2C+i]=ipParts[i];
+      for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
+      for(let i=0;i<4;i++) p[0x2C+i]=aIP[i];
       p[0x30]=0x07; p[0x34]=0x05; p[0x35]=0x20;
       return p;
     };
 
     const sendAnn=()=>{
       if(!this._pdjlAnnSock) return;
-      const pkt=buildAnnPkt();
-      // PDJL 인터페이스 subnet broadcast만 사용 (다른 인터페이스로 PDJL 패킷 누출 방지)
-      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,pdjlBC);}catch(_){}
+      // 각 인터페이스 broadcast에 해당 인터페이스 IP/MAC으로 keepalive 전송
+      for(const iface of getAllInterfaces()){
+        if(!iface.internal&&iface.broadcast&&iface.broadcast!=='127.255.255.255'){
+          const pkt=buildAnnPkt(iface.address,iface.mac||pdjlMAC);
+          try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,iface.broadcast);}catch(_){}
+        }
+      }
     };
 
     const _bridgeJoin=()=>{
       if(!this._pdjlAnnSock) return;
-      // 시퀀스 중복 방지: 진행 중이면 스킵 (DJM이 첫 hello 이후 재시작하면 state machine 초기화됨)
       if(this._joinInProgress){
         console.log('[PDJL] bridge join already in progress — skipping duplicate trigger');
         return;
       }
       this._joinInProgress = true;
-      // Hello (0x0A) — 37B × 7, 모두 step=0x01 동일 (pcap full_4cdj_djm.pcapng 확정)
-      // step은 변하지 않음 — 7번 반복 자체가 DJM state machine 진행
+      // Hello (0x0A) — 37B × 7, step=0x01 고정 (pcap full_4cdj_djm.pcapng 확정)
       for(let h=0;h<7;h++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
@@ -1905,12 +1909,11 @@ class BridgeCore {
           PDJL.MAGIC.copy(p,0);
           p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
           Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
-          try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
-          console.log(`[PDJL] bridge hello #${h+1}/7 ip=${pdjlIP} bc=${pdjlBC}`);
+          for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
+          console.log(`[PDJL] bridge hello #${h+1}/7 bcs=[${allBCs.join(',')}]`);
         }, h*320);
       }
       // Claim (0x02) — 50B × 11, hello 완료(7×320=2240ms) 후 900ms 대기, 이후 300ms 간격
-      // (pcap: claim 첫 패킷이 hello 마지막 후 ~0.9s, 간격 ~300ms)
       for(let n=1;n<=11;n++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
@@ -1922,8 +1925,7 @@ class BridgeCore {
           for(let i=0;i<6;i++) p[0x28+i]=macBytes[i]||0;
           p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
           p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
-          try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
-          console.log(`[PDJL] bridge claim ${n}/11`);
+          for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
           if(n===11){
             setTimeout(()=>{ this._joinInProgress=false; console.log('[PDJL] bridge join sequence complete'); }, 1000);
           }
@@ -1931,17 +1933,10 @@ class BridgeCore {
       }
     };
 
-    // announce 소켓 바인딩 후 join 시작
-    const annSock = dgram.createSocket({type:'udp4', reuseAddr:true});
-    annSock.on('error', e=>console.warn(`[PDJL] annSock err: ${e.message}`));
-    annSock.bind(50000, pdjlIP, ()=>{
-      try{annSock.setBroadcast(true);}catch(_){}
-      this._pdjlAnnSock = annSock;
-      _bridgeJoin();
-      setTimeout(()=>{ if(Object.keys(this.devices||{}).length>0) _bridgeJoin(); }, 30000);
-      this._bridgeJoinFn = _bridgeJoin;
-      console.log(`[PDJL] annSock ready: ${pdjlIP}:50000 → bc=${pdjlBC}`);
-    });
+    _bridgeJoin();
+    setTimeout(()=>{ if(Object.keys(this.devices||{}).length>0) _bridgeJoin(); }, 30000);
+    this._bridgeJoinFn = _bridgeJoin;
+    console.log(`[PDJL] annSock ready (shared=${!!this._pdjlSockets?.[0]}) ip=${pdjlIP} allBCs=[${allBCs.join(',')}]`);
 
     // 95B dbserver keepalive — UNICAST to CDJs only (not broadcast!)
     // STC: CDJ-3000 validates "PIONEER DJ CORP" / "PRODJLINK BRIDGE" strings
