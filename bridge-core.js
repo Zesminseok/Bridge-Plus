@@ -556,13 +556,13 @@ function parsePDJL(msg){
     // Fader pitch: 3 bytes uint24 at 0x8D, neutral=0x100000, range 0~0x200000 (-100%~+100%)
     const pitchRaw = msg.length>0x8F ? (msg[0x8D]*65536 + msg[0x8E]*256 + msg[0x8F]) : 0x100000;
     const pitch = (pitchRaw-0x100000)/0x100000*100;
-    // Effective pitch (includes jog wheel nudge) — offset 0x99 (3B):
-    // CDJ-2000NXS2: 0x99 always valid during play/cue
-    // CDJ-3000: 0x99 valid only when playing (p1≠cued); 0x000000 when cued → fall back to fader pitch
-    const v99 = msg.length>0x9B ? (msg[0x99]*65536 + msg[0x9A]*256 + msg[0x9B]) : 0;
+    // Effective pitch (includes jog wheel nudge) — model-specific:
+    // CDJ-2000NXS2: offset 0x99 (3B) is reliable (jog nudge), fallback to 0x8D if zero
+    // CDJ-3000: offset 0x99 is 0x000000 in cued/paused state → always use fader pitch 0x8D
+    const v99 = isNXS2 && msg.length>0x9B ? (msg[0x99]*65536 + msg[0x9A]*256 + msg[0x9B]) : 0;
     const effPitchRaw = isNXS2
-      ? (v99 || pitchRaw)          // NXS2: prefer 0x99, fallback to 0x8D
-      : (v99 !== 0 ? v99 : pitchRaw);  // CDJ-3000: only use 0x99 when non-zero
+      ? (v99 || pitchRaw)  // NXS2: 0x99 includes jog nudge
+      : pitchRaw;          // CDJ-3000: fader pitch only
     const effPitch = (effPitchRaw-0x100000)/0x100000*100;
     // Effective BPM: trackBpm × (1 + effPitch/100)
     let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+effPitch/100)*100)/100 : 0;
