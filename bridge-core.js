@@ -2104,10 +2104,14 @@ class BridgeCore {
         // `_precisePos` is populated only from parsePDJL kind==='precise_pos' (type 0x0b), which is already CDJ-3000-specific.
         const hasPrecise = pp && (Date.now()-pp.time)<500;
 
-        // Get track length from any available source
+        // Get track length — beat-based gives sub-second precision, integer-second sources lose ≤999ms
         const prevLayerLen = this.layers[li]?.totalLength || 0;
         const ppLen = this._precisePos?.[p.playerNum]?.trackLengthSec;
-        const totalLenMs = ppLen ? Math.round(ppLen*1000) : prevLayerLen;
+        const ppLenMs = ppLen ? Math.round(ppLen * 1000) : 0;
+        const beatBasedLen = (p.trackBeats > 0 && p.bpmTrack > 0)
+          ? Math.round(p.trackBeats * 60000 / p.bpmTrack)
+          : 0;
+        const totalLenMs = beatBasedLen || ppLenMs || prevLayerLen;
 
         const isCdj3000=(p.name||p.deviceName||'').includes('CDJ-3000');
         if(hasPrecise){
