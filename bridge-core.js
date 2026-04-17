@@ -1889,6 +1889,12 @@ class BridgeCore {
 
     const _bridgeJoin=()=>{
       if(!this._pdjlAnnSock) return;
+      // 시퀀스 중복 방지: 진행 중이면 스킵 (DJM이 첫 hello 이후 재시작하면 state machine 초기화됨)
+      if(this._joinInProgress){
+        console.log('[PDJL] bridge join already in progress — skipping duplicate trigger');
+        return;
+      }
+      this._joinInProgress = true;
       // Hello (0x0A) — 37B × 2
       for(let h=0;h<2;h++){
         setTimeout(()=>{
@@ -1914,6 +1920,10 @@ class BridgeCore {
           p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
           p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
           try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
+          if(n===11){
+            // 마지막 claim 후 500ms 뒤 플래그 해제 → 이후 재시도 허용
+            setTimeout(()=>{ this._joinInProgress=false; console.log('[PDJL] bridge join sequence complete'); }, 500);
+          }
         }, 600+n*500);
       }
     };
