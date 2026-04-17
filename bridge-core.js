@@ -615,19 +615,20 @@ function parsePDJL(msg){
     const masterLvl=Math.min(255,Math.round((msg[0x14]||0)*255/0x7F));
     const hpLevel=msg.length>0x15?Math.min(255,Math.round(msg[0x15]*255/0x7F)):0;
     const hpCueCh=msg.length>0x16?msg[0x16]:0;
-    // EQ: 0x17 + ch*3, each [Hi,Mid,Lo] 0x00-0x7F
+    // EQ: 0x17+ch*3, [Hi,Mid,Lo] 0-0x7F → renderer 형식 [TRIM,HI,MID,LOW,COLOR] 0-255 center=128
     const eq=[0,1,2,3].map(c=>{
       const b=0x17+c*3;
-      return[ b<msg.length?msg[b]:0x40, b+1<msg.length?msg[b+1]:0x40, b+2<msg.length?msg[b+2]:0x40 ];
+      const hi  = b  <msg.length ? Math.min(255,msg[b  ]*2) : 128;
+      const mid = b+1<msg.length ? Math.min(255,msg[b+1]*2) : 128;
+      const lo  = b+2<msg.length ? Math.min(255,msg[b+2]*2) : 128;
+      return[128, hi, mid, lo, 128]; // TRIM/COLOR neutral
     });
-    const onAir=[0,0,0,0]; // type 0x29 has no on-air field, comes from type 0x03
     if(!parsePDJL._djm29Logged){
       parsePDJL._djm29Logged=true;
       const hex=Array.from(msg.slice(0,Math.min(56,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' ');
-      try{console.log(`[DJM-0x29] len=${msg.length} hex=[${hex}]`);}catch(_){}
+      try{console.log(`[DJM-0x29] name="${name}" len=${msg.length} hex=[${hex}]`);}catch(_){}
     }
-    try{console.log(`[DJM-0x29] faders=[${ch}] eq=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl}`);}catch(_){}
-    return{kind:'djm',name,channel:ch,onAir,eq,xfader,masterLvl,boothLvl:0,hpLevel,hpCueCh,chExtra:[]};
+    return{kind:'djm',name,channel:ch,eq,xfader,masterLvl,boothLvl:0,hpLevel,hpCueCh,chExtra:[]};
   }
   if(type===PDJL.DJM && msg.length>=0x80){
     // Type 0x39 — 248-byte layout (DJM-900NXS2)
@@ -2198,17 +2199,17 @@ class BridgeCore {
       }
     }
     if(p.kind==='djm'){
-      // rekordbox도 0x29(djm)를 broadcast함 → name에 'DJM' 들어간 실제 믹서만 처리
-      const isRealDjm = p.name && p.name.includes('DJM');
-      if(!isRealDjm) return; // rekordbox 등 비-DJM 소스 무시
       this._hasRealFaders=true;
       this.faders=p.channel;
-      // onAir는 0x03(djm_onair)에서만 관리 — 0x39 fader값으로 덮어쓰지 않음
-      if(!this.devices['djm']){
-        this.devices['djm']={type:'DJM',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
-        this.onDeviceList?.(this.devices);
-        if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
-      } else { this.devices['djm'].lastSeen=Date.now(); }
+      // DJM 등록: name에 'DJM' 포함된 실제 믹서만 (rekordbox 등 제외)
+      const isRealDjm = p.name && p.name.includes('DJM');
+      if(isRealDjm){
+        if(!this.devices['djm']){
+          this.devices['djm']={type:'DJM',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
+          this.onDeviceList?.(this.devices);
+          if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
+        } else { this.devices['djm'].lastSeen=Date.now(); }
+      }
       // Forward raw hex dump for first 128 bytes for protocol debugging in UI log panel
       let rawHex=null;
       if(msg.length>0x20){
