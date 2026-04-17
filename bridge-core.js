@@ -2166,9 +2166,23 @@ class BridgeCore {
             }
           }
         } else {
-          // Stopped/paused: preserve previous position, but CUEDOWN means CDJ is at cue point (=0)
+          // Stopped/paused: preserve previous position, but CUEDOWN means CDJ is at cue point
           if(p.state === STATE.CUEDOWN){
-            timecodeMs = 0;  // CDJ returned to cue point — next play must start from 0
+            // CDJ-2000NXS2 sends beatNum even in CUEDOWN state — use it to find cue position
+            const cueBeat = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
+            if(cueBeat > 0){
+              const bg = this._beatGrids?.[p.playerNum];
+              const beatIdx = cueBeat - 1;
+              if(bg && beatIdx >= 0 && beatIdx < bg.length){
+                timecodeMs = bg[beatIdx].timeMs;
+              } else if(p.bpm > 0){
+                timecodeMs = Math.round((cueBeat - 1) * 60000 / p.bpm);
+              } else {
+                timecodeMs = 0;
+              }
+            } else {
+              timecodeMs = 0;  // beat 0 or BPM-less → cue at track start
+            }
           } else if(this.layers[li]?.timecodeMs > 0){
             timecodeMs = this.layers[li].timecodeMs;
           }
