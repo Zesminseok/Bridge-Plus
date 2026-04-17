@@ -4233,7 +4233,9 @@ if(E){
       const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
       dk._hasPrecisePos=true;
       if(status.timecodeMs!=null){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
-      if(status.trackLengthSec>0) dk.dur=status.trackLengthSec*1000;
+      // totalLenMs = beat-based ms precision from bridge-core; trackLengthSec = integer seconds only
+      if(status.totalLenMs > 0) dk.dur = status.totalLenMs;
+      else if(status.trackLengthSec > 0 && !(dk.dur > 0)) dk.dur = status.trackLengthSec * 1000;
       if(status.bpmEffective>0) dk.bpm=Math.round(status.bpmEffective*100)/100;
       return;
     }

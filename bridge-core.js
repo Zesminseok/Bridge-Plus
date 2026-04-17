@@ -2271,6 +2271,7 @@ class BridgeCore {
         }
         p.ip = rinfo.address;
         p.timecodeMs = timecodeMs;
+        p.totalLenMs = totalLenMs; // beat-based ms precision — renderer uses this for dk.dur
         this.onCDJStatus?.(li, p);
       }
     }
@@ -2355,10 +2356,16 @@ class BridgeCore {
           console.log(`[PDJL] P${p.playerNum} Precise Position: ${p.playbackMs}ms, dur=${p.trackLengthSec}s, bpm=${p.bpmEffective}`);
         }
         // Send directly to renderer as CDJ status update
+        // totalLenMs: best available ms precision (beat-based > bgEst > integer-sec)
+        const _li = p.playerNum - 1;
+        const _ppBeat = this.layers[_li]?.totalLength || 0; // already beat-based from last CDJ status
+        const _ppSec  = p.trackLengthSec > 0 ? Math.round(p.trackLengthSec * 1000) : 0;
+        const _ppTotal = _ppBeat || _ppSec;
         this.onCDJStatus?.(li, {
           playerNum:p.playerNum,
           timecodeMs:p.playbackMs,
           trackLengthSec:p.trackLengthSec,
+          totalLenMs: _ppTotal,
           bpmEffective:p.bpmEffective,
           _precisePos:true,
         });
