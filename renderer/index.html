@@ -4323,6 +4323,8 @@ if(E){
     if(status.beatNum>0)dk._beatNum=status.beatNum;
     const _wasOnAir=dk.onAir; dk.onAir=!!status.isOnAir;
     if(_wasOnAir!==dk.onAir)_histOnAirChange(layerIndex,dk,_wasOnAir,dk.onAir);
+    // 믹서 채널 on-air: CDJ playerNum → CH(n-1) 직접 동기화 (DJM 0x03보다 신뢰)
+    if(status.playerNum>=1&&status.playerNum<=4) onAirCh[status.playerNum-1]=dk.onAir?1:0;
     dk.master=!!status.isMaster;
     dk.sync=!!status.isSync;
     dk.vinylMode=!!status.isVinylMode;

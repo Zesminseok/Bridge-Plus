@@ -1895,20 +1895,21 @@ class BridgeCore {
         return;
       }
       this._joinInProgress = true;
-      // Hello (0x0A) — 37B × 2  (1초 간격 — DJM이 느린 state machine에 맞게)
-      // ⭐ step=h+1: 첫 hello step=1, 두 번째 hello step=2 (둘 다 1이면 DJM이 무시)
-      for(let h=0;h<2;h++){
+      // Hello (0x0A) — 37B × 7, 모두 step=0x01 동일 (pcap full_4cdj_djm.pcapng 확정)
+      // step은 변하지 않음 — 7번 반복 자체가 DJM state machine 진행
+      for(let h=0;h<7;h++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
           const p=Buffer.alloc(37);
           PDJL.MAGIC.copy(p,0);
-          p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=h+1; p[0x23]=0x25; p[0x24]=spoofPlayer;
+          p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
           Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
           try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
-          console.log(`[PDJL] bridge hello #${h+1} step=${h+1} ip=${pdjlIP} bc=${pdjlBC}`);
-        }, h*1000);
+          console.log(`[PDJL] bridge hello #${h+1}/7 ip=${pdjlIP} bc=${pdjlBC}`);
+        }, h*320);
       }
-      // Claim (0x02) — 50B × 11  (hello 2회 후 1.5초 대기, 이후 800ms 간격)
+      // Claim (0x02) — 50B × 11, hello 완료(7×320=2240ms) 후 900ms 대기, 이후 300ms 간격
+      // (pcap: claim 첫 패킷이 hello 마지막 후 ~0.9s, 간격 ~300ms)
       for(let n=1;n<=11;n++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
@@ -1921,11 +1922,11 @@ class BridgeCore {
           p[0x2E]=(macBytes[5]||0)^(n*3+0xFB); p[0x2F]=n;
           p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
           try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
+          console.log(`[PDJL] bridge claim ${n}/11`);
           if(n===11){
-            // 마지막 claim 후 1000ms 뒤 플래그 해제 → 이후 재시도 허용
             setTimeout(()=>{ this._joinInProgress=false; console.log('[PDJL] bridge join sequence complete'); }, 1000);
           }
-        }, 2500+n*800);
+        }, 3140+(n-1)*300);
       }
     };
 
