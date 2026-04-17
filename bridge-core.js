@@ -2166,8 +2166,12 @@ class BridgeCore {
             }
           }
         } else {
-          // Stopped/paused: preserve previous position
-          if(this.layers[li]?.timecodeMs > 0) timecodeMs = this.layers[li].timecodeMs;
+          // Stopped/paused: preserve previous position, but CUEDOWN means CDJ is at cue point (=0)
+          if(p.state === STATE.CUEDOWN){
+            timecodeMs = 0;  // CDJ returned to cue point — next play must start from 0
+          } else if(this.layers[li]?.timecodeMs > 0){
+            timecodeMs = this.layers[li].timecodeMs;
+          }
           if(acc){ acc._playStart=0; acc._anchorMs=null; acc._anchorTime=null; acc._noBeatAnchorTime=null; acc._noBeatAnchorMs=null; acc._fracMs=null; acc._fracAnchorTime=null; }
         }
 
