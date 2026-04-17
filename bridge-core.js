@@ -1896,15 +1896,16 @@ class BridgeCore {
       }
       this._joinInProgress = true;
       // Hello (0x0A) — 37B × 2  (1초 간격 — DJM이 느린 state machine에 맞게)
+      // ⭐ step=h+1: 첫 hello step=1, 두 번째 hello step=2 (둘 다 1이면 DJM이 무시)
       for(let h=0;h<2;h++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
           const p=Buffer.alloc(37);
           PDJL.MAGIC.copy(p,0);
-          p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
+          p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=h+1; p[0x23]=0x25; p[0x24]=spoofPlayer;
           Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
           try{this._pdjlAnnSock.send(p,0,p.length,50000,pdjlBC);}catch(_){}
-          console.log(`[PDJL] bridge hello #${h+1} ip=${pdjlIP} bc=${pdjlBC}`);
+          console.log(`[PDJL] bridge hello #${h+1} step=${h+1} ip=${pdjlIP} bc=${pdjlBC}`);
         }, h*1000);
       }
       // Claim (0x02) — 50B × 11  (hello 2회 후 1.5초 대기, 이후 800ms 간격)
@@ -2196,16 +2197,17 @@ class BridgeCore {
       }
     }
     if(p.kind==='djm'){
+      // rekordbox도 0x29(djm)를 broadcast함 → name에 'DJM' 들어간 실제 믹서만 처리
+      const isRealDjm = p.name && p.name.includes('DJM');
+      if(!isRealDjm) return; // rekordbox 등 비-DJM 소스 무시
       this._hasRealFaders=true;
       this.faders=p.channel;
       // onAir는 0x03(djm_onair)에서만 관리 — 0x39 fader값으로 덮어쓰지 않음
-      // rekordbox도 0x29(djm)를 broadcast함 → name에 'DJM' 들어간 실제 믹서만 등록
-      const isRealDjm = p.name && p.name.includes('DJM');
-      if(isRealDjm && !this.devices['djm']){
+      if(!this.devices['djm']){
         this.devices['djm']={type:'DJM',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
         this.onDeviceList?.(this.devices);
         if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
-      } else if(isRealDjm){ this.devices['djm'].lastSeen=Date.now(); }
+      } else { this.devices['djm'].lastSeen=Date.now(); }
       // Forward raw hex dump for first 128 bytes for protocol debugging in UI log panel
       let rawHex=null;
       if(msg.length>0x20){
