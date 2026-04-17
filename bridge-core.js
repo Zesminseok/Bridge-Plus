@@ -543,27 +543,30 @@ function parsePDJL(msg){
   if(!hasMagic && !isKnownDjmShape) return null;
 
   if(type===PDJL.CDJ && msg.length>=0x90){
-    // Deep Symmetry: device number at 0x21 (NXS2), also at 0x24 (CDJ-3000)
-    // Try 0x21 first (works for both NXS2 and CDJ-3000), fallback to 0x24
+    // Device number: CDJ-2000NXS2 uses 0x21, CDJ-3000 uses 0x24
     let pNum = msg[0x21]; if(pNum<1||pNum>6) pNum = msg[0x24];
     if(pNum<1||pNum>6) return null;
+    // Model detection — use full model name to avoid false-positives (e.g. future CDJ-3000NXS2)
+    const isNXS2 = name.includes('2000NXS2');
     const p1   = msg[0x7B];
     const state= P1_TO_STATE[p1] ?? STATE.IDLE;
     // BPM: uint16BE at 0x92–0x93 = TRACK BPM (original, no pitch) × 100
-    // Ref: https://djl-analysis.deepsymmetry.org/djl-analysis/vcdj.html
     const bpmRaw16 = msg.length>0x93 ? msg.readUInt16BE(0x92) : 0;
     const trackBpm = (bpmRaw16>0 && bpmRaw16!==0xFFFF) ? bpmRaw16/100 : 0;
-    // Pitch: 3 bytes uint24 at 0x8D (prolink-connect + beat-link confirmed: 0x8D, NOT 0x8C)
-    // Deep Symmetry docs say 4B at 0x8C but actual implementations read 3B at 0x8D
-    // Neutral = 0x100000, range: 0x000000(-100%) ~ 0x200000(+100%)
+    // Fader pitch: 3 bytes uint24 at 0x8D, neutral=0x100000, range 0~0x200000 (-100%~+100%)
     const pitchRaw = msg.length>0x8F ? (msg[0x8D]*65536 + msg[0x8E]*256 + msg[0x8F]) : 0x100000;
     const pitch = (pitchRaw-0x100000)/0x100000*100;
-    // effectivePitch at 0x99 (3B) — includes jog wheel nudge (prolink-connect confirmed)
-    const effPitchRaw = msg.length>0x9B ? (msg[0x99]*65536 + msg[0x9A]*256 + msg[0x9B]) : pitchRaw;
+    // Effective pitch (includes jog wheel nudge) — offset 0x99 (3B):
+    // CDJ-2000NXS2: 0x99 always valid during play/cue
+    // CDJ-3000: 0x99 valid only when playing (p1≠cued); 0x000000 when cued → fall back to fader pitch
+    const v99 = msg.length>0x9B ? (msg[0x99]*65536 + msg[0x9A]*256 + msg[0x9B]) : 0;
+    const effPitchRaw = isNXS2
+      ? (v99 || pitchRaw)          // NXS2: prefer 0x99, fallback to 0x8D
+      : (v99 !== 0 ? v99 : pitchRaw);  // CDJ-3000: only use 0x99 when non-zero
     const effPitch = (effPitchRaw-0x100000)/0x100000*100;
-    // Effective BPM: use effectivePitch when available (jog wheel 반영)
+    // Effective BPM: trackBpm × (1 + effPitch/100)
     let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+effPitch/100)*100)/100 : 0;
-    if(bpmEff > 500) bpmEff = 0;  // sanity: no track exceeds 500 BPM
+    if(bpmEff > 500) bpmEff = 0;
     const baseBpm = trackBpm;
     const beatNum   = msg.length>0xA3 ? msg.readUInt32BE(0xA0) : 0;
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
@@ -584,8 +587,6 @@ function parsePDJL(msg){
     // Vinyl/CDJ jog mode at 0x9D (P3)
     const p3 = msg.length>0x9D ? msg[0x9D] : 0;
     const isVinylMode = (p3===0x09 || p3===0x0A); // forward/backward vinyl
-    // Speed multiplier: effective pitch (0x99) includes jog/platter nudge — more accurate than fader-only (0x8D)
-    // For BPM-less wall-clock interpolation and between-beat interpolation, platter movement matters
     const pitchMultiplier = effPitchRaw / 0x100000;  // 1.0 = normal speed
     return{
       kind:'cdj', playerNum:pNum, name, deviceName:name, p1, state,
@@ -594,6 +595,7 @@ function parsePDJL(msg){
       isLooping: state===STATE.LOOPING,
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
       pitch, effectivePitch:effPitch, pitchMultiplier,
+      isNXS2,
       trackId: msg.readUInt32BE(0x2C),
       trackDeviceId: msg[0x28],
       slot:     msg[0x29],
