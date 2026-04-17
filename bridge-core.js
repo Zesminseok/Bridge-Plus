@@ -543,10 +543,12 @@ function parsePDJL(msg){
   if(!hasMagic && !isKnownDjmShape) return null;
 
   if(type===PDJL.CDJ && msg.length>=0x90){
-    // Deep Symmetry: device number at 0x21 (NXS2), also at 0x24 (CDJ-3000)
-    // Try 0x21 first (works for both NXS2 and CDJ-3000), fallback to 0x24
-    // ROLLBACK: was `const pNum = msg[0x24]` only
-    let pNum = msg[0x21]; if(pNum<1||pNum>6) pNum = msg[0x24];
+    // CDJ-3000 / CDJ-2000NXS2(미디어 있음): 0x1F=0x01, player# at 0x24
+    // CDJ-2000NXS2(미디어 없음/대기): 0x1F=0x00, layout +1 shift → player# at 0x25
+    // 0x21은 device count 필드로 1~6 범위와 겹쳐 오판 가능 — 최후 폴백만 사용
+    let pNum = msg[0x24];
+    if(pNum<1||pNum>6) pNum = msg[0x25];
+    if(pNum<1||pNum>6) pNum = msg[0x21];
     if(pNum<1||pNum>6) return null;
     const p1   = msg[0x7B];
     const state= P1_TO_STATE[p1] ?? STATE.IDLE;
@@ -573,7 +575,9 @@ function parsePDJL(msg){
     // Playback position fraction 0x48-0x4B (prolink-connect confirmed): uint32BE / 1000 = 0.0~1.0
     // Available on CDJ-2000NXS2 and CDJ-3000 — gives absolute position for any track including BPM-less
     const posFracRaw = msg.length>0x4B ? msg.readUInt32BE(0x48) : 0;
-    const positionFraction = (posFracRaw>0 && posFracRaw<=1000) ? posFracRaw/1000 : 0;
+    // CDJ-3000/NXS2 모두 pcap에서 0x48=0 확인됨 → beatNum/trackBeats 비율로 폴백
+    const positionFraction = (posFracRaw>0 && posFracRaw<=1000) ? posFracRaw/1000
+      : (trackBeats>0 && beatNum>0 && beatNum<=trackBeats) ? beatNum/trackBeats : 0;
     // Flags byte F at 0x89 (Deep Symmetry spec):
     //   bit 6 = playing, bit 5 = master, bit 4 = sync, bit 3 = on-air
     const flags = msg.length>0x89 ? msg[0x89] : 0;
