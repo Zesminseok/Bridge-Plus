@@ -166,7 +166,12 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onDJMStatus=f=>_send('bridge:djm',{faders:f.channel||f, onAir:f.onAir, eq:f.eq, hasRealFaders:f.hasRealFaders, xfader:f.xfader, masterLvl:f.masterLvl, boothLvl:f.boothLvl, hpLevel:f.hpLevel, hpCueCh:f.hpCueCh, chExtra:f.chExtra, pktType:f.pktType, pktLen:f.pktLen, rawHex:f.rawHex});
     bridge.onDJMMeter=d=>_send('bridge:djmmeter',d);
     bridge.onTCMixerVU=d=>_send('bridge:tcmixervu',d);
-    bridge.onDeviceList=devs=>_send('pdjl:devices',Object.values(devs));
+    bridge.onDeviceList=devs=>{
+      // stale(>10s) 기기 필터링 — UI에 유령 장치/쓰레기값 남지 않도록
+      const now=Date.now();
+      const active=Object.values(devs||{}).filter(d=>d&&(now-(d.lastSeen||0))<10000&&d.name!=='BRIDGE+'&&d.ip!=='127.0.0.1');
+      _send('pdjl:devices',active);
+    };
     bridge.onWaveformPreview=(pn,wf)=>_send('bridge:wfpreview',{playerNum:pn,...wf});
     bridge.onWaveformDetail=(pn,wf)=>_send('bridge:wfdetail',{playerNum:pn,...wf});
     bridge.onCuePoints=(pn,cues)=>_send('bridge:cuepoints',{playerNum:pn,cues});

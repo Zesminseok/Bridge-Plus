@@ -2229,11 +2229,16 @@ class BridgeCore {
         const beatBasedLen = (p.trackBeats > 0 && p.bpmTrack > 0)
           ? Math.round(p.trackBeats * 60000 / p.bpmTrack)
           : 0;
-        // CDJ-3000: ppLenMs 우선 (0x0b에서 직접 읽은 값 = CDJ 화면과 일치)
+        // CDJ-3000: ppLenMs는 0x0b 오프셋 38의 uint16 — 정수 초 단위 (소수점 없음)
+        //           bgEstLen/beatBasedLen이 ppLenMs와 근접(±3초)하면 ms 정밀도 유지
         // CDJ-2000NXS2: 0x0b 없음 → beat-grid 추정값 우선
+        const _msPrecise = (bgEstLen>0 && ppLenMs>0 && Math.abs(bgEstLen-ppLenMs)<3000)
+          ? bgEstLen
+          : (beatBasedLen>0 && ppLenMs>0 && Math.abs(beatBasedLen-ppLenMs)<3000)
+            ? beatBasedLen : 0;
         const totalLenMs = p.isNXS2
           ? (bgEstLen || beatBasedLen || prevLayerLen)
-          : (ppLenMs  || bgEstLen || beatBasedLen || prevLayerLen);
+          : (_msPrecise || ppLenMs || bgEstLen || beatBasedLen || prevLayerLen);
 
         // ── CDJ-2000NXS2 timecode path ──
         // No type 0x0b precise_pos — uses positionFraction (beatNum/trackBeats) + beat-link interpolation

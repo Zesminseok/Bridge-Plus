@@ -4159,6 +4159,15 @@ document.getElementById('mainBtn').onclick=()=>run?doStop():doStart();
 if(E) setTimeout(()=>{if(!run) doStart();}, 2000);
 async function doStart(){
   if(E){
+    // 저장된 인터페이스 IP 검증 — 존재하지 않는 IP면 자동(null)으로 폴백
+    try{
+      const _ifaces=await window.bridge.getInterfaces();
+      allIfaces=_ifaces||[];
+      const _ips=new Set(allIfaces.map(i=>i.address));
+      _ips.add('127.0.0.1');
+      if(cfg.tcnetIface && !_ips.has(cfg.tcnetIface)){cfg.tcnetIface='';_saveCfg();}
+      if(cfg.pdjlIface  && !_ips.has(cfg.pdjlIface)) {cfg.pdjlIface=''; _saveCfg();}
+    }catch(_){}
     const r=await window.bridge.start({
       broadcast:'auto',
       tcnetIface:cfg.tcnetIface||null,
