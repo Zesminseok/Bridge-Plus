@@ -593,12 +593,22 @@ function parsePDJL(msg){
     // Vinyl/CDJ jog mode at 0x9D (P3)
     const p3 = msg.length>0x9D ? msg[0x9D] : 0;
     const isVinylMode = (p3===0x09 || p3===0x0A); // forward/backward vinyl
+    // Reverse detection: FFRV state or backward vinyl mode (p3=0x0A)
+    const isReverse = state===STATE.FFRV || p3===0x0A;
     const pitchMultiplier = effPitchRaw / 0x100000;  // 1.0 = normal speed
+    // Loop start/end from CDJ-3000 512B extended packet (not available on shorter packets)
+    // Raw value × 65536 / 1000 = ms per ProDJLinkInput.h
+    const loopStartRaw = msg.length>0x1C1 ? msg.readUInt32BE(0x1B6) : 0;
+    const loopEndRaw   = msg.length>0x1C5 ? msg.readUInt32BE(0x1BE) : 0;
+    const loopStartMs  = loopStartRaw > 0 ? Math.round(loopStartRaw / 65.536) : 0;
+    const loopEndMs    = loopEndRaw   > 0 ? Math.round(loopEndRaw   / 65.536) : 0;
     return{
       kind:'cdj', playerNum:pNum, name, deviceName:name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
       isPlaying: state===STATE.PLAYING || state===STATE.FFWD || state===STATE.FFRV,
       isLooping: state===STATE.LOOPING,
+      isReverse,
+      loopStartMs, loopEndMs,
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
       pitch, effectivePitch:effPitch, pitchMultiplier,
       isNXS2,
@@ -866,7 +876,11 @@ function parsePDJL(msg){
         return{kind:'media_slot',name,playerNum:pNum,mediaColor:color};
       }
     }
-    return{kind:'announce',name,playerNum:msg.length>0x24?msg[0x24]:0};
+    const playerNum = msg.length>0x24 ? msg[0x24] : 0;
+    // STC ProDJLinkInput.h: kDeviceTypeMixer=0x02 at byte[33]=0x21, playerNum>=0x21=DJM
+    const devType = msg.length>0x21 ? msg[0x21] : 0;
+    const isDjmType = devType===0x02 && playerNum>=0x21;
+    return{kind:'announce',name,playerNum,isDjmType};
   }
   // CDJ-3000 Absolute Position (type 0x0b, port 50001, ~60B, ~30Hz pairs)
   // CDJ-3000 sends PAIRS: 1) real data (byte[33]=player 1-6), 2) garbage (byte[33]>=0x80)
@@ -2051,12 +2065,18 @@ class BridgeCore {
     };
     const sendDjmSub=()=>{
       const djmIp=this.devices?.['djm']?.ip;
-      if(!djmIp||!this._pdjlAnnSock) return;
+      if(!djmIp){ return; }
       const pkt=buildSubPkt();
-      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,djmIp);}catch(_){}
-      if(!sendDjmSub._logged){sendDjmSub._logged=true;console.log(`[PDJL] 0x57 subscribe → ${djmIp}:50001`);}
+      // port 50001 소켓 우선 사용 (DJM이 선호하는 소스 포트)
+      const subSock = this._pdjlSockets?.[1] || this._pdjlSockets?.[0] || this._pdjlAnnSock;
+      if(!subSock){ console.warn('[PDJL] 0x57: no socket available'); return; }
+      try{subSock.send(pkt,0,pkt.length,50001,djmIp);}catch(e){ console.warn('[PDJL] 0x57 send error:',e.message); }
+      this._djmSubCount = (this._djmSubCount||0)+1;
+      if(this._djmSubCount===1||this._djmSubCount%10===0){
+        console.log(`[PDJL] 0x57 subscribe #${this._djmSubCount} → ${djmIp}:50001 hasRealFaders=${this._hasRealFaders}`);
+      }
     };
-    setTimeout(sendDjmSub,3000);  // DJM가 bridge identity 등록할 시간 확보
+    setTimeout(sendDjmSub, 3000);  // DJM가 bridge identity 등록할 시간 확보
     const _subTimer=setInterval(()=>{ if(!this.running)return; sendDjmSub(); },2000);
     this._timers.push(_subTimer);
 
@@ -2170,17 +2190,18 @@ class BridgeCore {
           try{console.log(`[TC] P${p.playerNum} metadata retry → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
-        // ── Track length (model-agnostic, best-available source) ──
+        // ── Track length (best-available source, ms precision) ──
         const prevLayerLen = this.layers[li]?.totalLength || 0;
         const ppLen = this._precisePos?.[p.playerNum]?.trackLengthSec;
         const ppLenMs = ppLen ? Math.round(ppLen * 1000) : 0;
-        // Beat-based: trackBeats × ms/beat gives sub-second precision vs integer ppLen
+        // Beat-grid: last beat timeMs + one interval (평균 BPM 기반, 가장 정밀)
+        const bgEstLen = this._bgTrackLen?.[p.playerNum] || 0;
+        // Beat-based fallback: trackBeats × 60000 / bpmTrack (BPM 반올림 오차 있음)
         const beatBasedLen = (p.trackBeats > 0 && p.bpmTrack > 0)
           ? Math.round(p.trackBeats * 60000 / p.bpmTrack)
           : 0;
-        // Beat-grid estimated end: last beat timeMs + one beat interval (loaded by _dbserverBeatGrid)
-        const bgEstLen = this._bgTrackLen?.[p.playerNum] || 0;
-        const totalLenMs = beatBasedLen || bgEstLen || ppLenMs || prevLayerLen;
+        // Priority: bgEstLen (beat-grid ms) > beatBasedLen > ppLenMs (integer-sec) > prev
+        const totalLenMs = bgEstLen || beatBasedLen || ppLenMs || prevLayerLen;
 
         // ── CDJ-2000NXS2 timecode path ──
         // No type 0x0b precise_pos — uses positionFraction (beatNum/trackBeats) + beat-link interpolation
@@ -2316,6 +2337,9 @@ class BridgeCore {
       }
     }
     if(p.kind==='djm'){
+      if(!this._hasRealFaders){
+        console.log(`[DJM] 첫 0x39 수신! name=${p.name} from=${rinfo.address}:${rinfo.port} faders=[${p.channel}]`);
+      }
       this._hasRealFaders=true;
       this.faders=p.channel;
       this._djmMixer={
@@ -2329,8 +2353,8 @@ class BridgeCore {
         masterCue:p.masterCue||0,
         masterBalance:p.masterBalance!=null?p.masterBalance:128,
       };
-      // DJM 등록: name에 'DJM' 포함된 실제 믹서만 (rekordbox 등 제외)
-      const isRealDjm = p.name && p.name.includes('DJM');
+      // DJM 등록: name 또는 타입 바이트로 실제 믹서 판별
+      const isRealDjm = (p.name && p.name.includes('DJM'));
       if(isRealDjm){
         if(!this.devices['djm']){
           this.devices['djm']={type:'DJM',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
@@ -2363,15 +2387,20 @@ class BridgeCore {
         this.onDJMStatus?.({channel:this.faders, onAir:held, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:this._hasRealFaders});
       }
       if(!this.devices['djm']){
-        // 첫 DJM 감지 시 기본 페이더값 255 초기화 (type 0x39 도착 전 TCNet에 0 보내지 않도록)
         if(!this._hasRealFaders) this.faders=[255,255,255,255];
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
+        console.log(`[DJM] 0x03 on-air에서 DJM 최초 감지: name=${p.name} ip=${rinfo.address}`);
         this.onDeviceList?.(this.devices);
-        // Probe DJM TCP ports when first discovered — fader data might be on TCP 50003
         this._probeDjmTCP(rinfo.address);
-        // CRITICAL: DJM 처음 발견 시 hello+claim을 즉시 재전송 (unicast 포함)
-        // macOS broadcast 라우팅이 REJECT된 경우에도 DJM이 bridge 등록하도록 강제
         if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
+        // 15초 후 0x39 미수신이면 진단 로그
+        setTimeout(()=>{
+          if(this.running && !this._hasRealFaders && this.devices['djm']){
+            const djmIp = this.devices['djm'].ip;
+            console.warn(`[DJM] ⚠ 15초 경과했으나 0x39 미수신! DJM=${djmIp} 0x57전송횟수=${this._djmSubCount||0}`);
+            console.warn('[DJM] 체크: 1) DJM이 같은 서브넷? 2) 방화벽 50001 차단? 3) 0x57 소켓 바인딩 실패?');
+          }
+        }, 15000);
       } else this.devices['djm'].lastSeen=Date.now();
     }
     // Beat packet (0x28, port 50001) — beat timing from CDJ
@@ -2456,13 +2485,13 @@ class BridgeCore {
       const pn = p.playerNum;
       // Skip self-announce (bridge device) — double-check name and IP
       if(p.name==='BRIDGE+'||p.name==='TCS-SHOWKONTROL'||rinfo.address==='127.0.0.1') return;
-      // DJM announce (name contains "DJM") — register before CDJ check
-      if(p.name && p.name.includes('DJM')){
+      // DJM detect: name contains "DJM" OR device type byte[33]=0x02 (STC ProDJLinkInput.h)
+      const isDjm = (p.name && p.name.includes('DJM')) || p.isDjmType;
+      if(isDjm){
         if(!this.devices['djm']){
           this.devices['djm']={type:'DJM',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
-          console.log(`[PDJL] DJM keepalive detected: ${p.name}@${rinfo.address}`);
+          console.log(`[PDJL] DJM keepalive detected: ${p.name}@${rinfo.address} (isDjmType=${p.isDjmType})`);
           this.onDeviceList?.(this.devices);
-          // DJM 처음 발견 시 hello+claim 즉시 재전송 (broadcast REJECT 우회)
           if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
         } else {
           this.devices['djm'].lastSeen=Date.now();
@@ -3665,9 +3694,11 @@ class BridgeCore {
           this._beatGrids[playerNum] = beats;
           // Estimate track end: last beat timeMs + one beat interval (best available for NXS2)
           const lastB = beats[beats.length-1];
-          if(lastB.bpm > 0){
+          if(lastB.bpm > 0 || baseBpm > 0){
             this._bgTrackLen = this._bgTrackLen || {};
-            this._bgTrackLen[playerNum] = Math.round(lastB.timeMs + 60000/lastB.bpm);
+            // baseBpm = 전체 비트 평균 BPM → 마지막 beat BPM보다 정확
+            const estBpm = baseBpm > 0 ? baseBpm : lastB.bpm;
+            this._bgTrackLen[playerNum] = Math.round(lastB.timeMs + 60000/estBpm);
           }
           this.onBeatGrid?.(playerNum, {beats, baseBpm});
           console.log(`[DBSRV] P${playerNum} beat grid: ${beats.length} beats, baseBpm=${baseBpm}, estLen=${this._bgTrackLen?.[playerNum]||0}ms`);

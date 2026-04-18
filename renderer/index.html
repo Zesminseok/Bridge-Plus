@@ -3221,7 +3221,7 @@ function tick(){
     // Sync data-type attribute for CSS-based HW/Virtual element visibility
     el.setAttribute('data-type', d.type==='hw'?'hw':'virtual');
     // HW/Virtual 동일한 상태 표시 — 루프 중이면 play와 동일하게 처리
-    el.setAttribute('data-st',d._isLooping?'play':d.pl?'play':d.scratch?'play':d.cu?'cue':'stop');
+    el.setAttribute('data-st',d._isLooping?'play':d._isReverse?'play':d.pl?'play':d.scratch?'play':d.cu?'cue':'stop');
     // USB media color — deck border + glow via inline style (overrides data-st CSS)
     {
       const _MCOL={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
@@ -3363,8 +3363,8 @@ function tick(){
     const bg=document.getElementById('dbg'+slot);
     if(bg){
       // HW/Virtual 동일한 상태 배지
-      bg.textContent=d._isLooping?'LOOP':d.pl?'PLAY':d.scratch?'HANDLING':d.cu?'CUE':'STOP';
-      bg.className='dbadge '+(d._isLooping?'bg':d.pl?'bg':d.scratch?'bb':d.cu?'by':'bm');
+      bg.textContent=d._isLooping?'LOOP':d._isReverse?'REV':d.pl?'PLAY':d.scratch?'HANDLING':d.cu?'CUE':'STOP';
+      bg.className='dbadge '+(d._isLooping?'bg':d._isReverse?'br':d.pl?'bg':d.scratch?'bb':d.cu?'by':'bm');
     }
     // ON AIR badge — always visible, toggle on/off classes (no layout reflow)
     const bAir=document.getElementById('dair'+slot);
@@ -4286,6 +4286,9 @@ if(E){
     dk.pl=status.state===3||status.state===4; // PLAYING or LOOPING
     dk.cu=status.state===7||status.state===8;  // CUEDOWN or PLATTERDOWN
     dk._isLooping=!!status.isLooping; // CDJ active loop state
+    dk._isReverse=!!status.isReverse; // 역재생 중
+    if(status.loopStartMs > 0) dk._loopStartMs = status.loopStartMs;
+    if(status.loopEndMs   > 0) dk._loopEndMs   = status.loopEndMs;
     if(dk.pl!==wasPl||dk.cu!==wasCu){dk._stateChanged=true;dk._smoothPos=null;}
     if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
     // CDJ-2000NXS2: update track duration from CDJ status (precise_pos handles CDJ-3000 separately)
