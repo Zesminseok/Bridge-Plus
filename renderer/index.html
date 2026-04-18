@@ -4585,7 +4585,12 @@ if(E){
     if(status.loopStartMs > 0) dk._loopStartMs = status.loopStartMs;
     if(status.loopEndMs   > 0) dk._loopEndMs   = status.loopEndMs;
     if(dk.pl!==wasPl||dk.cu!==wasCu){dk._stateChanged=true;dk._smoothPos=null;}
-    if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
+    // CDJ-3000: 0x0b precise_pos 경로가 pos/posTime 의 유일한 authority —
+    // 여기서 0x0a status 의 stale timecodeMs(pp.playbackMs 캐시값)로 덮어쓰면
+    // _posTime=now() + pos=200ms 전 값 조합으로 extrapolation base 가 뒤로 튐 → 비트그리드 점프 발생
+    if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos&&!dk._hasPrecisePos){
+      dk.pos=status.timecodeMs;dk._posTime=Date.now();
+    }
     // CDJ-2000NXS2: totalLenMs(bgEstLen 기반) 사용
     // CDJ-3000: _precisePos 경로에서 이미 처리됨 — 여기서 덮어쓰지 않음
     if(status.totalLenMs > 0 && !dk._hasPrecisePos){

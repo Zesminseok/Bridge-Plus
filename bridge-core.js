@@ -986,6 +986,7 @@ class BridgeCore {
     this.rxSocket      = null;
     this.lPortSocket   = null;  // listener port RX socket
     this.pdjlSocket    = null;
+    this._ownPorts     = new Set();  // local ports of our sockets — drop self-loop packets
     this.pdjlPort      = null;
     this.startTime     = Date.now();
     this.running       = false;
@@ -1103,6 +1104,7 @@ class BridgeCore {
         this.txSocket.bind(port, this.isLocalMode?'127.0.0.1':(this.tcnetBindAddr||undefined), ()=>{
           this.txSocket.removeListener('error', onErr);
           if(!this.isLocalMode) this.txSocket.setBroadcast(true);
+          try{this._ownPorts.add(this.txSocket.address().port);}catch(_){}
           res();
         });
       };
@@ -1116,6 +1118,7 @@ class BridgeCore {
     this._dataSocket = dgram.createSocket({type:'udp4', reuseAddr:true});
     this._dataSocket.on('error',()=>{});
     await new Promise(r=>this._dataSocket.bind(0, this.isLocalMode?'127.0.0.1':undefined, r));
+    try{this._ownPorts.add(this._dataSocket.address().port);}catch(_){}
     console.log(`[TCNet] DATA socket bound to port ${this._dataSocket.address().port}`);
 
     this.running = true; this.startTime = Date.now();
@@ -1183,20 +1186,34 @@ class BridgeCore {
       b.writeUInt16LE(2, TC.H);                    // nodeCount
       b.writeUInt16LE(this.listenerPort||0, TC.H+2); // listenerPort
       // Send via normal _send (covers broadcastAddr + 255.255.255.255 + localAddr + 127.0.0.1)
-      for(let i=0;i<3;i++) this._send(b,TC.P_BC);
+      for(let i=0;i<5;i++) this._send(b,TC.P_BC);
       // Also send to ALL network interfaces' broadcast addresses (covers WiFi, LAN, etc.)
       const allIfaces = getAllInterfaces().filter(i=>!i.internal&&i.broadcast);
       for(const iface of allIfaces){
-        for(let i=0;i<2;i++){
+        for(let i=0;i<3;i++){
           try{this.txSocket.send(b,0,b.length,TC.P_BC,iface.broadcast);}catch(_){}
+          // Also hit the DATA port since Arena may track nodes via P_DATA listener
+          try{this.txSocket.send(b,0,b.length,TC.P_DATA,iface.broadcast);}catch(_){}
         }
       }
       // Also send directly to each known Arena's listener port (unicast)
       for(const[,n] of Object.entries(this.nodes||{})){
         if(n.lPort&&n.ip){
-          try{this.txSocket.send(b,0,b.length,n.lPort,n.ip);}catch(_){}
-          try{this.txSocket.send(b,0,b.length,TC.P_BC,n.ip);}catch(_){}
+          for(let i=0;i<2;i++){
+            try{this.txSocket.send(b,0,b.length,n.lPort,n.ip);}catch(_){}
+            try{this.txSocket.send(b,0,b.length,TC.P_BC,n.ip);}catch(_){}
+            try{this.txSocket.send(b,0,b.length,TC.P_DATA,n.ip);}catch(_){}
+          }
         }
+      }
+      // Also emit via dataSocket (bound to P_DATA 60002) — Arena listens here for data msgs
+      if(this._dataSocket){
+        try{
+          for(let i=0;i<3;i++){
+            this._dataSocket.send(b,0,b.length,TC.P_BC,this.broadcastAddr||'255.255.255.255');
+            this._dataSocket.send(b,0,b.length,TC.P_DATA,this.broadcastAddr||'255.255.255.255');
+          }
+        }catch(_){}
       }
       console.log(`[BridgeCore] sent OptOut on ${allIfaces.length} ifaces + ${Object.keys(this.nodes||{}).length} nodes`);
     }catch(e){console.warn('[BridgeCore] OptOut error:',e.message);}
@@ -1211,6 +1228,7 @@ class BridgeCore {
       sockets.forEach(s=>{try{s?.close();}catch(_){}});
       this.txSocket=null; this.rxSocket=null; this._loRxSocket=null;
       this._ipRxSocket=null; this.lPortSocket=null; this._dataSocket=null; this.pdjlSocket=null;
+      try{this._ownPorts?.clear();}catch(_){}
       this._pdjlSockets=[];
       // _pdjlAnnSock may be shared with _pdjlSockets[0], don't double-close
       if(this._pdjlAnnSock && !this._pdjlSockets?.includes(this._pdjlAnnSock)){
@@ -1223,7 +1241,8 @@ class BridgeCore {
       this._djmSubSock=null;
       console.log('[BridgeCore] sockets closed');
     };
-    setTimeout(closeSockets, 100);
+    // 250ms gives OS UDP buffer ample time to flush all OptOut bursts before socket close
+    setTimeout(closeSockets, 250);
     // close virtual dbserver
     try{this._dbSrv?.close();}catch(_){}
     try{this._dbSrvProto?.close();}catch(_){}
@@ -1547,9 +1566,15 @@ class BridgeCore {
   _handleTCNetMsg(msg, rinfo, label){
     if(msg.length<TC.H) return;
     if(msg[4]!==0x54||msg[5]!==0x43||msg[6]!==0x4E) return;
+    // 1차 방어: Node ID 일치 → 자기 자신이 보낸 패킷 (NNAME 변경에도 견고)
+    if(msg[0]===TC.NID[0] && msg[1]===TC.NID[1]) return;
     const type = msg[7];
     const name = msg.slice(8,16).toString('ascii').replace(/\0/g,'').trim();
+    // 2차 방어: 이름 prefix (역호환 + 다른 Bridge 인스턴스 방지)
     if(name.toUpperCase().startsWith('BRIDGE')) return;
+    // 3차 방어: 송신 포트가 우리 소켓이면 loop
+    if(this._ownPorts && this._ownPorts.has(rinfo.port) &&
+       (rinfo.address===this.localAddr || rinfo.address==='127.0.0.1')) return;
 
     if(type===TC.OPTIN){
       const body = msg.slice(TC.H);
@@ -1696,9 +1721,13 @@ class BridgeCore {
       sock.on('message',(msg,rinfo)=>{
         if(msg.length<TC.H) return;
         if(msg[4]!==0x54||msg[5]!==0x43||msg[6]!==0x4E) return;
+        // NID + ownPorts + name 3중 방어 (TCNet 패킷 loop 차단)
+        if(msg[0]===TC.NID[0] && msg[1]===TC.NID[1]) return;
         const type = msg[7];
         const name = msg.slice(8,16).toString('ascii').replace(/\0/g,'').trim();
         if(name.toUpperCase().startsWith('BRIDGE')) return;
+        if(this._ownPorts && this._ownPorts.has(rinfo.port) &&
+           (rinfo.address===this.localAddr || rinfo.address==='127.0.0.1')) return;
 
         // Only log first occurrence of each type from each source
         const lk=name+type;
@@ -1763,6 +1792,7 @@ class BridgeCore {
           sock.on('error',(e2)=>{console.warn(`[lPort] fallback error: ${e2.message}`);reject(e2);});
           sock.bind(0, '127.0.0.1', ()=>{
             this.listenerPort = sock.address().port;
+            try{this._ownPorts.add(this.listenerPort);}catch(_){}
             console.log(`[TCNet] listener port ${this.listenerPort} (fallback 127.0.0.1)`);
             resolve();
           });
@@ -1775,6 +1805,7 @@ class BridgeCore {
       // bind to port 0 — OS assigns a dynamic port
       sock.bind(0, bindAddr, ()=>{
         this.listenerPort = sock.address().port;
+        try{this._ownPorts.add(this.listenerPort);}catch(_){}
         console.log(`[TCNet] listener port ${this.listenerPort}`);
         resolve();
       });
