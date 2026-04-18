@@ -430,7 +430,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
  * DATA MixerData (0xC8, sub-type 150) — 270B
  * TCNet v3.5.1B spec: per-channel fader, EQ, filter, crossfader, master
  */
-function mkMixerData(faders, mixerName){
+function mkMixerData(faders, mixerName, mixer){
   const b = Buffer.alloc(270);
   buildHdr(TC.DATA).copy(b, 0);
   const d = b.slice(TC.H);  // body 246B
@@ -441,20 +441,26 @@ function mkMixerData(faders, mixerName){
   // Mixer Name at body offset 5 (byte 29), 16 chars
   const nm = (mixerName || 'DJM-900NXS2').padEnd(16, '\0');
   Buffer.from(nm, 'ascii').copy(d, 5, 0, 16);
-  // Master Audio Level (byte 61)
-  d[37] = 255;
-  // Master Fader Level (byte 62)
-  d[38] = 255;
-  // Cross Fader (byte 99) — center
-  d[75] = 127;
-  // Per-channel data: each channel block starts at byte 125 + (ch * 24)
-  // Channel N block: [+0]=SourceSelect, [+1]=AudioLevel, [+2]=FaderLevel, [+3]=TrimLevel
+  // Master Audio Level — use real DJM masterLvl if available
+  d[37] = mixer?.masterLvl != null ? mixer.masterLvl : 255;
+  // Master Fader Level
+  d[38] = mixer?.masterLvl != null ? mixer.masterLvl : 255;
+  // Cross Fader — real xfader value (0=A, 128=center, 255=B)
+  d[75] = mixer?.xfader != null ? mixer.xfader : 127;
+  // Per-channel data: each channel block starts at body offset 101 + (ch * 24)
   for(let ch=0; ch<4; ch++){
-    const off = 101 + ch * 24;  // body offset for channel block (byte 125 = body 101)
-    d[off]   = ch + 1;          // Source Select (1-4)
-    d[off+1] = faders?.[ch] || 0; // Audio Level (0-255)
-    d[off+2] = faders?.[ch] || 0; // Fader Level (0-255)
-    d[off+3] = 200;             // Trim Level (default 200/255)
+    const off = 101 + ch * 24;
+    d[off]   = ch + 1;                                  // Source Select (1-4)
+    d[off+1] = faders?.[ch] != null ? faders[ch] : 0;  // Audio Level (fader 0-255)
+    d[off+2] = faders?.[ch] != null ? faders[ch] : 0;  // Fader Level
+    // Trim from EQ index 0 (128=0dB), fallback to 200
+    d[off+3] = mixer?.eq?.[ch]?.[0] != null ? mixer.eq[ch][0] : 200;
+    // EQ Hi/Mid/Lo from DJM 0x39 (128=center)
+    d[off+4] = mixer?.eq?.[ch]?.[1] != null ? mixer.eq[ch][1] : 128;  // HI
+    d[off+5] = mixer?.eq?.[ch]?.[2] != null ? mixer.eq[ch][2] : 128;  // MID
+    d[off+6] = mixer?.eq?.[ch]?.[3] != null ? mixer.eq[ch][3] : 128;  // LOW
+    // XF Assign (0=THRU, 1=A, 2=B)
+    d[off+7] = mixer?.xfAssign?.[ch] != null ? mixer.xfAssign[ch] : 0;
   }
   return b;
 }
@@ -957,6 +963,7 @@ class BridgeCore {
     this.faders  = [0,0,0,0];
     this.onAir   = [0,0,0,0];  // DJM Channels-On-Air flags
     this._hasRealFaders = false;
+    this._djmMixer = null;  // last parsed DJM 0x39 mixer state
     this._tcAcc = new Array(8).fill(null);
 
     this.onNodeDiscovered = null;
@@ -1104,7 +1111,7 @@ class BridgeCore {
     const t5 = setInterval(()=>{
       if(!this.running) return;
       const djm = Object.values(this.devices).find(d=>d.type==='DJM');
-      const pkt = mkMixerData(this.faders, djm?.name);
+      const pkt = mkMixerData(this.faders, djm?.name, this._djmMixer);
       this._sendDataToArenas(pkt);
     }, 100);
 
@@ -1878,7 +1885,7 @@ class BridgeCore {
       p[0x0A]=0x06; p[0x0B]=0x00;
       Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
       p[0x20]=0x01; p[0x21]=0x01; p[0x22]=0x00; p[0x23]=0x36;
-      p[0x24]=0x9E;
+      p[0x24] = process.platform==='darwin' ? 0xF9 : 0xC1;
       p[0x25]=0x00;
       for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
       for(let i=0;i<4;i++) p[0x2C+i]=aIP[i];
@@ -2029,10 +2036,28 @@ class BridgeCore {
     this._pdjlAnnTimer=setInterval(()=>{sendAnn();sendDbKeepalive();},1500);
     this._timers.push(this._pdjlAnnTimer);
 
-    // DJM subscribe (0x57) — DISABLED
-    // orig-bridge.pcap 분석: 실제 동작하는 브리지는 0x57을 전혀 보내지 않음.
-    // keepalive(0x06) name="TCS-SHOWKONTROL" + deviceType=0x9E 만으로 DJM이 0x39를 트리거함.
-    // 잘못된 0x57을 계속 보내면 DJM이 오히려 꼬일 수 있어서 완전 중단.
+    // DJM subscribe (0x57) — ProDJLinkInput.h 기준: 반드시 전송해야 DJM이 0x39 fader data를 보냄
+    // 전송 대상: DJM IP, 포트 50001 / 주기: 2초 / 첫 전송: keepalive 후 3초 딜레이
+    const buildSubPkt=()=>{
+      const p=Buffer.alloc(40);
+      PDJL.MAGIC.copy(p,0);
+      p[0x0A]=0x57;
+      Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0B,0,15);
+      p[0x1F]=0x00; p[0x20]=0x01; p[0x21]=0x00; p[0x22]=0x01; p[0x23]=0x00;
+      p[0x24]=process.platform==='darwin'?0xFE:0x87;
+      p[0x25]=0x00; p[0x26]=0x04; p[0x27]=0x01;
+      return p;
+    };
+    const sendDjmSub=()=>{
+      const djmIp=this.devices?.['djm']?.ip;
+      if(!djmIp||!this._pdjlAnnSock) return;
+      const pkt=buildSubPkt();
+      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,djmIp);}catch(_){}
+      if(!sendDjmSub._logged){sendDjmSub._logged=true;console.log(`[PDJL] 0x57 subscribe → ${djmIp}:50001`);}
+    };
+    setTimeout(sendDjmSub,3000);  // DJM가 bridge identity 등록할 시간 확보
+    const _subTimer=setInterval(()=>{ if(!this.running)return; sendDjmSub(); },2000);
+    this._timers.push(_subTimer);
 
     // Virtual CDJ status broadcast every 500ms — keeps Arena updated on virtual decks
     // Real CDJs broadcast status packets ~every 500ms; Arena stops querying if it stops seeing them
@@ -2292,6 +2317,17 @@ class BridgeCore {
     if(p.kind==='djm'){
       this._hasRealFaders=true;
       this.faders=p.channel;
+      this._djmMixer={
+        eq:p.eq,
+        xfader:p.xfader!=null?p.xfader:128,
+        masterLvl:p.masterLvl!=null?p.masterLvl:255,
+        boothLvl:p.boothLvl||0,
+        hpLevel:p.hpLevel||0,
+        cueBtn:p.cueBtn||[0,0,0,0],
+        xfAssign:p.xfAssign||[0,0,0,0],
+        masterCue:p.masterCue||0,
+        masterBalance:p.masterBalance!=null?p.masterBalance:128,
+      };
       // DJM 등록: name에 'DJM' 포함된 실제 믹서만 (rekordbox 등 제외)
       const isRealDjm = p.name && p.name.includes('DJM');
       if(isRealDjm){
@@ -2358,6 +2394,15 @@ class BridgeCore {
         // Extra guard: skip if this player is a known NXS2 (redundant but safe)
         const _ppDev = this.devices[`cdj${p.playerNum}`];
         if(_ppDev?.state?.isNXS2) return;
+        // Jog anti-jitter (TCNetOutput.h): when paused/jogging, ignore position deltas < 33ms
+        // Prevents Resolume frame vibration from CDJ jog-wheel micro-movements
+        const _layerState = this.layers[li]?.state;
+        const _isPlaying = _layerState===STATE.PLAYING || _layerState===STATE.LOOPING;
+        if(!_isPlaying){
+          const _lastMs = this.layers[li]?.timecodeMs || 0;
+          const _delta = Math.abs(p.playbackMs - _lastMs);
+          if(_delta > 0 && _delta < 33) return;
+        }
         // Store precise position for CDJ status handler to use
         if(!this._precisePos) this._precisePos={};
         this._precisePos[p.playerNum]={
