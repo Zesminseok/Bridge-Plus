@@ -888,9 +888,10 @@ function parsePDJL(msg){
       // Sanity check: reject garbage packets
       // Valid: trackLen < 24h, playhead ≤ trackLen×1000ms, BPM 20-500, pitch ±50%
       const bpmCheck = bpmRaw10/10;
+      // bpmCheck=0 허용: BPM 정보 없는 트랙(BPM-less)도 정상 처리
       const sane = trackLenSec > 0 && trackLenSec < 86400
                 && playheadRaw <= trackLenSec * 1000
-                && bpmCheck > 20 && bpmCheck < 500
+                && (bpmCheck === 0 || (bpmCheck > 20 && bpmCheck < 500))
                 && Math.abs(pitchRaw2) < 5000;
       if(!sane) return null;
       return{
@@ -1889,7 +1890,7 @@ class BridgeCore {
       p[0x25]=0x00;
       for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
       for(let i=0;i<4;i++) p[0x2C+i]=aIP[i];
-      p[0x30]=0x07; p[0x34]=0x05; p[0x35]=0x20;
+      p[0x30]=0x03; p[0x34]=0x05; p[0x35]=0x20;  // 0x03 per STC ProDJLinkInput.h reference
       return p;
     };
 
