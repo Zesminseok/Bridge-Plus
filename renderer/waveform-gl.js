@@ -380,14 +380,17 @@ void main() {
   vec3 col;
 
   if (u_mode == 3) {
-    // HW mode: height from original data (wf.a), color from band ratios
+    // HW PWV7 3-band — STC 공식 (paintWaveform):
+    //   B=low, M=mid, T=high 로 저장됨. amp=M, hiRatio=T/(B+M+T)
+    //   R = hiRatio, G = 0.45 + hiRatio*0.55, Blue=1.0 → 저음 파랑→고음 흰색 그라디언트
     float h = wf.a;
     outerH = h * scale;
     float AA = 1.0;
     inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
     if (inside < 0.005) { fragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
     float total = B + M + T + 0.001;
-    col = (bassCol * B + midCol * M + trebCol * T) / total;
+    float hiR = T / total;
+    col = vec3(hiR, 0.45 + hiR * 0.55, 1.0);
   } else {
     // Virtual: direct RGB mapping — Bass→Red, Mid→Green, Treble→Blue
     float bV = max(B, 0.0) * 1.1;
@@ -474,14 +477,15 @@ void main() {
   vec3 col;
 
   if (u_mode == 3) {
-    // HW CDJ: use wf.a for height, beat-link weighted blend for color
+    // HW PWV7 3-band — STC 공식 (blue→white spectrum)
     float h = wf.a;
     outerH = h * scale;
     float AA2 = 0.6;
     inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
     if (inside < 0.005) { fragColor = played ? vec4(0.04,0.04,0.06,1.0) : vec4(0.0,0.0,0.0,1.0); return; }
     float total = B + M + T + 0.001;
-    col = (bassCol * B + midCol * M + trebCol * T) / total;
+    float hiR = T / total;
+    col = vec3(hiR, 0.45 + hiR * 0.55, 1.0);
   } else {
     // Virtual: sqrt-scaled bands, power-3 ratio to prevent white-washing
     float bV = max(B, 0.0) * 1.1;

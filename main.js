@@ -164,12 +164,34 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onNodeDiscovered=n=>_send('tcnet:node',n);
     bridge.onCDJStatus=(li,s)=>_send('bridge:cdj',{layerIndex:li,status:s});
     bridge.onDJMStatus=f=>_send('bridge:djm',{
+      // core
+      name:f.name, isV10:f.isV10, numCh:f.numCh,
       faders:f.channel||f, onAir:f.onAir, eq:f.eq, hasRealFaders:f.hasRealFaders,
-      xfader:f.xfader, masterLvl:f.masterLvl, masterBalance:f.masterBalance, masterCue:f.masterCue,
-      boothLvl:f.boothLvl, hpLevel:f.hpLevel, hpCueCh:f.hpCueCh,
-      eqCurve:f.eqCurve, faderCurve:f.faderCurve,
-      cueBtn:f.cueBtn, xfAssign:f.xfAssign,
-      chExtra:f.chExtra, pktType:f.pktType, pktLen:f.pktLen, rawHex:f.rawHex
+      cueBtn:f.cueBtn, cueBtnB:f.cueBtnB, xfAssign:f.xfAssign, chExtra:f.chExtra,
+      xfader:f.xfader, masterLvl:f.masterLvl, masterCue:f.masterCue, masterCueB:f.masterCueB,
+      masterBalance:f.masterBalance, eqCurve:f.eqCurve, faderCurve:f.faderCurve, xfCurve:f.xfCurve,
+      // Isolator (A9/V10)
+      isolatorOn:f.isolatorOn, isolatorHi:f.isolatorHi, isolatorMid:f.isolatorMid, isolatorLo:f.isolatorLo,
+      // Booth (+EQ A9/V10)
+      boothLvl:f.boothLvl, boothEqHi:f.boothEqHi, boothEqLo:f.boothEqLo, boothEqBtn:f.boothEqBtn,
+      // HP A/B
+      hpCueCh:f.hpCueCh, hpCueLink:f.hpCueLink, hpCueLinkB:f.hpCueLinkB,
+      hpMixing:f.hpMixing, hpMixingB:f.hpMixingB, hpLevel:f.hpLevel, hpLevelB:f.hpLevelB,
+      // Beat FX
+      fxFreqLo:f.fxFreqLo, fxFreqMid:f.fxFreqMid, fxFreqHi:f.fxFreqHi,
+      beatFxSel:f.beatFxSel, beatFxAssign:f.beatFxAssign, beatFxLevel:f.beatFxLevel, beatFxOn:f.beatFxOn,
+      multiIoSel:f.multiIoSel, sendReturn:f.sendReturn,
+      // Mic
+      micEqHi:f.micEqHi, micEqLo:f.micEqLo,
+      // Filter (V10)
+      filterLPF:f.filterLPF, filterHPF:f.filterHPF, filterReso:f.filterReso,
+      // Color FX + Send Ext
+      colorFxSel:f.colorFxSel, sendExt1:f.sendExt1, sendExt2:f.sendExt2, colorFxParam:f.colorFxParam,
+      // Master Mix (V10)
+      masterMixOn:f.masterMixOn, masterMixSize:f.masterMixSize,
+      masterMixTime:f.masterMixTime, masterMixTone:f.masterMixTone, masterMixLevel:f.masterMixLevel,
+      // diagnostics
+      pktType:f.pktType, pktLen:f.pktLen, rawHex:f.rawHex
     });
     bridge.onDJMMeter=d=>_send('bridge:djmmeter',d);
     bridge.onTCMixerVU=d=>_send('bridge:tcmixervu',d);

@@ -661,131 +661,141 @@ function parsePDJL(msg){
       }
       return null;
     }
-    // Type 0x39 — 248-byte layout (DJM-900NXS2)
-    // CH_BASE=0x24, CH_STRIDE=0x18 (24B/ch), but note crossfader at abs 0x47 sits
-    // inside the CH2 block slot — DJM repurposes that byte for global xfader.
-    // Per-channel offsets (PCAP CONFIRMED 2026-04-17 full_4cdj_djm.pcapng):
-    //   +1  = TRIM (128=0dB center)
-    //   +3  = HI EQ (128=center)
-    //   +4  = MID EQ (128=center)
-    //   +6  = LOW EQ (128=center)
-    //   +7  = COLOR/Filter knob (128=center)     ⭐ was wrongly mapped to +2
-    //   +9  = CUE button (0/1)
-    //   +11 = channel FADER (0=closed)
-    //   +12 = X-Fader Assign (0=A, 1=Thru, 2=B)
-    const CH_BASE=0x24, CH_STRIDE=0x18;
-    const ch=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+11; return off<msg.length?msg[off]:0; });
-    // onAir는 0x03 패킷(djm_onair)에서 관리 — 0x39 fader값으로 on-air 판단하지 않음
-    const cueBtn=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+9; return off<msg.length?msg[off]:0; });
-    const xfAssign=[0,1,2,3].map(c=>{ const off=CH_BASE+c*CH_STRIDE+12; return off<msg.length?msg[off]:0; });
-    const eq=[0,1,2,3].map(c=>{
-      const base=CH_BASE+c*CH_STRIDE;
-      // Order: [TRIM, HI, MID, LOW, COLOR] — matches profile ids=['T','H','M','L','C']
-      return[
-        base+1<msg.length?msg[base+1]:0x80,  // TRIM (index 0)
-        base+3<msg.length?msg[base+3]:0x80,  // HI EQ (index 1)
-        base+4<msg.length?msg[base+4]:0x80,  // MID EQ (index 2)
-        base+6<msg.length?msg[base+6]:0x80,  // LOW EQ (index 3)
-        base+7<msg.length?msg[base+7]:0x80,  // COLOR / Filter knob (index 4)  ⭐ was +2
-      ];
+    // Type 0x39 — 248-byte layout (DJM-900NXS2/A9/V10)
+    // Offsets from STC SuperTimecodeConverter (pcap-confirmed, V10__nuevo_crossfader.pcapng)
+    // Per-channel block (stride 0x18):
+    //   +0 InputSource  +1 Trim  +2 Comp(V10)  +3 HI  +4 MID  +5 LoMid(V10)
+    //   +6 LO  +7 Color  +8 Send(V10)  +9 CUE  +10 CueB(A9/V10)  +11 Fader  +12 XF Assign
+    const isV10 = /V10/i.test(name);
+    const numCh = isV10 ? 6 : 4;
+    const CH_BASES = [0x024,0x03C,0x054,0x06C,0x084,0x09C];
+    const readB = (o,dflt=0)=> o<msg.length ? msg[o] : dflt;
+    const ch      = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+11,0));
+    const cueBtn  = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+9,0));
+    const cueBtnB = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+10,0));
+    const xfAssign= new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+12,0));
+    // eq: [TRIM, HI, MID, LOW, COLOR] for display compatibility
+    const eq = new Array(numCh).fill(0).map((_,c)=>{
+      const b=CH_BASES[c];
+      return [readB(b+1,128), readB(b+3,128), readB(b+4,128), readB(b+6,128), readB(b+7,128)];
     });
-    const chExtra=[0,1,2,3].map(c=>{
-      const base=CH_BASE+c*CH_STRIDE; const extra={cue:cueBtn[c], xfa:xfAssign[c]};
-      for(let b=2;b<=23;b++){if(base+b<msg.length)extra['b'+b]=msg[base+b];}
-      return extra;
-    });
-    const gBase=CH_BASE+4*CH_STRIDE; // 0x84
-    // Global/master offsets (PCAP CONFIRMED 2026-04-17):
-    //   abs 0x47    = Crossfader (0-255, 0=A, 128=center, 255=B)  ⭐ sits in CH2 slot
-    //   gBase+48 (0xb4) = Master Volume
-    //   gBase+49 (0xb5) = EQ Curve (0=ISOLATOR, 1=STANDARD, 2=HOT EQ)
-    //   gBase+50 (0xb6) = Fader Curve (0/1/2)
-    //   gBase+51 (0xb7) = Master CUE level
-    //   gBase+53 (0xb9) = Booth Monitor on/off (0/1)
-    //   gBase+59 (0xbf) = Master Balance (128=center)
-    const xfader=(0x47<msg.length)?msg[0x47]:128;
-    const masterLvl=(gBase+48<msg.length)?msg[gBase+48]:128;
-    const eqCurve=(gBase+49<msg.length)?msg[gBase+49]:0;
-    const faderCurve=(gBase+50<msg.length)?msg[gBase+50]:0;
-    const masterCue=(gBase+51<msg.length)?msg[gBase+51]:0;
-    const boothLvl=(gBase+53<msg.length)?msg[gBase+53]:0;
-    const masterBalance=(gBase+59<msg.length)?msg[gBase+59]:128;
-    const hpLevel=(gBase+71<msg.length)?msg[gBase+71]:0;
-    const hpCueCh=(gBase+4<msg.length)?msg[gBase+4]:0;
-    // Debug hex dump: first receive + extended global view
+    // V10 extras per channel
+    const chComp  = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+2,0));
+    const chLoMid = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+5,128));
+    const chSend  = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+8,0));
+    const chInput = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+0,0));
+    const chExtra = new Array(numCh).fill(0).map((_,c)=>({
+      cue:cueBtn[c], cueB:cueBtnB[c], xfa:xfAssign[c],
+      comp:chComp[c], loMid:chLoMid[c], send:chSend[c], input:chInput[c]
+    }));
+    // Global / Master (absolute offsets — same for 4ch & 6ch)
+    const xfader      = readB(0x0B4,128);
+    const faderCurve  = readB(0x0B5,1);
+    const xfCurve     = readB(0x0B6,1);
+    const masterLvl   = readB(0x0B7,128);
+    const masterCue   = readB(0x0B9,0);
+    const masterCueB  = readB(0x0BA,0);  // A9/V10
+    const isolatorOn  = readB(0x0BB,0);  // A9/V10
+    const isolatorHi  = readB(0x0BC,128);// V10
+    const isolatorMid = readB(0x0BD,128);// V10
+    const isolatorLo  = readB(0x0BE,128);// V10
+    const boothLvl    = readB(0x0BF,0);
+    const boothEqHi   = readB(0x0C0,128);// A9/V10
+    const boothEqLo   = readB(0x0C1,128);// A9/V10
+    // Headphones
+    const hpCueLink   = readB(0x0C4,0);
+    const hpCueLinkB  = readB(0x0C5,0);  // A9/V10
+    const hpMixing    = readB(0x0E3,0);
+    const hpLevel     = readB(0x0E4,0);
+    const boothEqBtn  = readB(0x0E5,0);  // A9/V10
+    const hpMixingB   = readB(0x0E6,0);  // A9/V10
+    const hpLevelB    = readB(0x0E7,0);  // A9/V10
+    // Beat FX
+    const fxFreqLo    = readB(0x0C6,0);
+    const fxFreqMid   = readB(0x0C7,0);
+    const fxFreqHi    = readB(0x0C8,0);
+    const beatFxSel   = readB(0x0C9,0);
+    const beatFxAssign= readB(0x0CA,0);
+    const beatFxLevel = readB(0x0CB,0);
+    const beatFxOn    = readB(0x0CC,0);
+    const multiIoSel  = readB(0x0CE,0);
+    const sendReturn  = readB(0x0CF,0);
+    // Mic
+    const micEqHi     = readB(0x0D6,128);
+    const micEqLo     = readB(0x0D7,128);
+    // Filter (V10)
+    const filterLPF   = readB(0x0D8,0);
+    const filterHPF   = readB(0x0D9,0);
+    const filterReso  = readB(0x0DA,0);
+    // Color FX / Send ext
+    const colorFxSel  = readB(0x0DB,255);
+    const sendExt1    = readB(0x0DC,0);
+    const sendExt2    = readB(0x0DD,0);
+    const colorFxParam= readB(0x0E2,128);
+    // Master Mix (V10 — shares 0x0E2 with ColorFxParam)
+    const masterMixOn   = readB(0x0DE,0);
+    const masterMixSize = readB(0x0DF,0);
+    const masterMixTime = readB(0x0E0,0);
+    const masterMixTone = readB(0x0E1,0);
+    const masterMixLevel= readB(0x0E2,0);
+    // Legacy aliases kept for backward compatibility with renderer
+    const eqCurve = faderCurve; // historical name; actually fader curve
+    const masterBalance = 128;  // not in 0x39 (V10 has isolator instead)
+    const hpCueCh = hpCueLink;  // legacy alias
+    // Debug hex dump: first receive (per-channel + global ranges)
     if(!parsePDJL._djm39Logged){
       parsePDJL._djm39Logged=true;
-      const hex=[0,1,2,3].map(c=>{const b=CH_BASE+c*CH_STRIDE;return`CH${c+1}[${Array.from(msg.slice(b,Math.min(b+24,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' ')}]`;}).join(' ');
-      const gHex=msg.length>gBase?Array.from(msg.slice(gBase,Math.min(gBase+100,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' '):'(none)';
-      try{console.log(`[DJM-0x39] len=${msg.length}\n  ${hex}\n  GLOBAL@0x${gBase.toString(16)}=[${gHex}]`);}catch(_){}
+      const hex=CH_BASES.slice(0,numCh).map((b,c)=>`CH${c+1}[${Array.from(msg.slice(b,Math.min(b+13,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' ')}]`).join(' ');
+      const gHex=msg.length>0xB4?Array.from(msg.slice(0xB4,Math.min(0xE8,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' '):'(none)';
+      try{console.log(`[DJM-0x39] model=${name} ${isV10?'(V10/6ch)':'(4ch)'} len=${msg.length}\n  ${hex}\n  GLOBAL@0xB4=[${gHex}]`);}catch(_){}
     }
-    // Full packet byte-diff tracker: log every byte that changes (for discovering unknown fields)
-    const _knownOffsets=new Set([
-      // ch1-4 known bytes: +1=TRIM,+3=HI,+4=MID,+6=LOW,+7=COLOR,+9=CUE,+11=FADER,+12=XFA
-      ...[0,1,2,3].flatMap(c=>[0,1,3,4,6,7,9,11,12].map(b=>CH_BASE+c*CH_STRIDE+b)),
-      0x21, 0x47,               // VU, Crossfader
-      gBase+4, gBase+48, gBase+49, gBase+50, gBase+51, gBase+53, gBase+59, gBase+71
-    ]);
-    if(!parsePDJL._djm39Prev){
-      parsePDJL._djm39Prev=new Uint8Array(msg);
-    } else {
-      const prev=parsePDJL._djm39Prev;
-      const diffs=[];
-      for(let i=0;i<Math.min(msg.length,248);i++){
-        if(msg[i]!==prev[i]){
-          let lbl='';
-          const relG=i-gBase;
-          if(i===0x47){ lbl='XFADER'; }
-          else if(i===0x21){ lbl='VU'; }
-          else if(i>=CH_BASE&&i<gBase){
-            const c=Math.floor((i-CH_BASE)/CH_STRIDE);
-            const b=(i-CH_BASE)%CH_STRIDE;
-            const BNAMES={0:'status',1:'TRIM',3:'HI',4:'MID',6:'LOW',7:'COLOR',9:'CUE',11:'FADER',12:'XFA'};
-            lbl=`CH${c+1}+${b}${BNAMES[b]?'('+BNAMES[b]+')':''}`;
-          } else if(relG>=0){
-            const GNAMES={4:'hpCueCh',48:'masterLvl',49:'eqCurve',50:'faderCurve',51:'masterCue',53:'boothOn',59:'masterBal',71:'hpLevel'};
-            lbl=`G+${relG}${GNAMES[relG]?'('+GNAMES[relG]+')':''}`;
-          } else {
-            lbl=`@0x${i.toString(16)}`;
-          }
-          const known=_knownOffsets.has(i)?'':'★NEW';
-          diffs.push(`${lbl}:${prev[i]}→${msg[i]}${known}`);
-        }
-      }
-      if(diffs.length>0){
-        try{console.log(`[DJM-0x39 DIFF] ${diffs.join('  ')}`);}catch(_){}
-      }
-      parsePDJL._djm39Prev=new Uint8Array(msg);
-    }
-    if(!parsePDJL._lastDjm||parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
+    if(!parsePDJL._lastDjm||parsePDJL._lastDjm.length!==ch.length||parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
       parsePDJL._lastDjm=ch.slice();
-      try{console.log(`[DJM-0x39] faders=[${ch}] eq(T/Hi/Mid/Lo/Clr)=${JSON.stringify(eq)} xf=${xfader} mVol=${masterLvl} bal=${masterBalance} mCue=${masterCue} booth=${boothLvl} eqCv=${eqCurve} fCv=${faderCurve} hp=${hpLevel}`);}catch(_){}
+      try{console.log(`[DJM-0x39] faders=[${ch}] xf=${xfader} mVol=${masterLvl} mCue=${masterCue} booth=${boothLvl} fCv=${faderCurve} xfCv=${xfCurve} hpLv=${hpLevel} hpMix=${hpMixing} beatFx=${beatFxSel}/${beatFxOn} colorFx=${colorFxSel}`);}catch(_){}
     }
-    return{kind:'djm',name,channel:ch,eq,xfader,masterLvl,masterBalance,masterCue,eqCurve,faderCurve,boothLvl,hpLevel,hpCueCh,cueBtn,xfAssign,chExtra};
+    return{
+      kind:'djm',name, isV10, numCh,
+      channel:ch, eq, cueBtn, cueBtnB, xfAssign, chExtra,
+      xfader, masterLvl, masterCue, masterCueB,
+      faderCurve, xfCurve,
+      isolatorOn, isolatorHi, isolatorMid, isolatorLo,
+      boothLvl, boothEqHi, boothEqLo, boothEqBtn,
+      hpCueLink, hpCueLinkB, hpMixing, hpMixingB, hpLevel, hpLevelB,
+      fxFreqLo, fxFreqMid, fxFreqHi,
+      beatFxSel, beatFxAssign, beatFxLevel, beatFxOn, multiIoSel, sendReturn,
+      micEqHi, micEqLo,
+      filterLPF, filterHPF, filterReso,
+      colorFxSel, sendExt1, sendExt2, colorFxParam,
+      masterMixOn, masterMixSize, masterMixTime, masterMixTone, masterMixLevel,
+      // legacy aliases
+      masterBalance, eqCurve, hpCueCh
+    };
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
-  // 15-band spectrum per channel: base 0xA4, stride 0x3C, uint16BE per band
-  if(type===PDJL.DJM_METER && msg.length>=0x180){
-    const MBASE=0xA4, MSTEP=0x3C;
-    const ch=[0,1,2,3].map(c=>{
-      let peak=0;
+  // STC-confirmed offsets (15 × uint16BE per block, 0=silence, 32767=clip):
+  //   4-ch: CH1=0x02C CH2=0x068 CH3=0x0A4 CH4=0x0E0 MasterL=0x11C MasterR=0x158
+  //   6-ch (V10): CH5=0x194 CH6=0x1D0 appended AFTER MasterR (same as 4-ch positions)
+  if(type===PDJL.DJM_METER && msg.length>=0x176){
+    const isV10 = /V10/i.test(name);
+    const chOff4 = [0x02C,0x068,0x0A4,0x0E0];
+    const chOff6 = [0x02C,0x068,0x0A4,0x0E0,0x194,0x1D0];
+    const masterLOff = 0x11C, masterROff = 0x158;
+    const chOffsets = isV10 ? chOff6 : chOff4;
+    const readBlock = (base)=>{
+      const bands=[]; let peak=0;
       for(let b=0;b<15;b++){
-        const off=MBASE+c*MSTEP+b*2;
-        if(off+1<msg.length){const v=msg.readUInt16BE(off);if(v>peak)peak=v;}
-      }
-      return Math.min(255,Math.round(peak/9200*255));
-    });
-    // 15-band spectrum raw data per channel (normalized 0-255)
-    const spectrum=[0,1,2,3].map(c=>{
-      const bands=[];
-      for(let b=0;b<15;b++){
-        const off=MBASE+c*MSTEP+b*2;
-        if(off+1<msg.length){bands.push(Math.min(255,Math.round(msg.readUInt16BE(off)/9200*255)));}
+        const off=base+b*2;
+        if(off+1<msg.length){const v=msg.readUInt16BE(off); if(v>peak)peak=v; bands.push(Math.min(255,Math.round(v/32767*255)));}
         else bands.push(0);
       }
-      return bands;
-    });
-    return{kind:'djm_meter',name,ch,spectrum};
+      return {peak:Math.min(255,Math.round(peak/32767*255)), bands};
+    };
+    const blocks = chOffsets.map(readBlock);
+    const ch = blocks.map(b=>b.peak);
+    const spectrum = blocks.map(b=>b.bands);
+    const mL = msg.length>=masterLOff+30 ? readBlock(masterLOff) : {peak:0,bands:new Array(15).fill(0)};
+    const mR = msg.length>=masterROff+30 ? readBlock(masterROff) : {peak:0,bands:new Array(15).fill(0)};
+    return{kind:'djm_meter',name,isV10,numCh:chOffsets.length,ch,spectrum,masterL:mL.peak,masterR:mR.peak,masterLBands:mL.bands,masterRBands:mR.bands};
   }
   // DJM Channels On-Air (type 0x03, 45B, port 50001)
   if(type===PDJL.DJM_ONAIR && msg.length>=0x2C){

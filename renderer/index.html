@@ -616,6 +616,97 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
           <span id="mxFdrCurve" style="font:700 10px var(--sn);color:var(--cyn);letter-spacing:.04em">STANDARD</span>
         </div>
       </div>
+      <!-- Extended FX / Mic / Filter / Isolator / Master Mix / Booth EQ / HP B (STC offsets) -->
+      <div id="mxAuxExt" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:8px 10px;margin-top:4px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:4px">
+        <!-- BEAT FX -->
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">BEAT FX <span id="mxBfxOn" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.12);margin-left:3px"></span></span>
+          <span id="mxBfxSel" style="font:700 10px var(--sn);color:var(--pur);letter-spacing:.04em">DELAY</span>
+          <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div id="mxBfxLvlBar" style="height:100%;width:0%;background:var(--pur);transition:width .1s"></div></div>
+          <span id="mxBfxAssign" style="font:500 8px var(--mn);color:var(--tx3)">MASTER</span>
+        </div>
+        <!-- FX FREQ buttons (LO/MID/HI) -->
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">FX FREQ</span>
+          <div style="display:flex;gap:3px">
+            <span id="mxFxFLo" class="mx-fx-btn" style="font:700 8px var(--sn);padding:1px 5px;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:var(--tx3)">LO</span>
+            <span id="mxFxFMid" class="mx-fx-btn" style="font:700 8px var(--sn);padding:1px 5px;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:var(--tx3)">MID</span>
+            <span id="mxFxFHi" class="mx-fx-btn" style="font:700 8px var(--sn);padding:1px 5px;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:var(--tx3)">HI</span>
+          </div>
+          <span id="mxSndRtn" style="font:500 8px var(--mn);color:var(--tx3)">SND/RTN 0</span>
+        </div>
+        <!-- COLOR FX -->
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">COLOR FX</span>
+          <span id="mxCfxSel" style="font:700 10px var(--sn);color:var(--cyn);letter-spacing:.04em">OFF</span>
+          <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;position:relative"><div style="position:absolute;left:50%;top:-1px;width:1px;height:5px;background:rgba(255,255,255,.3)"></div><div id="mxCfxPar" style="position:absolute;top:0;width:3px;height:3px;background:var(--cyn);border-radius:1px;left:50%;transform:translateX(-50%)"></div></div>
+          <span id="mxCfxVal" style="font:500 8px var(--mn);color:var(--tx3)">0</span>
+        </div>
+        <!-- MIC EQ -->
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">MIC EQ</span>
+          <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;position:relative"><div style="position:absolute;left:50%;top:-1px;width:1px;height:5px;background:rgba(255,255,255,.3)"></div><div id="mxMicHi" style="position:absolute;top:0;width:3px;height:3px;background:var(--ylw2);border-radius:1px;left:50%;transform:translateX(-50%)"></div></div>
+          <span style="font:500 7px var(--sn);color:var(--tx4)">HI</span>
+          <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;position:relative"><div style="position:absolute;left:50%;top:-1px;width:1px;height:5px;background:rgba(255,255,255,.3)"></div><div id="mxMicLo" style="position:absolute;top:0;width:3px;height:3px;background:var(--blu);border-radius:1px;left:50%;transform:translateX(-50%)"></div></div>
+          <span style="font:500 7px var(--sn);color:var(--tx4)">LO</span>
+        </div>
+        <!-- BOOTH EQ (A9/V10) -->
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">BOOTH EQ</span>
+          <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;position:relative"><div style="position:absolute;left:50%;top:-1px;width:1px;height:5px;background:rgba(255,255,255,.3)"></div><div id="mxBthHi" style="position:absolute;top:0;width:3px;height:3px;background:var(--ylw2);border-radius:1px;left:50%;transform:translateX(-50%)"></div></div>
+          <span style="font:500 7px var(--sn);color:var(--tx4)">HI</span>
+          <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;position:relative"><div style="position:absolute;left:50%;top:-1px;width:1px;height:5px;background:rgba(255,255,255,.3)"></div><div id="mxBthLo" style="position:absolute;top:0;width:3px;height:3px;background:var(--blu);border-radius:1px;left:50%;transform:translateX(-50%)"></div></div>
+          <span style="font:500 7px var(--sn);color:var(--tx4)">LO</span>
+        </div>
+        <!-- HP B (A9/V10) -->
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">HP B <span id="mxHpLinkB" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.12);margin-left:3px"></span></span>
+          <div style="width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div id="mxHpBarB" style="height:100%;width:0%;background:var(--ylw2);transition:width .12s"></div></div>
+          <span id="mxHpValB" style="font:500 9px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums">0</span>
+          <span id="mxHpMixB" style="font:500 8px var(--mn);color:var(--tx3)">MIX 0</span>
+        </div>
+      </div>
+      <!-- V10-only row: Filter / Isolator / Master Mix -->
+      <div id="mxAuxV10" style="display:none;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 10px;margin-top:4px;background:rgba(150,100,200,.04);border:1px solid rgba(150,100,200,.18);border-radius:4px">
+        <!-- FILTER -->
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:#c58af0;letter-spacing:.08em">FILTER</span>
+          <div style="display:flex;gap:3px">
+            <span id="mxFltLPF" class="mx-fx-btn" style="font:700 8px var(--sn);padding:1px 5px;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:var(--tx3)">LPF</span>
+            <span id="mxFltHPF" class="mx-fx-btn" style="font:700 8px var(--sn);padding:1px 5px;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:var(--tx3)">HPF</span>
+          </div>
+          <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div id="mxFltReso" style="height:100%;width:0%;background:#c58af0;transition:width .1s"></div></div>
+          <span style="font:500 7px var(--sn);color:var(--tx4)">RESONANCE</span>
+        </div>
+        <!-- ISOLATOR -->
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:#c58af0;letter-spacing:.08em">ISOLATOR <span id="mxIsoOn" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.12);margin-left:3px"></span></span>
+          <div style="display:flex;gap:4px;width:100%">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+              <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;position:relative"><div style="position:absolute;left:50%;top:-1px;width:1px;height:5px;background:rgba(255,255,255,.3)"></div><div id="mxIsoHi" style="position:absolute;top:0;width:3px;height:3px;background:var(--ylw2);border-radius:1px;left:50%;transform:translateX(-50%)"></div></div>
+              <span style="font:500 7px var(--sn);color:var(--tx4)">H</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+              <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;position:relative"><div style="position:absolute;left:50%;top:-1px;width:1px;height:5px;background:rgba(255,255,255,.3)"></div><div id="mxIsoMid" style="position:absolute;top:0;width:3px;height:3px;background:var(--grn);border-radius:1px;left:50%;transform:translateX(-50%)"></div></div>
+              <span style="font:500 7px var(--sn);color:var(--tx4)">M</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+              <div style="width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;position:relative"><div style="position:absolute;left:50%;top:-1px;width:1px;height:5px;background:rgba(255,255,255,.3)"></div><div id="mxIsoLo" style="position:absolute;top:0;width:3px;height:3px;background:var(--blu);border-radius:1px;left:50%;transform:translateX(-50%)"></div></div>
+              <span style="font:500 7px var(--sn);color:var(--tx4)">L</span>
+            </div>
+          </div>
+        </div>
+        <!-- MASTER MIX -->
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:#c58af0;letter-spacing:.08em">MASTER MIX <span id="mxMmxOn" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.12);margin-left:3px"></span></span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 6px;width:100%;font:500 8px var(--sn);color:var(--tx3)">
+            <span>SIZE <span id="mxMmxSize" style="color:var(--tx)">0</span></span>
+            <span>TIME <span id="mxMmxTime" style="color:var(--tx)">0</span></span>
+            <span>TONE <span id="mxMmxTone" style="color:var(--tx)">0</span></span>
+            <span>LVL <span id="mxMmxLvl" style="color:var(--tx)">0</span></span>
+          </div>
+        </div>
+      </div>
       <div style="display:flex;gap:6px;align-items:center">
         <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').textContent=_djmLogOpen?'▾':'▸'" style="flex:1"><span>▸</span> DJM PACKET LOG</div>
         <button id="mxCaptureBtn" style="font:600 9px var(--mn);padding:2px 8px;border-radius:3px;border:1px solid rgba(255,80,80,.4);background:rgba(255,80,80,.1);color:#ff8080;cursor:pointer" onclick="_toggleDjmCapture()">● REC</button>
@@ -661,6 +752,21 @@ let _djmChXfAssign=[0,0,0,0,0,0]; // crossfader assign per channel (0=THRU,1=A,2
 let _djmXfader=128, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=128, _djmHasRealFaders=false;
 let _djmMasterBal=128, _djmMasterCue=0, _djmBoothLvl=0, _djmHpLevel=0;
 let _djmEqCurve=1, _djmFaderCurve=1;  // 0=ISOLATOR/LONG, 1=STANDARD, 2=HOT/SHORT
+// Extended DJM fields (A9/V10) — from STC offsets
+let _djmIsV10=false;
+let _djmBoothEqHi=128, _djmBoothEqLo=128, _djmBoothEqBtn=0;
+let _djmMasterCueB=0, _djmHpCueLink=0, _djmHpCueLinkB=0;
+let _djmHpMixing=128, _djmHpMixingB=128, _djmHpLevelB=0;
+let _djmBeatFxSel=0, _djmBeatFxAssign=0, _djmBeatFxLevel=0, _djmBeatFxOn=0, _djmSendReturn=0, _djmMultiIoSel=0;
+let _djmFxFreqLo=0, _djmFxFreqMid=0, _djmFxFreqHi=0;
+let _djmMicEqHi=128, _djmMicEqLo=128;
+let _djmFilterLPF=0, _djmFilterHPF=0, _djmFilterReso=0;
+let _djmColorFxSel=255, _djmColorFxParam=128, _djmSendExt1=0, _djmSendExt2=0;
+let _djmIsolatorOn=0, _djmIsolatorHi=128, _djmIsolatorMid=128, _djmIsolatorLo=128;
+let _djmMasterMixOn=0, _djmMasterMixSize=0, _djmMasterMixTime=0, _djmMasterMixTone=128, _djmMasterMixLevel=0;
+const _BEAT_FX_NAMES=['DELAY','ECHO','PING PONG','SPIRAL','REVERB','TRANS','FILTER','FLANGER','PHASER','PITCH','SLIP ROLL','ROLL','VINYL BRAKE','HELIX'];
+const _COLOR_FX_NAMES={0:'SPACE',1:'DUB ECHO',2:'SWEEP',3:'NOISE',4:'CRUSH',5:'FILTER',255:'OFF'};
+const _BEAT_FX_ASSIGN_NAMES={0:'MIC',1:'CH1',2:'CH2',3:'CH3',7:'CH4',6:'XF-A',8:'XF-B',9:'MASTER'};
 let _djmLog=[], _djmLogMax=80, _djmLogOpen=false, _djmCapturing=false, _djmAutoCapStarted=false;
 async function _toggleDjmCapture(){
   const btn=document.getElementById('mxCaptureBtn');
@@ -683,7 +789,7 @@ async function _toggleDjmCapture(){
 const _DJM_PROFILES={
   'V10':     {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW','CLR'], ids:['T','H','HM','LM','L','C'], comp:true},
   'V10-LF':  {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW','CLR'], ids:['T','H','HM','LM','L','C'], comp:true},
-  'A9':      {ch:6, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
+  'A9':      {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
   '900NXS2': {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
   '900NXS':  {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
   '750MK2':  {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
@@ -1263,6 +1369,29 @@ function _cdjColorToRGB(c){
   return palette[c & 7];
 }
 
+// ═══ HW waveform color renderer (dedicated, STC-compliant) ═══════════════
+// HW(CDJ) 덱은 rekordbox에서 분석된 PWV5/PWV7 데이터를 받는다.
+// STC WaveformDetailDisplay::paintWaveform PWV7 공식:
+//   amp = mid / peak → 높이
+//   highRatio = high / (low+mid+high)
+//   R = highRatio, G = 0.45 + highRatio*0.55, B = 1.0
+// 이 공식은 저음↔청색, 고음↔흰색 스펙트럼 그라디언트로 렌더됨.
+function _hwPwv7ToRGB(low,mid,hi){
+  const total = low + mid + hi + 0.001;
+  const hiR   = hi / total;
+  return [hiR, 0.45 + hiR*0.55, 1.0];
+}
+// Standard CDJ 1-byte preview (height 5-bit + color 3-bit)는 이미 _cdjColorToRGB()로 전처리됨.
+// HW 덱에서만 적용되는 포인트 → RGB 컨버터 단일 진입점
+function _hwPointToRGB(p, isPwv7){
+  if(isPwv7){
+    // p = {r:low, g:mid, b:hi} — 저장 단계에서 low/mid/hi를 r/g/b 슬롯에 역사적으로 재사용
+    return _hwPwv7ToRGB(p.r||0, p.g||0, p.b||0);
+  }
+  // Preview/detail 1-byte: rgbWf 생성 시 이미 팔레트 RGB를 기록 → 그대로 사용
+  return [p.r||0, p.g||0, p.b||0];
+}
+
 // Waveform color: 3 presets — 'blue', 'rgb', '3band'
 // Source: Rekordbox ANLZ PWV4/PWV5/PWV6 + Deep-Symmetry/dysentery #9/#33
 function _wfBlend(r,g,b2,dimF){
@@ -1331,8 +1460,9 @@ function buildWaveformCache(slot){
     const h=Math.max(1,Math.round(p.h*mid*0.95));
     let R,G,B;
     if(d.type==='hw'){
-      // HW: r,g,b are already direct RGB (0-1), just scale to 255
-      R=Math.round(p.r*255); G=Math.round(p.g*255); B=Math.round(p.b*255);
+      // HW 전용 경로 — STC PWV7 공식 또는 CDJ 팔레트 컬러 (나눠진 코드)
+      const [fr,fg,fb]=_hwPointToRGB(p,!!d._pwv7);
+      R=Math.round(fr*255); G=Math.round(fg*255); B=Math.round(fb*255);
     } else {
       [R,G,B]=_wfBlend(p.r,p.g,p.b,1);
     }
@@ -1411,18 +1541,36 @@ function _drawZoomScrollingCache(ctx, cache, viewL, msPerPx, W, H){
   ctx.drawImage(cache.canvas,sx,0,sw,H,0,0,sw,H);
 }
 
+// Draw active loop on zoom waveform.
+// Priority: CDJ-reported loop (d._loopStartMs/_loopEndMs from 0x0A status 512B) — most accurate.
+// Fallback: any cue-list 'loop' entry that currently contains the playhead (legacy path).
+// STC convention: semi-transparent orange fill + orange boundary bars.
 function _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX){
+  const drawRange=(startMs,endMs,active)=>{
+    if(!(endMs>startMs))return;
+    const cpx=Math.round((startMs-posMs)/msPerPx+cX);
+    const epx=Math.round((endMs  -posMs)/msPerPx+cX);
+    if(epx<=0||cpx>=W)return;
+    const lx=Math.max(0,cpx),rx=Math.min(W,epx);
+    ctx.fillStyle=active?'rgba(255,136,0,.22)':'rgba(255,136,0,.10)';
+    ctx.fillRect(lx,0,rx-lx,H);
+    ctx.fillStyle=active?'rgba(255,136,0,.85)':'rgba(255,136,0,.50)';
+    if(cpx>=0&&cpx<W)ctx.fillRect(cpx-0.5,0,1.5,H);
+    if(epx>=0&&epx<W)ctx.fillRect(epx-0.5,0,1.5,H);
+    ctx.fillStyle=active?'rgba(255,200,0,.55)':'rgba(255,180,0,.25)';
+    ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
+  };
+  // 1) CDJ active loop from status packet (STC-style, most accurate)
+  if(d._loopStartMs>0&&d._loopEndMs>d._loopStartMs){
+    drawRange(d._loopStartMs,d._loopEndMs,!!d._isLooping);
+    return;
+  }
+  // 2) Legacy: cue-list 'loop' that contains the playhead
   if(!d._isLooping||!d.cuePoints?.length)return;
   for(const cue of d.cuePoints){
     if(cue.type!=='loop'||cue.loopEndMs<=0)continue;
     if(posMs<cue.timeMs-50||posMs>cue.loopEndMs+50)continue;
-    const cpx=Math.round((cue.timeMs-posMs)/msPerPx+cX);
-    const epx=Math.round((cue.loopEndMs-posMs)/msPerPx+cX);
-    if(epx<=Math.max(cpx,0)||cpx>=W)break;
-    const lx=Math.max(0,cpx),rx=Math.min(W,epx);
-    ctx.fillStyle='rgba(255,200,0,.15)';ctx.fillRect(lx,0,rx-lx,H);
-    ctx.fillStyle='rgba(255,200,0,.6)';ctx.fillRect(lx,0,1,H);ctx.fillRect(rx-1,0,1,H);
-    ctx.fillStyle='rgba(255,200,0,.35)';ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
+    drawRange(cue.timeMs,cue.loopEndMs,true);
     break;
   }
 }
@@ -1566,8 +1714,8 @@ function drawOverview(slot,prog){
     // Auto-upload texture if missing — mirrors drawZoomWaveform's self-healing pattern
     if(!d.ovgl._wfTex){const _wd=d.rgbWfDetail||d.rgbWf;if(_wd)d.ovgl.setData(_wd);}
     if(!d.ovgl._wfTex)return;
-    // HW decks → mode 3 (CDJ native colors), blue config → mode 2, default → mode 1
-    d.ovgl.draw(pos, d.type==='hw' ? 3 : (cfg.wfColor==='blue' ? 2 : 1));
+    // HW PWV7 → mode 3 (STC 3-band blue→white), HW palette → mode 4 (native RGB), blue → 2, default → 1
+    d.ovgl.draw(pos, d.type==='hw' ? (d._pwv7 ? 3 : 4) : (cfg.wfColor==='blue' ? 2 : 1));
     // Continue to draw overlay markers on separate canvas
   } else {
     if(!d.wovCtx)return;
@@ -1588,8 +1736,10 @@ function drawOverview(slot,prog){
         const h=Math.max(1,Math.round(pk*mid*0.95));
         if(h<1)continue;
         let R,G,B;
-        if(d.type==='hw'){R=Math.round(r*255);G=Math.round(g*255);B=Math.round(b*255);}
-        else{[R,G,B]=_wfBlend(r,g,b,1);}
+        if(d.type==='hw'){
+          const [fr,fg,fb]=_hwPointToRGB({r,g,b},!!d._pwv7);
+          R=Math.round(fr*255);G=Math.round(fg*255);B=Math.round(fb*255);
+        } else {[R,G,B]=_wfBlend(r,g,b,1);}
         const invH=1/h;
         for(let dy=-h;dy<=h;dy++){
           const y=mid+dy;if(y<0||y>=H)continue;
@@ -1631,6 +1781,18 @@ function drawOverview(slot,prog){
     if(cue.type==='hot')return _cueColors[cue.colorId]||'#00e676';
     if(cue.type==='loop')return '#ff8800';
     return '#fff';
+  }
+  // STC-style active CDJ loop overlay on overview (from 0x0A 512B packet).
+  // Drawn first so cue markers sit on top.
+  if(_ovDur>0&&d._loopStartMs>0&&d._loopEndMs>d._loopStartMs){
+    const sx=Math.round(d._loopStartMs/_ovDur*W2);
+    const ex=Math.round(d._loopEndMs  /_ovDur*W2);
+    if(ex>sx){
+      olCtx.fillStyle=d._isLooping?'rgba(255,136,0,.30)':'rgba(255,136,0,.14)';
+      olCtx.fillRect(sx,0,ex-sx,H2);
+      olCtx.fillStyle=d._isLooping?'rgba(255,136,0,.9)':'rgba(255,136,0,.55)';
+      olCtx.fillRect(sx,0,1.5,H2);olCtx.fillRect(ex-1,0,1.5,H2);
+    }
   }
   if(d.cuePoints&&_ovDur>0){
     olCtx.font='bold 8px "DM Mono",monospace';
@@ -1728,7 +1890,8 @@ function drawZoomWaveform(slot,prog){
     }
     if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;} // no data yet
     const modeMap={'rgb':0,'3band':1,'blue':2};
-    const mode=d.type==='hw'&&!d._pwv7?3:(modeMap[cfg.wfColor]??1);
+    // HW PWV7 → mode 3 (STC 3-band), HW palette(PWV5) → mode 4 (native RGB), 그 외 → 설정 매핑
+    const mode=d.type==='hw' ? (d._pwv7 ? 3 : 4) : (modeMap[cfg.wfColor]??1);
     const cX=cfg.wfCenter==='left'?0.25:0.5;
     d.wgl.draw(pos*d.dur, d.zoomMs||8000, cX, mode);
     drawZoomOverlay(slot,prog);
@@ -1766,8 +1929,10 @@ function drawZoomWaveform(slot,prog){
         const g=p0.g+((p1?.g||0)-p0.g)*f;
         const b=p0.b+((p1?.b||0)-p0.b)*f;
         let R,G,B;
-        if(d.type==='hw'){R=Math.round(r*255);G=Math.round(g*255);B=Math.round(b*255);}
-        else{[R,G,B]=_wfBlend(r,g,b,1);}
+        if(d.type==='hw'){
+          const [fr,fg,fb]=_hwPointToRGB({r,g,b},!!d._pwv7);
+          R=Math.round(fr*255);G=Math.round(fg*255);B=Math.round(fb*255);
+        } else {[R,G,B]=_wfBlend(r,g,b,1);}
         _gc2.push({t:px/(cacheW-1),c:`rgb(${R},${G},${B})`});
       }
     }
@@ -3937,6 +4102,62 @@ function updateMixer(){
   if(_eqc)_eqc.textContent=_djmEqCurve===0?'ISOLATOR':_djmEqCurve===2?'HOT EQ':'STANDARD';
   const _fdc=document.getElementById('mxFdrCurve');
   if(_fdc)_fdc.textContent=_djmFaderCurve===0?'LONG':_djmFaderCurve===2?'SHORT':'STANDARD';
+  // ── 확장 AUX: Beat FX / Color FX / Mic / Booth EQ / HP B ──
+  const _bfxSel=document.getElementById('mxBfxSel');
+  if(_bfxSel)_bfxSel.textContent=_BEAT_FX_NAMES[_djmBeatFxSel]||'—';
+  const _bfxLvl=document.getElementById('mxBfxLvlBar');
+  if(_bfxLvl)_bfxLvl.style.width=Math.round(_djmBeatFxLevel/255*100)+'%';
+  const _bfxOn=document.getElementById('mxBfxOn');
+  if(_bfxOn)_bfxOn.style.background=_djmBeatFxOn?'var(--pur)':'rgba(255,255,255,.12)';
+  const _bfxAsn=document.getElementById('mxBfxAssign');
+  if(_bfxAsn)_bfxAsn.textContent=_BEAT_FX_ASSIGN_NAMES[_djmBeatFxAssign]||('?'+_djmBeatFxAssign);
+  const _setFxBtn=(id,on)=>{const el=document.getElementById(id);if(el){el.style.background=on?'rgba(150,100,200,.3)':'';el.style.color=on?'#fff':'var(--tx3)';el.style.borderColor=on?'#c58af0':'rgba(255,255,255,.15)';}};
+  _setFxBtn('mxFxFLo',_djmFxFreqLo);_setFxBtn('mxFxFMid',_djmFxFreqMid);_setFxBtn('mxFxFHi',_djmFxFreqHi);
+  const _sr=document.getElementById('mxSndRtn');
+  if(_sr)_sr.textContent='SND/RTN '+_djmSendReturn;
+  const _cfxSel=document.getElementById('mxCfxSel');
+  if(_cfxSel){_cfxSel.textContent=_COLOR_FX_NAMES[_djmColorFxSel]||('#'+_djmColorFxSel);_cfxSel.style.opacity=_djmColorFxSel===255?0.4:1;}
+  const _cfxPar=document.getElementById('mxCfxPar');
+  if(_cfxPar)_cfxPar.style.left=Math.max(0,Math.min(100,_djmColorFxParam/255*100))+'%';
+  const _cfxVal=document.getElementById('mxCfxVal');
+  if(_cfxVal){const cd=_djmColorFxParam-128;_cfxVal.textContent=cd===0?'0':(cd<0?cd:'+'+cd);}
+  // Mic EQ bipolar
+  const _micHi=document.getElementById('mxMicHi');
+  if(_micHi)_micHi.style.left=Math.max(0,Math.min(100,_djmMicEqHi/255*100))+'%';
+  const _micLo=document.getElementById('mxMicLo');
+  if(_micLo)_micLo.style.left=Math.max(0,Math.min(100,_djmMicEqLo/255*100))+'%';
+  // Booth EQ bipolar
+  const _bthHi=document.getElementById('mxBthHi');
+  if(_bthHi)_bthHi.style.left=Math.max(0,Math.min(100,_djmBoothEqHi/255*100))+'%';
+  const _bthLo=document.getElementById('mxBthLo');
+  if(_bthLo)_bthLo.style.left=Math.max(0,Math.min(100,_djmBoothEqLo/255*100))+'%';
+  // HP B
+  const _hpBarB=document.getElementById('mxHpBarB');
+  if(_hpBarB)_hpBarB.style.width=Math.round(_djmHpLevelB/255*100)+'%';
+  const _hpValB=document.getElementById('mxHpValB');
+  if(_hpValB)_hpValB.textContent=String(_djmHpLevelB);
+  const _hpLinkB=document.getElementById('mxHpLinkB');
+  if(_hpLinkB)_hpLinkB.style.background=_djmHpCueLinkB?'var(--ylw2)':'rgba(255,255,255,.12)';
+  const _hpMixB=document.getElementById('mxHpMixB');
+  if(_hpMixB)_hpMixB.textContent='MIX '+_djmHpMixingB;
+  // ── V10 전용 row ──
+  const _v10Row=document.getElementById('mxAuxV10');
+  if(_v10Row)_v10Row.style.display=_djmIsV10?'grid':'none';
+  if(_djmIsV10){
+    _setFxBtn('mxFltLPF',_djmFilterLPF);_setFxBtn('mxFltHPF',_djmFilterHPF);
+    const _flr=document.getElementById('mxFltReso');
+    if(_flr)_flr.style.width=Math.round(_djmFilterReso/255*100)+'%';
+    const _isoOn=document.getElementById('mxIsoOn');
+    if(_isoOn)_isoOn.style.background=_djmIsolatorOn?'#c58af0':'rgba(255,255,255,.12)';
+    const setBi=(id,v)=>{const el=document.getElementById(id);if(el)el.style.left=Math.max(0,Math.min(100,v/255*100))+'%';};
+    setBi('mxIsoHi',_djmIsolatorHi);setBi('mxIsoMid',_djmIsolatorMid);setBi('mxIsoLo',_djmIsolatorLo);
+    const _mmxOn=document.getElementById('mxMmxOn');
+    if(_mmxOn)_mmxOn.style.background=_djmMasterMixOn?'#c58af0':'rgba(255,255,255,.12)';
+    const _ms=document.getElementById('mxMmxSize');if(_ms)_ms.textContent=_djmMasterMixSize;
+    const _mt=document.getElementById('mxMmxTime');if(_mt)_mt.textContent=_djmMasterMixTime;
+    const _mtn=document.getElementById('mxMmxTone');if(_mtn)_mtn.textContent=_djmMasterMixTone;
+    const _ml=document.getElementById('mxMmxLvl');if(_ml)_ml.textContent=_djmMasterMixLevel;
+  }
   // DJM packet log panel rendering
   if(_djmLogOpen&&_djmLog.length){
     const logEl=document.getElementById('mxLogPanel');
@@ -4569,7 +4790,46 @@ if(E){
     if(d.faderCurve!=null)_djmFaderCurve=d.faderCurve;
     // 0x39 CUE 버튼/XF Assign → 채널 상태에 반영 (TCNet MixerData가 없을 때 fallback)
     if(d.cueBtn)for(let i=0;i<d.cueBtn.length&&i<6;i++)_djmChCueA[i]=d.cueBtn[i];
+    if(d.cueBtnB)for(let i=0;i<d.cueBtnB.length&&i<6;i++)_djmChCueB[i]=d.cueBtnB[i];
     if(d.xfAssign)for(let i=0;i<d.xfAssign.length&&i<6;i++)_djmChXfAssign[i]=d.xfAssign[i];
+    // Extended DJM fields (STC offsets)
+    if(d.isV10!=null)_djmIsV10=!!d.isV10;
+    if(d.boothEqHi!=null)_djmBoothEqHi=d.boothEqHi;
+    if(d.boothEqLo!=null)_djmBoothEqLo=d.boothEqLo;
+    if(d.boothEqBtn!=null)_djmBoothEqBtn=d.boothEqBtn;
+    if(d.masterCueB!=null)_djmMasterCueB=d.masterCueB;
+    if(d.hpCueLink!=null)_djmHpCueLink=d.hpCueLink;
+    if(d.hpCueLinkB!=null)_djmHpCueLinkB=d.hpCueLinkB;
+    if(d.hpMixing!=null)_djmHpMixing=d.hpMixing;
+    if(d.hpMixingB!=null)_djmHpMixingB=d.hpMixingB;
+    if(d.hpLevelB!=null)_djmHpLevelB=d.hpLevelB;
+    if(d.beatFxSel!=null)_djmBeatFxSel=d.beatFxSel;
+    if(d.beatFxAssign!=null)_djmBeatFxAssign=d.beatFxAssign;
+    if(d.beatFxLevel!=null)_djmBeatFxLevel=d.beatFxLevel;
+    if(d.beatFxOn!=null)_djmBeatFxOn=d.beatFxOn;
+    if(d.sendReturn!=null)_djmSendReturn=d.sendReturn;
+    if(d.multiIoSel!=null)_djmMultiIoSel=d.multiIoSel;
+    if(d.fxFreqLo!=null)_djmFxFreqLo=d.fxFreqLo;
+    if(d.fxFreqMid!=null)_djmFxFreqMid=d.fxFreqMid;
+    if(d.fxFreqHi!=null)_djmFxFreqHi=d.fxFreqHi;
+    if(d.micEqHi!=null)_djmMicEqHi=d.micEqHi;
+    if(d.micEqLo!=null)_djmMicEqLo=d.micEqLo;
+    if(d.filterLPF!=null)_djmFilterLPF=d.filterLPF;
+    if(d.filterHPF!=null)_djmFilterHPF=d.filterHPF;
+    if(d.filterReso!=null)_djmFilterReso=d.filterReso;
+    if(d.colorFxSel!=null)_djmColorFxSel=d.colorFxSel;
+    if(d.colorFxParam!=null)_djmColorFxParam=d.colorFxParam;
+    if(d.sendExt1!=null)_djmSendExt1=d.sendExt1;
+    if(d.sendExt2!=null)_djmSendExt2=d.sendExt2;
+    if(d.isolatorOn!=null)_djmIsolatorOn=d.isolatorOn;
+    if(d.isolatorHi!=null)_djmIsolatorHi=d.isolatorHi;
+    if(d.isolatorMid!=null)_djmIsolatorMid=d.isolatorMid;
+    if(d.isolatorLo!=null)_djmIsolatorLo=d.isolatorLo;
+    if(d.masterMixOn!=null)_djmMasterMixOn=d.masterMixOn;
+    if(d.masterMixSize!=null)_djmMasterMixSize=d.masterMixSize;
+    if(d.masterMixTime!=null)_djmMasterMixTime=d.masterMixTime;
+    if(d.masterMixTone!=null)_djmMasterMixTone=d.masterMixTone;
+    if(d.masterMixLevel!=null)_djmMasterMixLevel=d.masterMixLevel;
     // DJM packet log — collect raw data for protocol analysis
     if(_djmLogOpen){
       const ts=new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit',fractionalSecondDigits:2});
@@ -4642,6 +4902,18 @@ if(E){
       _djmChCueB=[0,0,0,0,0,0];
       _djmChXfAssign=[0,0,0,0,0,0];
       _djmSpectrum=[[],[],[],[],[],[]];
+      // Reset extended fields
+      _djmIsV10=false;
+      _djmBoothEqHi=128;_djmBoothEqLo=128;_djmBoothEqBtn=0;
+      _djmMasterCueB=0;_djmHpCueLink=0;_djmHpCueLinkB=0;
+      _djmHpMixing=128;_djmHpMixingB=128;_djmHpLevelB=0;
+      _djmBeatFxSel=0;_djmBeatFxAssign=0;_djmBeatFxLevel=0;_djmBeatFxOn=0;_djmSendReturn=0;_djmMultiIoSel=0;
+      _djmFxFreqLo=0;_djmFxFreqMid=0;_djmFxFreqHi=0;
+      _djmMicEqHi=128;_djmMicEqLo=128;
+      _djmFilterLPF=0;_djmFilterHPF=0;_djmFilterReso=0;
+      _djmColorFxSel=255;_djmColorFxParam=128;_djmSendExt1=0;_djmSendExt2=0;
+      _djmIsolatorOn=0;_djmIsolatorHi=128;_djmIsolatorMid=128;_djmIsolatorLo=128;
+      _djmMasterMixOn=0;_djmMasterMixSize=0;_djmMasterMixTime=0;_djmMasterMixTone=128;_djmMasterMixLevel=0;
     }
     const hwCdjs=devs.filter(d=>d.type==='CDJ'&&!d.virtual);
     // Add new HW decks
