@@ -652,6 +652,15 @@ function parsePDJL(msg){
     return{kind:'djm',name,channel:ch,eq,xfader,masterLvl,boothLvl:0,hpLevel,hpCueCh,chExtra:[]};
   }
   if(type===PDJL.DJM && msg.length>=0x80){
+    // Rekordbox 가 생성하는 가짜 0x39 (가상 믹서 state) 차단
+    // 실제 DJM은 "DJM-900NXS2", "DJM-V10", "DJM-A9" 등으로만 이름 시작
+    if(/rekordbox|rbdj|NXS-?GW|TCS-|prolink/i.test(name)){
+      if(!parsePDJL._fake39Logged){
+        parsePDJL._fake39Logged=true;
+        console.warn(`[DJM-0x39] 가짜 패킷 차단: name="${name}" len=${msg.length}`);
+      }
+      return null;
+    }
     // Type 0x39 — 248-byte layout (DJM-900NXS2)
     // CH_BASE=0x24, CH_STRIDE=0x18 (24B/ch), but note crossfader at abs 0x47 sits
     // inside the CH2 block slot — DJM repurposes that byte for global xfader.
@@ -2221,26 +2230,33 @@ class BridgeCore {
           try{console.log(`[TC] P${p.playerNum} metadata retry → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
-        // ── Track length (모델별 분리) ──
+        // ── Track length (권위 순위) ──
+        //  1) 웨이브폼 디테일 길이 × 1/150 — rekordbox 분석 원본 (ms 정밀, ±6.67ms)
+        //  2) Beat-grid: last beat timeMs + one interval
+        //  3) trackBeats × 60/bpm
+        //  4) 0x0b 정수 초 × 1000 (.000)
+        //  5) 이전 layer 값
+        // STC ProDJLinkView.h 는 trackLenSec(uint32 초)만 사용 → 소수점 없음
+        // 브리지는 waveform-detail(150 pts/sec) 로 STC 한계 넘어 ms 정밀도 제공
         const prevLayerLen = this.layers[li]?.totalLength || 0;
         const ppLen = this._precisePos?.[p.playerNum]?.trackLengthSec;
         const ppLenMs = ppLen ? Math.round(ppLen * 1000) : 0;
-        // Beat-grid: last beat timeMs + one interval (평균 BPM 기반)
+        const wfLen = this._wfTrackLen?.[p.playerNum] || 0;
         const bgEstLen = this._bgTrackLen?.[p.playerNum] || 0;
-        // Beat-based fallback: trackBeats × 60000 / bpmTrack
         const beatBasedLen = (p.trackBeats > 0 && p.bpmTrack > 0)
           ? Math.round(p.trackBeats * 60000 / p.bpmTrack)
           : 0;
-        // CDJ-3000: ppLenMs는 0x0b 오프셋 38의 uint16 — 정수 초 단위 (소수점 없음)
-        //           bgEstLen/beatBasedLen이 ppLenMs와 근접(±3초)하면 ms 정밀도 유지
-        // CDJ-2000NXS2: 0x0b 없음 → beat-grid 추정값 우선
-        const _msPrecise = (bgEstLen>0 && ppLenMs>0 && Math.abs(bgEstLen-ppLenMs)<3000)
-          ? bgEstLen
-          : (beatBasedLen>0 && ppLenMs>0 && Math.abs(beatBasedLen-ppLenMs)<3000)
-            ? beatBasedLen : 0;
+        // wfLen 이 ppLenMs 와 ±3초 이내면 신뢰 (rekordbox 분석 완료 상태)
+        const wfSane = wfLen > 0 && (ppLenMs === 0 || Math.abs(wfLen - ppLenMs) < 3000);
+        const _msPrecise = wfSane ? wfLen
+          : (bgEstLen>0 && ppLenMs>0 && Math.abs(bgEstLen-ppLenMs)<3000) ? bgEstLen
+          : (beatBasedLen>0 && ppLenMs>0 && Math.abs(beatBasedLen-ppLenMs)<3000) ? beatBasedLen
+          : (wfLen > 0 && ppLenMs === 0) ? wfLen
+          : (bgEstLen > 0 && ppLenMs === 0) ? bgEstLen
+          : 0;
         const totalLenMs = p.isNXS2
-          ? (bgEstLen || beatBasedLen || prevLayerLen)
-          : (_msPrecise || ppLenMs || bgEstLen || beatBasedLen || prevLayerLen);
+          ? (wfSane ? wfLen : (bgEstLen || beatBasedLen || wfLen || prevLayerLen))
+          : (_msPrecise || wfLen || bgEstLen || beatBasedLen || ppLenMs || prevLayerLen);
 
         // ── CDJ-2000NXS2 timecode path ──
         // No type 0x0b precise_pos — uses positionFraction (beatNum/trackBeats) + beat-link interpolation
@@ -2498,10 +2514,22 @@ class BridgeCore {
           this._ppDbg[p.playerNum]=true;
           console.log(`[PDJL] P${p.playerNum} Precise Position: ${p.playbackMs}ms, dur=${p.trackLengthSec}s, bpm=${p.bpmEffective}`);
         }
-        // precise_pos는 CDJ-3000 전용 — ppLenMs가 CDJ 화면과 일치하는 유일한 소스
+        // precise_pos는 CDJ-3000 전용 — 길이 우선순위:
+        //  1) 웨이브폼 디테일 길이 (rekordbox 분석 원본, 150 pts/sec)
+        //  2) beat-grid 추정 길이 (last beat + 1 interval)
+        //  3) 0x0b 정수 초 × 1000 (항상 .000 — 프로토콜 제약)
+        //  4) 기존 layer totalLength
+        // Deep Symmetry + STC ProDJLinkInput.h 0x0b [36-39] 필드는 "seconds rounded down"
+        //  → ms 정밀도는 반드시 dbserver analysis 로부터 획득
         const _li = p.playerNum - 1;
+        const _wfMs = this._wfTrackLen?.[p.playerNum] || 0;
+        const _bgMs = this._bgTrackLen?.[p.playerNum] || 0;
         const _ppSec = p.trackLengthSec > 0 ? Math.round(p.trackLengthSec * 1000) : 0;
-        const _ppTotal = _ppSec || this.layers[_li]?.totalLength || 0;
+        const _wfSane = _wfMs > 0 && (_ppSec === 0 || Math.abs(_wfMs - _ppSec) < 3000);
+        const _bgSane = _bgMs > 0 && (_ppSec === 0 || Math.abs(_bgMs - _ppSec) < 3000);
+        const _ppTotal = _wfSane ? _wfMs
+          : _bgSane ? _bgMs
+          : (_ppSec || this.layers[_li]?.totalLength || 0);
         this.onCDJStatus?.(li, {
           playerNum:p.playerNum,
           timecodeMs:p.playbackMs,
@@ -2534,6 +2562,17 @@ class BridgeCore {
       const pn = p.playerNum;
       // Skip self-announce (bridge device) — double-check name and IP
       if(p.name==='BRIDGE+'||p.name==='TCS-SHOWKONTROL'||rinfo.address==='127.0.0.1') return;
+      // Rekordbox (같은 PC/다른 PC 모두) 가 보내는 가짜 announce 차단
+      // Rekordbox는 "rekordbox", "NXS-GW", "rbdj" 등 다양한 이름 사용
+      if(p.name && /rekordbox|rbdj|NXS-?GW|TCS-|prolink/i.test(p.name)){
+        if(!this._fakeAnnLogged) this._fakeAnnLogged={};
+        const fkey = `${p.name}@${rinfo.address}`;
+        if(!this._fakeAnnLogged[fkey]){
+          this._fakeAnnLogged[fkey]=true;
+          console.warn(`[PDJL] 가짜 announce 차단: name="${p.name}" from=${rinfo.address} (Rekordbox/가상 장치)`);
+        }
+        return;
+      }
       // DJM detect: name contains "DJM" OR device type byte[33]=0x02 (STC ProDJLinkInput.h)
       const isDjm = (p.name && p.name.includes('DJM')) || p.isDjmType;
       if(isDjm){
@@ -3425,8 +3464,12 @@ class BridgeCore {
         for(let i=0;i<data.length;i++){
           pts.push({height:data[i]&0x1F, color:(data[i]>>5)&0x07});
         }
-        this.onWaveformDetail?.(playerNum, {pts, wfType:'detail'});
-        console.log(`[DBSRV] P${playerNum} waveform detail: ${pts.length} pts (${Math.round(pts.length/150)}s)`);
+        // Waveform detail = 150 pts/sec (Deep Symmetry 공식 표준)
+        // rekordbox 분석 시 실제 오디오 파일 길이 기반 → ms 정밀도 확보 가능한 유일한 소스
+        this._wfTrackLen = this._wfTrackLen || {};
+        this._wfTrackLen[playerNum] = Math.round(pts.length * 1000 / 150);
+        this.onWaveformDetail?.(playerNum, {pts, wfType:'detail', trackLenMs:this._wfTrackLen[playerNum]});
+        console.log(`[DBSRV] P${playerNum} waveform detail: ${pts.length} pts (${(pts.length/150).toFixed(3)}s, ${this._wfTrackLen[playerNum]}ms)`);
       } else {
         console.log(`[DBSRV] P${playerNum} waveform detail: no data in ${wfResp?.length||0}B`);
       }

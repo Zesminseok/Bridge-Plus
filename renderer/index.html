@@ -3203,12 +3203,15 @@ function tick(){
           }else if(Math.abs(diff)>3000){
             // Large jump (seek/track change): snap immediately
             d._smoothPos=target;
-          }else if(d._hasPrecisePos&&elapsed<200){
-            // CDJ-3000: fast convergence
-            d._smoothPos+=(target-d._smoothPos)*0.7;
+          }else if(d._hasPrecisePos&&elapsed<100){
+            // CDJ-3000 fresh precise_pos (30Hz): 직접 사용 — 비트그리드 정합성 우선
+            d._smoothPos=target;
+          }else if(d._hasPrecisePos){
+            // CDJ-3000 stale (>100ms): 빠른 수렴
+            d._smoothPos+=(target-d._smoothPos)*0.85;
           }else{
-            // NXS2/other: smooth linear tracking
-            d._smoothPos+=(target-d._smoothPos)*0.3;
+            // NXS2 (5Hz status, 200ms gap): 공격적 수렴 — 비트 튐 최소화
+            d._smoothPos+=(target-d._smoothPos)*0.6;
           }
         }
         displayPos=d._smoothPos;
