@@ -3189,7 +3189,9 @@ function tick(){
       if(d.pl){
         // Playing: linear extrapolation from last known position
         // pitch-corrected speed (pitch is percentage: +6% = 1.06x)
-        const speed=d.pitch!=null?(1+d.pitch/100):1.0;
+        // 역재생 시 speed 부호 반전 — NXS2 5Hz status 갭 동안 target이 앞으로 가는 오류 방지
+        const pitchMag=d.pitch!=null?(1+d.pitch/100):1.0;
+        const speed=d._isReverse?-pitchMag:pitchMag;
         const target=d.pos+elapsed*speed;
         if(d._stateChanged){
           d._smoothPos=d.pos;d._stateChanged=false;
@@ -3222,10 +3224,11 @@ function tick(){
         d._stateChanged=false;
       }
       if(d.dur>0&&displayPos>d.dur) displayPos=d.dur;
+      if(displayPos<0) displayPos=0;  // 역재생 언더플로우 방어
     }else if(d.type==='hw'){
       d._smoothPos=null;
     }
-    const prog=d.dur>0?(displayPos/d.dur):0;
+    const prog=d.dur>0?Math.max(0,Math.min(1,displayPos/d.dur)):0;
 
     // UI updates — ALWAYS
     // Sync data-type attribute for CSS-based HW/Virtual element visibility
@@ -4606,13 +4609,13 @@ if(E){
   });
 }
 
-function fTC(ms){if(!ms&&ms!==0)return'--:--:--:--';const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000),f=Math.floor((ms%1000)/33.33);return z(h)+':'+z(m)+':'+z(s)+':'+z(f);}
-function fTm(ms){if(!ms)return'0:00';return Math.floor(ms/60000)+':'+z(Math.floor((ms%60000)/1000));}
+function fTC(ms){if(ms==null||!isFinite(ms))return'--:--:--:--';if(ms<0)ms=0;const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000),f=Math.floor((ms%1000)/33.33);return z(h)+':'+z(m)+':'+z(s)+':'+z(f);}
+function fTm(ms){if(ms==null||!isFinite(ms)||ms<=0)return'0:00';return Math.floor(ms/60000)+':'+z(Math.floor((ms%60000)/1000));}
 // mm:ss.mm format (centiseconds)
-function fTmMs(ms){if(!ms&&ms!==0)return'--:--.----';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return m+':'+z(s)+'.'+z3(ml);}
+function fTmMs(ms){if(ms==null||!isFinite(ms))return'--:--.----';if(ms<0)ms=0;const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return m+':'+z(s)+'.'+z3(ml);}
 function z3(n){return n<10?'00'+n:n<100?'0'+n:''+n;}
 // Cue point time: mm:ss.cs (centiseconds, 2 digits)
-function fTcue(ms){if(!ms&&ms!==0)return'--:--.---';const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return z(m)+':'+z(s)+'.'+z3(ml);}
+function fTcue(ms){if(ms==null||!isFinite(ms))return'--:--.---';if(ms<0)ms=0;const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return z(m)+':'+z(s)+'.'+z3(ml);}
 // Bar.Beat counter like Rekordbox ("8.2")
 function fBars(posMs,bpm){if(!bpm||!posMs)return'0.0';const bMs=60000/bpm,bar=Math.floor(posMs/(bMs*4))+1,beat=Math.floor((posMs%(bMs*4))/bMs)+1;return bar+'.'+beat;}
 function z(n){return String(Math.max(0,Math.round(n))).padStart(2,'0');}

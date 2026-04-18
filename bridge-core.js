@@ -888,7 +888,7 @@ function parsePDJL(msg){
       }
     }
     const playerNum = msg.length>0x24 ? msg[0x24] : 0;
-    // STC ProDJLinkInput.h: kDeviceTypeMixer=0x02 at byte[33]=0x21, playerNum>=0x21=DJM
+    // STC ProDJLinkInput.h: byte[0x21]=device type (0x02=mixer), byte[0x24]=playerNum (>=0x21=DJM)
     const devType = msg.length>0x21 ? msg[0x21] : 0;
     const isDjmType = devType===0x02 && playerNum>=0x21;
     return{kind:'announce',name,playerNum,isDjmType};
