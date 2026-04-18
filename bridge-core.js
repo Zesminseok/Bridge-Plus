@@ -2425,7 +2425,15 @@ class BridgeCore {
       if(msg.length>0x20){
         rawHex=Array.from(msg.slice(0,Math.min(msg.length,128))).map(x=>x.toString(16).padStart(2,'0')).join(' ');
       }
-      this.onDJMStatus?.({channel:p.channel, onAir:p.onAir, eq:p.eq, vuLevel:p.vuLevel, xfader:p.xfader, masterLvl:p.masterLvl, boothLvl:p.boothLvl, hpLevel:p.hpLevel, hpCueCh:p.hpCueCh, chExtra:p.chExtra, hasRealFaders:true, pktType:msg[10], pktLen:msg.length, rawHex});
+      this.onDJMStatus?.({
+        channel:p.channel, onAir:p.onAir, eq:p.eq, vuLevel:p.vuLevel,
+        xfader:p.xfader, masterLvl:p.masterLvl, masterBalance:p.masterBalance, masterCue:p.masterCue,
+        boothLvl:p.boothLvl, hpLevel:p.hpLevel, hpCueCh:p.hpCueCh,
+        eqCurve:p.eqCurve, faderCurve:p.faderCurve,
+        cueBtn:p.cueBtn, xfAssign:p.xfAssign,
+        chExtra:p.chExtra, hasRealFaders:true,
+        pktType:msg[10], pktLen:msg.length, rawHex
+      });
     }
     if(p.kind==='djm_meter'){
       this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum});

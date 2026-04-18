@@ -586,6 +586,36 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
         <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
         <span class="mx-xf-b">B</span>
       </div>
+      <div class="mx-aux" id="mxAuxPanel" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:8px 10px;margin-top:6px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:4px">
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">MASTER CUE</span>
+          <div style="width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div id="mxMCueBar" style="height:100%;width:0%;background:var(--pur);transition:width .12s"></div></div>
+          <span id="mxMCueVal" style="font:500 9px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums">0</span>
+        </div>
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">BALANCE</span>
+          <div style="width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;position:relative"><div style="position:absolute;left:50%;top:-2px;width:1px;height:8px;background:rgba(255,255,255,.25)"></div><div id="mxBalMark" style="position:absolute;top:-1px;width:3px;height:6px;background:var(--cyn);border-radius:1px;left:50%;transform:translateX(-50%)"></div></div>
+          <span id="mxBalVal" style="font:500 9px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums">C</span>
+        </div>
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">BOOTH</span>
+          <div style="width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div id="mxBoothBar" style="height:100%;width:0%;background:var(--grn);transition:width .12s"></div></div>
+          <span id="mxBoothVal" style="font:500 9px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums">0</span>
+        </div>
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">HP LEVEL</span>
+          <div style="width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden"><div id="mxHpBar" style="height:100%;width:0%;background:var(--ylw2);transition:width .12s"></div></div>
+          <span id="mxHpVal" style="font:500 9px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums">0</span>
+        </div>
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">EQ CURVE</span>
+          <span id="mxEqCurve" style="font:700 10px var(--sn);color:var(--cyn);letter-spacing:.04em">STANDARD</span>
+        </div>
+        <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font:600 8px var(--sn);color:var(--tx3);letter-spacing:.08em">FDR CURVE</span>
+          <span id="mxFdrCurve" style="font:700 10px var(--sn);color:var(--cyn);letter-spacing:.04em">STANDARD</span>
+        </div>
+      </div>
       <div style="display:flex;gap:6px;align-items:center">
         <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').textContent=_djmLogOpen?'▾':'▸'" style="flex:1"><span>▸</span> DJM PACKET LOG</div>
         <button id="mxCaptureBtn" style="font:600 9px var(--mn);padding:2px 8px;border-radius:3px;border:1px solid rgba(255,80,80,.4);background:rgba(255,80,80,.1);color:#ff8080;cursor:pointer" onclick="_toggleDjmCapture()">● REC</button>
@@ -629,6 +659,8 @@ let _djmMasterVu=0; // master audio level 0-255 (from TCNet MixerData byte 61)
 let _djmChCueA=[0,0,0,0,0,0],_djmChCueB=[0,0,0,0,0,0]; // CUE A/B per channel (0=off,1=on)
 let _djmChXfAssign=[0,0,0,0,0,0]; // crossfader assign per channel (0=THRU,1=A,2=B)
 let _djmXfader=128, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=128, _djmHasRealFaders=false;
+let _djmMasterBal=128, _djmMasterCue=0, _djmBoothLvl=0, _djmHpLevel=0;
+let _djmEqCurve=1, _djmFaderCurve=1;  // 0=ISOLATOR/LONG, 1=STANDARD, 2=HOT/SHORT
 let _djmLog=[], _djmLogMax=80, _djmLogOpen=false, _djmCapturing=false, _djmAutoCapStarted=false;
 async function _toggleDjmCapture(){
   const btn=document.getElementById('mxCaptureBtn');
@@ -3881,6 +3913,30 @@ function updateMixer(){
   const activeDk=Object.values(DECKS).find(d=>d.type==='hw'&&d.pl&&d.bpm>0);
   const mxBpm=document.getElementById('mxMasterBpm');
   if(mxBpm)mxBpm.textContent=activeDk?activeDk.bpm.toFixed(2):'—';
+  // AUX panel: Master CUE / Balance / Booth / HP / EQ Curve / Fader Curve
+  const _mcb=document.getElementById('mxMCueBar');
+  const _mcv=document.getElementById('mxMCueVal');
+  if(_mcb)_mcb.style.width=Math.round(_djmMasterCue/255*100)+'%';
+  if(_mcv)_mcv.textContent=String(_djmMasterCue);
+  const _bm=document.getElementById('mxBalMark');
+  const _bv=document.getElementById('mxBalVal');
+  if(_bm)_bm.style.left=Math.max(0,Math.min(100,_djmMasterBal/255*100))+'%';
+  if(_bv){
+    const bd=_djmMasterBal-128;
+    _bv.textContent=bd===0?'C':(bd<0?'L'+(-bd):'R'+bd);
+  }
+  const _bb=document.getElementById('mxBoothBar');
+  const _bbv=document.getElementById('mxBoothVal');
+  if(_bb)_bb.style.width=Math.round(_djmBoothLvl/255*100)+'%';
+  if(_bbv)_bbv.textContent=String(_djmBoothLvl);
+  const _hb=document.getElementById('mxHpBar');
+  const _hv=document.getElementById('mxHpVal');
+  if(_hb)_hb.style.width=Math.round(_djmHpLevel/255*100)+'%';
+  if(_hv)_hv.textContent=String(_djmHpLevel);
+  const _eqc=document.getElementById('mxEqCurve');
+  if(_eqc)_eqc.textContent=_djmEqCurve===0?'ISOLATOR':_djmEqCurve===2?'HOT EQ':'STANDARD';
+  const _fdc=document.getElementById('mxFdrCurve');
+  if(_fdc)_fdc.textContent=_djmFaderCurve===0?'LONG':_djmFaderCurve===2?'SHORT':'STANDARD';
   // DJM packet log panel rendering
   if(_djmLogOpen&&_djmLog.length){
     const logEl=document.getElementById('mxLogPanel');
@@ -4504,7 +4560,16 @@ if(E){
     if(d.vuLevel){for(let i=0;i<d.vuLevel.length&&i<6;i++)_djmChVu[i]=d.vuLevel[i];}
     if(d.xfader!=null)_djmXfader=d.xfader;
     if(d.masterLvl!=null)_djmMasterLvl=d.masterLvl;
+    if(d.masterBalance!=null)_djmMasterBal=d.masterBalance;
+    if(d.masterCue!=null)_djmMasterCue=d.masterCue;
+    if(d.boothLvl!=null)_djmBoothLvl=d.boothLvl;
+    if(d.hpLevel!=null)_djmHpLevel=d.hpLevel;
     if(d.hpCueCh!=null)_djmHpCue=d.hpCueCh;
+    if(d.eqCurve!=null)_djmEqCurve=d.eqCurve;
+    if(d.faderCurve!=null)_djmFaderCurve=d.faderCurve;
+    // 0x39 CUE 버튼/XF Assign → 채널 상태에 반영 (TCNet MixerData가 없을 때 fallback)
+    if(d.cueBtn)for(let i=0;i<d.cueBtn.length&&i<6;i++)_djmChCueA[i]=d.cueBtn[i];
+    if(d.xfAssign)for(let i=0;i<d.xfAssign.length&&i<6;i++)_djmChXfAssign[i]=d.xfAssign[i];
     // DJM packet log — collect raw data for protocol analysis
     if(_djmLogOpen){
       const ts=new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit',fractionalSecondDigits:2});
@@ -4567,6 +4632,12 @@ if(E){
       _djmXfader=128;
       _djmMasterLvl=128;
       _djmHpCue=0;
+      _djmMasterBal=128;
+      _djmMasterCue=0;
+      _djmBoothLvl=0;
+      _djmHpLevel=0;
+      _djmEqCurve=1;
+      _djmFaderCurve=1;
       _djmChCueA=[0,0,0,0,0,0];
       _djmChCueB=[0,0,0,0,0,0];
       _djmChXfAssign=[0,0,0,0,0,0];
