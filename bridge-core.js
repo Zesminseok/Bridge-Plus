@@ -975,7 +975,7 @@ class BridgeCore {
     this.hwMode  = new Array(8).fill(false);
     this.nodes   = {};
     this.devices = {};
-    this.faders  = [0,0,0,0];
+    this.faders  = [255,255,255,255];  // 페이더 기본값 100% — 실 0x39 도착 시 덮어씀
     this.onAir   = [0,0,0,0];  // DJM Channels-On-Air flags
     this._hasRealFaders = false;
     this._djmMixer = null;  // last parsed DJM 0x39 mixer state
@@ -2080,6 +2080,30 @@ class BridgeCore {
     const _subTimer=setInterval(()=>{ if(!this.running)return; sendDjmSub(); },2000);
     this._timers.push(_subTimer);
 
+    // DJM freshness watchdog — lastSeen >10s 이면 연결 해제로 간주하고 모든 믹서 상태 초기화
+    // (UI는 onDeviceList 빈 DJM + hasRealFaders:false 를 받으면 defaults 로 복귀)
+    const _djmWatch=setInterval(()=>{
+      if(!this.running) return;
+      const djm=this.devices['djm'];
+      if(!djm) return;
+      const now=Date.now();
+      if(now-djm.lastSeen > 10000){
+        console.log(`[DJM] lastSeen=${now-djm.lastSeen}ms — 연결 해제로 간주, 상태 초기화`);
+        delete this.devices['djm'];
+        this._hasRealFaders=false;
+        this._djmMixer=null;
+        this.faders=[255,255,255,255];
+        this.onAir=[0,0,0,0];
+        this._djmSubCount=0;
+        this._djmSeenTypes.clear();
+        this._nonPdjlDjm=null;
+        this.onDJMStatus?.({channel:this.faders, onAir:this.onAir, eq:[], vuLevel:[0,0,0,0,0,0],
+          xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:false});
+        this.onDeviceList?.(this.devices);
+      }
+    },2000);
+    this._timers.push(_djmWatch);
+
     // Virtual CDJ status broadcast every 500ms — keeps Arena updated on virtual decks
     // Real CDJs broadcast status packets ~every 500ms; Arena stops querying if it stops seeing them
     const vt=setInterval(()=>{
@@ -2163,6 +2187,11 @@ class BridgeCore {
         if(trackChanged){
           this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false, initPos:0 };
           try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} trackType=${p.trackType} trackDeviceId=${p.trackDeviceId} ip=${rinfo?.address}`);}catch(_){}
+          // 새 트랙에 이전 캐시 적용 금지: beat grid / 길이 / 정밀 위치 모두 무효화
+          // (dbserver 응답이 오기 전까지 stale 값으로 timecodeMs 계산하면 UI가 점프로 인식)
+          if(this._beatGrids) delete this._beatGrids[p.playerNum];
+          if(this._bgTrackLen) delete this._bgTrackLen[p.playerNum];
+          if(this._precisePos) delete this._precisePos[p.playerNum];
           // Clear artwork on track change — push blank JPEG to Arena to replace stale art
           this._virtualArt[li] = BLANK_JPEG;
           if(this.layers[li]){
@@ -2234,9 +2263,13 @@ class BridgeCore {
             // positionFraction = beatNum/trackBeats → absolute position anchor
             const rawFracMs = Math.round(p.positionFraction * totalLenMs);
             const prevFrac = acc._fracMs || 0;
-            // Guard: ignore large backward jump near end of track (beatNum reset at track end while PLAYING)
-            const fracMs = (prevFrac > totalLenMs * 0.7 && rawFracMs < prevFrac - 2000)
-              ? prevFrac : rawFracMs;
+            // Backward-jump guard:
+            //  (1) 트랙 끝(마지막 30%) 근처에서 beatNum 리셋으로 prevFrac−2s 이상 역전
+            //  (2) PLAYING 중 트랙 어느 지점에서든 갑자기 prevFrac−5s 이상 역전 (CDJ 순간 오류)
+            //  역재생/CUEDOWN/루프는 여기 진입 전에 분기되므로 이 분기에서는 정상 후진 없음
+            const endBackward   = prevFrac > totalLenMs * 0.7 && rawFracMs < prevFrac - 2000;
+            const midBackward   = prevFrac > 5000 && rawFracMs < prevFrac - 5000 && !p.isReverse;
+            const fracMs = (endBackward || midBackward) ? prevFrac : rawFracMs;
             if(!acc._fracMs || Math.abs(fracMs - acc._fracMs) > 50){
               acc._fracMs = fracMs;
               acc._fracAnchorTime = Date.now();

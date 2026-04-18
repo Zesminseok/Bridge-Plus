@@ -621,7 +621,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 const E=typeof window.bridge!=='undefined';
 let run=false,t0=0,up=0,pk=0,curTab='link',TC_NAME='BRIDGE+';
 let tcNodes={},pdjlDevices=[],audioDevs=[],allIfaces=[];
-let faders=[0,0,0,0,0,0],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
+let faders=[255,255,255,255,255,255],onAirCh=[0,0,0,0,0,0],pdjlPort=null;
 let _djmSpectrum=[[],[],[],[],[],[]];
 let eqBands=[[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128]]; // [TRIM, HI, MID, LOW, COLOR]
 let _djmChVu=[0,0,0,0,0,0]; // per-channel VU level 0-255 (from TCNet MixerData or 0x58 meter)
@@ -1522,7 +1522,14 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
 
 function drawOverview(slot,prog){
   const d=DECKS[slot];if(!d)return;
-  const pos=Math.max(0,Math.min(1,prog||0));
+  // Overview playhead/overlay를 detail waveform과 동일한 시간축으로 맞춤
+  // detail은 wfDurMs(=wfData.length/150*1000) 기준으로 playhead 위치를 계산 →
+  // overview도 같은 기준 사용해야 오버뷰 커서와 디테일 커서가 일치
+  const _wfDataOv=d.rgbWfDetail||d.rgbWf;
+  const _wfDurOv=(_wfDataOv&&_wfDataOv.length>1)?(_wfDataOv.length/150*1000):0;
+  const _ovDur=(_wfDurOv>0)?_wfDurOv:(d.dur||0);
+  const _posMsOv=(d.dur>0)?Math.max(0,Math.min(1,prog||0))*d.dur:0;
+  const pos=(_ovDur>0)?Math.max(0,Math.min(1,_posMsOv/_ovDur)):Math.max(0,Math.min(1,prog||0));
   if(d.ovgl&&(d.rgbWfDetail||d.rgbWf)){
     // Auto-upload texture if missing — mirrors drawZoomWaveform's self-healing pattern
     if(!d.ovgl._wfTex){const _wd=d.rgbWfDetail||d.rgbWf;if(_wd)d.ovgl.setData(_wd);}
@@ -1593,15 +1600,15 @@ function drawOverview(slot,prog){
     if(cue.type==='loop')return '#ff8800';
     return '#fff';
   }
-  if(d.cuePoints&&d.dur>0){
+  if(d.cuePoints&&_ovDur>0){
     olCtx.font='bold 8px "DM Mono",monospace';
     for(const cue of d.cuePoints){
-      const cx=Math.round(cue.timeMs/d.dur*W2);
+      const cx=Math.round(cue.timeMs/_ovDur*W2);
       if(cx<0||cx>=W2)continue;
       const col=_ovCueCol(cue);
       // Loop range — yellow overlay
       if(cue.type==='loop'&&cue.loopEndMs>0){
-        const ex=Math.round(cue.loopEndMs/d.dur*W2);
+        const ex=Math.round(cue.loopEndMs/_ovDur*W2);
         if(ex>cx){
           const isActive=d._isLooping&&d.pos>=cue.timeMs-50&&d.pos<=cue.loopEndMs+50;
           olCtx.fillStyle=isActive?'rgba(255,200,0,.25)':'rgba(255,180,0,.12)';
@@ -1629,8 +1636,8 @@ function drawOverview(slot,prog){
       }
     }
   }
-  if(d.cp>0&&d.dur>0){
-    const cx=Math.round(d.cp*1000/d.dur*W2);
+  if(d.cp>0&&_ovDur>0){
+    const cx=Math.round(d.cp*1000/_ovDur*W2);
     olCtx.fillStyle='rgba(251,191,36,.9)';olCtx.fillRect(cx-.5,0,1,H2);
     olCtx.beginPath();olCtx.moveTo(cx-3,0);olCtx.lineTo(cx+3,0);olCtx.lineTo(cx,4);olCtx.closePath();
     olCtx.fillStyle='rgba(251,191,36,1)';olCtx.fill();
@@ -3753,15 +3760,15 @@ function updateMixer(){
   if(mxContent){if(connected)mxContent.classList.add('mx-content-on');else{mxContent.classList.remove('mx-content-on');mxContent.style.display='none';}}
   if(!connected)return;
   const KSZ=26, prof=_djmProfile, nCh=prof.ch;
-  const hasReal=_djmHasRealFaders;
   for(let i=0;i<nCh;i++){
     const air=!!onAirCh[i];
     const meter=(_djmChVu[i]||0)/255;
     // ON AIR
     const chEl=document.getElementById('mxCh'+i);
     if(chEl)chEl.classList.toggle('on-air',air);
-    // EQ knobs: only show real values when mixer sends fader/eq data
-    if(hasReal){
+    // EQ knobs: eqBands 기본값(128=12시)에서 0x39 수신 시 실제 값으로 덮어씀
+    // hasReal 게이트 제거 — 기본 상태에서 자연스레 중립 표시됨
+    {
       const eq=eqBands[i]||[128,128,128,128];
       // Index map — confirmed via live user test (2026-04-17):
       // eq[0]=TRIM(+1), eq[1]=HI(+4), eq[2]=MID(+3), eq[3]=LOW(+6), eq[4]=COLOR(+7)
@@ -3772,13 +3779,9 @@ function updateMixer(){
       const _levelIds=new Set(['T','C']);
       prof.ids.forEach(id=>{
         const bi=eqMap[id];
-        // raw 0-255, center=128; norm -1 to +1 for tick rotation (same for both types)
         const norm=bi!=null?(((eq[bi]??128)-128)/128):0;
         _mxKnobUpdate('mx'+id+i,norm,KSZ,_levelIds.has(id));
       });
-    } else {
-      // No real EQ data — show knobs at neutral (center)
-      prof.ids.forEach(id=>_mxKnobUpdate('mx'+id+i,0,KSZ));
     }
     // Fader cap position: faders[] 직접 사용 (on-air 폴백 제거, type 0x39 전 기본값 255)
     const fv=(faders[i]||0)/255;
@@ -3827,9 +3830,9 @@ function updateMixer(){
       }
     }
   }
-  // Crossfader position (only when real data available, else center)
+  // Crossfader position — _djmXfader 기본값 128 이므로 데이터 없을 때 자연스레 중앙
   const xfKnob=document.getElementById('mxXfKnob');
-  if(xfKnob)xfKnob.style.left=(hasReal?(_djmXfader/255*100):50)+'%';
+  if(xfKnob)xfKnob.style.left=(_djmXfader/255*100)+'%';
   // Master VU — LED dots (12 per side: 0-7=green, 8-10=amber, 11=red/clip)
   // Primary: TCNet MixerData masterAudio (byte 61) — dedicated master output level
   // Fallback: mix of channel VU levels when no TCNet master data
@@ -3853,8 +3856,9 @@ function updateMixer(){
   const clipEl=document.getElementById('mxClip');
   if(clipEl)clipEl.classList.toggle('on',clipping);
   // Master volume knob: 0=−∞ (fully CCW, -1), 255=+5dB (fully CW, +1)
+  // _djmMasterLvl 기본값 128 → (128/127.5)-1 ≈ 0 = 중립, 실 값 도착 시 업데이트
   const MSZ=44;
-  const mVolNorm=hasReal?(((_djmMasterLvl||0)/127.5)-1):0;
+  const mVolNorm=(((_djmMasterLvl||0)/127.5)-1);
   _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),MSZ,true);
   // A/B crossfader assign badges — from TCNet MixerData chXfAssign (0=THRU,1=A,2=B)
   for(let i=0;i<nCh;i++){
@@ -4534,7 +4538,25 @@ if(E){
     if(d.xfader!=null&&!_djmHasRealFaders)_djmXfader=d.xfader;
   });
   window.bridge.onDevices?.(devs=>{
+    const _hadDjm=pdjlDevices.some(d=>d.type==='DJM');
+    const _hasDjm=devs.some(d=>d.type==='DJM');
     pdjlDevices=devs;
+    // DJM 연결 해제 감지: 믹서 관련 UI 상태 전체를 기본값으로 복귀
+    // (faders 100%, EQ 12시, VU/마스터/CUE/XF 전부 중립)
+    if(_hadDjm && !_hasDjm){
+      _djmHasRealFaders=false;
+      faders=[255,255,255,255,255,255];
+      eqBands=[[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128],[128,128,128,128,128]];
+      _djmChVu=[0,0,0,0,0,0];
+      _djmMasterVu=0;
+      _djmXfader=128;
+      _djmMasterLvl=128;
+      _djmHpCue=0;
+      _djmChCueA=[0,0,0,0,0,0];
+      _djmChCueB=[0,0,0,0,0,0];
+      _djmChXfAssign=[0,0,0,0,0,0];
+      _djmSpectrum=[[],[],[],[],[],[]];
+    }
     const hwCdjs=devs.filter(d=>d.type==='CDJ'&&!d.virtual);
     // Add new HW decks
     hwCdjs.forEach(d=>ensureHWDeck(d.playerNum));
