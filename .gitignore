@@ -21,3 +21,12 @@ token.json
 
 # macOS App bundles
 *.app/
+
+# electron-builder output
+dist/
+release/
+out/
+*.dmg
+*.blockmap
+*.exe
+*.nsis.7z

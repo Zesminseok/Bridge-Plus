@@ -5,7 +5,11 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "headless": "node bridge-core.js --demo"
+    "headless": "node bridge-core.js --demo",
+    "dist:mac": "electron-builder --mac --x64 --arm64",
+    "dist:win": "electron-builder --win --x64",
+    "dist:all": "electron-builder -mw",
+    "pack": "electron-builder --dir"
   },
   "keywords": [
     "pioneer",
@@ -17,6 +21,57 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "electron": "^33.4.11"
+    "electron": "^33.4.11",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.zesofficial.bridgeplus",
+    "productName": "BRIDGE+",
+    "copyright": "Copyright © 2026 zesofficial",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "bridge-core.js",
+      "preload.js",
+      "renderer/**/*",
+      "default-album-artwork.png",
+      "!**/*.pcapng",
+      "!**/*.tgz",
+      "!.codex-artifacts/**",
+      "!tools/**",
+      "!package/**",
+      "!juce-app/**",
+      "!docs/**",
+      "!bridge-clone.js",
+      "!.serena/**",
+      "!.claude/**"
+    ],
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
+      ],
+      "category": "public.app-category.music",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": null
+    },
+    "dmg": {
+      "writeUpdateInfo": false,
+      "sign": false
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    }
   }
 }
