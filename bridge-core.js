@@ -2190,18 +2190,21 @@ class BridgeCore {
           try{console.log(`[TC] P${p.playerNum} metadata retry → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
-        // ── Track length (best-available source, ms precision) ──
+        // ── Track length (모델별 분리) ──
         const prevLayerLen = this.layers[li]?.totalLength || 0;
         const ppLen = this._precisePos?.[p.playerNum]?.trackLengthSec;
         const ppLenMs = ppLen ? Math.round(ppLen * 1000) : 0;
-        // Beat-grid: last beat timeMs + one interval (평균 BPM 기반, 가장 정밀)
+        // Beat-grid: last beat timeMs + one interval (평균 BPM 기반)
         const bgEstLen = this._bgTrackLen?.[p.playerNum] || 0;
-        // Beat-based fallback: trackBeats × 60000 / bpmTrack (BPM 반올림 오차 있음)
+        // Beat-based fallback: trackBeats × 60000 / bpmTrack
         const beatBasedLen = (p.trackBeats > 0 && p.bpmTrack > 0)
           ? Math.round(p.trackBeats * 60000 / p.bpmTrack)
           : 0;
-        // Priority: bgEstLen (beat-grid ms) > beatBasedLen > ppLenMs (integer-sec) > prev
-        const totalLenMs = bgEstLen || beatBasedLen || ppLenMs || prevLayerLen;
+        // CDJ-3000: ppLenMs 우선 (0x0b에서 직접 읽은 값 = CDJ 화면과 일치)
+        // CDJ-2000NXS2: 0x0b 없음 → beat-grid 추정값 우선
+        const totalLenMs = p.isNXS2
+          ? (bgEstLen || beatBasedLen || prevLayerLen)
+          : (ppLenMs  || bgEstLen || beatBasedLen || prevLayerLen);
 
         // ── CDJ-2000NXS2 timecode path ──
         // No type 0x0b precise_pos — uses positionFraction (beatNum/trackBeats) + beat-link interpolation
@@ -2447,12 +2450,10 @@ class BridgeCore {
           this._ppDbg[p.playerNum]=true;
           console.log(`[PDJL] P${p.playerNum} Precise Position: ${p.playbackMs}ms, dur=${p.trackLengthSec}s, bpm=${p.bpmEffective}`);
         }
-        // Send directly to renderer as CDJ status update
-        // totalLenMs: best available ms precision (beat-based > bgEst > integer-sec)
+        // precise_pos는 CDJ-3000 전용 — ppLenMs가 CDJ 화면과 일치하는 유일한 소스
         const _li = p.playerNum - 1;
-        const _ppBeat = this.layers[_li]?.totalLength || 0; // already beat-based from last CDJ status
-        const _ppSec  = p.trackLengthSec > 0 ? Math.round(p.trackLengthSec * 1000) : 0;
-        const _ppTotal = _ppBeat || _ppSec;
+        const _ppSec = p.trackLengthSec > 0 ? Math.round(p.trackLengthSec * 1000) : 0;
+        const _ppTotal = _ppSec || this.layers[_li]?.totalLength || 0;
         this.onCDJStatus?.(li, {
           playerNum:p.playerNum,
           timecodeMs:p.playbackMs,

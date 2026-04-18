@@ -4228,14 +4228,13 @@ if(E){
       dk._beatTime=Date.now();
       return;
     }
-    // CDJ-3000 Precise Position — direct ms update, highest priority
+    // CDJ-3000 Precise Position — direct ms update (CDJ-3000 전용)
     if(status._precisePos){
       const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
       dk._hasPrecisePos=true;
       if(status.timecodeMs!=null){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
-      // totalLenMs = beat-based ms precision from bridge-core; trackLengthSec = integer seconds only
+      // totalLenMs는 bridge-core에서 ppLenMs 기반(CDJ 화면과 일치)으로 계산됨
       if(status.totalLenMs > 0) dk.dur = status.totalLenMs;
-      else if(status.trackLengthSec > 0 && !(dk.dur > 0)) dk.dur = status.trackLengthSec * 1000;
       if(status.bpmEffective>0) dk.bpm=Math.round(status.bpmEffective*100)/100;
       return;
     }
@@ -4291,9 +4290,10 @@ if(E){
     if(status.loopEndMs   > 0) dk._loopEndMs   = status.loopEndMs;
     if(dk.pl!==wasPl||dk.cu!==wasCu){dk._stateChanged=true;dk._smoothPos=null;}
     if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
-    // CDJ-2000NXS2: update track duration from CDJ status (precise_pos handles CDJ-3000 separately)
+    // CDJ-2000NXS2: totalLenMs(bgEstLen 기반) 사용
+    // CDJ-3000: _precisePos 경로에서 이미 처리됨 — 여기서 덮어쓰지 않음
     if(status.totalLenMs > 0 && !dk._hasPrecisePos){
-      if(!dk.dur || status.totalLenMs > dk.dur) dk.dur = status.totalLenMs;
+      dk.dur = status.totalLenMs;
     }
     // NXS2 debug: log state/timecode for non-precise decks
     if(!dk._hasPrecisePos){
