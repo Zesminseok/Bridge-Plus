@@ -3384,45 +3384,46 @@ function tick(){
       const now=Date.now();
       const elapsed=now-d._posTime;
       if(d.pl){
-        // Playing: linear extrapolation from last known position
-        // pitch-corrected speed (pitch is percentage: +6% = 1.06x)
-        // 역재생 시 speed 부호 반전 — NXS2 5Hz status 갭 동안 target이 앞으로 가는 오류 방지
-        const pitchMag=d.pitch!=null?(1+d.pitch/100):1.0;
-        const speed=d._isReverse?-pitchMag:pitchMag;
+        // 재생 속도 결정:
+        //  - CDJ-3000: 0x0b delta 에서 추정한 _inferredSpeed (30ms 내 pitch 변화 반영)
+        //  - 그 외: d.pitch (5Hz 0x0a status 기반)
+        let speedMag;
+        if(d._hasPrecisePos && d._inferredSpeed!=null && Math.abs(d._inferredSpeed)>0.3 && Math.abs(d._inferredSpeed)<2){
+          speedMag=Math.abs(d._inferredSpeed);
+        }else{
+          speedMag=d.pitch!=null?(1+d.pitch/100):1.0;
+        }
+        const speed=d._isReverse?-speedMag:speedMag;
         const target=d.pos+elapsed*speed;
         if(d._stateChanged){
           d._smoothPos=d.pos;d._stateChanged=false;
         }else if(d._smoothPos==null){
           d._smoothPos=target;
+        }else if(d._hasPrecisePos){
+          // CDJ-3000 30Hz precise_pos: 0x0b 위치가 30ms 마다 truth.
+          // LERP(α=0.35) 는 steady-state lag L = v·dt/α ≈ 48ms 를 발생시켜
+          // 웨이브폼/비트그리드가 재생 중 지속적으로 뒤쳐짐 → CUE 누르면 스냅 복구.
+          // 해결: _inferredSpeed 로 정확히 extrapolate 한 target 을 즉시 사용.
+          //       30ms 전후 차이는 <1px 수준이라 시각적 튀지 않음.
+          const diff=target-d._smoothPos;
+          if(Math.abs(diff)>500){
+            // seek/loop jump: 즉시 스냅
+            d._smoothPos=target;
+          }else{
+            d._smoothPos=target;
+          }
         }else{
           const diff=target-d._smoothPos;
-          // 역재생: target 이 _smoothPos 보다 속도만큼 뒤로 감 — 역재생 시엔 그대로 따라감
           if(d._isReverse){
-            // 역재생 중: target 이 감소하는 것이 정상 — 바로 따라감
             d._smoothPos = target;
           }else if(diff<-100){
-            // Loop jump: 역행 100ms 이상 → 즉시 스냅 (rewind effect 방지)
             d._smoothPos=target;
           }else if(Math.abs(diff)>3000){
-            // Large jump (seek/track change): 즉시 스냅
             d._smoothPos=target;
-          }else if(d._hasPrecisePos){
-            // CDJ-3000 30Hz precise_pos — 네트워크 지터(±30ms) 흡수 위해 LERP
-            // 스냅(_smoothPos=target) 은 매 0x0b 도착 시 stale sample 이 current
-            // 로 인식되어 비트그리드/웨이브폼/비트페이저 동시 점프 발생.
-            // 전향 전진: 0.35 (시간상수 ~40ms) / 후향 소폭: 0.15 (시각 역행 최소화)
-            if(diff>=0){
-              d._smoothPos += diff * 0.35;
-            }else{
-              d._smoothPos += diff * 0.15;
-            }
           }else{
-            // NXS2 (5Hz status, 200ms gap): LERP 0.35 — 매 status 스냅 대신 부드럽게 수렴
-            if(diff>=0){
-              d._smoothPos += diff * 0.35;
-            }else{
-              d._smoothPos += diff * 0.15;
-            }
+            // NXS2 (5Hz status, 200ms gap): LERP 부드럽게 수렴
+            if(diff>=0) d._smoothPos += diff * 0.35;
+            else        d._smoothPos += diff * 0.15;
           }
         }
         displayPos=d._smoothPos;
@@ -4540,7 +4541,22 @@ if(E){
     if(status._precisePos){
       const dk=DECKS[layerIndex];if(!dk||dk.type!=='hw')return;
       dk._hasPrecisePos=true;
-      if(status.timecodeMs!=null){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
+      if(status.timecodeMs!=null){
+        const now=Date.now();
+        // 0x0b delta 로 실제 재생속도 추정(EMA) — 5Hz status 의 d.pitch 보다 정확
+        // pitch fader 이동 중에도 30ms 내로 반응 → 드리프트(누적 오프셋) 차단
+        if(dk._posTime>0 && dk.pos>0){
+          const dt=now-dk._posTime, dp=status.timecodeMs-dk.pos;
+          if(dt>5 && dt<200 && Math.abs(dp)<500){
+            const inst=dp/dt;
+            dk._inferredSpeed = dk._inferredSpeed!=null
+              ? dk._inferredSpeed*0.7 + inst*0.3
+              : inst;
+          }
+        }
+        dk.pos=status.timecodeMs;
+        dk._posTime=now;
+      }
       // totalLenMs는 bridge-core에서 ppLenMs 기반(CDJ 화면과 일치)으로 계산됨
       if(status.totalLenMs > 0) dk.dur = status.totalLenMs;
       if(status.bpmEffective>0) dk.bpm=Math.round(status.bpmEffective*100)/100;
@@ -4558,7 +4574,7 @@ if(E){
       dk._tidChangeTo=newTid;
       if(dk._tidChangeCount>=3 && dk._tidChangeTo===newTid){
         console.log(`[UI] P${status.playerNum} track change confirmed: ${oldTid} → ${newTid}`);
-        dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;
+        dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;
         dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
         dk._trackId=newTid;dk._tidChangeCount=0;
         const _artEl=document.getElementById('dart'+layerIndex);
@@ -4581,7 +4597,7 @@ if(E){
       dk._noTrackCount=(dk._noTrackCount||0)+1;
       if(dk._noTrackCount>=3 && dk.ld){
         console.log(`[UI] P${status.playerNum} track ejected`);
-        dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk.pl=false;dk.bpm=0;
+        dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.pl=false;dk.bpm=0;
         dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
         patchDeck(layerIndex);
       }
