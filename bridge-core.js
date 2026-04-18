@@ -628,6 +628,8 @@ function parsePDJL(msg){
   // Type 0x39: block 248-byte layout (DJM-900NXS2, V10, A9)
   if(type===PDJL.DJM2 && msg.length>=0x24){
     // Type 0x29 — flat layout per Deep Symmetry docs
+    // rekordbox/NXS-GW 가 fake 0x29 브로드캐스트 → 쓰레기값 원천 차단
+    if(/rekordbox|NXS-?GW|TCS-/i.test(name)) return null;
     // Faders at 0x0F-0x12 (0-0x7F), scale to 0-255
     const ch=[0,1,2,3].map(c=>{ const v=msg[0x0F+c]||0; return Math.min(255,Math.round(v*255/0x7F)); });
     const xfader=Math.min(255,Math.round((msg[0x13]||0)*255/0x7F));
@@ -2378,6 +2380,14 @@ class BridgeCore {
       }
     }
     if(p.kind==='djm'){
+      // 2차 방어: name 에 "DJM" 이 없으면 (rekordbox/가상 믹서) state 덮어쓰기 금지
+      if(!(p.name && p.name.includes('DJM'))){
+        if(!parsePDJL._fakeDjmLogged){
+          parsePDJL._fakeDjmLogged=true;
+          console.warn(`[DJM] 가짜 mixer 패킷 무시: name="${p.name}" from=${rinfo.address}:${rinfo.port}`);
+        }
+        return;
+      }
       if(!this._hasRealFaders){
         console.log(`[DJM] 첫 0x39 수신! name=${p.name} from=${rinfo.address}:${rinfo.port} faders=[${p.channel}]`);
       }
