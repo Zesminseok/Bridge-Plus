@@ -1948,19 +1948,22 @@ class BridgeCore {
     const _bridgeJoin=()=>{
       if(!this._pdjlAnnSock) return;
       if(this._joinInProgress){
-        // If DJM is now known but wasn't when join started, schedule a retry after current join
         const _pendingDjm = this.devices?.['djm']?.ip;
         if(_pendingDjm && !this._djmJoinPending){
           this._djmJoinPending = true;
-          setTimeout(()=>{ this._djmJoinPending=false; _bridgeJoin(); }, 8500);
-          console.log(`[PDJL] DJM found during join — retry in 8.5s → ${_pendingDjm}`);
+          setTimeout(()=>{ this._djmJoinPending=false; _bridgeJoin(); }, 7000);
+          console.log(`[PDJL] DJM found during join — retry after current → ${_pendingDjm}`);
         }
         return;
       }
       this._joinInProgress = true;
-      const djmIp = this.devices?.['djm']?.ip || null;
-      // Hello (0x0A) — 37B × 7, broadcast + unicast to known DJM
-      for(let h=0;h<7;h++){
+      // STC performBridgeJoinSequence 재현:
+      //   Hello(0x0A) × 2  @ 300ms 간격 (broadcast only)
+      //   Claim(0x02) × 11 @ 500ms 간격 (broadcast only)
+      //   keepalive는 join 완료 후 시작 (sendAnn 루프는 기존대로 1500ms 유지)
+      const HELLO_GAP = 300, CLAIM_GAP = 500, CLAIM_N = 11;
+      const helloEnd = HELLO_GAP*2; // 600ms
+      for(let h=0;h<2;h++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
           const p=Buffer.alloc(37);
@@ -1968,48 +1971,28 @@ class BridgeCore {
           p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
           Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
           for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
-          // Unicast hello directly to DJM if already known
-          if(djmIp){try{this._pdjlAnnSock.send(p,0,p.length,50000,djmIp);}catch(_){}}
-          console.log(`[PDJL] bridge hello #${h+1}/7 bcs=[${allBCs.join(',')}]${djmIp?` +unicast→${djmIp}`:''}`);
-        }, h*320);
+          console.log(`[PDJL] bridge hello #${h+1}/2 bcs=[${allBCs.join(',')}]`);
+        }, h*HELLO_GAP);
       }
-      // Claim (0x02) — 50B × 11: broadcast per-interface + unicast to known DJM
-      // Per-interface embed: ensures DJM can unicast 0x39 back to a reachable IP
-      for(let n=1;n<=11;n++){
+      for(let n=1;n<=CLAIM_N;n++){
         setTimeout(()=>{
           if(!this._pdjlAnnSock) return;
           const ifaces = getAllInterfaces().filter(i=>!i.internal&&i.broadcast&&i.broadcast!=='127.255.255.255');
-          const sentUnicast = new Set();
           for(const iface of ifaces){
             const cp = _buildClaim(iface, n);
-            // Broadcast on this interface's subnet
             try{this._pdjlAnnSock.send(cp,0,cp.length,50000,iface.broadcast);}catch(_){}
-            // Also unicast to known DJM IP using the interface whose subnet matches the DJM
-            const djmNow = this.devices?.['djm']?.ip;
-            if(djmNow && !sentUnicast.has(djmNow)){
-              const djmParts = djmNow.split('.').map(Number);
-              const ifParts  = iface.address.split('.').map(Number);
-              const maskParts= iface.netmask.split('.').map(Number);
-              const sameSubnet = maskParts.every((_,i)=>(djmParts[i]&maskParts[i])===(ifParts[i]&maskParts[i]));
-              if(sameSubnet){
-                // Use THIS interface's IP in the claim so DJM unicasts 0x39 back to us
-                sentUnicast.add(djmNow);
-                try{this._pdjlAnnSock.send(cp,0,cp.length,50000,djmNow);}catch(_){}
-                console.log(`[PDJL] claim #${n} unicast→${djmNow} via ${iface.address}`);
-              }
-            }
           }
-          // Fallback unicast with any interface IP if subnet match failed
-          const djmNow2 = this.devices?.['djm']?.ip;
-          if(djmNow2 && sentUnicast.size===0 && ifaces.length>0){
-            const cp = _buildClaim(ifaces[0], n);
-            try{this._pdjlAnnSock.send(cp,0,cp.length,50000,djmNow2);}catch(_){}
-            console.log(`[PDJL] claim #${n} unicast fallback→${djmNow2}`);
+          console.log(`[PDJL] bridge claim #${n}/${CLAIM_N} broadcast`);
+          if(n===CLAIM_N){
+            setTimeout(()=>{
+              this._joinInProgress=false;
+              this._joinCompleted=true;
+              console.log('[PDJL] bridge join sequence complete (STC-style)');
+              // join 완료 직후 subscribe/keepalive 한 번 즉시 전송
+              try{ sendAnn(); }catch(_){}
+            }, 500);
           }
-          if(n===11){
-            setTimeout(()=>{ this._joinInProgress=false; console.log('[PDJL] bridge join sequence complete'); }, 1000);
-          }
-        }, 3140+(n-1)*300);
+        }, helloEnd + (n-1)*CLAIM_GAP);
       }
     };
 
@@ -2057,10 +2040,17 @@ class BridgeCore {
       }
     };
 
-    sendAnn();
+    // STC: keepalive는 bridge join 완료 후에 시작 (병렬 전송 금지)
+    // join 총 소요: hello(600ms) + claim(5500ms) + 500ms buffer ≈ 6.6초
     if(this._pdjlAnnTimer) clearInterval(this._pdjlAnnTimer);
-    this._pdjlAnnTimer=setInterval(()=>{sendAnn();sendDbKeepalive();},1500);
-    this._timers.push(this._pdjlAnnTimer);
+    setTimeout(()=>{
+      if(!this.running) return;
+      sendAnn();
+      sendDbKeepalive();
+      this._pdjlAnnTimer=setInterval(()=>{sendAnn();sendDbKeepalive();},1500);
+      this._timers.push(this._pdjlAnnTimer);
+      console.log('[PDJL] keepalive loop started (post-join)');
+    }, 6700);
 
     // DJM subscribe (0x57) — ProDJLinkInput.h 기준: 반드시 전송해야 DJM이 0x39 fader data를 보냄
     // 전송 대상: DJM IP, 포트 50001 / 주기: 2초 / 첫 전송: keepalive 후 3초 딜레이
@@ -2087,7 +2077,8 @@ class BridgeCore {
         console.log(`[PDJL] 0x57 subscribe #${this._djmSubCount} → ${djmIp}:50001 hasRealFaders=${this._hasRealFaders}`);
       }
     };
-    setTimeout(sendDjmSub, 3000);  // DJM가 bridge identity 등록할 시간 확보
+    // STC 타이밍: join 완료(≈6.6s) 이후 keepalive 시작 → 추가 3s 뒤 첫 subscribe
+    setTimeout(sendDjmSub, 9700);
     const _subTimer=setInterval(()=>{ if(!this.running)return; sendDjmSub(); },2000);
     this._timers.push(_subTimer);
 
