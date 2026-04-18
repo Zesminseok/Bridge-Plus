@@ -3396,21 +3396,33 @@ function tick(){
           d._smoothPos=target;
         }else{
           const diff=target-d._smoothPos;
-          // Loop jump: position went backwards → snap immediately (no rewind effect)
-          if(diff<-50){
+          // 역재생: target 이 _smoothPos 보다 속도만큼 뒤로 감 — 역재생 시엔 그대로 따라감
+          if(d._isReverse){
+            // 역재생 중: target 이 감소하는 것이 정상 — 바로 따라감
+            d._smoothPos = target;
+          }else if(diff<-100){
+            // Loop jump: 역행 100ms 이상 → 즉시 스냅 (rewind effect 방지)
             d._smoothPos=target;
           }else if(Math.abs(diff)>3000){
-            // Large jump (seek/track change): snap immediately
-            d._smoothPos=target;
-          }else if(d._hasPrecisePos&&elapsed<100){
-            // CDJ-3000 fresh precise_pos (30Hz): 직접 사용 — 비트그리드 정합성 우선
+            // Large jump (seek/track change): 즉시 스냅
             d._smoothPos=target;
           }else if(d._hasPrecisePos){
-            // CDJ-3000 stale (>100ms): 빠른 수렴
-            d._smoothPos+=(target-d._smoothPos)*0.85;
+            // CDJ-3000 30Hz precise_pos — 네트워크 지터(±30ms) 흡수 위해 LERP
+            // 스냅(_smoothPos=target) 은 매 0x0b 도착 시 stale sample 이 current
+            // 로 인식되어 비트그리드/웨이브폼/비트페이저 동시 점프 발생.
+            // 전향 전진: 0.35 (시간상수 ~40ms) / 후향 소폭: 0.15 (시각 역행 최소화)
+            if(diff>=0){
+              d._smoothPos += diff * 0.35;
+            }else{
+              d._smoothPos += diff * 0.15;
+            }
           }else{
-            // NXS2 (5Hz status, 200ms gap): 공격적 수렴 — 비트 튐 최소화
-            d._smoothPos+=(target-d._smoothPos)*0.6;
+            // NXS2 (5Hz status, 200ms gap): LERP 0.35 — 매 status 스냅 대신 부드럽게 수렴
+            if(diff>=0){
+              d._smoothPos += diff * 0.35;
+            }else{
+              d._smoothPos += diff * 0.15;
+            }
           }
         }
         displayPos=d._smoothPos;
