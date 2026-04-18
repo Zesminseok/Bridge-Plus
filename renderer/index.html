@@ -1580,45 +1580,43 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
   const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
   if(clearFirst)ctx.clearRect(0,0,W,H);
 
-  const beatKey=`${_getZoomBeatStateKey(d)}#${W}x${H}#${msPerPx}`;
-  const beatCache=_ensureZoomScrollingCache(d,'_zoomBeatCache',beatKey,W,H,viewL,viewR,msPerPx,(octx,cw,ch,startMs,endMs)=>{
-    if(!(d.bpm>0&&d.dur>0))return;
+  // 비트그리드 직접 렌더링 (캐시 제거)
+  // 이유: padPx 벗어나는 순간마다 캐시가 재생성되면서 Math.round 픽셀 양자화가
+  //       이전/새 비트맵 간 1px 어긋남 → 바 경계 근처(4번째 비트)에서 튀어 보임.
+  // GPU 셰이더는 서브픽셀 정밀도로 웨이브폼을 그리므로, 비트그리드도 매 프레임
+  // 서브픽셀(float) 위치에 그려야 정렬이 맞는다. 뷰포트 내 비트선 ~20개 × fillRect
+  // 는 1ms 이내 → 자원 영향 무시.
+  if(d.bpm>0&&d.dur>0){
+    const drawBeatAt=(bMs,isBar)=>{
+      const fpx=(bMs-viewL)/msPerPx; // float
+      if(fpx<1||fpx>=W-1)return;
+      if(isBar){
+        ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(fpx-.5,0,1,H);
+        ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(fpx-1,0,3,5);ctx.fillRect(fpx-1,H-5,3,5);
+      }else{
+        ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(fpx-.5,0,1,H);
+        ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(fpx-1,0,3,3);ctx.fillRect(fpx-1,H-3,3,3);
+      }
+    };
     if(d._beatGrid&&d._beatGrid.length>0){
       const bg=d._beatGrid;
       let lo=0,hi=bg.length-1;
-      while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<startMs)lo=mid2+1;else hi=mid2;}
+      while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<viewL)lo=mid2+1;else hi=mid2;}
       for(let i=Math.max(0,lo-1);i<bg.length;i++){
-        const bt=bg[i];if(bt.timeMs>endMs)break;
-        const bpx=Math.round((bt.timeMs-startMs)/msPerPx);
-        if(bpx<1||bpx>=cw-1)continue;
-        if(bt.beatInBar===1){
-          octx.fillStyle='rgba(255,0,0,.25)';octx.fillRect(bpx-.5,0,1,ch);
-          octx.fillStyle='rgba(255,32,32,.8)';octx.fillRect(bpx-1,0,3,5);octx.fillRect(bpx-1,ch-5,3,5);
-        }else{
-          octx.fillStyle='rgba(255,255,255,.12)';octx.fillRect(bpx-.5,0,1,ch);
-          octx.fillStyle='rgba(255,255,255,.3)';octx.fillRect(bpx-1,0,3,3);octx.fillRect(bpx-1,ch-3,3,3);
-        }
+        const bt=bg[i];if(bt.timeMs>viewR)break;
+        drawBeatAt(bt.timeMs,bt.beatInBar===1);
       }
-      return;
-    }
-    const beatMs=60000/(d.baseBpm||d.bpm);
-    const anchor=d._barAnchorMs||0;
-    const firstB=Math.ceil((startMs-anchor)/beatMs),lastB=Math.floor((endMs-anchor)/beatMs);
-    for(let b=firstB;b<=lastB;b++){
-      const bMs=anchor+b*beatMs;
-      const bpx=Math.round((bMs-startMs)/msPerPx);
-      if(bpx<1||bpx>=cw-1)continue;
-      const barNum=((b%4)+4)%4+1;
-      if(barNum===1){
-        octx.fillStyle='rgba(255,0,0,.25)';octx.fillRect(bpx-.5,0,1,ch);
-        octx.fillStyle='rgba(255,32,32,.8)';octx.fillRect(bpx-1,0,3,5);octx.fillRect(bpx-1,ch-5,3,5);
-      }else{
-        octx.fillStyle='rgba(255,255,255,.12)';octx.fillRect(bpx-.5,0,1,ch);
-        octx.fillStyle='rgba(255,255,255,.3)';octx.fillRect(bpx-1,0,3,3);octx.fillRect(bpx-1,ch-3,3,3);
+    }else{
+      const beatMs=60000/(d.baseBpm||d.bpm);
+      const anchor=d._barAnchorMs||0;
+      const firstB=Math.ceil((viewL-anchor)/beatMs),lastB=Math.floor((viewR-anchor)/beatMs);
+      for(let b=firstB;b<=lastB;b++){
+        const bMs=anchor+b*beatMs;
+        const barNum=((b%4)+4)%4+1;
+        drawBeatAt(bMs,barNum===1);
       }
     }
-  });
-  _drawZoomScrollingCache(ctx,beatCache,viewL,msPerPx,W,H);
+  }
   _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX);
 
   const cueKey=`${_getZoomCueStateKey(d)}#${W}x${H}#${msPerPx}`;
