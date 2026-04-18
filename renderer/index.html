@@ -4288,6 +4288,10 @@ if(E){
     dk._isLooping=!!status.isLooping; // CDJ active loop state
     if(dk.pl!==wasPl||dk.cu!==wasCu){dk._stateChanged=true;dk._smoothPos=null;}
     if(status.timecodeMs!=null&&status.timecodeMs!==dk.pos){dk.pos=status.timecodeMs;dk._posTime=Date.now();}
+    // CDJ-2000NXS2: update track duration from CDJ status (precise_pos handles CDJ-3000 separately)
+    if(status.totalLenMs > 0 && !dk._hasPrecisePos){
+      if(!dk.dur || status.totalLenMs > dk.dur) dk.dur = status.totalLenMs;
+    }
     // NXS2 debug: log state/timecode for non-precise decks
     if(!dk._hasPrecisePos){
       if(!dk._nxDbg)dk._nxDbg=0;

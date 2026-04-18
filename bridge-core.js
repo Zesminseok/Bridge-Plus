@@ -869,25 +869,24 @@ function parsePDJL(msg){
   // Note: bytes[36-37] are separate fields (not part of trackLength).
   // Only bytes[38-39] as uint16BE give correct duration across all CDJ-3000 units.
   // CDJ-3000 Precise Position (type 0x0b, exactly 60B, port 50001)
-  // IMPORTANT: NXS2 also sends type 0x0b packets with different structure — validate parsed values
+  // IMPORTANT: NXS2 also sends type 0x0b with different structure — filter by name field
   if(type===0x0b && msg.length>=60){
     const pNum = msg[33];
     if(pNum>=1 && pNum<=6){
+      // NXS2 sends type 0x0b packets with incompatible structure — reject by name
+      if(name.includes('2000NXS2') || name.includes('NXS2') || name.includes('NXS')) return null;
       const trackLenSec = msg.readUInt16BE(38);
       const playheadRaw = msg.readUInt32BE(40);
       const pitchRaw2 = msg.readInt32BE(44);
       const bpmRaw10 = msg.readUInt32BE(56);
-      // Sanity check: reject garbage from non-CDJ-3000 models
-      // Valid: trackLen < 24h, playhead < trackLen, BPM 20-500, pitch ±50%
+      // Sanity check: reject garbage packets
+      // Valid: trackLen < 24h, playhead ≤ trackLen×1000ms, BPM 20-500, pitch ±50%
       const bpmCheck = bpmRaw10/10;
       const sane = trackLenSec > 0 && trackLenSec < 86400
                 && playheadRaw <= trackLenSec * 1000
                 && bpmCheck > 20 && bpmCheck < 500
                 && Math.abs(pitchRaw2) < 5000;
-      if(!sane){
-        // Not a valid CDJ-3000 precise_pos — skip silently
-        return null;
-      }
+      if(!sane) return null;
       return{
         kind:'precise_pos', playerNum:pNum, name,
         trackLengthSec: trackLenSec,
@@ -1916,7 +1915,13 @@ class BridgeCore {
     const _bridgeJoin=()=>{
       if(!this._pdjlAnnSock) return;
       if(this._joinInProgress){
-        console.log('[PDJL] bridge join already in progress — skipping duplicate trigger');
+        // If DJM is now known but wasn't when join started, schedule a retry after current join
+        const _pendingDjm = this.devices?.['djm']?.ip;
+        if(_pendingDjm && !this._djmJoinPending){
+          this._djmJoinPending = true;
+          setTimeout(()=>{ this._djmJoinPending=false; _bridgeJoin(); }, 8500);
+          console.log(`[PDJL] DJM found during join — retry in 8.5s → ${_pendingDjm}`);
+        }
         return;
       }
       this._joinInProgress = true;
@@ -1978,6 +1983,15 @@ class BridgeCore {
     _bridgeJoin();
     setTimeout(()=>{ if(Object.keys(this.devices||{}).length>0) _bridgeJoin(); }, 30000);
     this._bridgeJoinFn = _bridgeJoin;
+    // Periodic DJM reconnect: if DJM is known but hasn't sent 0x39 mixer data yet
+    const _djmRetryT = setInterval(()=>{
+      if(!this.running) return;
+      if(this.devices['djm'] && !this._hasRealFaders && !this._joinInProgress){
+        console.log('[PDJL] DJM known but no mixer data yet — retrying join');
+        _bridgeJoin();
+      }
+    }, 20000);
+    this._timers.push(_djmRetryT);
     console.log(`[PDJL] annSock ready (shared=${!!this._pdjlSockets?.[0]}) ip=${pdjlIP} allBCs=[${allBCs.join(',')}]`);
 
     // 95B dbserver keepalive — UNICAST to CDJs only (not broadcast!)
@@ -2341,6 +2355,9 @@ class BridgeCore {
     if(p.kind==='precise_pos'){
       const li=p.playerNum-1;
       if(li>=0&&li<8){
+        // Extra guard: skip if this player is a known NXS2 (redundant but safe)
+        const _ppDev = this.devices[`cdj${p.playerNum}`];
+        if(_ppDev?.state?.isNXS2) return;
         // Store precise position for CDJ status handler to use
         if(!this._precisePos) this._precisePos={};
         this._precisePos[p.playerNum]={
