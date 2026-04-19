@@ -804,8 +804,14 @@ const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIfac
   tcLtcA:'',tcLtcB:'',tcLtcM:'',tcMidiOutId:'',
   tcLtcACh:0,tcLtcBCh:0,tcLtcMCh:0,
   tcArtnetIp:'255.255.255.255',tcArtnetPort:'6454',
+  // TC latency offset (ms) — 음향/영상 파이프라인 지연 보정 (+ 면 TC가 먼저 나감)
+  tcOffsetMs:0,
   // Art-Net Engine
   anEnabled:false,anIface:'',anDmxEnabled:false,anDmxUniverse:0,anDmxSource:'all',
+  // Art-Net 확장: ArtPollReply 응답, Unicast 모드, DMX 주기, ArtSync
+  anPollReply:true,anUnicast:false,anUnicastIp:'',anDmxHz:40,anSync:false,
+  // Ableton Link
+  linkEnabled:false,linkSource:'mixer',linkDeckIdx:0,
   tcnetUnicast:false,tcnetAllIfaces:false};
 // Load persisted settings
 let cfg=Object.assign({},_CFG_DEF);
@@ -1035,12 +1041,7 @@ function _artForceResync(){if(_artEnabled)window.bridge.artnetForceResync?.();_a
 async function _artnetRestartIfEnabled(){
   if(!_artEnabled)return;
   await window.bridge.artnetStop?.();
-  const r=await window.bridge.artnetStart?.({
-    bindIp:cfg.anIface||'0.0.0.0',
-    destIp:cfg.tcArtnetIp||'255.255.255.255',
-    destPort:parseInt(cfg.tcArtnetPort)||6454,
-    fps:cfg.tcFps||'25',
-  });
+  const r=await _artnetStart();
   _updateArtnetUi(r?.ok);
 }
 function _updateArtnetUi(running){
@@ -1094,9 +1095,14 @@ function _outPlaying(key){
 }
 
 // ── Timecode tick — called every ~33ms from tick() ──────────────────
+// TC 레이턴시 보정: cfg.tcOffsetMs 를 모든 TC 출력(LTC/MTC/Art-Net)에 일관 적용.
+//   (+) 값 → TC 가 실제 음원보다 앞섬 (downstream 지연 보정)
+//   (-) 값 → TC 가 실제 음원보다 늦음 (upstream 지연 보정)
 async function tcTick(){
+  const off=+(cfg.tcOffsetMs)||0;
   for(const [key,o] of Object.entries(OUT)){
-    const ms=_outSrcMs(key);
+    const msRaw=_outSrcMs(key);
+    const ms = (msRaw!=null) ? Math.max(0, msRaw + off) : msRaw;
     const playing=_outPlaying(key);
     if(o.ltc){
       if(!_ltc[key].ready)await _ltcInit(key);
@@ -4378,6 +4384,7 @@ function renderSettings(){
     <div class="sl mt">SMPTE 타임코드 출력</div>
     <div class="sgr">
       <div class="srw"><span class="srl">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">레이턴시 보정</span><div style="display:flex;align-items:center;gap:6px"><input type="number" step="1" min="-5000" max="5000" value="${cfg.tcOffsetMs|0}" data-cfg="tcOffsetMs" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:90px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">ms (LTC/MTC/Art-Net 공통, + 면 TC 앞섬)</span></div></div>
       ${['A','B','M'].map(lyr=>`<div class="srw"><span class="srl">LTC — Layer ${lyr}</span><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select class="ss" data-cfg="tcLtc${lyr}" style="max-width:180px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg[`tcLtc${lyr}`]===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select><select class="ss" data-cfg="tcLtc${lyr}Ch" style="width:72px" disabled><option>감지 중…</option></select></div></div>`).join('')}
       <div class="srw"><span class="srl">MTC MIDI 출력</span><select class="ss" id="midiOutSel" style="max-width:200px"><option value="">—</option></select></div>
     </div>
@@ -4389,10 +4396,15 @@ function renderSettings(){
     <div class="sgr">
       <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnEnabled" ${cfg.anEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">ArtTimeCode + DMX 송신 엔진 시작</span></label></div>
       <div class="srw"><span class="srl">Art-Net 인터페이스</span><select class="ss" data-cfg="anIface">${ifaceOpts(allIfaces,'anIface')}</select></div>
-      <div class="srw"><span class="srl">대상 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
+      <div class="srw"><span class="srl">송신 모드</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnUnicast" ${cfg.anUnicast?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">유니캐스트 (특정 노드 IP로만 송신)</span></label></div>
+      <div class="srw"><span class="srl">유니캐스트 IP</span><input type="text" value="${cfg.anUnicastIp||''}" data-cfg="anUnicastIp" placeholder="예: 192.168.1.50" ${cfg.anUnicast?'':'disabled'} style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
+      <div class="srw"><span class="srl">브로드캐스트 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
       <div class="srw"><span class="srl">Port</span><input type="text" value="${cfg.tcArtnetPort}" data-cfg="tcArtnetPort" placeholder="6454" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:70px;text-align:right"></div>
       <div class="srw"><span class="srl">Frame Rate (TC)</span><span style="font:400 10px var(--mn);color:var(--tx3)">SMPTE 프레임레이트와 공유 (${cfg.tcFps} fps)</span></div>
-      <div class="srw"><span class="srl">DMX 출력</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnDmxEn" ${cfg.anDmxEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpDmx 0x5000 (40Hz)</span></label></div>
+      <div class="srw"><span class="srl">ArtPollReply</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnPoll" ${cfg.anPollReply?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">컨트롤러 자동 탐지 응답 (grandMA·Resolume·QLC+)</span></label></div>
+      <div class="srw"><span class="srl">ArtSync</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnSync" ${cfg.anSync?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpSync(0x5200) 프레임 래치 송신</span></label></div>
+      <div class="srw"><span class="srl">DMX 출력</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnDmxEn" ${cfg.anDmxEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpDmx 0x5000</span></label></div>
+      <div class="srw"><span class="srl">DMX 주기</span><div style="display:flex;align-items:center;gap:6px"><input type="number" min="10" max="50" value="${cfg.anDmxHz||40}" data-cfg="anDmxHz" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:70px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">Hz (10~50)</span></div></div>
       <div class="srw"><span class="srl">DMX Universe</span><input type="number" min="0" max="32767" value="${cfg.anDmxUniverse}" data-cfg="anDmxUniverse" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:80px;text-align:right"></div>
       <div class="srw"><span class="srl">DMX 소스</span><select class="ss" data-cfg="anDmxSource">${[['off','Off'],['fader','DJM 페이더 (ch1-6)'],['vu','DJM VU (ch1-6)'],['all','DJM 전체 (fader+VU+xf+master)']].map(([v,l])=>`<option value="${v}" ${cfg.anDmxSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">송신 상태</span><span id="anStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">정지</span></div>
@@ -4400,8 +4412,24 @@ function renderSettings(){
     <div class="al alw" style="margin-top:6px;margin-bottom:4px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span>
       <div style="font:400 10px var(--sn);color:var(--tx2)">
-        <b>Art-Net 4 엔진:</b> 드리프트 보정 타이머 (2ms tick · fractional accumulator), forceResync on seek/cue, auto-increment encoder, OpDmx 512ch.<br>
-        인터페이스 선택 시 해당 NIC 서브넷 브로드캐스트로 송신합니다.
+        <b>Art-Net 4 엔진:</b> 드리프트 보정 2ms tick · forceResync on seek/cue · 자동증분 encoder · OpDmx 512ch.<br>
+        <b>확장:</b> ArtPollReply 자동응답 + Unicast + ArtSync + 10~50Hz DMX. 유니캐스트 IP가 비어있으면 브로드캐스트로 fallback.
+      </div>
+    </div>
+    <div class="sl mt">Ableton Link <span id="linkStatusDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#555;margin-left:6px;vertical-align:middle"></span></div>
+    <div class="sgr">
+      <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkLinkEnabled" ${cfg.linkEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">Link 세션 참여 — BPM 송신 (단방향)</span></label></div>
+      <div class="srw"><span class="srl">BPM 소스</span><select class="ss" data-cfg="linkSource">${[['mixer','Mixer BPM (DJM)'],['deck','선택 덱 BPM'],['master','Master 덱 BPM (Pro DJ Link)']].map(([v,l])=>`<option value="${v}" ${cfg.linkSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">덱 선택 (deck 모드)</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${['A','B','C','D','E','F'][i]}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">세션 상태</span><span id="linkStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">—</span></div>
+      <div class="srw"><span class="srl">현재 송신 BPM</span><span id="linkBpmLbl" style="font:700 11px var(--mn);color:var(--grn)">—</span></div>
+    </div>
+    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
+      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
+      <div style="font:400 10px var(--sn);color:var(--tx2)">
+        <b>Ableton Link — BPM 전용 모드:</b> 브리지는 선택된 소스의 BPM만 Link 세션에 공급합니다 (phase/quantum 기여 없음).<br>
+        <b>Resolume·Ableton Live·Traktor</b> 등 같은 LAN에 있는 Link 피어가 자동으로 따라옵니다.<br>
+        <b>네이티브 모듈 필요:</b> <code style="background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px">npm i abletonlink && npx electron-rebuild</code> 설치 후 재시작.
       </div>
     </div>
     <div class="sl">정보</div>
@@ -4459,6 +4487,22 @@ function renderSettings(){
       else if(k==='anIface'){cfg[k]=e.target.value;_saveCfg();_artnetRestartIfEnabled();return;}
       else if(k==='anDmxUniverse'){cfg[k]=parseInt(e.target.value)||0;_saveCfg();return;}
       else if(k==='anDmxSource'){cfg[k]=e.target.value;_saveCfg();if(cfg.anDmxSource==='off')window.bridge.artnetClearDmx?.();return;}
+      else if(k==='tcOffsetMs'){
+        const v=parseInt(e.target.value);
+        cfg.tcOffsetMs = Number.isFinite(v) ? Math.max(-5000,Math.min(5000,v)) : 0;
+        _saveCfg();
+        // offset 변경 시 Art-Net 엔진에 즉시 resync 요청 (다음 tick 이 새 offset 반영)
+        if(_artEnabled) _artForceResync();
+        return;
+      }
+      else if(k==='anUnicastIp'){cfg[k]=e.target.value.trim();_saveCfg();_artnetRestartIfEnabled();return;}
+      else if(k==='anDmxHz'){
+        const v=parseInt(e.target.value);
+        cfg.anDmxHz=Number.isFinite(v)?Math.max(10,Math.min(50,v)):40;
+        _saveCfg();window.bridge.artnetSetDmxHz?.(cfg.anDmxHz);return;
+      }
+      else if(k==='linkSource'){cfg[k]=e.target.value;_saveCfg();return;}
+      else if(k==='linkDeckIdx'){cfg[k]=parseInt(e.target.value)||0;_saveCfg();return;}
       else if(k==='tcFps'){cfg.tcFps=e.target.value;_saveCfg();window.bridge.artnetSetFps?.(cfg.tcFps);return;}
       else if(k==='tcnetIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindTCNet(e.target.value||null);return;}
       else if(k==='pdjlIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindPDJL(e.target.value||null);return;}
@@ -4508,12 +4552,7 @@ function renderSettings(){
   if(chkAn)chkAn.onchange=async e=>{
     cfg.anEnabled=e.target.checked;_saveCfg();
     if(cfg.anEnabled){
-      const r=await window.bridge.artnetStart?.({
-        bindIp:cfg.anIface||'0.0.0.0',
-        destIp:cfg.tcArtnetIp||'255.255.255.255',
-        destPort:parseInt(cfg.tcArtnetPort)||6454,
-        fps:cfg.tcFps||'25',
-      });
+      const r=await _artnetStart();
       _artEnabled=!!r?.ok;
       _updateArtnetUi(_artEnabled);
       if(!r?.ok){e.target.checked=false;cfg.anEnabled=false;_saveCfg();alert('Art-Net 엔진 시작 실패: '+(r?.err||'unknown'));}
@@ -4527,25 +4566,132 @@ function renderSettings(){
     cfg.anDmxEnabled=e.target.checked;_saveCfg();
     if(!cfg.anDmxEnabled)window.bridge.artnetClearDmx?.();
   };
+  // Art-Net 확장 체크박스 핸들러
+  const chkAnUni=el.querySelector('#chkAnUnicast');
+  if(chkAnUni)chkAnUni.onchange=e=>{
+    cfg.anUnicast=e.target.checked;_saveCfg();
+    const ipIn=el.querySelector('[data-cfg="anUnicastIp"]');
+    if(ipIn) ipIn.disabled=!cfg.anUnicast;
+    window.bridge.artnetSetUnicast?.(cfg.anUnicast,cfg.anUnicastIp||'');
+  };
+  const chkAnPoll=el.querySelector('#chkAnPoll');
+  if(chkAnPoll)chkAnPoll.onchange=e=>{
+    cfg.anPollReply=e.target.checked;_saveCfg();
+    window.bridge.artnetSetPollReply?.(cfg.anPollReply);
+    _artnetRestartIfEnabled(); // PollReply 는 listener 리바인드 필요
+  };
+  const chkAnSync=el.querySelector('#chkAnSync');
+  if(chkAnSync)chkAnSync.onchange=e=>{
+    cfg.anSync=e.target.checked;_saveCfg();
+    window.bridge.artnetSetSync?.(cfg.anSync);
+  };
+  // Ableton Link 체크박스
+  const chkLink=el.querySelector('#chkLinkEnabled');
+  if(chkLink)chkLink.onchange=async e=>{
+    cfg.linkEnabled=e.target.checked;_saveCfg();
+    const st=await window.bridge.linkSetEnabled?.(cfg.linkEnabled);
+    _updateLinkUi(st);
+    if(cfg.linkEnabled && st && !st.available){
+      alert('abletonlink 네이티브 모듈이 설치되어 있지 않습니다.\n'
+          + '터미널에서 다음을 실행하세요:\n\n'
+          + '  npm i abletonlink\n'
+          + '  npx electron-rebuild\n\n'
+          + '그 후 BRIDGE+ 를 재시작하세요.');
+    }
+  };
   _updateArtnetUi(_artEnabled);
   el.querySelector('[data-cfg="anIface"]').value=cfg.anIface||'';
   el.querySelector('[data-cfg="anDmxSource"]').value=cfg.anDmxSource||'all';
+  // Link 상태 초기 반영
+  window.bridge.linkGetStatus?.().then(_updateLinkUi);
 }
-// Auto-start Art-Net engine at boot if user had it enabled last session
+// Art-Net 엔진 시작 — 확장 옵션 포함 단일 진입점
+async function _artnetStart(){
+  return await window.bridge.artnetStart?.({
+    bindIp:cfg.anIface||'0.0.0.0',
+    destIp:cfg.tcArtnetIp||'255.255.255.255',
+    destPort:parseInt(cfg.tcArtnetPort)||6454,
+    fps:cfg.tcFps||'25',
+    unicast:!!cfg.anUnicast,
+    unicastIp:cfg.anUnicastIp||'',
+    pollReply:cfg.anPollReply!==false,
+    sync:!!cfg.anSync,
+    dmxHz:parseInt(cfg.anDmxHz)||40,
+  });
+}
+// Link UI 상태 반영 (setEnabled 응답 또는 상태 조회 결과로 호출)
+function _updateLinkUi(st){
+  const dot=document.getElementById('linkStatusDot');
+  const lbl=document.getElementById('linkStatusLbl');
+  if(!st){ if(dot)dot.style.background='#555'; if(lbl)lbl.textContent='—'; return; }
+  if(dot) dot.style.background = (!st.available) ? '#b08040' : (st.enabled ? '#32be5a' : '#555');
+  if(lbl){
+    if(!st.available) lbl.textContent='모듈 미설치';
+    else if(!st.enabled) lbl.textContent='비활성';
+    else lbl.textContent=`활성 · 피어 ${st.peers||0}`;
+  }
+}
+// Boot: Art-Net / Link 자동 재시작 (지난 세션에서 켜져있었다면)
 window.addEventListener('DOMContentLoaded',()=>{
   if(cfg.anEnabled){
-    window.bridge.artnetStart?.({
-      bindIp:cfg.anIface||'0.0.0.0',
-      destIp:cfg.tcArtnetIp||'255.255.255.255',
-      destPort:parseInt(cfg.tcArtnetPort)||6454,
-      fps:cfg.tcFps||'25',
-    }).then(r=>{
+    _artnetStart().then(r=>{
       _artEnabled=!!r?.ok;
       _updateArtnetUi(_artEnabled);
       if(!r?.ok){console.warn('[ART] auto-start failed:',r?.err);}
     });
   }
+  if(cfg.linkEnabled){
+    window.bridge.linkSetEnabled?.(true).then(_updateLinkUi);
+  }
 });
+// ═══ Ableton Link BPM 송신 루프 ═══════════════════════════════════
+// 250ms 주기로 선택된 소스의 BPM을 main 프로세스에 전달.
+// main 프로세스의 LinkBridge가 0.02 BPM 히스테리시스/레이트리밋으로 Link 세션에 공급.
+let _linkLastStatus={available:false,enabled:false,peers:0,bpm:0};
+setInterval(async ()=>{
+  if(!cfg.linkEnabled) return;
+  const bpm = _computeLinkSourceBpm();
+  if(bpm>0){
+    window.bridge.linkSetTempo?.(bpm);
+    const el=document.getElementById('linkBpmLbl');
+    if(el) el.textContent = bpm.toFixed(2) + ' BPM';
+  }
+  // 상태 주기 갱신 (피어 수)
+  try{
+    const st=await window.bridge.linkGetStatus?.();
+    if(st){ _linkLastStatus=st; _updateLinkUi(st); }
+  }catch(_){}
+},250);
+// BPM 소스 계산 — 'mixer' | 'deck' | 'master'
+// 덱 필드: DECKS[slot].bpm, DECKS[slot].master (Pro DJ Link master flag)
+function _computeLinkSourceBpm(){
+  const src=cfg.linkSource||'mixer';
+  const slots=['A','B','C','D','E','F'];
+  if(src==='mixer'){
+    // Mixer BPM = 현재 master 로 지정된 덱의 BPM (DJM 자체는 BPM 미송출)
+    for(const k of slots){
+      const d=DECKS[k];
+      if(d && d.master && d.bpm>0) return d.bpm;
+    }
+    // fallback: 재생 중인 덱 중 첫 번째
+    for(const k of slots){
+      const d=DECKS[k];
+      if(d && d.pl && d.bpm>0) return d.bpm;
+    }
+    return 0;
+  }
+  if(src==='deck'){
+    const idx=Math.max(0,Math.min(5,cfg.linkDeckIdx|0));
+    const d=DECKS[slots[idx]];
+    return (d && d.bpm>0) ? d.bpm : 0;
+  }
+  // 'master': Pro DJ Link master=true 인 덱의 BPM
+  for(const k of slots){
+    const d=DECKS[k];
+    if(d && d.master && d.bpm>0) return d.bpm;
+  }
+  return 0;
+}
 
 // ════ History tracking ═══════════════════════════════
 const _histLog=[];

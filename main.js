@@ -70,19 +70,27 @@ function _registerBridgeAudioProtocol(){
 //  • forceResync() — CUE/핫큐/트랙전환 즉시 반영 (1-frame 지연 제로)
 //  • OpTimeCode 19B + OpDmx 512ch(시퀀스 1-255) 단일 엔진 통합
 //  • 인터페이스별 bind + SO_BROADCAST + Pause/Resume/에러카운터
+//  • ArtPollReply 자동응답 (grandMA / Resolume / QLC+ 자동 탐지)
+//  • Unicast 모드(특정 노드 IP 직접 송신) + DMX 주기 설정 + ArtSync(0x5200)
 //  • IPC 핸들러 분리 → 메인 ↔ 렌더러 동기화 오버헤드 최소
 class ArtnetEngine{
   constructor(){
-    this._sock=null;this._bindIp='0.0.0.0';this._destIp='255.255.255.255';this._destPort=6454;
+    this._sock=null;this._pollSock=null;
+    this._bindIp='0.0.0.0';this._destIp='255.255.255.255';this._destPort=6454;
+    this._unicast=false;this._unicastIp='';
+    this._pollReply=true;this._sync=false;
     this._timer=null;this._running=false;this._paused=false;
     this._fps=25;this._fpsType=1;
     this._target={hh:0,mm:0,ss:0,ff:0};
     this._enc={hh:0,mm:0,ss:0,ff:0};
     this._seeded=false;this._lastHR=0;this._errors=0;
     this._dmxBuf=null;this._dmxUniverse=0;this._dmxSeq=0;this._dmxLastHR=0;this._dmxIntervalMs=25; // 40Hz
+    this._nodeShortName='BRIDGE+';
+    this._nodeLongName='Pro DJ Link Bridge Plus - Art-Net 4';
   }
   _now(){const[s,n]=process.hrtime();return s*1000+n/1e6;}
-  getStatus(){return{running:this._running,paused:this._paused,bindIp:this._bindIp,destIp:this._destIp,port:this._destPort,fps:this._fps,errors:this._errors};}
+  _destFor(){ return this._unicast && this._unicastIp ? this._unicastIp : this._destIp; }
+  getStatus(){return{running:this._running,paused:this._paused,bindIp:this._bindIp,destIp:this._destFor(),port:this._destPort,fps:this._fps,errors:this._errors,unicast:this._unicast,sync:this._sync,pollReply:this._pollReply,dmxHz:Math.round(1000/this._dmxIntervalMs)};}
   isRunning(){return this._running;}
   setFps(fpsStr){
     const m={'24':[24,0],'25':[25,1],'29.97':[30,2],'30':[30,3]};
@@ -100,18 +108,32 @@ class ArtnetEngine{
     this._dmxUniverse=(universe|0)&0x7FFF;
   }
   clearDmx(){this._dmxBuf=null;}
+  setDmxHz(hz){
+    const v=Math.max(10,Math.min(50,parseInt(hz)||40));
+    this._dmxIntervalMs=Math.round(1000/v);
+  }
+  setUnicast(enabled,ip){
+    this._unicast=!!enabled;
+    this._unicastIp=(ip||'').trim();
+  }
+  setPollReply(enabled){ this._pollReply=!!enabled; }
+  setSync(enabled){ this._sync=!!enabled; }
   forceResync(){
     if(!this._running||this._paused||!this._sock)return;
     this._seeded=false;
     this._sendTc();
     this._lastHR=this._now();
   }
-  start({bindIp,destIp,destPort}={}){
+  start({bindIp,destIp,destPort,unicast,unicastIp,pollReply,sync,dmxHz}={}){
     return new Promise((resolve)=>{
       this.stop();
       this._bindIp=bindIp||'0.0.0.0';
       this._destIp=destIp||'255.255.255.255';
       this._destPort=(destPort|0)||6454;
+      this._unicast=!!unicast;this._unicastIp=(unicastIp||'').trim();
+      this._pollReply=pollReply!==false;
+      this._sync=!!sync;
+      if(dmxHz) this.setDmxHz(dmxHz);
       const sock=dgram.createSocket({type:'udp4',reuseAddr:true});
       sock.on('error',e=>{this._errors++;console.warn('[ART] sock err',e.message);});
       const bindAddr=(this._bindIp&&this._bindIp!=='0.0.0.0'&&this._bindIp!=='auto')?this._bindIp:undefined;
@@ -122,7 +144,11 @@ class ArtnetEngine{
           this._seeded=false;this._errors=0;
           this._lastHR=this._now();this._dmxLastHR=0;
           this._timer=setInterval(()=>this._tick(),2);
-          console.log('[ART] started',this._bindIp,'->',this._destIp+':'+this._destPort);
+          this._startPollListener();
+          console.log('[ART] started',this._bindIp,'->',this._destFor()+':'+this._destPort,
+                      this._unicast?'(unicast)':'(broadcast)',
+                      this._pollReply?'ArtPoll✓':'ArtPoll✗',
+                      this._sync?'ArtSync✓':'');
           resolve({ok:true});
         });
       }catch(e){console.warn('[ART] bind error',e.message);resolve({ok:false,err:e.message});}
@@ -132,6 +158,7 @@ class ArtnetEngine{
     this._running=false;this._paused=false;
     if(this._timer){clearInterval(this._timer);this._timer=null;}
     if(this._sock){try{this._sock.close();}catch(_){}this._sock=null;}
+    if(this._pollSock){try{this._pollSock.close();}catch(_){}this._pollSock=null;}
   }
   _tick(){
     if(!this._running||!this._sock)return;
@@ -148,6 +175,7 @@ class ArtnetEngine{
     }
     if(this._dmxBuf&&(now-this._dmxLastHR)>=this._dmxIntervalMs){
       this._sendDmx();
+      if(this._sync) this._sendSync();
       this._dmxLastHR=now;
     }
   }
@@ -183,7 +211,7 @@ class ArtnetEngine{
     pkt.writeUInt8(tc.ff,14);pkt.writeUInt8(tc.ss,15);
     pkt.writeUInt8(tc.mm,16);pkt.writeUInt8(tc.hh,17);
     pkt.writeUInt8(this._fpsType&0x03,18);
-    try{this._sock.send(pkt,0,19,this._destPort,this._destIp);}
+    try{this._sock.send(pkt,0,19,this._destPort,this._destFor());}
     catch(e){this._errors++;}
   }
   _sendDmx(){
@@ -201,11 +229,163 @@ class ArtnetEngine{
     pkt.writeUInt8((n>>8)&0xFF,16);
     pkt.writeUInt8(n&0xFF,17);
     this._dmxBuf.copy(pkt,18,0,Math.min(this._dmxBuf.length,n));
-    try{this._sock.send(pkt,0,pkt.length,this._destPort,this._destIp);}
+    try{this._sock.send(pkt,0,pkt.length,this._destPort,this._destFor());}
     catch(e){this._errors++;}
   }
+  // ArtSync (0x5200, 14B) — 프레임 그룹 송신 후 일괄 래치. Resolume/grandMA 지원.
+  _sendSync(){
+    const pkt=Buffer.alloc(14);
+    pkt.write('Art-Net\0',0,'ascii');
+    pkt.writeUInt16LE(0x5200,8);
+    pkt.writeUInt8(0,10);pkt.writeUInt8(0x0E,11);
+    pkt.writeUInt8(0,12);pkt.writeUInt8(0,13);
+    const dst = this._unicast && this._unicastIp ? this._unicastIp : '255.255.255.255';
+    try{this._sock.send(pkt,0,pkt.length,this._destPort,dst);}catch(e){this._errors++;}
+  }
+  // 239-byte ArtPollReply (0x2100) — ArtPoll 수신 시 자동 응답.
+  _sendPollReply(remoteIp){
+    if(!this._sock) return;
+    const pkt=Buffer.alloc(239);
+    pkt.write('Art-Net\0',0,'ascii');
+    pkt.writeUInt16LE(0x2100,8);
+    // IP (4B LE-style: Art-Net 필드는 실제 IP octet 순서 — 다수 구현이 network order 로 씀)
+    const ip=this._bindIp==='0.0.0.0' ? (getLocalIp()||'0.0.0.0') : this._bindIp;
+    const oct=ip.split('.').map(x=>parseInt(x)||0);
+    pkt[10]=oct[0];pkt[11]=oct[1];pkt[12]=oct[2];pkt[13]=oct[3];
+    pkt.writeUInt16LE(this._destPort,14);  // Port
+    pkt.writeUInt16BE(0x0001,16);           // VersInfo
+    pkt.writeUInt8(0,18);pkt.writeUInt8(0,19); // NetSwitch/SubSwitch
+    pkt.writeUInt16BE(0xFFFF,20);           // OEM
+    pkt[22]=0;                              // UBEA
+    pkt[23]=0xE0;                           // Status1: indicator on, port-addr programmable
+    pkt.writeUInt16LE(0x1212,24);           // ESTA manufacturer code (개발자 코드)
+    pkt.write(this._nodeShortName.padEnd(17,'\0'),26,17,'ascii');
+    pkt.write(this._nodeLongName.padEnd(63,'\0'),44,63,'ascii');
+    pkt.write('#0001 [0000] BRIDGE+ online',108,64,'ascii');
+    pkt[173]=0;pkt[174]=1;                  // NumPorts (1)
+    pkt[175]=0x45;                          // PortType 0: DMX out + Art-Net
+    pkt[178]=0x02;                          // GoodInput: data received
+    pkt[182]=0x80;                          // GoodOutputA: data being transmitted
+    pkt[186]=this._dmxUniverse&0x0F;        // SwOut 0
+    pkt[190]=0;                             // SwVideo
+    pkt[191]=0;                             // SwMacro
+    pkt[192]=0;                             // SwRemote
+    pkt[196]=0;                             // Style: Node
+    // MAC (6B 0x00) — 필요시 getAllInterfaces 로 실 주소 주입 가능
+    pkt[201]=0;
+    pkt[212]=0x01;                          // Status2: supports 15-bit addressing + DHCP capable
+    try{
+      const dst = remoteIp || '255.255.255.255';
+      this._sock.send(pkt,0,pkt.length,this._destPort,dst);
+    }catch(e){this._errors++;}
+  }
+  // ArtPoll 수신 대기 — 기본 포트 6454 (메인 sock 과 공유 불가하므로 별도 소켓)
+  _startPollListener(){
+    if(!this._pollReply) return;
+    try{
+      const s=dgram.createSocket({type:'udp4',reuseAddr:true});
+      s.on('error',()=>{});
+      s.on('message',(msg,rinfo)=>{
+        if(msg.length<14) return;
+        if(msg.toString('ascii',0,8)!=='Art-Net\0') return;
+        const op=msg.readUInt16LE(8);
+        if(op===0x2000){ // ArtPoll
+          this._sendPollReply(rinfo.address);
+        }
+      });
+      const bindAddr=(this._bindIp&&this._bindIp!=='0.0.0.0'&&this._bindIp!=='auto')?this._bindIp:undefined;
+      s.bind(6454,bindAddr,()=>{
+        try{s.setBroadcast(true);}catch(_){}
+        this._pollSock=s;
+        // 시작 시 자발 공지 한 번 → 컨트롤러가 즉시 인식
+        setTimeout(()=>this._sendPollReply(null),200);
+      });
+    }catch(_){}
+  }
+}
+// 자체 bind IP 추출 — ArtPollReply 응답 시 우리 IP 를 정확히 기재하기 위해.
+function getLocalIp(){
+  try{
+    const os=require('os');
+    const ifs=os.networkInterfaces();
+    for(const name of Object.keys(ifs)){
+      for(const x of (ifs[name]||[])){
+        if(x.family==='IPv4' && !x.internal) return x.address;
+      }
+    }
+  }catch(_){}
+  return null;
 }
 const artnet=new ArtnetEngine();
+
+// ═══ Ableton Link Bridge (BPM-only, one-way propagation) ══════════════
+// 설계 원칙 (브리지 전용 튜닝):
+//  • 브리지는 마스터 BPM "공급자" 역할만 수행 — phase/quantum 기여 없음
+//  • 소스 선택(cfg.linkSource): 'mixer' | 'deck' | 'master' 를 렌더러가 결정
+//  • 0.02 BPM 히스테리시스 + 250ms 레이트리밋 → 네트워크 플러딩 방지
+//  • abletonlink 네이티브 모듈이 설치된 경우 실제 Link 송신, 미설치 시 stub
+//     설치법: `npm i abletonlink && npx electron-rebuild`
+class LinkBridge{
+  constructor(){
+    this._link=null;this._enabled=false;this._peers=0;
+    this._currentBpm=0;this._lastSentBpm=0;this._lastSentAt=0;
+    this._available=false;
+    try{
+      const AL=require('abletonlink');
+      this._LinkCtor=AL.default||AL;
+      this._available=true;
+      console.log('[LINK] abletonlink native module loaded');
+    }catch(e){
+      console.log('[LINK] abletonlink not installed (stub mode). '
+                + 'Install: npm i abletonlink && npx electron-rebuild');
+    }
+  }
+  isAvailable(){ return this._available; }
+  getStatus(){ return{available:this._available,enabled:this._enabled,peers:this._peers,bpm:this._currentBpm,lastSent:this._lastSentBpm};}
+  setEnabled(on){
+    this._enabled=!!on;
+    if(this._enabled){
+      if(this._available && !this._link){
+        try{
+          this._link=new this._LinkCtor(120.0);
+          this._link.enable(true);
+          // 피어 수 콜백 (버전별 API 차이 흡수)
+          if(typeof this._link.setNumPeersCallback==='function'){
+            this._link.setNumPeersCallback(n=>{this._peers=n|0;});
+          } else if(typeof this._link.on==='function'){
+            this._link.on('numPeers',n=>{this._peers=n|0;});
+          }
+          console.log('[LINK] session started (BPM-only mode)');
+        }catch(e){
+          console.warn('[LINK] start error:',e.message);
+          this._link=null;
+        }
+      }
+    } else {
+      if(this._link){
+        try{this._link.enable(false);}catch(_){}
+        try{this._link.destroy?.();}catch(_){}
+        this._link=null;this._peers=0;this._lastSentBpm=0;
+      }
+    }
+  }
+  setTempo(bpm){
+    const v=parseFloat(bpm);
+    if(!Number.isFinite(v)||v<20||v>999)return;
+    this._currentBpm=v;
+    if(!this._enabled||!this._link)return;
+    // 히스테리시스 0.02 + 레이트리밋 250ms
+    const now=Date.now();
+    if(Math.abs(v-this._lastSentBpm)<0.02 && (now-this._lastSentAt)<250) return;
+    try{
+      if(typeof this._link.setBpm==='function') this._link.setBpm(v);
+      else if(typeof this._link.bpm==='function') this._link.bpm(v);
+      else if('bpm' in this._link) this._link.bpm=v;
+      this._lastSentBpm=v;this._lastSentAt=now;
+    }catch(e){ console.warn('[LINK] setBpm err:',e.message); }
+  }
+}
+const link=new LinkBridge();
 
 // Legacy one-shot Art-Net ArtTimeCode (used by direct IPC call or fallback)
 const _artSocket=dgram.createSocket('udp4');
@@ -385,10 +565,19 @@ ipcMain.handle('bridge:getInterfaces',()=>getAllInterfaces());
 ipcMain.handle('bridge:getDevices',()=>bridge?.getActiveDevices()||[]);
 ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTimeCode(ip,port,hh,mm,ss,ff,type);return{ok:true};});
 // ─── Art-Net Engine IPC ───────────────────────────────────────────
-ipcMain.handle('artnet:start',async(_,{bindIp,destIp,destPort,fps})=>{
+ipcMain.handle('artnet:start',async(_,opts={})=>{
+  const{bindIp,destIp,destPort,fps,unicast,unicastIp,pollReply,sync,dmxHz}=opts;
   if(fps)artnet.setFps(fps);
-  return await artnet.start({bindIp,destIp,destPort});
+  return await artnet.start({bindIp,destIp,destPort,unicast,unicastIp,pollReply,sync,dmxHz});
 });
+ipcMain.handle('artnet:setUnicast',(_,{enabled,ip})=>{artnet.setUnicast(enabled,ip);return{ok:true};});
+ipcMain.handle('artnet:setPollReply',(_,{enabled})=>{artnet.setPollReply(enabled);return{ok:true};});
+ipcMain.handle('artnet:setSync',(_,{enabled})=>{artnet.setSync(enabled);return{ok:true};});
+ipcMain.handle('artnet:setDmxHz',(_,{hz})=>{artnet.setDmxHz(hz);return{ok:true};});
+// ─── Ableton Link IPC ───────────────────────────────────────────
+ipcMain.handle('link:setEnabled',(_,{enabled})=>{link.setEnabled(enabled);return link.getStatus();});
+ipcMain.on('link:setTempo',(_,{bpm})=>{link.setTempo(bpm);});
+ipcMain.handle('link:getStatus',()=>link.getStatus());
 ipcMain.handle('artnet:stop',()=>{artnet.stop();return{ok:true};});
 ipcMain.on('artnet:setTc',(_,{hh,mm,ss,ff})=>{artnet.setTimecode(hh,mm,ss,ff);});
 ipcMain.handle('artnet:setFps',(_,{fps})=>{artnet.setFps(fps);return{ok:true};});
@@ -572,6 +761,7 @@ function doQuit(){
     try{bridge?.stop();}catch(e){console.warn('[APP] bridge.stop error:',e.message);}
     bridge=null;
     try{artnet.stop();}catch(_){}
+    try{link.setEnabled(false);}catch(_){}
     try{_artSocket.close();}catch(_){}
     _cleaned=true;
     // 5. Wait 500ms for OptOut UDP (5×broadcast + per-iface + per-node) to flush + 250ms socket close
@@ -596,6 +786,7 @@ app.on('will-quit',()=>{
     saveBounds();clearInterval(iv);
     try{bridge?.stop();}catch(_){}bridge=null;
     try{artnet.stop();}catch(_){}
+    try{link.setEnabled(false);}catch(_){}
     try{_artSocket.close();}catch(_){}
     _cleaned=true;
   }

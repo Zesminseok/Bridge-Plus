@@ -38,6 +38,15 @@ contextBridge.exposeInMainWorld('bridge',{
   artnetSetDmx:(data,universe)=>ipcRenderer.send('artnet:setDmx',{data,universe}),
   artnetClearDmx:()=>ipcRenderer.invoke('artnet:clearDmx'),
   artnetGetStatus:()=>ipcRenderer.invoke('artnet:getStatus'),
+  // Art-Net 확장 옵션
+  artnetSetUnicast:(enabled,ip)=>ipcRenderer.invoke('artnet:setUnicast',{enabled,ip}),
+  artnetSetPollReply:(enabled)=>ipcRenderer.invoke('artnet:setPollReply',{enabled}),
+  artnetSetSync:(enabled)=>ipcRenderer.invoke('artnet:setSync',{enabled}),
+  artnetSetDmxHz:(hz)=>ipcRenderer.invoke('artnet:setDmxHz',{hz}),
+  // Ableton Link API
+  linkSetEnabled:(enabled)=>ipcRenderer.invoke('link:setEnabled',{enabled}),
+  linkSetTempo:(bpm)=>ipcRenderer.send('link:setTempo',{bpm}),
+  linkGetStatus:()=>ipcRenderer.invoke('link:getStatus'),
   findRekordboxWaveform:(filename)=>ipcRenderer.invoke('bridge:findRekordboxWaveform',{filename}),
   rebindTCNet:(addr)=>ipcRenderer.invoke('bridge:rebindTCNet',{addr}),
   rebindPDJL:(addr)=>ipcRenderer.invoke('bridge:rebindPDJL',{addr}),
