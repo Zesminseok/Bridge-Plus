@@ -491,6 +491,8 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
   <button class="sbi" data-t="history" title="HISTORY"><span class="sbi-ic material-symbols-outlined">history</span><span class="sbi-lb">HIST</span></button>
   <button class="sbi" data-t="pdjl" title="PRO DJ LINK"><span class="sbi-ic material-symbols-outlined">device_hub</span><span class="sbi-lb">PDJL</span></button>
   <button class="sbi" data-t="tcnet" title="TCNet"><span class="sbi-ic material-symbols-outlined">lan</span><span class="sbi-lb">TCNET</span></button>
+  <button class="sbi" data-t="artnet" title="Art-Net"><span class="sbi-ic material-symbols-outlined">router</span><span class="sbi-lb">ARTNET</span></button>
+  <button class="sbi" data-t="ablink" title="Ableton Link"><span class="sbi-ic material-symbols-outlined">graphic_eq</span><span class="sbi-lb">LINK</span></button>
   <div class="sbi-spacer"></div>
   <button class="sbi" data-t="settings" title="SETTINGS"><span class="sbi-ic material-symbols-outlined">settings</span><span class="sbi-lb">SET</span></button>
 </aside>
@@ -541,6 +543,12 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 
 <!-- TCNet -->
 <div class="pg hide" id="pgTcnet"></div>
+
+<!-- Art-Net -->
+<div class="pg hide" id="pgArtnet"></div>
+
+<!-- Ableton Link -->
+<div class="pg hide" id="pgAblink"></div>
 
 <!-- Settings -->
 <div class="pg hide" id="pgSettings"></div>
@@ -4392,51 +4400,9 @@ function renderSettings(){
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
       <div style="font:400 10px var(--sn);color:var(--ylw)">LTC는 음원과 다른 장치로 출력해야 합니다. 덱 카드의 [TC] 버튼으로 모드를 선택하세요.</div>
     </div>
-    <div class="sl mt">Art-Net 출력 <span id="anStatusDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#555;margin-left:6px;vertical-align:middle"></span></div>
-    <div class="sgr">
-      <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnEnabled" ${cfg.anEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">ArtTimeCode + DMX 송신 엔진 시작</span></label></div>
-      <div class="srw"><span class="srl">Art-Net 인터페이스</span><select class="ss" data-cfg="anIface">${ifaceOpts(allIfaces,'anIface')}</select></div>
-      <div class="srw"><span class="srl">송신 모드</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnUnicast" ${cfg.anUnicast?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">유니캐스트 (특정 노드 IP로만 송신)</span></label></div>
-      <div class="srw"><span class="srl">유니캐스트 IP</span><input type="text" value="${cfg.anUnicastIp||''}" data-cfg="anUnicastIp" placeholder="예: 192.168.1.50" ${cfg.anUnicast?'':'disabled'} style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
-      <div class="srw"><span class="srl">브로드캐스트 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
-      <div class="srw"><span class="srl">Port</span><input type="text" value="${cfg.tcArtnetPort}" data-cfg="tcArtnetPort" placeholder="6454" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:70px;text-align:right"></div>
-      <div class="srw"><span class="srl">Frame Rate (TC)</span><span style="font:400 10px var(--mn);color:var(--tx3)">SMPTE 프레임레이트와 공유 (${cfg.tcFps} fps)</span></div>
-      <div class="srw"><span class="srl">ArtPollReply</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnPoll" ${cfg.anPollReply?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">컨트롤러 자동 탐지 응답 (grandMA·Resolume·QLC+)</span></label></div>
-      <div class="srw"><span class="srl">ArtSync</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnSync" ${cfg.anSync?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpSync(0x5200) 프레임 래치 송신</span></label></div>
-      <div class="srw"><span class="srl">DMX 출력</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnDmxEn" ${cfg.anDmxEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpDmx 0x5000</span></label></div>
-      <div class="srw"><span class="srl">DMX 주기</span><div style="display:flex;align-items:center;gap:6px"><input type="number" min="10" max="50" value="${cfg.anDmxHz||40}" data-cfg="anDmxHz" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:70px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">Hz (10~50)</span></div></div>
-      <div class="srw"><span class="srl">DMX Universe</span><input type="number" min="0" max="32767" value="${cfg.anDmxUniverse}" data-cfg="anDmxUniverse" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:80px;text-align:right"></div>
-      <div class="srw"><span class="srl">DMX 소스</span><select class="ss" data-cfg="anDmxSource">${[['off','Off'],['fader','DJM 페이더 (ch1-6)'],['vu','DJM VU (ch1-6)'],['all','DJM 전체 (fader+VU+xf+master)']].map(([v,l])=>`<option value="${v}" ${cfg.anDmxSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">송신 상태</span><span id="anStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">정지</span></div>
-    </div>
-    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
-      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span>
-      <div style="font:400 10px var(--sn);color:var(--tx2)">
-        <b>Art-Net 4 엔진:</b> 드리프트 보정 2ms tick · forceResync on seek/cue · 자동증분 encoder · OpDmx 512ch.<br>
-        <b>확장:</b> ArtPollReply 자동응답 + Unicast + ArtSync + 10~50Hz DMX. 유니캐스트 IP가 비어있으면 브로드캐스트로 fallback.
-      </div>
-    </div>
-    <div class="sl mt">Ableton Link <span id="linkStatusDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#555;margin-left:6px;vertical-align:middle"></span></div>
-    <div class="sgr">
-      <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkLinkEnabled" ${cfg.linkEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">Link 세션 참여 — BPM 송신 (단방향)</span></label></div>
-      <div class="srw"><span class="srl">BPM 소스</span><select class="ss" data-cfg="linkSource">${[['mixer','Mixer BPM (DJM)'],['deck','선택 덱 BPM'],['master','Master 덱 BPM (Pro DJ Link)']].map(([v,l])=>`<option value="${v}" ${cfg.linkSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="srw" id="linkDeckRow" style="${cfg.linkSource==='deck'?'':'display:none'}"><span class="srl">덱 선택</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${i+1}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">세션 상태</span><span id="linkStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">—</span></div>
-      <div class="srw"><span class="srl">현재 송신 BPM</span><span id="linkBpmLbl" style="font:700 11px var(--mn);color:var(--grn)">—</span></div>
-    </div>
-    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
-      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
-      <div style="font:400 10px var(--sn);color:var(--tx2)">
-        <b>Ableton Link — BPM 전용 모드:</b> 브리지는 선택된 소스의 BPM만 Link 세션에 공급합니다 (phase/quantum 기여 없음).<br>
-        <b>Resolume·Ableton Live·Traktor</b> 등 같은 LAN에 있는 Link 피어가 자동으로 따라옵니다.<br>
-        <b>네이티브 모듈 필요:</b> <code style="background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px">npm i abletonlink && npx electron-rebuild</code> 설치 후 재시작.
-      </div>
-    </div>
-    <div class="sl">정보</div>
+    <div class="sl mt">정보</div>
     <div class="sgr">
       <div class="srw"><span class="srl">Version</span><span class="srv">0.12.0</span></div>
-      <div class="srw"><span class="srl">Protocol</span><span class="srv">TCNet v3.5</span></div>
-      <div class="srw"><span class="srl">Data 전송</span><span class="srv" style="color:var(--org)">브로드캐스트 + 유니캐스트</span></div>
     </div>`;
 
   el.querySelectorAll('[data-cfg]').forEach(inp=>{
@@ -4599,12 +4565,227 @@ function renderSettings(){
           + '그 후 BRIDGE+ 를 재시작하세요.');
     }
   };
-  _updateArtnetUi(_artEnabled);
-  el.querySelector('[data-cfg="anIface"]').value=cfg.anIface||'';
-  el.querySelector('[data-cfg="anDmxSource"]').value=cfg.anDmxSource||'all';
-  // Link 상태 초기 반영
-  window.bridge.linkGetStatus?.().then(_updateLinkUi);
 }
+// ═══ Art-Net 전용 페이지 렌더러 ═══════════════════════════════════
+function renderArtnet(){
+  const el=document.getElementById('pgArtnet');
+  const ifaceOpts=(ifaces,field)=>{
+    const sel=cfg[field]||'';
+    const loopSel=sel==='127.0.0.1'?'selected':'';
+    const loopOpt=`<option value="127.0.0.1" ${loopSel}>lo0 (localhost 127.0.0.1) — Arena 같은 맥</option>`;
+    const netOpts=(ifaces||[]).filter(i=>!i.internal).map(i=>{
+      const label=i.hwPort||i.name;
+      const suffix=i.address.startsWith('169.254')?'  (링크로컬 CDJ)':'';
+      return`<option value="${i.address}" ${sel===i.address?'selected':''}>${i.name} — ${i.address} (${label})${suffix}</option>`;
+    }).join('');
+    return `<option value="">자동 감지</option>${loopOpt}${netOpts}`;
+  };
+  const inpStyle='background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none';
+  el.innerHTML=`
+    <div class="sl">Art-Net 출력 <span id="anStatusDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#555;margin-left:6px;vertical-align:middle"></span></div>
+    <div class="sgr">
+      <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnEnabled" ${cfg.anEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">ArtTimeCode + DMX 송신 엔진 시작</span></label></div>
+      <div class="srw"><span class="srl">Art-Net 인터페이스</span><select class="ss" data-cfg="anIface">${ifaceOpts(allIfaces,'anIface')}</select></div>
+      <div class="srw"><span class="srl">송신 모드</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnUnicast" ${cfg.anUnicast?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">유니캐스트 (특정 노드 IP로만 송신)</span></label></div>
+      <div class="srw"><span class="srl">유니캐스트 IP</span><input type="text" value="${cfg.anUnicastIp||''}" data-cfg="anUnicastIp" placeholder="예: 192.168.1.50" ${cfg.anUnicast?'':'disabled'} style="${inpStyle};width:140px;text-align:right"></div>
+      <div class="srw"><span class="srl">브로드캐스트 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="${inpStyle};width:140px;text-align:right"></div>
+      <div class="srw"><span class="srl">Port</span><input type="text" value="${cfg.tcArtnetPort}" data-cfg="tcArtnetPort" placeholder="6454" style="${inpStyle};width:70px;text-align:right"></div>
+      <div class="srw"><span class="srl">Frame Rate (TC)</span><span style="font:400 10px var(--mn);color:var(--tx3)">SMPTE 프레임레이트와 공유 (${cfg.tcFps} fps)</span></div>
+      <div class="srw"><span class="srl">ArtPollReply</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnPoll" ${cfg.anPollReply?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">컨트롤러 자동 탐지 응답 (grandMA·Resolume·QLC+)</span></label></div>
+      <div class="srw"><span class="srl">ArtSync</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnSync" ${cfg.anSync?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpSync(0x5200) 프레임 래치 송신</span></label></div>
+      <div class="srw"><span class="srl">DMX 출력</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnDmxEn" ${cfg.anDmxEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpDmx 0x5000</span></label></div>
+      <div class="srw"><span class="srl">DMX 주기</span><div style="display:flex;align-items:center;gap:6px"><input type="number" min="10" max="50" value="${cfg.anDmxHz||40}" data-cfg="anDmxHz" style="${inpStyle};width:70px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">Hz (10~50)</span></div></div>
+      <div class="srw"><span class="srl">DMX Universe</span><input type="number" min="0" max="32767" value="${cfg.anDmxUniverse}" data-cfg="anDmxUniverse" style="${inpStyle};width:80px;text-align:right"></div>
+      <div class="srw"><span class="srl">DMX 소스</span><select class="ss" data-cfg="anDmxSource">${[['off','Off'],['fader','DJM 페이더 (ch1-6)'],['vu','DJM VU (ch1-6)'],['all','DJM 전체 (fader+VU+xf+master)']].map(([v,l])=>`<option value="${v}" ${cfg.anDmxSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">송신 상태</span><span id="anStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">정지</span></div>
+    </div>
+    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
+      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span>
+      <div style="font:400 10px var(--sn);color:var(--tx2)">
+        <b>Art-Net 4 엔진:</b> 드리프트 보정 2ms tick · forceResync on seek/cue · 자동증분 encoder · OpDmx 512ch.<br>
+        <b>확장:</b> ArtPollReply 자동응답 + Unicast + ArtSync + 10~50Hz DMX. 유니캐스트 IP가 비어있으면 브로드캐스트로 fallback.
+      </div>
+    </div>`;
+  // ─── 값 바인딩
+  el.querySelectorAll('[data-cfg]').forEach(inp=>{
+    inp.addEventListener('change',e=>{
+      const k=inp.dataset.cfg;
+      if(k==='anIface'){cfg[k]=e.target.value;_saveCfg();_artnetRestartIfEnabled();return;}
+      if(k==='tcArtnetIp'||k==='tcArtnetPort'){cfg[k]=e.target.value;_saveCfg();_artnetRestartIfEnabled();return;}
+      if(k==='anUnicastIp'){cfg[k]=e.target.value.trim();_saveCfg();_artnetRestartIfEnabled();return;}
+      if(k==='anDmxUniverse'){cfg[k]=parseInt(e.target.value)||0;_saveCfg();return;}
+      if(k==='anDmxSource'){cfg[k]=e.target.value;_saveCfg();if(cfg.anDmxSource==='off')window.bridge.artnetClearDmx?.();return;}
+      if(k==='anDmxHz'){
+        const v=parseInt(e.target.value);
+        cfg.anDmxHz=Number.isFinite(v)?Math.max(10,Math.min(50,v)):40;
+        _saveCfg();window.bridge.artnetSetDmxHz?.(cfg.anDmxHz);return;
+      }
+      cfg[k]=e.target.value;_saveCfg();
+    });
+  });
+  // ─── 체크박스
+  const chkAn=el.querySelector('#chkAnEnabled');
+  if(chkAn)chkAn.onchange=async e=>{
+    cfg.anEnabled=e.target.checked;_saveCfg();
+    if(cfg.anEnabled){
+      const r=await _artnetStart();
+      _artEnabled=!!r?.ok;
+      _updateArtnetUi(_artEnabled);
+      if(!r?.ok){e.target.checked=false;cfg.anEnabled=false;_saveCfg();alert('Art-Net 엔진 시작 실패: '+(r?.err||'unknown'));}
+    } else {
+      await window.bridge.artnetStop?.();
+      _artEnabled=false;_updateArtnetUi(false);
+    }
+  };
+  const chkDmx=el.querySelector('#chkAnDmxEn');
+  if(chkDmx)chkDmx.onchange=e=>{
+    cfg.anDmxEnabled=e.target.checked;_saveCfg();
+    if(!cfg.anDmxEnabled)window.bridge.artnetClearDmx?.();
+  };
+  const chkAnUni=el.querySelector('#chkAnUnicast');
+  if(chkAnUni)chkAnUni.onchange=e=>{
+    cfg.anUnicast=e.target.checked;_saveCfg();
+    const ipIn=el.querySelector('[data-cfg="anUnicastIp"]');
+    if(ipIn) ipIn.disabled=!cfg.anUnicast;
+    window.bridge.artnetSetUnicast?.(cfg.anUnicast,cfg.anUnicastIp||'');
+  };
+  const chkAnPoll=el.querySelector('#chkAnPoll');
+  if(chkAnPoll)chkAnPoll.onchange=e=>{
+    cfg.anPollReply=e.target.checked;_saveCfg();
+    window.bridge.artnetSetPollReply?.(cfg.anPollReply);
+    _artnetRestartIfEnabled();
+  };
+  const chkAnSync=el.querySelector('#chkAnSync');
+  if(chkAnSync)chkAnSync.onchange=e=>{
+    cfg.anSync=e.target.checked;_saveCfg();
+    window.bridge.artnetSetSync?.(cfg.anSync);
+  };
+  _updateArtnetUi(_artEnabled);
+  const ifSel=el.querySelector('[data-cfg="anIface"]');if(ifSel)ifSel.value=cfg.anIface||'';
+  const dmxSel=el.querySelector('[data-cfg="anDmxSource"]');if(dmxSel)dmxSel.value=cfg.anDmxSource||'all';
+}
+
+// ═══ Ableton Link 전용 페이지 — BPM/Phase 대형 시각화 ═══════════════
+// phase 는 0..quantum(=4) 범위. SVG 링(fill by phase/q) + 4개 비트 닷.
+// 렌더러가 60ms 주기로 link:getStatus 를 폴링해 원형 게이지와 숫자를 업데이트.
+function renderAblink(){
+  const el=document.getElementById('pgAblink');
+  el.innerHTML=`
+    <div class="sl">Ableton Link <span id="linkStatusDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#555;margin-left:6px;vertical-align:middle"></span></div>
+    <div style="background:linear-gradient(180deg,rgba(50,190,90,.08),rgba(0,0,0,0));border:1px solid var(--bdr2);border-radius:12px;padding:22px 18px;margin-top:4px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;justify-content:center">
+      <!-- BPM 큰 숫자 -->
+      <div style="text-align:center;min-width:180px">
+        <div style="font:500 10px var(--lb);color:var(--tx3);letter-spacing:.15em;margin-bottom:4px">TEMPO</div>
+        <div id="linkBpmBig" style="font:700 56px var(--mn);color:var(--grn);font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.02em">—</div>
+        <div style="font:500 10px var(--mn);color:var(--tx4);margin-top:6px">BPM · <span id="linkSrcLbl" style="color:var(--tx3)">${cfg.linkSource||'mixer'}</span></div>
+      </div>
+      <!-- Phase 링 + 비트 닷 -->
+      <div style="position:relative;width:150px;height:150px">
+        <svg id="linkPhaseSvg" viewBox="0 0 150 150" style="width:100%;height:100%">
+          <circle cx="75" cy="75" r="62" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="8"/>
+          <circle id="linkPhaseArc" cx="75" cy="75" r="62" fill="none" stroke="var(--grn)" stroke-width="8"
+            stroke-linecap="round" stroke-dasharray="389.56" stroke-dashoffset="389.56"
+            transform="rotate(-90 75 75)"/>
+          <g id="linkBeatDots"></g>
+          <text id="linkPhaseTxt" x="75" y="82" text-anchor="middle" fill="var(--tx)" font-family="var(--mn)" font-weight="700" font-size="26" font-variant-numeric="tabular-nums">0.00</text>
+          <text x="75" y="102" text-anchor="middle" fill="var(--tx3)" font-family="var(--lb)" font-weight="500" font-size="9" letter-spacing=".15em">PHASE / 4</text>
+        </svg>
+      </div>
+      <!-- 피어/상태 -->
+      <div style="min-width:110px;text-align:center">
+        <div style="font:500 10px var(--lb);color:var(--tx3);letter-spacing:.15em;margin-bottom:4px">PEERS</div>
+        <div id="linkPeersBig" style="font:700 36px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums;line-height:1">0</div>
+        <div style="font:500 10px var(--mn);color:var(--tx4);margin-top:6px" id="linkSessLbl">대기</div>
+      </div>
+    </div>
+    <div class="sgr" style="margin-top:10px">
+      <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkLinkEnabled" ${cfg.linkEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">Link 세션 참여 — BPM 송신 (단방향)</span></label></div>
+      <div class="srw"><span class="srl">BPM 소스</span><select class="ss" data-cfg="linkSource">${[['mixer','Mixer BPM (DJM)'],['deck','선택 덱 BPM'],['master','Master 덱 BPM (Pro DJ Link)']].map(([v,l])=>`<option value="${v}" ${cfg.linkSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="srw" id="linkDeckRow" style="${cfg.linkSource==='deck'?'':'display:none'}"><span class="srl">덱 선택</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${i+1}</option>`).join('')}</select></div>
+    </div>
+    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
+      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
+      <div style="font:400 10px var(--sn);color:var(--tx2)">
+        <b>단방향 브리지:</b> 선택된 소스의 BPM만 Link 세션에 공급. Link 세션의 phase 클럭은 활성화 시점부터 자체 ticking하며 Resolume·Live·Traktor 가 자동 동기화됩니다.<br>
+        <b>네이티브 모듈:</b> <code style="background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px">npm i abletonlink && npx electron-rebuild</code> 후 재시작.
+      </div>
+    </div>`;
+  // ─── 비트 닷 생성 (4개, 원 주변 90도 간격 · 12시부터 시계방향)
+  const g=el.querySelector('#linkBeatDots');
+  for(let i=0;i<4;i++){
+    const ang=(i/4)*Math.PI*2 - Math.PI/2; // 12시부터 CW
+    const x=75+Math.cos(ang)*62, y=75+Math.sin(ang)*62;
+    g.insertAdjacentHTML('beforeend',`<circle data-beat="${i}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="rgba(255,255,255,.18)" stroke="rgba(0,0,0,.4)" stroke-width="1"/>`);
+  }
+  // ─── 컨트롤 바인딩
+  el.querySelectorAll('[data-cfg]').forEach(inp=>{
+    inp.addEventListener('change',e=>{
+      const k=inp.dataset.cfg;
+      if(k==='linkSource'){
+        cfg[k]=e.target.value;_saveCfg();
+        const row=el.querySelector('#linkDeckRow');if(row)row.style.display=(cfg[k]==='deck')?'':'none';
+        const srcLbl=el.querySelector('#linkSrcLbl');if(srcLbl)srcLbl.textContent=cfg[k];
+        return;
+      }
+      if(k==='linkDeckIdx'){cfg[k]=parseInt(e.target.value)||0;_saveCfg();return;}
+      cfg[k]=e.target.value;_saveCfg();
+    });
+  });
+  const chkLink=el.querySelector('#chkLinkEnabled');
+  if(chkLink)chkLink.onchange=async e=>{
+    cfg.linkEnabled=e.target.checked;_saveCfg();
+    const st=await window.bridge.linkSetEnabled?.(cfg.linkEnabled);
+    _updateLinkUi(st);
+    if(cfg.linkEnabled && st && !st.available){
+      alert('abletonlink 네이티브 모듈이 설치되어 있지 않습니다.\n\n'
+          + '  npm i abletonlink\n  npx electron-rebuild\n\n재시작 후 사용.');
+    }
+  };
+  // 초기 상태 반영
+  window.bridge.linkGetStatus?.().then(st=>{ _updateLinkUi(st); _renderLinkBig(st); });
+}
+
+// Link 대형 시각화 갱신 (renderAblink 활성 시 60ms 주기로 호출)
+function _renderLinkBig(st){
+  if(!st) return;
+  const bpmEl=document.getElementById('linkBpmBig');
+  if(bpmEl) bpmEl.textContent = (st.bpm>0 ? st.bpm.toFixed(2) : '—');
+  const peersEl=document.getElementById('linkPeersBig');
+  if(peersEl) peersEl.textContent = (st.peers|0);
+  const sess=document.getElementById('linkSessLbl');
+  if(sess){
+    sess.textContent = !st.available ? '모듈 미설치' : (!st.enabled ? '비활성' : (st.peers>0?'연결됨':'대기'));
+    sess.style.color = !st.available?'#b08040':(st.enabled?'var(--grn)':'var(--tx4)');
+  }
+  // phase 링 (0..quantum → stroke-dashoffset)
+  const q=st.quantum||4;
+  const phase=Math.max(0,Math.min(q,st.phase||0));
+  const arc=document.getElementById('linkPhaseArc');
+  if(arc){
+    const C=2*Math.PI*62; // ≈ 389.56
+    const off = st.enabled ? C*(1-phase/q) : C;
+    arc.setAttribute('stroke-dashoffset', off.toFixed(2));
+  }
+  const txt=document.getElementById('linkPhaseTxt');
+  if(txt) txt.textContent = (st.enabled?phase:0).toFixed(2);
+  // 활성 비트 닷 강조
+  const cur=Math.floor(phase)%q;
+  document.querySelectorAll('#linkBeatDots circle').forEach(c=>{
+    const b=+c.dataset.beat;
+    c.setAttribute('fill', (st.enabled && b===cur) ? 'var(--grn)' : 'rgba(255,255,255,.18)');
+    c.setAttribute('r', (st.enabled && b===cur) ? '7' : '5');
+  });
+}
+
+// ablink 페이지 활성 중에만 60ms 고빈도 폴링
+setInterval(async ()=>{
+  if(curTab!=='ablink') return;
+  try{
+    const st=await window.bridge.linkGetStatus?.();
+    if(st) _renderLinkBig(st);
+  }catch(_){}
+},60);
+
 // Art-Net 엔진 시작 — 확장 옵션 포함 단일 진입점
 async function _artnetStart(){
   return await window.bridge.artnetStart?.({
@@ -4763,11 +4944,13 @@ document.getElementById('sidebar').onclick=e=>{
   const t=e.target.closest('.sbi');if(!t)return;
   curTab=t.dataset.t;
   document.querySelectorAll('.sbi').forEach(x=>x.classList.toggle('on',x.dataset.t===curTab));
-  const m={link:'pgLink',pdjl:'pgPdjl',tcnet:'pgTcnet',settings:'pgSettings',history:'pgHistory',mixer:'pgMixer'};
+  const m={link:'pgLink',pdjl:'pgPdjl',tcnet:'pgTcnet',artnet:'pgArtnet',ablink:'pgAblink',settings:'pgSettings',history:'pgHistory',mixer:'pgMixer'};
   Object.values(m).forEach(id=>document.getElementById(id)?.classList.add('hide'));
   document.getElementById(m[curTab])?.classList.remove('hide');
   if(curTab==='pdjl')renderPDJL();
   if(curTab==='tcnet')renderTcnet();
+  if(curTab==='artnet'){loadInterfaces();renderArtnet();}
+  if(curTab==='ablink')renderAblink();
   if(curTab==='settings'){loadInterfaces();renderSettings();}
   if(curTab==='history')renderHistory();
 };

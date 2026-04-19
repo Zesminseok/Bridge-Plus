@@ -341,7 +341,32 @@ class LinkBridge{
     }
   }
   isAvailable(){ return this._available; }
-  getStatus(){ return{available:this._available,enabled:this._enabled,peers:this._peers,bpm:this._currentBpm,lastSent:this._lastSentBpm};}
+  // Link 세션의 전역 beat 클럭과 quantum 내 phase 를 읽어 UI에 공급.
+  // API 변형 흡수: link.beat/phase(getter) · link.getBeat()/getPhase() · beat+quantum 기반 계산.
+  _readBeat(){
+    const L=this._link;if(!L)return 0;
+    try{
+      if(typeof L.getBeat==='function') return L.getBeat();
+      if('beat' in L) return typeof L.beat==='function'?L.beat():L.beat;
+    }catch(_){}
+    return 0;
+  }
+  _readPhase(quantum){
+    const L=this._link;if(!L)return 0;
+    try{
+      if(typeof L.getPhase==='function') return L.getPhase();
+      if('phase' in L) return typeof L.phase==='function'?L.phase():L.phase;
+    }catch(_){}
+    // fallback: beat mod quantum
+    const b=this._readBeat();const q=quantum||4;
+    return ((b%q)+q)%q;
+  }
+  getStatus(){
+    const quantum=4;
+    const beat=this._enabled?this._readBeat():0;
+    const phase=this._enabled?this._readPhase(quantum):0;
+    return {available:this._available,enabled:this._enabled,peers:this._peers,bpm:this._currentBpm,lastSent:this._lastSentBpm,beat,phase,quantum};
+  }
   setEnabled(on){
     this._enabled=!!on;
     if(this._enabled){
