@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><title>Proposal B v2 — Studio Dark (1-column decks)</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --key:#ff6b1a;
+  --key-2:#ff9a4a;
+  --bg:#000;
+  --surf:#0a0a0a;
+  --surf-2:#060606;
+  --line:#1a1a1a;
+  --line-2:#0f0f0f;
+  --text:#fff;
+  --text-dim:#888;
+  --text-off:#444;
+  --idle:#222;
+}
+body { background:var(--bg); color:var(--text); font-family:-apple-system,"SF Pro Display","Inter",sans-serif; font-size:11px; overflow:hidden; -webkit-font-smoothing:antialiased; }
+.app { display:grid; grid-template-columns:68px 1fr; height:100vh; }
+
+/* ── SVG icon helper ───────────────────────────── */
+.ic { width:18px; height:18px; display:inline-block; vertical-align:middle; fill:currentColor; stroke:currentColor; stroke-width:0; }
+.ic-sm { width:14px; height:14px; }
+.ic-lg { width:22px; height:22px; }
+
+/* ── Sidebar ───────────────────────────────────── */
+.nav { background:var(--surf-2); border-right:1px solid var(--line); padding:14px 0 12px; display:flex; flex-direction:column; align-items:stretch; }
+.nav-logo { text-align:center; font-size:9px; font-weight:900; letter-spacing:.22em; color:var(--key); padding:0 0 14px; border-bottom:1px solid var(--line-2); }
+.nav-item { padding:12px 0 10px; text-align:center; color:#555; cursor:pointer; border-left:2px solid transparent; transition:all .12s; }
+.nav-item:hover { color:#bbb; background:rgba(255,107,26,.04); }
+.nav-item.act { color:var(--key); border-left-color:var(--key); background:rgba(255,107,26,.08); }
+.nav-lb { font-size:7px; letter-spacing:.2em; margin-top:4px; font-weight:700; }
+.nav-spacer { flex:1; }
+
+/* ── Center ────────────────────────────────────── */
+.center { display:grid; grid-template-rows:auto 1fr auto; overflow:hidden; }
+
+/* ── Topbar ────────────────────────────────────── */
+.hdr { display:flex; align-items:center; gap:18px; padding:12px 18px; border-bottom:1px solid var(--line); background:var(--surf-2); }
+.hdr h1 { font-size:15px; font-weight:200; letter-spacing:.18em; color:#fff; font-family:"SF Mono","Menlo",monospace; }
+.hdr h1 b { color:var(--key); font-weight:800; }
+.hdr .sub { font-size:9px; color:#555; letter-spacing:.25em; }
+
+.view-toggle { display:flex; gap:2px; background:#080808; border:1px solid var(--line-2); border-radius:4px; padding:2px; }
+.view-toggle button { background:transparent; color:#666; border:none; padding:5px 10px; font-size:9px; font-weight:800; letter-spacing:.15em; font-family:"SF Mono",monospace; cursor:pointer; border-radius:3px; display:flex; align-items:center; gap:5px; }
+.view-toggle button:hover { color:#bbb; }
+.view-toggle button.act { background:rgba(255,107,26,.15); color:var(--key); }
+
+.hdr-status { margin-left:auto; display:flex; align-items:center; gap:14px; font-size:9px; color:#666; letter-spacing:.15em; font-family:"SF Mono",monospace; }
+.hdr-stat { display:flex; align-items:center; gap:6px; }
+.dot { width:6px; height:6px; border-radius:50%; background:var(--key); box-shadow:0 0 6px rgba(255,107,26,.6); }
+.dot.off { background:#2a2a2a; box-shadow:none; }
+
+/* ── Deck list (default: 1 column large) ───────── */
+.decks { padding:14px; overflow-y:auto; display:grid; gap:10px; }
+.decks.view-1col { grid-template-columns:1fr; }
+.decks.view-2col { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+.decks.view-3col { grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr; }
+.decks.view-2col .dk, .decks.view-3col .dk { min-height:0; }
+.decks.view-2col .dk-btns .btn-label, .decks.view-3col .dk-btns .btn-label { display:none; }
+
+/* Custom scrollbar */
+.decks::-webkit-scrollbar { width:6px; }
+.decks::-webkit-scrollbar-track { background:transparent; }
+.decks::-webkit-scrollbar-thumb { background:#1a1a1a; border-radius:3px; }
+
+/* ── Deck card ─────────────────────────────────── */
+.dk { background:linear-gradient(180deg,var(--surf) 0%,#050505 100%); border:1px solid var(--line); border-radius:6px; padding:14px 16px; display:grid; grid-template-columns:48px 1fr auto; grid-template-rows:auto auto auto auto; column-gap:16px; row-gap:10px; position:relative; overflow:hidden; transition:border-color .15s; }
+.dk.live { border-color:var(--key); box-shadow:0 0 0 1px var(--key) inset, 0 0 24px rgba(255,107,26,.18); }
+.dk.live::after { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--key); }
+.dk.idle { opacity:.45; }
+
+.dk-badge { grid-row:1/3; background:var(--key); color:#000; width:48px; height:48px; border-radius:4px; display:grid; place-items:center; font-weight:900; font-size:22px; font-family:"SF Mono",monospace; letter-spacing:-.02em; }
+.dk.idle .dk-badge { background:#1a1a1a; color:#333; }
+.dk-badge-sub { position:absolute; top:12px; left:58px; font-size:7px; color:#555; letter-spacing:.25em; font-weight:800; }
+
+.dk-title { grid-column:2; font-size:16px; font-weight:700; letter-spacing:.01em; color:#fff; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-top:14px; }
+.dk.idle .dk-title { color:#333; text-transform:none; font-style:italic; font-weight:400; padding-top:18px; }
+.dk-sub { grid-column:2; font-size:10px; color:#888; letter-spacing:.1em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dk.idle .dk-sub { color:#333; }
+
+.dk-bpm { grid-column:3; grid-row:1/3; text-align:right; font-family:"SF Mono",monospace; padding-top:6px; }
+.dk-bpm .big { font-size:38px; font-weight:100; color:var(--key); letter-spacing:-.04em; line-height:1; font-variant-numeric:tabular-nums; }
+.dk.idle .dk-bpm .big { color:#222; }
+.dk-bpm .lbl { font-size:8px; color:#555; letter-spacing:.3em; margin-top:4px; font-weight:700; }
+.dk-bpm .key-val { font-size:12px; color:#ccc; letter-spacing:.1em; margin-top:6px; }
+.dk.idle .dk-bpm .key-val { color:#333; }
+
+/* Waveform row */
+.dk-wave-row { grid-column:1/4; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; }
+.dk-time { font-size:11px; color:#888; font-variant-numeric:tabular-nums; letter-spacing:.08em; font-family:"SF Mono",monospace; font-weight:600; min-width:52px; }
+.dk-time.dim { color:#444; }
+.dk-time.total { text-align:right; color:#666; }
+.dk-wave { height:48px; background:#040404; border:1px solid var(--line-2); border-radius:3px; position:relative; overflow:hidden; }
+.dk-wave svg { width:100%; height:100%; display:block; }
+.dk-wave .playhead { position:absolute; top:0; bottom:0; width:2px; background:var(--key); box-shadow:0 0 8px var(--key); }
+.dk-wave .hot-cue { position:absolute; top:0; bottom:0; width:2px; background:#4a90ff; opacity:.7; }
+.dk-wave .hot-cue.red { background:#ff4444; }
+.dk-wave .hot-cue.green { background:#44ff88; }
+.dk.idle .dk-wave { opacity:.3; }
+
+/* Meters row (phasor, progress bar, ...) */
+.dk-meters { grid-column:1/4; display:flex; align-items:center; gap:14px; }
+.dk-phasor { display:flex; gap:4px; }
+.pb { width:9px; height:9px; background:#222; border-radius:50%; transition:all .1s; }
+.pb.on { background:var(--key); box-shadow:0 0 8px var(--key); }
+.dk-progress { flex:1; height:3px; background:#111; border-radius:2px; overflow:hidden; }
+.dk-progress-fill { height:100%; background:linear-gradient(90deg,var(--key) 0%,var(--key-2) 100%); }
+.dk-meta-pills { display:flex; gap:6px; font-family:"SF Mono",monospace; }
+.pill { font-size:8px; font-weight:800; padding:3px 7px; background:#111; border:1px solid var(--line-2); border-radius:2px; color:#888; letter-spacing:.15em; }
+.pill.on { background:rgba(255,107,26,.12); border-color:var(--key); color:var(--key); }
+.pill.master { background:#ffb400; color:#000; border-color:#ffb400; }
+
+/* Button row */
+.dk-btns { grid-column:1/4; display:grid; grid-template-columns:repeat(5,1fr) auto repeat(4,1fr); gap:6px; padding-top:4px; }
+.btn { background:#0c0c0c; border:1px solid var(--line); color:#aaa; padding:8px 4px; border-radius:3px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; transition:all .12s; font-family:"SF Mono",monospace; min-height:38px; }
+.btn:hover { border-color:#333; color:#fff; background:#111; }
+.btn.key { border-color:var(--key); color:var(--key); background:rgba(255,107,26,.06); }
+.btn.key:hover { background:rgba(255,107,26,.16); }
+.btn.act { background:var(--key); color:#000; border-color:var(--key); }
+.btn.act .btn-label { color:#000; }
+.btn-label { font-size:8px; font-weight:800; letter-spacing:.15em; }
+.btn-divider { width:1px; background:var(--line-2); margin:0 4px; }
+.btn.hc { color:#ccc; }
+.btn.hc.set { border-color:#4a90ff; color:#4a90ff; background:rgba(74,144,255,.06); }
+.btn.hc.red { border-color:#ff4444; color:#ff4444; background:rgba(255,68,68,.06); }
+.btn.hc.green { border-color:#44ff88; color:#44ff88; background:rgba(68,255,136,.06); }
+.dk.idle .dk-btns { opacity:.3; pointer-events:none; }
+
+/* ── Statusbar ─────────────────────────────────── */
+.status-bar { border-top:1px solid var(--line); background:var(--surf-2); padding:8px 18px; display:flex; align-items:center; gap:20px; font-size:9px; color:#666; font-family:"SF Mono",monospace; letter-spacing:.1em; }
+.status-bar .ok { color:var(--key); }
+.status-bar .warn { color:#ffb400; }
+.status-bar .version { margin-left:auto; color:#333; font-size:8px; letter-spacing:.2em; }
+</style></head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     SVG ICON SPRITE — 정의 1회, <use> 로 재사용
+     런타임 비용: SVG 패스는 GPU에서 한 번만 컴파일됨
+     PNG 이미지 대비: 메모리 감소, 해상도 무관 선명
+     ═══════════════════════════════════════════════ -->
+<svg width="0" height="0" style="position:absolute;" aria-hidden="true">
+  <defs>
+    <!-- Sidebar icons -->
+    <symbol id="i-live" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".5"/></symbol>
+    <symbol id="i-mix" viewBox="0 0 24 24"><path d="M4 7h4v10H4zm6-3h4v16h-4zm6 6h4v4h-4z" fill="currentColor"/></symbol>
+    <symbol id="i-pdjl" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5" fill="currentColor"/><circle cx="18" cy="6" r="2.5" fill="currentColor"/><circle cx="6" cy="18" r="2.5" fill="currentColor"/><circle cx="18" cy="18" r="2.5" fill="currentColor"/><path d="M6 6 L18 18 M18 6 L6 18 M6 6 L6 18 M18 6 L18 18" stroke="currentColor" stroke-width="1" fill="none" opacity=".4"/></symbol>
+    <symbol id="i-tcnet" viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zm-9 9h7v7H4zm9 0h7v7h-7z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-artnet" viewBox="0 0 24 24"><path d="M12 3 L21 20 L3 20 Z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M9 13.5a3.5 3.5 0 0 1 0-5l3-3a3.5 3.5 0 0 1 5 5l-1 1M15 10.5a3.5 3.5 0 0 1 0 5l-3 3a3.5 3.5 0 0 1-5-5l1-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+
+    <!-- View mode icons -->
+    <symbol id="i-view-1" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-view-2" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="4" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="13" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-view-3" viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="9.5" y="4" width="5" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="16" y="4" width="5" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13" width="5" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="9.5" y="13" width="5" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="16" y="13" width="5" height="7" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+
+    <!-- Deck control icons -->
+    <symbol id="i-cue" viewBox="0 0 24 24"><path d="M6 4v16M10 12 L20 4 L20 20 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4 L20 12 L6 20 Z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24"><path d="M4 9a8 8 0 0 1 14-4M20 15a8 8 0 0 1-14 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 5h4V1M10 19H6v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-loop" viewBox="0 0 24 24"><path d="M7 9a5 5 0 0 1 10 0v6a5 5 0 0 1-10 0V12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12l3-3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-fx" viewBox="0 0 24 24"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="currentColor"/></symbol>
+    <symbol id="i-hotcue" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5L12 16l-6.5 5 2-7.5L2 9h7z" fill="currentColor"/></symbol>
+    <symbol id="i-master" viewBox="0 0 24 24"><path d="M12 2 L22 22 L2 22 Z" fill="currentColor"/><text x="12" y="20" font-size="9" font-weight="900" fill="#000" text-anchor="middle" font-family="monospace">M</text></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+
+  <!-- ── Sidebar ─────────────────────────────── -->
+  <nav class="nav">
+    <div class="nav-logo">BRIDGE+</div>
+    <div class="nav-item act"><svg class="ic ic-lg"><use href="#i-live"/></svg><div class="nav-lb">LIVE</div></div>
+    <div class="nav-item"><svg class="ic ic-lg"><use href="#i-mix"/></svg><div class="nav-lb">MIX</div></div>
+    <div class="nav-item"><svg class="ic ic-lg"><use href="#i-pdjl"/></svg><div class="nav-lb">PDJL</div></div>
+    <div class="nav-item"><svg class="ic ic-lg"><use href="#i-tcnet"/></svg><div class="nav-lb">TCNET</div></div>
+    <div class="nav-item"><svg class="ic ic-lg"><use href="#i-artnet"/></svg><div class="nav-lb">ARTNET</div></div>
+    <div class="nav-item"><svg class="ic ic-lg"><use href="#i-link"/></svg><div class="nav-lb">LINK</div></div>
+    <div class="nav-spacer"></div>
+    <div class="nav-item"><svg class="ic ic-lg"><use href="#i-settings"/></svg><div class="nav-lb">SET</div></div>
+  </nav>
+
+  <!-- ── Center ──────────────────────────────── -->
+  <section class="center">
+
+    <!-- Topbar -->
+    <div class="hdr">
+      <h1>BRIDGE<b>+</b></h1>
+      <div class="sub">PRO DJ LINK · v0.12.0</div>
+
+      <div class="view-toggle">
+        <button class="act" title="1열 (전체 폭)"><svg class="ic ic-sm"><use href="#i-view-1"/></svg>1×N</button>
+        <button title="2×2 그리드"><svg class="ic ic-sm"><use href="#i-view-2"/></svg>2×2</button>
+        <button title="3×2 그리드"><svg class="ic ic-sm"><use href="#i-view-3"/></svg>3×2</button>
+      </div>
+
+      <div class="hdr-status">
+        <div class="hdr-stat"><span class="dot"></span>PDJL · 4 DECK</div>
+        <div class="hdr-stat"><span class="dot"></span>TCNET · A–H</div>
+        <div class="hdr-stat"><span class="dot off"></span>ART-NET</div>
+        <div class="hdr-stat"><span class="dot"></span>LINK · 2</div>
+      </div>
+    </div>
+
+    <!-- Deck list (default: 1 column) -->
+    <div class="decks view-1col">
+
+      <!-- Deck 1 — LIVE/MASTER -->
+      <article class="dk live">
+        <div class="dk-badge">1</div>
+        <div class="dk-badge-sub">CDJ-3000</div>
+        <div class="dk-title">Children Of The Night</div>
+        <div class="dk-sub">Daft Punk — Homework (Remastered)</div>
+        <div class="dk-bpm">
+          <div class="big">128.00</div>
+          <div class="lbl">BPM</div>
+          <div class="key-val">KEY 8A</div>
+        </div>
+
+        <div class="dk-wave-row">
+          <div class="dk-time">01:24</div>
+          <div class="dk-wave">
+            <svg viewBox="0 0 400 48" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="wave1-g" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#ff9a4a"/>
+                  <stop offset="100%" stop-color="#ff6b1a"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,24 Q8,6 16,24 T32,24 T48,24 T64,24 T80,24 T96,20 T112,28 T128,14 T144,30 T160,22 T176,24 T192,10 T208,34 T224,18 T240,24 T256,24 T272,24 T288,24 T304,24 T320,24 T336,24 T352,24 T368,24 T384,24 T400,24 L400,48 L0,48 Z" fill="url(#wave1-g)"/>
+              <rect x="90" y="0" width="2" height="48" fill="#4a90ff" opacity=".6"/>
+              <rect x="180" y="0" width="2" height="48" fill="#ff4444" opacity=".6"/>
+              <rect x="300" y="0" width="2" height="48" fill="#44ff88" opacity=".6"/>
+            </svg>
+            <div class="playhead" style="left:28%;"></div>
+          </div>
+          <div class="dk-time total">03:42</div>
+        </div>
+
+        <div class="dk-meters">
+          <div class="dk-phasor"><div class="pb on"></div><div class="pb"></div><div class="pb"></div><div class="pb"></div></div>
+          <div class="dk-progress"><div class="dk-progress-fill" style="width:28%;"></div></div>
+          <div class="dk-meta-pills">
+            <span class="pill master"><svg class="ic" style="width:8px;height:8px;margin-right:3px;"><use href="#i-master"/></svg>MASTER</span>
+            <span class="pill on">ON AIR</span>
+            <span class="pill on">SYNC</span>
+          </div>
+        </div>
+
+        <div class="dk-btns">
+          <button class="btn key"><svg class="ic"><use href="#i-cue"/></svg><span class="btn-label">CUE</span></button>
+          <button class="btn key act"><svg class="ic"><use href="#i-pause"/></svg><span class="btn-label">PAUSE</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-sync"/></svg><span class="btn-label">SYNC</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-loop"/></svg><span class="btn-label">LOOP</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-fx"/></svg><span class="btn-label">FX</span></button>
+          <div class="btn-divider"></div>
+          <button class="btn hc set"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H1</span></button>
+          <button class="btn hc red"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H2</span></button>
+          <button class="btn hc green"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H3</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H4</span></button>
+        </div>
+      </article>
+
+      <!-- Deck 2 -->
+      <article class="dk">
+        <div class="dk-badge">2</div>
+        <div class="dk-badge-sub">CDJ-3000</div>
+        <div class="dk-title">One More Time</div>
+        <div class="dk-sub">Daft Punk — Discovery</div>
+        <div class="dk-bpm">
+          <div class="big">123.00</div>
+          <div class="lbl">BPM</div>
+          <div class="key-val">KEY 5A</div>
+        </div>
+
+        <div class="dk-wave-row">
+          <div class="dk-time">00:48</div>
+          <div class="dk-wave">
+            <svg viewBox="0 0 400 48" preserveAspectRatio="none">
+              <path d="M0,24 Q8,12 16,24 T32,24 T48,24 T64,24 T80,24 T96,18 T112,30 T128,16 T144,28 T160,22 T176,24 T192,14 T208,32 T224,20 T240,24 T256,24 T272,24 T288,24 T304,24 T320,24 T336,24 T352,24 T368,24 T384,24 T400,24 L400,48 L0,48 Z" fill="#4a90ff" opacity=".8"/>
+              <rect x="60" y="0" width="2" height="48" fill="#4a90ff" opacity=".5"/>
+            </svg>
+            <div class="playhead" style="left:14%;"></div>
+          </div>
+          <div class="dk-time total">05:20</div>
+        </div>
+
+        <div class="dk-meters">
+          <div class="dk-phasor"><div class="pb"></div><div class="pb on"></div><div class="pb"></div><div class="pb"></div></div>
+          <div class="dk-progress"><div class="dk-progress-fill" style="width:14%;"></div></div>
+          <div class="dk-meta-pills">
+            <span class="pill on">ON AIR</span>
+          </div>
+        </div>
+
+        <div class="dk-btns">
+          <button class="btn key"><svg class="ic"><use href="#i-cue"/></svg><span class="btn-label">CUE</span></button>
+          <button class="btn key"><svg class="ic"><use href="#i-play"/></svg><span class="btn-label">PLAY</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-sync"/></svg><span class="btn-label">SYNC</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-loop"/></svg><span class="btn-label">LOOP</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-fx"/></svg><span class="btn-label">FX</span></button>
+          <div class="btn-divider"></div>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H1</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H2</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H3</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H4</span></button>
+        </div>
+      </article>
+
+      <!-- Deck 3 -->
+      <article class="dk">
+        <div class="dk-badge">3</div>
+        <div class="dk-badge-sub">NXS2</div>
+        <div class="dk-title">Get Lucky</div>
+        <div class="dk-sub">Daft Punk feat. Pharrell Williams</div>
+        <div class="dk-bpm">
+          <div class="big">116.00</div>
+          <div class="lbl">BPM</div>
+          <div class="key-val">KEY F#m</div>
+        </div>
+
+        <div class="dk-wave-row">
+          <div class="dk-time">02:13</div>
+          <div class="dk-wave">
+            <svg viewBox="0 0 400 48" preserveAspectRatio="none">
+              <path d="M0,24 Q8,14 16,24 T32,24 T48,24 T64,24 T80,24 T96,19 T112,29 T128,15 T144,32 T160,21 T176,24 T192,11 T208,33 T224,19 T240,24 T256,24 T272,24 T288,24 T304,24 T320,24 T336,24 T352,24 T368,24 T384,24 T400,24 L400,48 L0,48 Z" fill="#f4b400" opacity=".7"/>
+            </svg>
+            <div class="playhead" style="left:48%;"></div>
+          </div>
+          <div class="dk-time total">04:28</div>
+        </div>
+
+        <div class="dk-meters">
+          <div class="dk-phasor"><div class="pb"></div><div class="pb"></div><div class="pb on"></div><div class="pb"></div></div>
+          <div class="dk-progress"><div class="dk-progress-fill" style="width:48%;"></div></div>
+          <div class="dk-meta-pills"><span class="pill">CUED</span></div>
+        </div>
+
+        <div class="dk-btns">
+          <button class="btn key"><svg class="ic"><use href="#i-cue"/></svg><span class="btn-label">CUE</span></button>
+          <button class="btn key"><svg class="ic"><use href="#i-play"/></svg><span class="btn-label">PLAY</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-sync"/></svg><span class="btn-label">SYNC</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-loop"/></svg><span class="btn-label">LOOP</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-fx"/></svg><span class="btn-label">FX</span></button>
+          <div class="btn-divider"></div>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H1</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H2</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H3</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H4</span></button>
+        </div>
+      </article>
+
+      <!-- Deck 4 — idle (virtual) -->
+      <article class="dk idle">
+        <div class="dk-badge">4</div>
+        <div class="dk-badge-sub">VIRTUAL</div>
+        <div class="dk-title">No track loaded</div>
+        <div class="dk-sub">Drag file or select from browser</div>
+        <div class="dk-bpm">
+          <div class="big">—</div>
+          <div class="lbl">BPM</div>
+          <div class="key-val">KEY —</div>
+        </div>
+
+        <div class="dk-wave-row">
+          <div class="dk-time dim">—:—</div>
+          <div class="dk-wave"></div>
+          <div class="dk-time dim">—:—</div>
+        </div>
+
+        <div class="dk-meters">
+          <div class="dk-phasor"><div class="pb"></div><div class="pb"></div><div class="pb"></div><div class="pb"></div></div>
+          <div class="dk-progress"></div>
+          <div class="dk-meta-pills"></div>
+        </div>
+
+        <div class="dk-btns">
+          <button class="btn"><svg class="ic"><use href="#i-cue"/></svg><span class="btn-label">CUE</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-play"/></svg><span class="btn-label">PLAY</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-sync"/></svg><span class="btn-label">SYNC</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-loop"/></svg><span class="btn-label">LOOP</span></button>
+          <button class="btn"><svg class="ic"><use href="#i-fx"/></svg><span class="btn-label">FX</span></button>
+          <div class="btn-divider"></div>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H1</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H2</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H3</span></button>
+          <button class="btn hc"><svg class="ic"><use href="#i-hotcue"/></svg><span class="btn-label">H4</span></button>
+        </div>
+      </article>
+    </div>
+
+    <!-- Statusbar -->
+    <div class="status-bar">
+      <span class="ok">● PDJL 523 pps</span>
+      <span class="ok">● TCNET 120 pps</span>
+      <span class="warn">● DJM-A9 응답 없음 (14초)</span>
+      <span>CPU 12% · 47 MB</span>
+      <span class="version">v0.12.0</span>
+    </div>
+  </section>
+</div>
+
+<script>
+  // View toggle demo (간단 동작만 — 실제 구현 시 state 관리)
+  document.querySelectorAll('.view-toggle button').forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('act'));
+      btn.classList.add('act');
+      const decks = document.querySelector('.decks');
+      decks.classList.remove('view-1col','view-2col','view-3col');
+      decks.classList.add(['view-1col','view-2col','view-3col'][i]);
+    });
+  });
+</script>
+
+</body></html>
