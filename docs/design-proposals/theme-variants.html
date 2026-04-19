@@ -157,9 +157,12 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .v-tower .tw-tc{text-align:center;font:300 20px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 10px var(--t-accent-glow);line-height:1;padding:var(--u) 0}
 .v-tower .tw-tc.inactive{color:var(--t-tx3);text-shadow:none}
 
-/* BPM — pill + meta stacked center */
+/* BPM — BPM pill 좌 + phasor 우 한 줄 + meta 아래 중앙 */
 .v-tower .tw-bpm{display:flex;flex-direction:column;align-items:center;gap:var(--u)}
+.v-tower .tw-bpm-row{display:flex;align-items:center;justify-content:center;gap:var(--u2)}
 .v-tower .tw-bpm-cur{font-size:15px;padding:4px 10px}
+.v-tower .tw-bpm .phasor{height:10px}
+.v-tower .tw-bpm .phs{width:6px;height:6px}
 
 /* VU horizontal — 전체 폭 */
 .v-tower .vu-h{width:100%}
@@ -167,13 +170,13 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 /* EQ — 3 knobs 가로 균등 */
 .v-tower .tw-eq{padding:2px 6px}
 
-/* CTL — margin-top:auto 로 하단 고정 */
-.v-tower .tw-ctl{display:flex;flex-direction:column;gap:var(--u);margin-top:auto}
-.v-tower .tw-ctl .t-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--u)}
-.v-tower .tw-ctl .t-btn{height:26px;font-size:9px}
-.v-tower .tw-ctl .t-btn.stop{height:24px}
-.v-tower .tw-ctl .smpte-row{height:24px;gap:3px}
-.v-tower .tw-ctl .l-mst,.v-tower .tw-ctl .l-ab{font-size:8px;padding:0}
+/* CTL — TRANSPORT / SMPTE 두 섹션 레이블 포함 */
+.v-tower .tw-ctl{display:flex;flex-direction:column;gap:var(--u2);margin-top:auto}
+.v-tower .tw-section{display:flex;flex-direction:column;gap:3px}
+.v-tower .tw-section-lbl{font:700 7px var(--t-mn);color:var(--t-tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
+.v-tower .btn-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;height:26px}
+.v-tower .btn-row-3 .t-btn{height:100%;font-size:9px}
+.v-tower .btn-row-3 .l-mst,.v-tower .btn-row-3 .l-ab{flex:none;font-size:8px;padding:0;height:100%}
 
 /* ═════════════════════════════════════════════════════════ */
 /* ═════════ F · CARD — 다듬음 (360×auto) ═════════════════ */
@@ -382,7 +385,10 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         <div class="wf-box tw-wf" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
         <div class="tw-tc">00:01:24:12</div>
         <div class="tw-bpm">
-          <div class="bpm-cur tw-bpm-cur">128.00<span class="bpm-lbl">BPM</span></div>
+          <div class="tw-bpm-row">
+            <div class="bpm-cur tw-bpm-cur">128.00<span class="bpm-lbl">BPM</span></div>
+            <div class="phasor"><span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
+          </div>
           <div class="bpm-meta">124.00 · +3.23% · 8A</div>
         </div>
         <div class="vu-h">
@@ -395,15 +401,21 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
         </div>
         <div class="tw-ctl">
-          <div class="t-row">
-            <button class="t-btn cue">CUE</button>
-            <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+          <div class="tw-section">
+            <div class="tw-section-lbl">TRANSPORT</div>
+            <div class="btn-row-3">
+              <button class="t-btn cue">CUE</button>
+              <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+              <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+            </div>
           </div>
-          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-          <div class="smpte-row">
-            <button class="l-mst on">MASTER</button>
-            <button class="l-ab a on">A</button>
-            <button class="l-ab b">B</button>
+          <div class="tw-section">
+            <div class="tw-section-lbl">SMPTE</div>
+            <div class="btn-row-3">
+              <button class="l-mst on">MASTER</button>
+              <button class="l-ab a on">A</button>
+              <button class="l-ab b">B</button>
+            </div>
           </div>
         </div>
       </div>
@@ -427,7 +439,10 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         <div class="wf-box tw-wf" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
         <div class="tw-tc inactive">00:00:48:00</div>
         <div class="tw-bpm">
-          <div class="bpm-cur tw-bpm-cur inactive">119.98<span class="bpm-lbl">BPM</span></div>
+          <div class="tw-bpm-row">
+            <div class="bpm-cur tw-bpm-cur inactive">119.98<span class="bpm-lbl">BPM</span></div>
+            <div class="phasor"><span class="phs"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
+          </div>
           <div class="bpm-meta">120.00 · -0.02% · 5A</div>
         </div>
         <div class="vu-h">
@@ -436,15 +451,21 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:80%"></div></div></div>
         </div>
         <div class="tw-ctl">
-          <div class="t-row">
-            <button class="t-btn cue on">CUE</button>
-            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+          <div class="tw-section">
+            <div class="tw-section-lbl">TRANSPORT</div>
+            <div class="btn-row-3">
+              <button class="t-btn cue on">CUE</button>
+              <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+              <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+            </div>
           </div>
-          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-          <div class="smpte-row">
-            <button class="l-mst">MASTER</button>
-            <button class="l-ab a">A</button>
-            <button class="l-ab b on">B</button>
+          <div class="tw-section">
+            <div class="tw-section-lbl">SMPTE</div>
+            <div class="btn-row-3">
+              <button class="l-mst">MASTER</button>
+              <button class="l-ab a">A</button>
+              <button class="l-ab b on">B</button>
+            </div>
           </div>
         </div>
       </div>
@@ -468,7 +489,10 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         <div class="wf-box tw-wf" style="color:#555"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
         <div class="tw-tc inactive">00:00:00:00</div>
         <div class="tw-bpm">
-          <div class="bpm-cur tw-bpm-cur inactive">122.00<span class="bpm-lbl">BPM</span></div>
+          <div class="tw-bpm-row">
+            <div class="bpm-cur tw-bpm-cur inactive">122.00<span class="bpm-lbl">BPM</span></div>
+            <div class="phasor"><span class="phs"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
+          </div>
           <div class="bpm-meta">122.00 · +0.00% · 10A</div>
         </div>
         <div class="vu-h">
@@ -481,15 +505,21 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">LO</span></div>
         </div>
         <div class="tw-ctl">
-          <div class="t-row">
-            <button class="t-btn cue">CUE</button>
-            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+          <div class="tw-section">
+            <div class="tw-section-lbl">TRANSPORT</div>
+            <div class="btn-row-3">
+              <button class="t-btn cue">CUE</button>
+              <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+              <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+            </div>
           </div>
-          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-          <div class="smpte-row">
-            <button class="l-mst">MASTER</button>
-            <button class="l-ab a">A</button>
-            <button class="l-ab b">B</button>
+          <div class="tw-section">
+            <div class="tw-section-lbl">SMPTE</div>
+            <div class="btn-row-3">
+              <button class="l-mst">MASTER</button>
+              <button class="l-ab a">A</button>
+              <button class="l-ab b">B</button>
+            </div>
           </div>
         </div>
       </div>
