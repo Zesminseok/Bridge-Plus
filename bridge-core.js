@@ -1321,11 +1321,58 @@ class BridgeCore {
     console.log(`[TCNet] rebind complete — lPort=${this.listenerPort}`);
   }
 
+  // 원격 IP 와 같은 서브넷에 속한 로컬 인터페이스를 찾음.
+  // PDJL 장비(CDJ/DJM) 주소를 받아 서브넷 매칭으로 올바른 인터페이스 식별.
+  _findLocalIfaceForRemote(remoteIp){
+    if(!remoteIp) return null;
+    const parts = remoteIp.split('.').map(Number);
+    if(parts.length !== 4 || parts.some(n=>!(n>=0&&n<=255))) return null;
+    for(const iface of getAllInterfaces()){
+      if(iface.internal || !iface.netmask || !iface.address) continue;
+      if(iface.address==='127.0.0.1') continue;
+      const iIP = iface.address.split('.').map(Number);
+      const mask = iface.netmask.split('.').map(Number);
+      if(iIP.length!==4 || mask.length!==4) continue;
+      let match = true;
+      for(let i=0;i<4;i++){
+        if((iIP[i] & mask[i]) !== (parts[i] & mask[i])){ match = false; break; }
+      }
+      if(match) return iface;
+    }
+    return null;
+  }
+
+  // 원격 장비(CDJ/DJM) 최초 발견 시 해당 서브넷과 매칭되는 로컬 인터페이스로 자동 전환.
+  // 사용자가 수동으로 인터페이스를 선택한 경우 무시. 한 번 매칭되면 _autoPdjlLocked 로 중복 전환 방지.
+  _autoSelectPdjlForRemote(remoteIp){
+    if(!this.running || this.isLocalMode) return;
+    if(this.pdjlBindAddr && this.pdjlBindAddr!=='auto' && this.pdjlBindAddr!=='0.0.0.0') return;
+    if(this._autoPdjlLocked) return;
+    const iface = this._findLocalIfaceForRemote(remoteIp);
+    if(!iface) return;
+    if(this._currentPdjlIP === iface.address){
+      this._autoPdjlLocked = true;
+      console.log(`[PDJL] auto: iface ${iface.address} already matches remote ${remoteIp} — locked`);
+      return;
+    }
+    console.log(`[PDJL] auto-detect: remote ${remoteIp} matches iface ${iface.name}(${iface.address}) — switching from ${this._currentPdjlIP||'none'}`);
+    this._autoPdjlLocked = true;
+    // 현재 keepalive/join 사이클 흔들지 않도록 약간 지연 후 재바인드
+    setTimeout(()=>{
+      if(!this.running) return;
+      this.rebindPDJL(iface.address).catch(e=>console.warn('[PDJL] auto rebind failed:',e.message));
+    }, 100);
+  }
+
   // ── Live rebind: Pro DJ Link interface ──
   async rebindPDJL(newAddr){
     if(!this.running) return;
     const prev = this.pdjlBindAddr;
     this.pdjlBindAddr = newAddr||null;
+    // 명시적 auto/empty 로 되돌아가면 자동 선택 잠금 해제 → 재-자동감지 가능
+    if(!newAddr || newAddr==='auto' || newAddr==='0.0.0.0'){
+      this._autoPdjlLocked = false;
+    }
     console.log(`[PDJL] rebind ${prev||'auto'} → ${newAddr||'auto'}`);
 
     // Close existing PDJL sockets
@@ -1918,6 +1965,8 @@ class BridgeCore {
       }
     }
     if(!pdjlIP){ console.warn('[PDJL] no interface found for keep-alive'); return; }
+    // auto-select 비교용 현재 IP 저장. 장비 발견 시 서브넷 매칭으로 교체 판단.
+    this._currentPdjlIP = pdjlIP;
 
     // Collect ALL non-internal broadcast addresses so every subnet (including Arena's) receives the keepalive
     const allBCs = [...new Set(
@@ -2219,6 +2268,8 @@ class BridgeCore {
         this.devices[key]={type:'CDJ',playerNum:p.playerNum,name:p.name,ip:rinfo.address,lastSeen:Date.now()};
         console.log(`[PDJL] CDJ P${p.playerNum}(${p.name})@${rinfo.address}`);
         this.onDeviceList?.(this.devices);
+        // 자동 모드일 때 CDJ 서브넷과 매칭되는 인터페이스로 전환
+        this._autoSelectPdjlForRemote(rinfo.address);
       } else this.devices[key].lastSeen=Date.now();
       this.devices[key].state=p;
       if(this.hwMode[li]){
@@ -2459,6 +2510,8 @@ class BridgeCore {
         if(!this.devices['djm']){
           this.devices['djm']={type:'DJM',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
           this.onDeviceList?.(this.devices);
+          // 자동 모드일 때 DJM 서브넷과 매칭되는 인터페이스로 전환 (bridgeJoin 전에 실행 → 올바른 IP로 join)
+          this._autoSelectPdjlForRemote(rinfo.address);
           if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
         } else { this.devices['djm'].lastSeen=Date.now(); }
       }
@@ -2499,6 +2552,8 @@ class BridgeCore {
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
         console.log(`[DJM] 0x03 on-air에서 DJM 최초 감지: name=${p.name} ip=${rinfo.address}`);
         this.onDeviceList?.(this.devices);
+        // 자동 모드일 때 DJM 서브넷과 매칭되는 인터페이스로 전환
+        this._autoSelectPdjlForRemote(rinfo.address);
         this._probeDjmTCP(rinfo.address);
         if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
         // 15초 후 0x39 미수신이면 진단 로그
@@ -2621,6 +2676,8 @@ class BridgeCore {
           this.devices['djm']={type:'DJM',name:p.name,ip:rinfo.address,lastSeen:Date.now()};
           console.log(`[PDJL] DJM keepalive detected: ${p.name}@${rinfo.address} (isDjmType=${p.isDjmType})`);
           this.onDeviceList?.(this.devices);
+          // 자동 모드일 때 DJM 서브넷 매칭으로 인터페이스 자동 선택
+          this._autoSelectPdjlForRemote(rinfo.address);
           if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
         } else {
           this.devices['djm'].lastSeen=Date.now();
@@ -2635,6 +2692,8 @@ class BridgeCore {
           this.devices[key]={type:'CDJ',playerNum:pn,name:p.name,ip:rinfo.address,lastSeen:Date.now()};
           console.log(`[PDJL] CDJ keepalive P${pn}(${p.name})@${rinfo.address}`);
           this.onDeviceList?.(this.devices);
+          // 자동 모드일 때 CDJ 서브넷 매칭으로 인터페이스 자동 선택
+          this._autoSelectPdjlForRemote(rinfo.address);
         } else {
           this.devices[key].lastSeen=Date.now();
           this.devices[key].ip=rinfo.address; // update IP in case it changed
