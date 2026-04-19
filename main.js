@@ -837,6 +837,11 @@ app.on('will-quit',()=>{
     try{_artSocket.close();}catch(_){}
     _cleaned=true;
   }
-  setTimeout(()=>process.exit(0),500).unref();
+  // abletonlink v0.2.0 NAPI 바인딩에 스레드 종료 API가 없어 native callback
+  // thread (sleep_for 루프)가 프로세스 종료 시점에도 살아있다.
+  // process.exit() → libc atexit → C++ static dtor 가 스레드 소유권 경합으로
+  // abort 를 발생시킴. app.exit() 는 Chromium shutdown 후 OS 로 바로 반환하므로
+  // native dtor 경로를 건너뛴다.
+  setTimeout(()=>app.exit(0),300).unref();
 });
 app.on('activate',()=>{if(!_quitting&&BrowserWindow.getAllWindows().length===0)createWindow();});
