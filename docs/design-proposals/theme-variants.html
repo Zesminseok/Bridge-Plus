@@ -73,9 +73,9 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .wf-playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--t-accent);box-shadow:0 0 8px var(--t-accent);left:50%}
 
 /* VU — 가로 (L/R/F 세로 stack, 각 bar 가로 fill) */
-.vu-h{display:flex;flex-direction:column;gap:3px;background:var(--t-bg3);border:1px solid var(--t-bdr);padding:5px 6px}
-.vu-h .vu-row{display:flex;align-items:center;gap:5px}
-.vu-h .vu-lbl{font:700 7px var(--t-mn);color:var(--t-tx4);letter-spacing:.04em;line-height:1;width:9px;flex-shrink:0;text-align:center}
+.vu-h{display:flex;flex-direction:column;gap:4px;background:var(--t-bg3);border:1px solid var(--t-bdr);padding:8px 10px;justify-content:center}
+.vu-h .vu-row{display:flex;align-items:center;gap:7px}
+.vu-h .vu-lbl{font:700 7px var(--t-mn);color:var(--t-tx4);letter-spacing:.04em;line-height:1;width:10px;flex-shrink:0;text-align:center}
 .vu-h .vu-bar{flex:1;height:8px;background:var(--t-bg);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
 .vu-h .vu-fill{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,#808080 0%,#c0c0c0 58%,var(--t-ylw) 80%,var(--t-red) 100%)}
 .vu-h .vu-fader-fill{position:absolute;top:0;bottom:0;left:0;background:var(--t-accent);opacity:.78}
@@ -202,12 +202,12 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 /* BODY — 내부 섹션 간 --u3 로 균등 */
 .v-card .cd-body{padding:var(--u3) var(--u4) var(--u4);display:flex;flex-direction:column;gap:var(--u3)}
 
-/* TC row — 좌 TC / 우 BPM col */
-.v-card .cd-tc-row{display:grid;grid-template-columns:1fr auto;gap:var(--u2);align-items:center}
-.v-card .cd-tc{font-size:28px;line-height:1}
-.v-card .cd-bpm-col{display:flex;flex-direction:column;align-items:flex-end;gap:var(--u)}
+/* TC row — 좌 TC / 우 BPM col (우측 고정 140px, 오버플로우 방지) */
+.v-card .cd-tc-row{display:grid;grid-template-columns:1fr 140px;gap:var(--u2);align-items:center}
+.v-card .cd-tc{font-size:28px;line-height:1;min-width:0}
+.v-card .cd-bpm-col{display:flex;flex-direction:column;align-items:flex-end;gap:var(--u);min-width:0}
 .v-card .cd-bpm-col .bpm-cur{font-size:16px}
-.v-card .cd-bpm-col .bpm-meta{font-size:10px}
+.v-card .cd-bpm-col .bpm-meta{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:right}
 
 /* META row — 3열 grid 엄격 정렬 */
 .v-card .cd-meta-row{display:grid;grid-template-columns:auto 1fr auto;gap:var(--u2);align-items:center;height:18px}
@@ -216,73 +216,82 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 /* WAVE */
 .v-card .cd-wf{height:48px}
 
-/* MIX row — VU 좌 / EQ 우 */
-.v-card .cd-mix-row{display:grid;grid-template-columns:1fr auto;gap:var(--u3);align-items:stretch;min-height:56px}
-.v-card .cd-mix-row .eq-strip{padding:0 var(--u);gap:var(--u2)}
+/* MIX row — VU 좌 / EQ 우 (132px 고정) */
+.v-card .cd-mix-row{display:grid;grid-template-columns:1fr 132px;gap:var(--u3);align-items:stretch;min-height:56px}
+.v-card .cd-mix-row.no-eq{grid-template-columns:1fr}
+.v-card .cd-mix-row .eq-strip{padding:0 var(--u);gap:var(--u2);height:100%}
 .v-card .cd-mix-row .eq-knob svg{width:26px;height:26px}
 
-/* CTL row — CUE/PLAY/STOP 3 등분 */
-.v-card .cd-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--u)}
-.v-card .cd-ctl-row .t-btn{height:var(--h-btn-md)}
-
-/* SMPTE row — ctl 과 동일 높이 28 */
-.v-card .cd-smpte-row{height:var(--h-btn-md);gap:var(--u)}
+/* SECTION — 레이블 + 버튼 3등분, TRANSPORT / SMPTE 공통 */
+.v-card .cd-section{display:flex;flex-direction:column;gap:var(--u)}
+.v-card .cd-section-lbl{font:700 8px var(--t-mn);color:var(--t-tx3);letter-spacing:.18em;padding:0 2px;line-height:1}
+.v-card .cd-btn-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--u);height:var(--h-btn-md)}
+.v-card .cd-btn-row .l-mst,.v-card .cd-btn-row .l-ab{flex:none}
+.v-card .cd-btn-row .t-btn{height:100%}
 
 /* ═════════════════════════════════════════════════════════ */
-/* ═════════ G · MATRIX — 2×2 격자 다덱 뷰 ══════════════ */
+/* ═════════ G · MATRIX — 2×2 격자 (행/열 엄격 정렬) ═════ */
 /* ═════════════════════════════════════════════════════════ */
-.v-matrix-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--u3)}
+/* minmax(0, 1fr) 로 min-content overflow 방지 → 2 열 유지 */
+.v-matrix-grid{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:var(--u3)}
 
-/* 한 박스: 가로 476px × 세로 196 정도, 3 영역 grid */
-.v-matrix{padding:var(--u3) var(--u4);display:grid;
-  grid-template-columns:112px 1fr 132px;
-  grid-template-rows:auto auto 1fr auto;
+/* 한 박스: 3 영역 grid, strict rows */
+.v-matrix{
+  min-width:0;
+  padding:var(--u3) var(--u4);
+  display:grid;
+  grid-template-columns:120px minmax(0, 1fr) 140px;
+  grid-template-rows:28px auto 36px auto;
   grid-template-areas:
-    "head head   head"
-    "art  title  title"
-    "art  wave   tc"
-    "art  mix    ctl";
+    "head  head   head"
+    "art   title  tc"
+    "art   wave   tc"
+    "art   mix    ctl";
   gap:var(--u2) var(--u3);
-  align-items:center}
+  align-items:stretch
+}
 
-/* HEAD — 한 줄 */
-.v-matrix .mx-head{grid-area:head;display:flex;align-items:center;gap:var(--u2);padding-bottom:var(--u2);border-bottom:1px solid var(--t-bdr);height:26px}
-.v-matrix .mx-head .mx-pname{font:500 8px var(--t-sn);color:var(--t-tx3);letter-spacing:.22em;text-transform:uppercase;line-height:1}
-.v-matrix .mx-head .mx-pnum{font:700 18px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em}
-.v-matrix .mx-head .sync-cluster{margin-left:auto}
+/* HEAD — 한 줄 28px */
+.v-matrix .mx-head{grid-area:head;display:flex;align-items:center;gap:var(--u2);padding-bottom:var(--u2);border-bottom:1px solid var(--t-bdr);height:28px;min-width:0}
+.v-matrix .mx-pname{font:500 8px var(--t-sn);color:var(--t-tx3);letter-spacing:.22em;text-transform:uppercase;line-height:1;flex-shrink:0}
+.v-matrix .mx-pnum{font:700 18px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em;flex-shrink:0}
+.v-matrix .mx-head .badge{flex-shrink:0}
+.v-matrix .mx-head .hw-lbl{flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.v-matrix .mx-head .sync-cluster{margin-left:auto;flex-shrink:0}
 
-/* ART */
-.v-matrix .mx-art{grid-area:art;width:112px;height:112px;align-self:start}
+/* ART — 120×120 row-span 3 */
+.v-matrix .mx-art{grid-area:art;width:120px;height:120px;align-self:start}
 
-/* TITLE */
-.v-matrix .mx-title{grid-area:title;display:flex;flex-direction:column;gap:3px;min-width:0;align-self:end;padding-bottom:var(--u)}
+/* TITLE — row 2 (artist+track) */
+.v-matrix .mx-title{grid-area:title;display:flex;flex-direction:column;gap:3px;min-width:0;justify-content:center}
 .v-matrix .mx-artist{font:500 10px var(--t-sn);color:var(--t-tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
 .v-matrix .mx-track{font:600 13px var(--t-sn);color:var(--t-tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
 
-/* WAVE — title 아래 */
+/* WAVE — row 3, 36px 고정 */
 .v-matrix .mx-wave{grid-area:wave;height:36px}
 
-/* TC — wave 오른쪽 (compact) */
-.v-matrix .mx-tc{grid-area:tc;display:flex;flex-direction:column;align-items:flex-end;gap:3px;justify-content:center}
-.v-matrix .mx-tc-num{font:300 18px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 10px var(--t-accent-glow);line-height:1}
+/* TC — row 2+3 span (우측 세로 중앙 정렬) */
+.v-matrix .mx-tc{grid-area:tc;display:flex;flex-direction:column;align-items:flex-end;gap:4px;justify-content:center;min-width:0}
+.v-matrix .mx-tc-num{font:300 20px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 10px var(--t-accent-glow);line-height:1;white-space:nowrap}
 .v-matrix .mx-tc-num.inactive{color:var(--t-tx3);text-shadow:none}
-.v-matrix .mx-bpm-cur{font:700 13px var(--t-mn);color:var(--t-accent);padding:2px 7px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1}
+.v-matrix .mx-bpm-cur{font:700 13px var(--t-mn);color:var(--t-accent);padding:3px 8px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap}
 .v-matrix .mx-bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
-.v-matrix .mx-meta{font:500 8px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;line-height:1}
+.v-matrix .mx-meta{font:500 8px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:right}
 
-/* MIX — title 아래 row (VU + EQ) */
-.v-matrix .mx-mix{grid-area:mix;display:grid;grid-template-columns:1fr auto;gap:var(--u2);align-items:stretch;height:48px}
-.v-matrix .mx-mix .vu-h{height:100%}
-.v-matrix .mx-mix .eq-strip{padding:0;gap:var(--u)}
-.v-matrix .mx-mix .eq-knob svg{width:22px;height:22px}
+/* MIX — row 4, VU 좌 + EQ 우 (132px) */
+.v-matrix .mx-mix{grid-area:mix;display:grid;grid-template-columns:1fr 132px;gap:var(--u2);align-items:stretch;min-height:52px}
+.v-matrix .mx-mix.no-eq{grid-template-columns:1fr}
+.v-matrix .mx-mix .vu-h{height:100%;min-height:52px}
+.v-matrix .mx-mix .eq-strip{padding:0 var(--u);gap:var(--u);height:100%}
+.v-matrix .mx-mix .eq-knob svg{width:24px;height:24px}
 
-/* CTL — ctl stack */
-.v-matrix .mx-ctl{grid-area:ctl;display:flex;flex-direction:column;gap:var(--u);height:100%;justify-content:space-between}
-.v-matrix .mx-ctl .t-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--u)}
-.v-matrix .mx-ctl .t-btn{height:24px;font-size:9px}
-.v-matrix .mx-ctl .t-btn.stop{height:22px}
-.v-matrix .mx-ctl .smpte-row{height:22px;gap:3px}
-.v-matrix .mx-ctl .l-mst,.v-matrix .mx-ctl .l-ab{font-size:8px}
+/* CTL — row 4 (transport + SMPTE 두 섹션) */
+.v-matrix .mx-ctl{grid-area:ctl;display:flex;flex-direction:column;gap:var(--u);min-height:52px}
+.v-matrix .mx-ctl-sec{display:flex;flex-direction:column;gap:2px;flex:1}
+.v-matrix .mx-ctl-lbl{font:700 7px var(--t-mn);color:var(--t-tx3);letter-spacing:.16em;line-height:1;padding-left:2px}
+.v-matrix .mx-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;flex:1}
+.v-matrix .mx-ctl-row .t-btn{height:100%;font-size:9px}
+.v-matrix .mx-ctl-row .l-mst,.v-matrix .mx-ctl-row .l-ab{flex:none;font-size:8px}
 
 </style>
 </head>
@@ -571,15 +580,21 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
               <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
             </div>
           </div>
-          <div class="cd-ctl-row">
-            <button class="t-btn cue">CUE</button>
-            <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
-            <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+          <div class="cd-section">
+            <div class="cd-section-lbl">TRANSPORT</div>
+            <div class="cd-btn-row">
+              <button class="t-btn cue">CUE</button>
+              <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+              <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+            </div>
           </div>
-          <div class="cd-smpte-row smpte-row">
-            <button class="l-mst on">MASTER</button>
-            <button class="l-ab a on">A</button>
-            <button class="l-ab b">B</button>
+          <div class="cd-section">
+            <div class="cd-section-lbl">SMPTE</div>
+            <div class="cd-btn-row">
+              <button class="l-mst on">MASTER</button>
+              <button class="l-ab a on">A</button>
+              <button class="l-ab b">B</button>
+            </div>
           </div>
         </div>
       </div>
@@ -613,22 +628,28 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
             <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
           </div>
           <div class="wf-box cd-wf" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
-          <div class="cd-mix-row">
+          <div class="cd-mix-row no-eq">
             <div class="vu-h">
               <div class="vu-row"><span class="vu-lbl">L</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
               <div class="vu-row"><span class="vu-lbl">R</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
               <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:80%"></div></div></div>
             </div>
           </div>
-          <div class="cd-ctl-row">
-            <button class="t-btn cue on">CUE</button>
-            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
-            <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+          <div class="cd-section">
+            <div class="cd-section-lbl">TRANSPORT</div>
+            <div class="cd-btn-row">
+              <button class="t-btn cue on">CUE</button>
+              <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+              <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+            </div>
           </div>
-          <div class="cd-smpte-row smpte-row">
-            <button class="l-mst">MASTER</button>
-            <button class="l-ab a">A</button>
-            <button class="l-ab b on">B</button>
+          <div class="cd-section">
+            <div class="cd-section-lbl">SMPTE</div>
+            <div class="cd-btn-row">
+              <button class="l-mst">MASTER</button>
+              <button class="l-ab a">A</button>
+              <button class="l-ab b on">B</button>
+            </div>
           </div>
         </div>
       </div>
@@ -681,15 +702,21 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           </div>
         </div>
         <div class="mx-ctl">
-          <div class="t-row">
-            <button class="t-btn cue">CUE</button>
-            <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+          <div class="mx-ctl-sec">
+            <div class="mx-ctl-lbl">TRANSPORT</div>
+            <div class="mx-ctl-row">
+              <button class="t-btn cue">CUE</button>
+              <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+              <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+            </div>
           </div>
-          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-          <div class="smpte-row">
-            <button class="l-mst on">MASTER</button>
-            <button class="l-ab a on">A</button>
-            <button class="l-ab b">B</button>
+          <div class="mx-ctl-sec">
+            <div class="mx-ctl-lbl">SMPTE</div>
+            <div class="mx-ctl-row">
+              <button class="l-mst on">MASTER</button>
+              <button class="l-ab a on">A</button>
+              <button class="l-ab b">B</button>
+            </div>
           </div>
         </div>
       </div>
@@ -713,7 +740,7 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           <div class="mx-bpm-cur inactive">119.98 BPM</div>
           <div class="mx-meta">120.00 · -0.02% · 5A</div>
         </div>
-        <div class="mx-mix">
+        <div class="mx-mix no-eq">
           <div class="vu-h">
             <div class="vu-row"><span class="vu-lbl">L</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
             <div class="vu-row"><span class="vu-lbl">R</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
@@ -721,15 +748,21 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           </div>
         </div>
         <div class="mx-ctl">
-          <div class="t-row">
-            <button class="t-btn cue on">CUE</button>
-            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+          <div class="mx-ctl-sec">
+            <div class="mx-ctl-lbl">TRANSPORT</div>
+            <div class="mx-ctl-row">
+              <button class="t-btn cue on">CUE</button>
+              <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+              <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+            </div>
           </div>
-          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-          <div class="smpte-row">
-            <button class="l-mst">MASTER</button>
-            <button class="l-ab a">A</button>
-            <button class="l-ab b on">B</button>
+          <div class="mx-ctl-sec">
+            <div class="mx-ctl-lbl">SMPTE</div>
+            <div class="mx-ctl-row">
+              <button class="l-mst">MASTER</button>
+              <button class="l-ab a">A</button>
+              <button class="l-ab b on">B</button>
+            </div>
           </div>
         </div>
       </div>
@@ -765,15 +798,21 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           </div>
         </div>
         <div class="mx-ctl">
-          <div class="t-row">
-            <button class="t-btn cue">CUE</button>
-            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+          <div class="mx-ctl-sec">
+            <div class="mx-ctl-lbl">TRANSPORT</div>
+            <div class="mx-ctl-row">
+              <button class="t-btn cue">CUE</button>
+              <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+              <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+            </div>
           </div>
-          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-          <div class="smpte-row">
-            <button class="l-mst">MASTER</button>
-            <button class="l-ab a">A</button>
-            <button class="l-ab b">B</button>
+          <div class="mx-ctl-sec">
+            <div class="mx-ctl-lbl">SMPTE</div>
+            <div class="mx-ctl-row">
+              <button class="l-mst">MASTER</button>
+              <button class="l-ab a">A</button>
+              <button class="l-ab b">B</button>
+            </div>
           </div>
         </div>
       </div>
