@@ -283,16 +283,17 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .v-row .rw-wf-d{flex:1;min-height:0}
 .v-row .rw-wf-o{height:22px;flex-shrink:0}
 
-/* TAIL — TC+BPM / phasor 가로 긴 바 / TRANSPORT / SMPTE */
+/* TAIL — TC+BPM / meta / phasor / TRANSPORT / SMPTE (각각 별도 row) */
 .v-row .rw-tail{grid-area:tail;display:flex;flex-direction:column;gap:var(--u2);min-width:0}
-.v-row .rw-tc-row{display:grid;grid-template-columns:1fr auto;gap:var(--u2);align-items:center}
-.v-row .rw-tc-num{font:300 30px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 14px var(--t-accent-glow);line-height:1;white-space:nowrap}
+.v-row .rw-tc-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--u2);align-items:center}
+.v-row .rw-tc-num{min-width:0;font:300 28px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 14px var(--t-accent-glow);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v-row .rw-tc-num.inactive{color:var(--t-tx3);text-shadow:none}
-.v-row .rw-bpm-col{display:flex;flex-direction:column;align-items:flex-end;gap:var(--u)}
-.v-row .rw-bpm-cur{font:700 15px var(--t-mn);color:var(--t-accent);padding:3px 9px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap}
+.v-row .rw-bpm-cur{font:700 15px var(--t-mn);color:var(--t-accent);padding:3px 9px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap;flex-shrink:0}
 .v-row .rw-bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
-.v-row .rw-bpm-meta{font:500 10px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1}
-/* Phasor — TRANSPORT 위 별도 row, 전체 폭 가로 긴 바 */
+/* META row — tc-row 바로 아래 별도 행, tail 폭 안에서 오른쪽 정렬 */
+.v-row .rw-bpm-meta-row{text-align:right;padding-right:2px;min-width:0}
+.v-row .rw-bpm-meta{font:500 10px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:100%;line-height:1}
+/* Phasor row — TRANSPORT 위 전체 폭 가로 긴 바 */
 .v-row .rw-phasor-row{height:14px;margin-top:var(--u)}
 .v-row .rw-phasor-row .phasor{width:100%;height:100%;gap:3px}
 
@@ -322,20 +323,22 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .v-panel .pn-wf-col{display:flex;flex-direction:column;gap:3px;min-width:0}
 .v-panel .pn-wf-col .wf-box{flex:1;min-height:0}
 .v-panel .pn-wf-col .pn-wf-o{flex:none;height:22px}
-.v-panel .pn-tc-row{display:grid;grid-template-columns:auto 1fr auto;gap:var(--u3);align-items:center;padding-top:var(--u2);border-top:1px solid var(--t-bdr)}
-.v-panel .pn-tc-num{font:300 26px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 12px var(--t-accent-glow);line-height:1;white-space:nowrap}
+/* pn-tc-row — 2-row grid: 상단 TC+BPM / 하단 TRANSPORT+SMPTE */
+.v-panel .pn-tc-row{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:var(--u2) var(--u3);padding-top:var(--u2);border-top:1px solid var(--t-bdr);align-items:center}
+.v-panel .pn-tc-num{grid-column:1;grid-row:1;font:300 26px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 12px var(--t-accent-glow);line-height:1;white-space:nowrap}
 .v-panel .pn-tc-num.inactive{color:var(--t-tx3);text-shadow:none}
-.v-panel .pn-bpm-group{display:flex;align-items:center;gap:var(--u2);justify-content:center;flex-wrap:wrap}
+.v-panel .pn-bpm-group{grid-column:2;grid-row:1;display:flex;align-items:center;gap:var(--u2);justify-content:flex-end;flex-wrap:wrap}
 .v-panel .pn-bpm-cur{font:700 15px var(--t-mn);color:var(--t-accent);padding:3px 8px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap}
 .v-panel .pn-bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
-.v-panel .pn-bpm-meta{font:500 9px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1}
+.v-panel .pn-bpm-meta{font:500 9px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1;overflow:hidden;text-overflow:ellipsis}
 .v-panel .pn-bpm-group .phasor{width:64px;height:10px;flex-shrink:0}
-.v-panel .pn-ctl-group{display:flex;gap:var(--u2);align-items:stretch;flex-shrink:0}
-.v-panel .pn-ctl-sec{display:flex;flex-direction:column;gap:3px}
+/* ctl-group: 하단 row, TRANSPORT / SMPTE 2 등분 */
+.v-panel .pn-ctl-group{grid-column:1 / -1;grid-row:2;display:grid;grid-template-columns:1fr 1fr;gap:var(--u3);align-items:stretch}
+.v-panel .pn-ctl-sec{display:flex;flex-direction:column;gap:3px;min-width:0}
 .v-panel .pn-ctl-lbl{font:700 7px var(--t-mn);color:var(--t-tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
 .v-panel .pn-ctl-buttons{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;height:var(--h-btn-md)}
-.v-panel .pn-ctl-buttons .t-btn{min-width:42px;height:100%}
-.v-panel .pn-ctl-buttons .l-mst,.v-panel .pn-ctl-buttons .l-ab{flex:none;min-width:38px;height:100%}
+.v-panel .pn-ctl-buttons .t-btn{height:100%}
+.v-panel .pn-ctl-buttons .l-mst,.v-panel .pn-ctl-buttons .l-ab{flex:none;height:100%}
 
 /* ═════════════════════════════════════════════════════════ */
 /* ═════════ I · SPLIT — 1 행에 2 덱 좌우 대칭 ═══════════ */
@@ -785,10 +788,10 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         <div class="rw-tail">
           <div class="rw-tc-row">
             <div class="rw-tc-num">00:01:24:12</div>
-            <div class="rw-bpm-col">
-              <div class="rw-bpm-cur">128.00<span class="bpm-lbl">BPM</span></div>
-              <div class="rw-bpm-meta">124.00 · +3.23% · 8A</div>
-            </div>
+            <div class="rw-bpm-cur">128.00<span class="bpm-lbl">BPM</span></div>
+          </div>
+          <div class="rw-bpm-meta-row">
+            <span class="rw-bpm-meta">124.00 · +3.23% · 8A</span>
           </div>
           <div class="rw-phasor-row">
             <div class="phasor"><span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
@@ -842,10 +845,10 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         <div class="rw-tail">
           <div class="rw-tc-row">
             <div class="rw-tc-num inactive">00:00:48:00</div>
-            <div class="rw-bpm-col">
-              <div class="rw-bpm-cur inactive">119.98<span class="bpm-lbl">BPM</span></div>
-              <div class="rw-bpm-meta">120.00 · -0.02% · 5A</div>
-            </div>
+            <div class="rw-bpm-cur inactive">119.98<span class="bpm-lbl">BPM</span></div>
+          </div>
+          <div class="rw-bpm-meta-row">
+            <span class="rw-bpm-meta">120.00 · -0.02% · 5A</span>
           </div>
           <div class="rw-phasor-row">
             <div class="phasor"><span class="phs"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
