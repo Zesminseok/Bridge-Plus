@@ -1868,6 +1868,9 @@ class BridgeCore {
    */
   async _startPDJLRx(){
     this._pdjlSockets = [];
+    // [2026-04-19] 포트별 소켓 맵 추가 — 포트 50000 바인드 실패 시
+    // _pdjlSockets[1] 이 엉뚱한 포트 소켓으로 미끄러지는 문제 차단
+    this._pdjlSocketByPort = {};
     // macOS: ALL PDJL ports bind to INADDR_ANY (0.0.0.0)
     // to receive both broadcast and unicast packets from CDJs and DJMs.
     // Binding 50002 to specific IP blocks DJM mixer status packets from other interfaces.
@@ -1883,6 +1886,7 @@ class BridgeCore {
         sock.on('message',(msg,rinfo)=>this._onPDJL(msg,rinfo));
         sock.on('error',()=>{});
         this._pdjlSockets.push(sock);
+        this._pdjlSocketByPort[port] = sock;
         if(!this.pdjlSocket){ this.pdjlSocket = sock; this.pdjlPort = port; }
         console.log(`[PDJL] UDP ${port} active (${bindAddr||'0.0.0.0'})`);
       }catch(e){ console.warn(`[PDJL] port ${port} fail: ${e.message}`); }
@@ -1891,8 +1895,9 @@ class BridgeCore {
   }
 
   // ── DJM TCP probe — connect to DJM port 50003 when discovered ──
-  // DJM-900NXS2 TCP 50003: connection accepted but DJM sends nothing first.
-  // Must send correct handshake. Try multiple approaches sequentially.
+  // [DISABLED 2026-04-19] STC 참조 구현에 없는 투기성 TCP 핸드셰이크.
+  // 호출부(line ~2557)도 비활성화됨. 함수 본문은 주석 보존.
+  /*
   _probeDjmTCP(djmIp){
     if(this._djmTcpProbed===djmIp) return;
     this._djmTcpProbed=djmIp;
@@ -1933,6 +1938,7 @@ class BridgeCore {
     };
     doAttempt();
   }
+  */
 
   // Pro DJ Link keep-alive announcement on 50000
   // CDJs only send status to devices they see on the network
@@ -1982,10 +1988,11 @@ class BridgeCore {
 
     const spoofPlayer=5;
 
-    // annSock: 이미 열려있는 _pdjlSockets[0] (port 50000) 공유 소켓 우선 사용
+    // annSock: 이미 열려있는 port 50000 소켓 공유 우선 사용
     // → 비동기 바인딩 없이 즉시 사용 가능, DJM이 port 50000에서 hello/claim 수신
     // fallback: 새 소켓을 ephemeral port(0)에 바인딩 (port 충돌 없음)
-    this._pdjlAnnSock = this._pdjlSockets?.[0] || null;
+    // [2026-04-19] 인덱스 하드코딩 제거 — 포트 50000 바인드 실패 시에도 안전
+    this._pdjlAnnSock = this._pdjlSocketByPort?.[50000] || this._pdjlSockets?.[0] || null;
     if(!this._pdjlAnnSock){
       const s=dgram.createSocket({type:'udp4',reuseAddr:true});
       s.on('error',()=>{});
@@ -2160,7 +2167,12 @@ class BridgeCore {
       if(!djmIp){ return; }
       const pkt=buildSubPkt();
       // port 50001 소켓 우선 사용 (DJM이 선호하는 소스 포트)
-      const subSock = this._pdjlSockets?.[1] || this._pdjlSockets?.[0] || this._pdjlAnnSock;
+      // [2026-04-19] 인덱스 하드코딩 비활성화 — 50000 바인드 실패 시 [1]이 50002로 미끄러짐
+      // const subSock = this._pdjlSockets?.[1] || this._pdjlSockets?.[0] || this._pdjlAnnSock;
+      const subSock = this._pdjlSocketByPort?.[50001]
+                    || this._pdjlSocketByPort?.[50002]
+                    || this._pdjlSockets?.[0]
+                    || this._pdjlAnnSock;
       if(!subSock){ console.warn('[PDJL] 0x57: no socket available'); return; }
       try{subSock.send(pkt,0,pkt.length,50001,djmIp);}catch(e){ console.warn('[PDJL] 0x57 send error:',e.message); }
       this._djmSubCount = (this._djmSubCount||0)+1;
@@ -2554,7 +2566,8 @@ class BridgeCore {
         this.onDeviceList?.(this.devices);
         // 자동 모드일 때 DJM 서브넷과 매칭되는 인터페이스로 전환
         this._autoSelectPdjlForRemote(rinfo.address);
-        this._probeDjmTCP(rinfo.address);
+        // [DISABLED 2026-04-19] STC는 DJM에 TCP 안 씀. 투기성 핸드셰이크가 DJM 상태머신에 잡음 발생 가능.
+        // this._probeDjmTCP(rinfo.address);
         if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
         // 15초 후 0x39 미수신이면 진단 로그
         setTimeout(()=>{
