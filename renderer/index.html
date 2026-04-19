@@ -4420,7 +4420,7 @@ function renderSettings(){
     <div class="sgr">
       <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkLinkEnabled" ${cfg.linkEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">Link 세션 참여 — BPM 송신 (단방향)</span></label></div>
       <div class="srw"><span class="srl">BPM 소스</span><select class="ss" data-cfg="linkSource">${[['mixer','Mixer BPM (DJM)'],['deck','선택 덱 BPM'],['master','Master 덱 BPM (Pro DJ Link)']].map(([v,l])=>`<option value="${v}" ${cfg.linkSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">덱 선택 (deck 모드)</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${i+1}</option>`).join('')}</select></div>
+      <div class="srw" id="linkDeckRow" style="${cfg.linkSource==='deck'?'':'display:none'}"><span class="srl">덱 선택</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${i+1}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">세션 상태</span><span id="linkStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">—</span></div>
       <div class="srw"><span class="srl">현재 송신 BPM</span><span id="linkBpmLbl" style="font:700 11px var(--mn);color:var(--grn)">—</span></div>
     </div>
@@ -4501,7 +4501,7 @@ function renderSettings(){
         cfg.anDmxHz=Number.isFinite(v)?Math.max(10,Math.min(50,v)):40;
         _saveCfg();window.bridge.artnetSetDmxHz?.(cfg.anDmxHz);return;
       }
-      else if(k==='linkSource'){cfg[k]=e.target.value;_saveCfg();return;}
+      else if(k==='linkSource'){cfg[k]=e.target.value;_saveCfg();const row=document.getElementById('linkDeckRow');if(row)row.style.display=(cfg[k]==='deck')?'':'none';return;}
       else if(k==='linkDeckIdx'){cfg[k]=parseInt(e.target.value)||0;_saveCfg();return;}
       else if(k==='tcFps'){cfg.tcFps=e.target.value;_saveCfg();window.bridge.artnetSetFps?.(cfg.tcFps);return;}
       else if(k==='tcnetIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindTCNet(e.target.value||null);return;}
