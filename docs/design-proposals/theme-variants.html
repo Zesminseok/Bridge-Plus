@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<title>BRIDGE+ / Theme Variants — Claude Design Exploration</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;border-radius:0!important}
+body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;color:#e2e2e9;overflow:auto;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1400px;margin:0 auto;padding:24px}
+.hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px;border-bottom:1px solid #2a2a33;padding-bottom:16px}
+.hdr h1{font:700 18px "Space Grotesk",sans-serif;letter-spacing:-.01em}
+.hdr .sub{font:400 11px monospace;color:#6b6b78}
+
+.picker{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.pbtn{padding:10px 18px;border:1px solid #2a2a33;background:#14161c;color:#8b8b98;font:600 11px "Space Grotesk",sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:160px}
+.pbtn:hover{border-color:#3f3f52;color:#c0c0cc}
+.pbtn.on{border-color:#e2e2e9;color:#e2e2e9;background:#1e2028}
+.pbtn .pkey{font-size:9px;color:#6b6b78;letter-spacing:.2em}
+.pbtn .psw{display:flex;gap:4px;margin-top:6px}
+.pbtn .psw i{width:10px;height:10px;display:inline-block}
+
+.desc{font:400 11px monospace;color:#8b8b98;margin-bottom:20px;padding:10px 14px;background:#14161c;border:1px solid #2a2a33}
+
+/* ═══ SVG SPRITE ═══ */
+.gi{display:inline-block;width:1em;height:1em;vertical-align:-.12em;fill:currentColor;flex:none;pointer-events:none}
+.gi-hex{width:1.1em;height:1.1em;vertical-align:-.2em}
+.gi-play,.gi-pause,.gi-prev,.gi-stop{width:1.3em;height:1.3em;vertical-align:-.28em}
+.gi-close{width:.9em;height:.9em}
+
+/* ═══ STAGE (theme-scoped) ═══ */
+.stage{padding:28px;background:var(--t-bg);border:1px solid var(--t-bdr);transition:all .2s}
+.stage-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--t-bdr)}
+.stage-meta .title{font:700 14px var(--t-label);letter-spacing:.04em;color:var(--t-tx)}
+.stage-meta .sub{font:400 10px monospace;color:var(--t-tx3);letter-spacing:.12em}
+
+.deck-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.deck{background:var(--t-bg2);border:1px solid var(--t-bdr);padding:14px 16px}
+
+/* deck header */
+.d-hdr{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--t-bdr)}
+.d-hdr-l{display:flex;align-items:baseline;gap:6px}
+.d-pname{font:400 10px var(--t-sn);color:var(--t-tx3);letter-spacing:.04em}
+.d-pnum{font:700 18px var(--t-mn);color:var(--t-tx);letter-spacing:-.02em}
+.badge{font:700 9px var(--t-mn);padding:2px 7px;letter-spacing:.08em;background:transparent;border:1px solid var(--t-bdr2)}
+.badge.stop{color:var(--t-red);border-color:var(--t-red-bdr)}
+.badge.play{color:var(--t-grn);border-color:var(--t-grn-bdr);background:var(--t-grn-bg)}
+.badge.cue{color:var(--t-ylw);border-color:var(--t-ylw-bdr)}
+.badge.onair{color:var(--t-accent);border-color:var(--t-accent-bdr);background:var(--t-accent-bg);margin-left:auto}
+.sync-cluster{display:flex;gap:4px;margin-left:auto}
+.sbtn{font:700 8px var(--t-mn);padding:3px 6px;border:1px solid var(--t-bdr2);color:var(--t-tx3);letter-spacing:.08em;cursor:pointer}
+.sbtn.on{background:var(--t-accent-bg);color:var(--t-accent);border-color:var(--t-accent-bdr)}
+.sbtn.master{border-color:var(--t-ylw-bdr);color:var(--t-ylw)}
+.d-hdr-r{display:flex;align-items:center;gap:8px}
+.hw-lbl{font:500 9px var(--t-mn);color:var(--t-tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px}
+.close-btn{width:22px;height:22px;border:1px solid var(--t-red-bdr);color:var(--t-red);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px}
+
+/* title row */
+.d-title{display:flex;align-items:baseline;gap:8px;margin:10px 0 12px;font-size:13px;min-height:18px}
+.d-artist{color:var(--t-tx2);font-weight:500}
+.d-dash{color:var(--t-tx4)}
+.d-track{color:var(--t-tx);font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* waveform wrapper */
+.wf-wrap{display:grid;grid-template-columns:72px 1fr 36px 48px;gap:8px;margin-bottom:12px;height:108px}
+.art{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
+.art-fill{position:absolute;inset:0;background:linear-gradient(135deg,var(--t-accent) 0%,var(--t-accent-dim) 100%);opacity:.5}
+.art-label{position:absolute;bottom:6px;left:6px;right:6px;font:500 8px var(--t-mn);color:#fff;letter-spacing:.1em;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+
+.wf-col{display:flex;flex-direction:column;gap:4px}
+.wf-detail{flex:1;background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
+.wf-overview{height:28px;background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
+.wf-svg{width:100%;height:100%;display:block}
+.wf-playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--t-accent);box-shadow:0 0 8px var(--t-accent);left:50%}
+.wf-pos-box{position:absolute;top:0;bottom:0;border:1px solid var(--t-accent);width:30%;left:40%;pointer-events:none}
+
+.vu-strip{display:flex;flex-direction:column;gap:4px}
+.vu-bar{flex:1;background:var(--t-bg3);position:relative;overflow:hidden;border:1px solid var(--t-bdr)}
+.vu-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,var(--t-grn) 0%,var(--t-grn) 60%,var(--t-ylw) 80%,var(--t-red) 100%)}
+.vu-fill.l{height:72%}
+.vu-fill.r{height:65%}
+.vu-lbl{font:700 7px var(--t-mn);color:var(--t-tx4);text-align:center;letter-spacing:.1em}
+
+.eq-strip{display:grid;grid-template-rows:1fr 1fr 1fr;gap:4px}
+.eq-knob{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;display:flex;align-items:center;justify-content:center;font:700 8px var(--t-mn);color:var(--t-tx3);letter-spacing:.06em}
+.eq-knob::after{content:'';position:absolute;top:4px;left:4px;right:4px;height:2px;background:var(--t-accent);opacity:.6}
+
+/* timecode + transport row */
+.tc-row{display:grid;grid-template-columns:1fr 180px;gap:16px;align-items:center}
+.tc-box{display:flex;flex-direction:column;gap:4px}
+.tc-head{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font:700 8px var(--t-mn);color:var(--t-tx4);letter-spacing:.14em;text-transform:uppercase}
+.tc-num{font:300 34px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 18px var(--t-accent-glow)}
+.tc-bpm{display:flex;align-items:baseline;gap:6px}
+.tc-bpm-v{font:300 20px var(--t-mn);color:var(--t-tx);font-variant-numeric:tabular-nums}
+.tc-bpm-l{font:500 8px var(--t-mn);color:var(--t-tx3);letter-spacing:.12em}
+.tc-pitch{font:500 10px var(--t-mn);color:var(--t-accent);font-variant-numeric:tabular-nums}
+.phasor{display:flex;gap:4px;margin-top:6px}
+.phs{width:8px;height:8px;border:1px solid var(--t-tx4)}
+.phs.on{background:var(--t-grn);border-color:var(--t-grn)}
+
+.transport{display:flex;flex-direction:column;gap:6px}
+.t-row{display:flex;gap:6px}
+.t-btn{flex:1;height:34px;border:1.5px solid var(--t-bdr2);background:transparent;color:var(--t-tx2);font:700 11px var(--t-mn);letter-spacing:.08em;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.t-btn:hover{border-color:var(--t-tx3)}
+.t-btn.cue{color:var(--t-ylw);border-color:var(--t-ylw-bdr)}
+.t-btn.cue.on{background:var(--t-ylw-bg);border-color:var(--t-ylw)}
+.t-btn.play{color:var(--t-grn);border-color:var(--t-grn-bdr)}
+.t-btn.play.on{background:var(--t-grn-bg);border-color:var(--t-grn);color:var(--t-grn)}
+.t-btn.stop{color:var(--t-red);border-color:var(--t-red-bdr);height:26px}
+
+/* SMPTE layer */
+.layer-row{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px;margin-top:8px;padding-top:10px;border-top:1px solid var(--t-bdr)}
+.l-mst{height:22px;padding:0 10px;background:transparent;border:1px solid var(--t-ylw-bdr);color:var(--t-ylw);font:700 9px var(--t-mn);letter-spacing:.08em;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:62px}
+.l-mst.on{background:var(--t-ylw-bg)}
+.l-ab{height:22px;background:transparent;border:1px solid var(--t-bdr2);color:var(--t-tx3);font:700 10px var(--t-mn);letter-spacing:.2em;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.l-ab.a.on{background:rgba(77,212,230,.12);border-color:#4dd4e6;color:#4dd4e6}
+.l-ab.b.on{background:rgba(255,126,179,.12);border-color:#ff7eb3;color:#ff7eb3}
+
+/* ═══════════════════ THEME 01: SHARP (Black + Electric Yellow) ═══════════════════ */
+[data-theme="sharp"]{
+  --t-bg:#000;
+  --t-bg2:#0a0a0c;
+  --t-bg3:#131318;
+  --t-bdr:#1e1e24;
+  --t-bdr2:#2a2a33;
+  --t-tx:#fff;
+  --t-tx2:#d0d0d8;
+  --t-tx3:#7b7b88;
+  --t-tx4:#3a3a42;
+  --t-accent:#f0ff00;
+  --t-accent-dim:#808808;
+  --t-accent-bg:rgba(240,255,0,.08);
+  --t-accent-bdr:rgba(240,255,0,.35);
+  --t-accent-glow:rgba(240,255,0,.18);
+  --t-grn:#00ff88;
+  --t-grn-bdr:rgba(0,255,136,.4);
+  --t-grn-bg:rgba(0,255,136,.08);
+  --t-ylw:#f0ff00;
+  --t-ylw-bdr:rgba(240,255,0,.4);
+  --t-ylw-bg:rgba(240,255,0,.1);
+  --t-red:#ff3b3b;
+  --t-red-bdr:rgba(255,59,59,.4);
+  --t-sn:'Space Grotesk',sans-serif;
+  --t-mn:'JetBrains Mono',monospace;
+  --t-seg:'JetBrains Mono',monospace;
+  --t-label:'Space Grotesk',sans-serif;
+}
+
+/* ═══════════════════ THEME 02: MONO (Pure Grayscale + Single Orange Accent) ═══════════════════ */
+[data-theme="mono"]{
+  --t-bg:#141414;
+  --t-bg2:#1a1a1a;
+  --t-bg3:#222;
+  --t-bdr:#2a2a2a;
+  --t-bdr2:#3a3a3a;
+  --t-tx:#f2f2f2;
+  --t-tx2:#c8c8c8;
+  --t-tx3:#888;
+  --t-tx4:#444;
+  --t-accent:#ff6b2c;
+  --t-accent-dim:#a34418;
+  --t-accent-bg:rgba(255,107,44,.1);
+  --t-accent-bdr:rgba(255,107,44,.4);
+  --t-accent-glow:rgba(255,107,44,.25);
+  --t-grn:#d0d0d0;
+  --t-grn-bdr:rgba(208,208,208,.35);
+  --t-grn-bg:rgba(208,208,208,.06);
+  --t-ylw:#ffcc66;
+  --t-ylw-bdr:rgba(255,204,102,.35);
+  --t-ylw-bg:rgba(255,204,102,.08);
+  --t-red:#ff6b2c;
+  --t-red-bdr:rgba(255,107,44,.35);
+  --t-sn:'Inter',sans-serif;
+  --t-mn:'IBM Plex Mono',monospace;
+  --t-seg:'IBM Plex Mono',monospace;
+  --t-label:'Inter',sans-serif;
+}
+
+/* ═══════════════════ THEME 03: SUNSET (Warm Gradient — Claude Brand-Adjacent) ═══════════════════ */
+[data-theme="sunset"]{
+  --t-bg:#1a1212;
+  --t-bg2:#221616;
+  --t-bg3:#2c1c1c;
+  --t-bdr:#3a2424;
+  --t-bdr2:#4a2e2e;
+  --t-tx:#fef2e8;
+  --t-tx2:#e8d4c4;
+  --t-tx3:#a08878;
+  --t-tx4:#5a4038;
+  --t-accent:#ff8a3d;
+  --t-accent-dim:#b25825;
+  --t-accent-bg:rgba(255,138,61,.12);
+  --t-accent-bdr:rgba(255,138,61,.5);
+  --t-accent-glow:rgba(255,138,61,.3);
+  --t-grn:#d4a574;
+  --t-grn-bdr:rgba(212,165,116,.4);
+  --t-grn-bg:rgba(212,165,116,.08);
+  --t-ylw:#ffcc33;
+  --t-ylw-bdr:rgba(255,204,51,.4);
+  --t-ylw-bg:rgba(255,204,51,.1);
+  --t-red:#ff5a5a;
+  --t-red-bdr:rgba(255,90,90,.4);
+  --t-sn:'DM Sans',sans-serif;
+  --t-mn:'DM Mono',monospace;
+  --t-seg:'DM Mono',monospace;
+  --t-label:'DM Sans',sans-serif;
+}
+
+/* ═══════════════════ THEME 04: CLINICAL (Light — Pro Broadcast) ═══════════════════ */
+[data-theme="clinical"]{
+  --t-bg:#f5f5f7;
+  --t-bg2:#fff;
+  --t-bg3:#ebebef;
+  --t-bdr:#d0d0d6;
+  --t-bdr2:#b8b8c0;
+  --t-tx:#0a0a12;
+  --t-tx2:#3a3a46;
+  --t-tx3:#7a7a86;
+  --t-tx4:#b0b0ba;
+  --t-accent:#1258e0;
+  --t-accent-dim:#0a3a8c;
+  --t-accent-bg:rgba(18,88,224,.08);
+  --t-accent-bdr:rgba(18,88,224,.35);
+  --t-accent-glow:rgba(18,88,224,.15);
+  --t-grn:#0a8c42;
+  --t-grn-bdr:rgba(10,140,66,.35);
+  --t-grn-bg:rgba(10,140,66,.08);
+  --t-ylw:#b88000;
+  --t-ylw-bdr:rgba(184,128,0,.35);
+  --t-ylw-bg:rgba(184,128,0,.08);
+  --t-red:#c41c1c;
+  --t-red-bdr:rgba(196,28,28,.35);
+  --t-sn:'Inter',sans-serif;
+  --t-mn:'JetBrains Mono',monospace;
+  --t-seg:'JetBrains Mono',monospace;
+  --t-label:'Inter',sans-serif;
+}
+
+/* ═══════════════════ ICON VARIANTS ═══════════════════ */
+/* SHARP: thin outline */
+[data-theme="sharp"] .icon-play path,[data-theme="sharp"] .icon-pause path,[data-theme="sharp"] .icon-stop path,[data-theme="sharp"] .icon-prev path{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+/* MONO: solid filled */
+[data-theme="mono"] .icon-play path,[data-theme="mono"] .icon-pause path,[data-theme="mono"] .icon-stop path,[data-theme="mono"] .icon-prev path{fill:currentColor;stroke:none}
+/* SUNSET: filled with slight round-cap via stroke + fill combo */
+[data-theme="sunset"] .icon-play path,[data-theme="sunset"] .icon-pause path,[data-theme="sunset"] .icon-stop path,[data-theme="sunset"] .icon-prev path{fill:currentColor}
+/* CLINICAL: thin outlined */
+[data-theme="clinical"] .icon-play path,[data-theme="clinical"] .icon-pause path,[data-theme="clinical"] .icon-stop path,[data-theme="clinical"] .icon-prev path{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:miter}
+
+.notes{margin-top:24px;padding:16px 20px;background:#14161c;border:1px solid #2a2a33;font:400 11px/1.7 monospace;color:#8b8b98}
+.notes b{color:#e2e2e9;font-weight:700}
+
+</style>
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0" aria-hidden="true">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 4h4v16H7zM13 4h4v16h-4z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 4h2v16H6zM20 4v16L9 12z"/></symbol>
+    <symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 2.5 21 7.5v9L12 21.5 3 16.5v-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <div class="hdr">
+    <div>
+      <h1>BRIDGE+ · Theme Variants</h1>
+      <div class="sub" style="margin-top:4px">claude design exploration · no border-radius · color + icon only</div>
+    </div>
+    <div class="sub">2026-04-20 · 4 themes</div>
+  </div>
+
+  <div class="picker" id="picker">
+    <button class="pbtn on" data-th="sharp">
+      <span class="pkey">01</span><span>SHARP</span>
+      <span class="psw"><i style="background:#000"></i><i style="background:#f0ff00"></i><i style="background:#00ff88"></i><i style="background:#ff3b3b"></i></span>
+    </button>
+    <button class="pbtn" data-th="mono">
+      <span class="pkey">02</span><span>MONO</span>
+      <span class="psw"><i style="background:#141414"></i><i style="background:#ff6b2c"></i><i style="background:#d0d0d0"></i><i style="background:#ffcc66"></i></span>
+    </button>
+    <button class="pbtn" data-th="sunset">
+      <span class="pkey">03</span><span>SUNSET</span>
+      <span class="psw"><i style="background:#1a1212"></i><i style="background:#ff8a3d"></i><i style="background:#ffcc33"></i><i style="background:#d4a574"></i></span>
+    </button>
+    <button class="pbtn" data-th="clinical">
+      <span class="pkey">04</span><span>CLINICAL</span>
+      <span class="psw"><i style="background:#f5f5f7;border:1px solid #d0d0d6"></i><i style="background:#1258e0"></i><i style="background:#0a8c42"></i><i style="background:#c41c1c"></i></span>
+    </button>
+  </div>
+
+  <div class="desc" id="desc">
+    <b style="color:#f0ff00">SHARP</b> · 순수 검정 + 전기 옐로우 액센트 · 얇은 아웃라인 아이콘 · HUD/테크니컬 프로덕션 느낌 · 야간 클럽/라이브 환경에서 눈부심 낮음
+  </div>
+
+  <div class="stage" data-theme="sharp" id="stage">
+    <div class="stage-meta">
+      <div class="title">DECK PANEL · 2-COL LAYOUT</div>
+      <div class="sub" id="themeLabel">THEME · SHARP</div>
+    </div>
+    <div class="deck-grid">
+
+      <!-- DECK 1 (HW, playing, master) -->
+      <div class="deck">
+        <div class="d-hdr">
+          <div class="d-hdr-l">
+            <span class="d-pname">PLAYER</span>
+            <span class="d-pnum">1</span>
+          </div>
+          <span class="badge play">PLAY</span>
+          <div class="sync-cluster">
+            <span class="sbtn on">SYNC</span>
+            <span class="sbtn master">MASTER</span>
+          </div>
+          <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
+          <button class="close-btn" style="visibility:hidden"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
+        </div>
+
+        <div class="d-title">
+          <span class="d-artist">Daft Punk</span>
+          <span class="d-dash">—</span>
+          <span class="d-track">Children Of The Night</span>
+        </div>
+
+        <div class="wf-wrap">
+          <div class="art"><div class="art-fill"></div><div class="art-label">HOMEWORK</div></div>
+          <div class="wf-col">
+            <div class="wf-detail">
+              <svg class="wf-svg" viewBox="0 0 400 70" preserveAspectRatio="none">
+                <path d="M0,35 Q5,18 10,35 T20,22 T30,30 T40,10 T50,25 T60,18 T70,28 T80,8 T90,32 T100,14 T110,24 T120,6 T130,26 T140,20 T150,30 T160,12 T170,28 T180,16 T190,24 T200,10 T210,30 T220,18 T230,26 T240,8 T250,22 T260,14 T270,32 T280,20 T290,28 T300,10 T310,24 T320,16 T330,30 T340,12 T350,26 T360,20 T370,14 T380,28 T390,18 T400,24 L400,70 L0,70 Z" fill="var(--t-accent)" opacity=".85"/>
+              </svg>
+              <div class="wf-playhead"></div>
+            </div>
+            <div class="wf-overview">
+              <svg class="wf-svg" viewBox="0 0 400 28" preserveAspectRatio="none">
+                <path d="M0,14 Q10,4 20,14 T40,10 T60,14 T80,6 T100,12 T120,8 T140,14 T160,4 T180,12 T200,8 T220,16 T240,6 T260,14 T280,10 T300,4 T320,12 T340,8 T360,14 T380,6 T400,12 L400,28 L0,28 Z" fill="var(--t-accent)" opacity=".45"/>
+              </svg>
+              <div class="wf-pos-box"></div>
+            </div>
+          </div>
+          <div class="vu-strip">
+            <div class="vu-bar"><div class="vu-fill l"></div></div>
+            <div class="vu-bar"><div class="vu-fill r"></div></div>
+            <div class="vu-lbl">L · R</div>
+          </div>
+          <div class="eq-strip">
+            <div class="eq-knob">HI</div>
+            <div class="eq-knob">MID</div>
+            <div class="eq-knob">LO</div>
+          </div>
+        </div>
+
+        <div class="tc-row">
+          <div class="tc-box">
+            <div class="tc-head"><span>H</span><span>M</span><span>S</span><span>F</span></div>
+            <div class="tc-num">00:01:24:12</div>
+            <div class="tc-bpm">
+              <span class="tc-bpm-v">128.00</span>
+              <span class="tc-bpm-l">BPM · 8A</span>
+              <span class="tc-pitch" style="margin-left:auto">+0.0%</span>
+            </div>
+            <div class="phasor">
+              <span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span>
+            </div>
+          </div>
+          <div class="transport">
+            <div class="t-row">
+              <button class="t-btn cue">CUE</button>
+              <button class="t-btn play on"><svg class="gi gi-pause icon-pause"><use href="#i-pause"/></svg></button>
+            </div>
+            <button class="t-btn stop"><svg class="gi gi-prev icon-prev"><use href="#i-prev"/></svg></button>
+          </div>
+        </div>
+
+        <div class="layer-row">
+          <button class="l-mst on">SMPTE</button>
+          <button class="l-ab a on">A</button>
+          <button class="l-ab b">B</button>
+        </div>
+      </div>
+
+      <!-- DECK 2 (Virtual, paused, not master) -->
+      <div class="deck">
+        <div class="d-hdr">
+          <div class="d-hdr-l">
+            <span class="d-pname">PLAYER</span>
+            <span class="d-pnum">2</span>
+          </div>
+          <span class="badge cue">CUE</span>
+          <div class="sync-cluster">
+            <span class="sbtn">SYNC</span>
+            <span class="sbtn">MASTER</span>
+          </div>
+          <span class="hw-lbl" style="color:var(--t-pur,var(--t-accent))">VIRTUAL</span>
+          <button class="close-btn"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
+        </div>
+
+        <div class="d-title">
+          <span class="d-artist">Tame Impala</span>
+          <span class="d-dash">—</span>
+          <span class="d-track">Let It Happen (Soulwax Remix)</span>
+        </div>
+
+        <div class="wf-wrap">
+          <div class="art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.7"></div><div class="art-label">CURRENTS</div></div>
+          <div class="wf-col">
+            <div class="wf-detail">
+              <svg class="wf-svg" viewBox="0 0 400 70" preserveAspectRatio="none">
+                <path d="M0,35 Q5,28 10,20 T20,15 T30,24 T40,18 T50,10 T60,22 T70,14 T80,26 T90,18 T100,8 T110,20 T120,12 T130,24 T140,16 T150,28 T160,10 T170,22 T180,14 T190,26 T200,18 T210,8 T220,20 T230,12 T240,24 T250,16 T260,28 T270,10 T280,22 T290,14 T300,26 T310,18 T320,30 T330,22 T340,14 T350,26 T360,18 T370,10 T380,22 T390,14 T400,26 L400,70 L0,70 Z" fill="var(--t-grn)" opacity=".6"/>
+              </svg>
+            </div>
+            <div class="wf-overview">
+              <svg class="wf-svg" viewBox="0 0 400 28" preserveAspectRatio="none">
+                <path d="M0,14 Q10,8 20,10 T40,6 T60,12 T80,8 T100,10 T120,4 T140,12 T160,8 T180,14 T200,6 T220,10 T240,12 T260,8 T280,4 T300,10 T320,6 T340,12 T360,8 T380,10 T400,14 L400,28 L0,28 Z" fill="var(--t-grn)" opacity=".35"/>
+              </svg>
+            </div>
+          </div>
+          <div class="vu-strip">
+            <div class="vu-bar"><div class="vu-fill l" style="height:0"></div></div>
+            <div class="vu-bar"><div class="vu-fill r" style="height:0"></div></div>
+            <div class="vu-lbl">L · R</div>
+          </div>
+          <div class="eq-strip">
+            <div class="eq-knob">HI</div>
+            <div class="eq-knob">MID</div>
+            <div class="eq-knob">LO</div>
+          </div>
+        </div>
+
+        <div class="tc-row">
+          <div class="tc-box">
+            <div class="tc-head"><span>H</span><span>M</span><span>S</span><span>F</span></div>
+            <div class="tc-num" style="color:var(--t-tx3);text-shadow:none">00:00:48:00</div>
+            <div class="tc-bpm">
+              <span class="tc-bpm-v">119.98</span>
+              <span class="tc-bpm-l">BPM · 5A</span>
+              <span class="tc-pitch" style="margin-left:auto;color:var(--t-tx3)">-0.02%</span>
+            </div>
+            <div class="phasor">
+              <span class="phs"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span>
+            </div>
+          </div>
+          <div class="transport">
+            <div class="t-row">
+              <button class="t-btn cue on">CUE</button>
+              <button class="t-btn play"><svg class="gi gi-play icon-play"><use href="#i-play"/></svg></button>
+            </div>
+            <button class="t-btn stop"><svg class="gi gi-prev icon-prev"><use href="#i-prev"/></svg></button>
+          </div>
+        </div>
+
+        <div class="layer-row">
+          <button class="l-mst">SMPTE</button>
+          <button class="l-ab a">A</button>
+          <button class="l-ab b on">B</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="notes">
+    <b>공통 원칙</b><br>
+    · border-radius 전부 0 — 어떤 요소도 라운딩 없음 (* { border-radius: 0 !important })<br>
+    · 현재 덱 구조 유지 — 헤더 / 타이틀 / 웨이브폼+아트+VU+EQ / 타임코드+BPM+phasor / transport / SMPTE A·B<br>
+    · 색상과 아이콘 스타일만 테마별로 변화 (레이아웃 불변)<br>
+    · SVG 아이콘은 CSS custom property 기반 stroke/fill 전환 (MONO·SUNSET 채움 / SHARP·CLINICAL 외곽선)<br>
+    <br>
+    <b>테마 캐릭터</b><br>
+    · <b style="color:#f0ff00">SHARP</b> — 야간 클럽용. 순흑 배경 + 전기 옐로우 / 아이콘 외곽선만 / 눈부심 최소.<br>
+    · <b style="color:#ff6b2c">MONO</b> — 모노크롬 스튜디오. 짙은 회색 + 단일 오렌지 accent / 아이콘 실루엣 채움 / 시그널 대비 명확.<br>
+    · <b style="color:#ff8a3d">SUNSET</b> — 따뜻한 무드. 적갈색 바탕 + 선셋 오렌지/앰버 / Claude 브랜드 근처 색조 / 라운지·세션용.<br>
+    · <b style="color:#1258e0">CLINICAL</b> — 라이트 테마. 오프화이트 + 네이비 블루 / 얇은 아웃라인 아이콘 / 브로드캐스트·리허설 스튜디오 / 주간 콘솔.<br>
+  </div>
+</div>
+
+<script>
+const stage=document.getElementById('stage'),desc=document.getElementById('desc'),themeLabel=document.getElementById('themeLabel');
+const DESCS={
+  sharp:'<b style="color:#f0ff00">SHARP</b> · 순수 검정 + 전기 옐로우 액센트 · 얇은 아웃라인 아이콘 · HUD/테크니컬 프로덕션 느낌 · 야간 클럽/라이브 환경에서 눈부심 낮음',
+  mono:'<b style="color:#ff6b2c">MONO</b> · 짙은 그레이스케일 + 단일 오렌지 accent · 실루엣 채움 아이콘 · 시그널 대비가 가장 강함 · 스튜디오 전용',
+  sunset:'<b style="color:#ff8a3d">SUNSET</b> · 적갈색 배경 + 선셋 오렌지/앰버 · Claude 브랜드 근처 색조 · 라운지·테라스·세션용 · 따뜻한 무드',
+  clinical:'<b style="color:#1258e0">CLINICAL</b> · 오프화이트 라이트 테마 + 네이비 블루 accent · 얇은 아웃라인 아이콘 · 브로드캐스트/리허설 스튜디오 · 주간 콘솔용'
+};
+document.getElementById('picker').addEventListener('click',e=>{
+  const b=e.target.closest('.pbtn');if(!b)return;
+  document.querySelectorAll('.pbtn').forEach(p=>p.classList.toggle('on',p===b));
+  const th=b.dataset.th;
+  stage.dataset.theme=th;
+  themeLabel.textContent='THEME · '+b.querySelector('span:nth-child(2)').textContent;
+  desc.innerHTML=DESCS[th];
+});
+</script>
+</body></html>
