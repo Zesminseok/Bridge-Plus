@@ -205,6 +205,7 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     bridge.onWaveformDetail=(pn,wf)=>_send('bridge:wfdetail',{playerNum:pn,...wf});
     bridge.onCuePoints=(pn,cues)=>_send('bridge:cuepoints',{playerNum:pn,cues});
     bridge.onBeatGrid=(pn,bg)=>_send('bridge:beatgrid',{playerNum:pn,...bg});
+    bridge.onSongStructure=(pn,ss)=>_send('bridge:songstruct',{playerNum:pn,...ss});
     bridge.onAlbumArt=(pn,b64)=>_send('bridge:albumart',{playerNum:pn,art:b64});
     bridge.onTrackMetadata=(pn,meta)=>_send('bridge:trackmeta',{playerNum:pn,...meta});
     await bridge.start();push();

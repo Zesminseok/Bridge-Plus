@@ -1012,6 +1012,7 @@ class BridgeCore {
     this.onWaveformDetail  = null;  // (playerNum, {pts, wfType:'detail'}) => {}
     this.onCuePoints       = null;  // (playerNum, [{name, type, time, colorId}]) => {}
     this.onBeatGrid        = null;  // (playerNum, {beats:[{beatInBar,bpm,timeMs}], baseBpm}) => {}
+    this.onSongStructure   = null;  // (playerNum, {phrases:[{timeMs,kind,label,color,beat}], endMs, mood}) => {}
     this.onAlbumArt       = null;   // (playerNum, jpegBuffer) => {}
     this._artCache = {};  // trackId -> {playerNum, jpegBase64}
     this._beatGrids = {};   // playerNum -> [{beatInBar, bpm, timeMs}]
@@ -1256,7 +1257,7 @@ class BridgeCore {
     if(this._djmCapture) this.stopDJMCapture();
     // remove all callbacks to prevent post-stop activity
     this.onNodeDiscovered=null; this.onCDJStatus=null; this.onDJMStatus=null;
-    this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null; this.onWaveformDetail=null; this.onCuePoints=null; this.onBeatGrid=null;
+    this.onDJMMeter=null; this.onDeviceList=null; this.onWaveformPreview=null; this.onWaveformDetail=null; this.onCuePoints=null; this.onBeatGrid=null; this.onSongStructure=null;
     this.onAlbumArt=null; this.onTrackMetadata=null;
     console.log('[BridgeCore] stop: all sockets and connections closed');
   }
@@ -3431,6 +3432,12 @@ class BridgeCore {
         .catch(e=>console.warn(`[DBSRV] P${playerNum} cue points failed:`,e.message));
       this._dbserverBeatGrid(ip, slot, trackId, playerNum, tt)
         .catch(e=>console.warn(`[DBSRV] P${playerNum} beat grid failed:`,e.message));
+      // PSSI 곡구조는 beat grid 이후에 요청해야 timeMs 계산 가능
+      // → beat grid 완료 대기 후 실행 (짧은 지연으로 충분)
+      setTimeout(()=>{
+        this._dbserverSongStructure(ip, slot, trackId, playerNum, tt)
+          .catch(e=>console.warn(`[DBSRV] P${playerNum} song structure failed:`,e.message));
+      }, 1500);
     }catch(e){
       throw e;
     }finally{
@@ -3843,6 +3850,165 @@ class BridgeCore {
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} beat grid failed:`,e.message);
     }finally{try{sock?.destroy();}catch(_){}}
+  }
+
+  // PSSI — 곡 구조(프레이즈) 분석. 0x2c04 ANLZ tag 요청, rekordbox가 분석한 경우에만 존재.
+  // 반환: { phrases:[{timeMs, kind, label, color, beat}], endMs, mood }
+  async _dbserverSongStructure(ip, slot, trackId, playerNum, trackType){
+    const spoofPlayer = 5;
+    let sock;
+    try{
+      sock = await this._dbConnect(ip, spoofPlayer);
+      const rmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
+      // PSSI magic: 'P'(0x50)'S'(0x53)'S'(0x53)'I'(0x49) BE UInt32 = 0x50535349
+      const req = this._dbBuildMsg(1, 0x2c04, [
+        rmst, this._dbArg4(trackId), this._dbArg4(0), this._dbArg4(0x50535349)
+      ]);
+      sock.write(req);
+      const resp = await this._dbReadFullResponse(sock);
+      // ANLZ binary blob 추출
+      let anlzData=null;
+      for(let i=0;i<resp.length-5;i++){
+        if(resp[i]===0x14){
+          const len=resp.readUInt32BE(i+1);
+          if(len>40 && len<200000 && i+5+len<=resp.length){
+            anlzData=resp.slice(i+5,i+5+len);
+            break;
+          }
+        }
+      }
+      if(!anlzData || anlzData.length<40){
+        console.log(`[DBSRV] P${playerNum} song structure: no ANLZ data (${resp?.length||0}B resp)`);
+        return;
+      }
+      // ANLZ 태그 리스트 순회 → PSSI 섹션 위치 찾기
+      let pssiStart=-1, pssiEnd=-1;
+      let pos=0;
+      while(pos<anlzData.length-12){
+        const tag=anlzData.toString('ascii',pos,pos+4);
+        const tHL=anlzData.readUInt32BE(pos+4);
+        const tTL=anlzData.readUInt32BE(pos+8);
+        if(tag==='PSSI'){ pssiStart=pos; pssiEnd=pos+tTL; break; }
+        if(tTL===0||tTL>anlzData.length-pos)break;
+        pos+=tTL;
+      }
+      if(pssiStart<0){
+        console.log(`[DBSRV] P${playerNum} song structure: PSSI tag absent (track not analyzed by rekordbox?)`);
+        return;
+      }
+      const body = anlzData.slice(pssiStart, pssiEnd);
+      // PSSI body layout (BE, Deep-Symmetry/Crate Digger 기준):
+      //  0:  "PSSI"
+      //  4:  u4 len_header
+      //  8:  u4 len_tag
+      // 12:  u4 len_entry_bytes (or padding)
+      // 16:  u2 mood_high          (1=intro, 2=up, 3=down, 5=chorus, 6=outro)
+      // 18:  u2 entry_count
+      // 20:  u2 raw_mood           (>20 이면 XOR 난독화 적용)
+      // 22:  u2 end_beat
+      // 24:  u2 bank               (하이레벨 밴크 기호)
+      // 26:  u2 padding
+      // 28:  entries[ ] 24B each
+      if(body.length<32){
+        console.log(`[DBSRV] P${playerNum} song structure: body too short (${body.length}B)`);
+        return;
+      }
+      const hiMood = body.readUInt16BE(16);
+      const entryCount = body.readUInt16BE(18);
+      const rawMood = body.readUInt16BE(20);
+      const endBeat = body.readUInt16BE(22);
+      const entriesStart = 28;
+      if(entryCount<=0 || entryCount>300){
+        console.log(`[DBSRV] P${playerNum} song structure: invalid count=${entryCount}`);
+        return;
+      }
+      if(entriesStart + entryCount*24 > body.length){
+        console.log(`[DBSRV] P${playerNum} song structure: body cut (${body.length}B vs need ${entriesStart+entryCount*24})`);
+        return;
+      }
+      // XOR 난독화 (raw_mood > 20 일 때)
+      // key = XOR_MASK[i%19] + endBeat, applied from entriesStart
+      const buf = Buffer.from(body); // writable copy
+      if(rawMood > 20){
+        const XOR_MASK = Buffer.from([
+          0xCB,0xE1,0xEE,0xFA,0xE5,0xEE,0xAD,0xEE,0xE9,0xD2,
+          0xE9,0xEB,0xE1,0xE9,0xF3,0xE8,0xE9,0xF4,0xE1
+        ]);
+        const eb = endBeat & 0xFF;
+        const total = entryCount*24;
+        for(let i=0;i<total;i++){
+          const m = (XOR_MASK[i%19] + eb) & 0xFF;
+          buf[entriesStart+i] = buf[entriesStart+i] ^ m;
+        }
+      }
+      // 비트그리드 준비 (없으면 BPM+anchor로 추정)
+      const beatGrid = this._beatGrids && this._beatGrids[playerNum];
+      const b2ms = (beat)=>{
+        if(beatGrid && beat>=1 && beat<=beatGrid.length) return beatGrid[beat-1].timeMs;
+        return 0;
+      };
+      // entries 파싱
+      const phrases = [];
+      for(let e=0;e<entryCount;e++){
+        const off = entriesStart + e*24;
+        const idx  = buf.readUInt16BE(off+0);
+        const beat = buf.readUInt16BE(off+2);
+        const kind = buf.readUInt16BE(off+4);
+        const timeMs = b2ms(beat);
+        const meta = this._phraseKindMeta(hiMood, kind);
+        phrases.push({ index:idx, beat, kind, timeMs, label:meta.label, color:meta.color });
+      }
+      // 트랙 종료 시각
+      let endMs = b2ms(endBeat);
+      if(!endMs){
+        if(beatGrid && beatGrid.length>0) endMs = beatGrid[beatGrid.length-1].timeMs;
+        else if(this._bgTrackLen && this._bgTrackLen[playerNum]) endMs = this._bgTrackLen[playerNum];
+      }
+      // 시각순 정렬 + 유효한 엔트리만
+      phrases.sort((a,b)=>a.timeMs-b.timeMs);
+      const valid = phrases.filter(p=>p.timeMs>=0);
+      if(valid.length>0){
+        this._songStructures = this._songStructures || {};
+        this._songStructures[playerNum] = { phrases:valid, endMs, mood:hiMood };
+        this.onSongStructure?.(playerNum, { phrases:valid, endMs, mood:hiMood });
+        console.log(`[DBSRV] P${playerNum} song structure: ${valid.length} phrases, mood=${hiMood}, endBeat=${endBeat}, endMs=${endMs}`);
+      }
+    }catch(e){
+      console.warn(`[DBSRV] P${playerNum} song structure failed:`,e.message);
+    }finally{try{sock?.destroy();}catch(_){}}
+  }
+
+  // 프레이즈 종류 → 라벨/색상 맵. mood_high 에 따라 의미가 달라지지만
+  // 세부 스펙 미확정 구간은 kind 숫자 기반 기본 매핑으로 표시.
+  _phraseKindMeta(hiMood, kind){
+    const COL_INTRO='#2c5fe0', COL_VERSE='#32be5a', COL_VERSE2='#30a8a0';
+    const COL_BRIDGE='#8844cc', COL_CHORUS='#e04080', COL_OUTRO='#2c5fe0';
+    const COL_UP='#f59e0b', COL_DOWN='#64748b', COL_DEFAULT='#6b7280';
+    // mood_high=1: intro/outro 중심 구조
+    if(hiMood===1){
+      if(kind===1) return {label:'Intro', color:COL_INTRO};
+      if(kind===2) return {label:'Verse', color:COL_VERSE};
+      if(kind===3) return {label:'Bridge', color:COL_BRIDGE};
+      if(kind===5) return {label:'Chorus', color:COL_CHORUS};
+      if(kind===6) return {label:'Outro', color:COL_OUTRO};
+    }
+    // mood_high=2: up-tempo 구조
+    if(hiMood===2){
+      if(kind>=1 && kind<=3) return {label:`Up${kind}`, color:COL_UP};
+      if(kind===5) return {label:'Chorus', color:COL_CHORUS};
+      if(kind===6) return {label:'Outro', color:COL_OUTRO};
+    }
+    // mood_high=3: down-tempo 구조
+    if(hiMood===3){
+      if(kind>=1 && kind<=3) return {label:`Down${kind}`, color:COL_DOWN};
+      if(kind===5) return {label:'Chorus', color:COL_CHORUS};
+      if(kind===6) return {label:'Outro', color:COL_OUTRO};
+    }
+    // 기본 매핑
+    const DEF={1:{label:'Intro',color:COL_INTRO},2:{label:'Verse',color:COL_VERSE},
+      3:{label:'Verse2',color:COL_VERSE2},4:{label:'Bridge',color:COL_BRIDGE},
+      5:{label:'Chorus',color:COL_CHORUS},6:{label:'Outro',color:COL_OUTRO}};
+    return DEF[kind] || {label:`P${kind}`, color:COL_DEFAULT};
   }
 
   async _dbserverArtwork(ip, slot, artworkId, playerNum, cacheKey){

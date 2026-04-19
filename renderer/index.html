@@ -1586,16 +1586,46 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
   // GPU 셰이더는 서브픽셀 정밀도로 웨이브폼을 그리므로, 비트그리드도 매 프레임
   // 서브픽셀(float) 위치에 그려야 정렬이 맞는다. 뷰포트 내 비트선 ~20개 × fillRect
   // 는 1ms 이내 → 자원 영향 무시.
+  // Phrase bar (PSSI Song Structure) — 상단 10px 색상 띠
+  // 표시 영역: y=0..10. 나머지 오버레이(핫큐/비트그리드)는 y=10+ 에 배치
+  const phraseH=10;
+  const phraseActive=!!(d._songStructure&&d._songStructure.phrases&&d._songStructure.phrases.length);
+  if(phraseActive){
+    const phrases=d._songStructure.phrases;
+    const trackEndMs=d._songStructure.endMs||d.dur||0;
+    for(let i=0;i<phrases.length;i++){
+      const p=phrases[i];
+      const nextMs=(phrases[i+1]?phrases[i+1].timeMs:trackEndMs);
+      if(nextMs<=p.timeMs)continue;
+      const sx=(p.timeMs-viewL)/msPerPx, ex=(nextMs-viewL)/msPerPx;
+      if(ex<0||sx>=W)continue;
+      const lx=Math.max(0,sx),rx=Math.min(W,ex);
+      ctx.fillStyle=p.color||'#6b7280';
+      ctx.fillRect(lx,0,rx-lx,phraseH);
+      // 세그먼트 구분선
+      if(sx>=0&&sx<W){ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(sx,0,1,phraseH);}
+      // 라벨 (세그먼트 폭 >32px 일 때만)
+      if(rx-lx>32&&p.label){
+        ctx.fillStyle='rgba(255,255,255,.95)';
+        ctx.font='bold 8px "DM Mono",monospace';
+        ctx.textBaseline='top';
+        ctx.fillText(p.label,lx+3,1);
+      }
+    }
+  }
+  const topY=phraseActive?phraseH:0; // 핫큐/비트그리드 시작 Y
+
   if(d.bpm>0&&d.dur>0){
     const drawBeatAt=(bMs,isBar)=>{
       const fpx=(bMs-viewL)/msPerPx; // float
       if(fpx<1||fpx>=W-1)return;
       if(isBar){
-        ctx.fillStyle='rgba(255,0,0,.25)';ctx.fillRect(fpx-.5,0,1,H);
-        ctx.fillStyle='rgba(255,32,32,.8)';ctx.fillRect(fpx-1,0,3,5);ctx.fillRect(fpx-1,H-5,3,5);
+        // 다운비트: 두꺼운 빨간 라인(3px) + 상하 큰 단자(7px)
+        ctx.fillStyle='rgba(255,0,0,.35)';ctx.fillRect(fpx-1.5,topY,3,H-topY);
+        ctx.fillStyle='rgba(255,40,40,.9)';ctx.fillRect(fpx-2,topY,4,7);ctx.fillRect(fpx-2,H-7,4,7);
       }else{
-        ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(fpx-.5,0,1,H);
-        ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(fpx-1,0,3,3);ctx.fillRect(fpx-1,H-3,3,3);
+        ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(fpx-.5,topY,1,H-topY);
+        ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(fpx-1,topY,3,3);ctx.fillRect(fpx-1,H-3,3,3);
       }
     };
     if(d._beatGrid&&d._beatGrid.length>0){
@@ -1619,7 +1649,9 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
   }
   _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX);
 
-  const cueKey=`${_getZoomCueStateKey(d)}#${W}x${H}#${msPerPx}`;
+  // 큐 캐시 키에 topY 포함 → 프레이즈바 활성 상태 변경 시 캐시 재생성
+  const cueKey=`${_getZoomCueStateKey(d)}#${W}x${H}#${msPerPx}#t${topY}`;
+  const cueTopY=topY; // 클로저 캡처
   const cueCache=_ensureZoomScrollingCache(d,'_zoomCueCache',cueKey,W,H,viewL,viewR,msPerPx,(octx,cw,ch,startMs)=>{
     const _cueColorsZ={0:'#ff1744',1:'#ff9100',2:'#ffd600',3:'#00e676',4:'#00b0ff',5:'#d500f9',6:'#ff4081',7:'#e0e0e0'};
     function _cueCol(cue){
@@ -1628,8 +1660,14 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
       if(cue.type==='loop')return '#ff8800';
       return '#fff';
     }
+    // 레이아웃: 핫큐=상단(cueTopY 바로 아래), 메모리큐=하단(ch-12..ch)
+    // 가이드 라인은 cueTopY..ch 전체에 그어 위치 식별 용이
+    const hotTopY=cueTopY;           // 핫큐 마커 시작 Y
+    const hotMarkerH=12;             // 핫큐 삼각형 높이
+    const hotLabelW=14,hotLabelH=14; // 핫큐 라벨 박스
+    const memMarkerH=10;             // 메모리큐 삼각형 높이
     if(d.cuePoints&&d.dur>0){
-      octx.font='bold 8px "DM Mono",monospace';
+      octx.font='bold 11px "DM Mono",monospace';
       for(const cue of d.cuePoints){
         const cpx=Math.round((cue.timeMs-startMs)/msPerPx);
         const col=_cueCol(cue);
@@ -1638,36 +1676,48 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
           if(epx>Math.max(cpx,0)&&cpx<cw){
             const lx=Math.max(0,cpx),rx=Math.min(cw,epx);
             octx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.08)').replace('rgb(','rgba('):col+'14';
-            octx.fillRect(lx,0,rx-lx,ch);
+            octx.fillRect(lx,cueTopY,rx-lx,ch-cueTopY);
           }
         }
-        if(cpx<-10||cpx>=cw+10)continue;
-        octx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.6)').replace('rgb(','rgba('):col+'99';
-        octx.fillRect(cpx-.5,0,1,ch);
+        if(cpx<-16||cpx>=cw+16)continue;
+        // 세로 가이드 라인 (전체 높이)
+        octx.fillStyle=col.startsWith('rgb')?col.replace(')',',0.55)').replace('rgb(','rgba('):col+'8c';
+        octx.fillRect(cpx-.5,cueTopY,1,ch-cueTopY);
         if(cue.type==='hot'){
-          octx.fillStyle=col;octx.beginPath();octx.moveTo(cpx-4,0);octx.lineTo(cpx+4,0);octx.lineTo(cpx,5);octx.closePath();octx.fill();
+          // 상단 아래로 향한 삼각형(크게)
+          octx.fillStyle=col;octx.beginPath();
+          octx.moveTo(cpx-7,hotTopY);octx.lineTo(cpx+7,hotTopY);octx.lineTo(cpx,hotTopY+hotMarkerH);
+          octx.closePath();octx.fill();
           if(cue.hotCueNum>0){
             const lbl=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
-            octx.fillStyle='rgba(0,0,0,.75)';octx.fillRect(cpx+2,0,10,11);
-            octx.fillStyle=col;octx.fillText(lbl,cpx+3,9);
+            octx.fillStyle='rgba(0,0,0,.8)';octx.fillRect(cpx+3,hotTopY,hotLabelW,hotLabelH);
+            octx.fillStyle=col;octx.fillText(lbl,cpx+5,hotTopY+11);
           }
         }else if(cue.type==='loop'){
+          // 루프 시작: 상단 꺾쇠 + 라벨
           octx.fillStyle=col;
-          octx.fillRect(cpx-1,0,2,6);octx.fillRect(cpx-1,0,5,2);
+          octx.fillRect(cpx-1,hotTopY,2,8);octx.fillRect(cpx-1,hotTopY,6,2);
           const lbl=cue.hotCueNum>0?String.fromCharCode(64+cue.hotCueNum):'L';
-          octx.fillStyle='rgba(0,0,0,.75)';octx.fillRect(cpx+2,0,10,11);
-          octx.fillStyle=col;octx.fillText(lbl,cpx+3,9);
+          octx.fillStyle='rgba(0,0,0,.8)';octx.fillRect(cpx+3,hotTopY,hotLabelW,hotLabelH);
+          octx.fillStyle=col;octx.fillText(lbl,cpx+5,hotTopY+11);
           if(cue.loopEndMs>0){
             const epx=Math.round((cue.loopEndMs-startMs)/msPerPx);
             if(epx>0&&epx<cw){
               octx.fillStyle=col;
-              octx.fillRect(epx-1,0,2,6);octx.fillRect(epx-5,0,5,2);
+              octx.fillRect(epx-1,hotTopY,2,8);octx.fillRect(epx-6,hotTopY,6,2);
             }
           }
         }else{
-          octx.fillStyle=col;octx.beginPath();octx.moveTo(cpx,0);octx.lineTo(cpx+3,3);octx.lineTo(cpx,6);octx.lineTo(cpx-3,3);octx.closePath();octx.fill();
-          octx.fillStyle='rgba(0,0,0,.75)';octx.fillRect(cpx+2,0,10,11);
-          octx.fillStyle=col;octx.fillText('M',cpx+3,9);
+          // 메모리큐: 하단에서 위로 향한 큰 삼각형, 라벨 없음
+          const apex=ch-memMarkerH, base=ch-1;
+          octx.fillStyle=col;octx.beginPath();
+          octx.moveTo(cpx-6,base);octx.lineTo(cpx+6,base);octx.lineTo(cpx,apex);
+          octx.closePath();octx.fill();
+          // 외곽 하이라이트
+          octx.strokeStyle='rgba(255,255,255,.35)';octx.lineWidth=1;
+          octx.beginPath();
+          octx.moveTo(cpx-6,base);octx.lineTo(cpx,apex);octx.lineTo(cpx+6,base);
+          octx.stroke();
         }
       }
     }
@@ -4743,6 +4793,13 @@ if(E){
     dk._beatGrid=d.beats; // [{beatInBar, bpm, timeMs}]
     if(d.baseBpm>0){dk.baseBpm=d.baseBpm;dk._metaBaseBpm=true;}
     console.log(`[UI] P${d.playerNum} beat grid: ${d.beats.length} beats, baseBpm=${d.baseBpm}`);
+  });
+  // PSSI Song Structure (rekordbox 프레이즈 분석) — 상단 프레이즈 바 표시용
+  window.bridge.onSongStructure?.(d=>{
+    const li=d.playerNum-1;
+    const dk=DECKS[li];if(!dk)return;
+    dk._songStructure={phrases:d.phrases||[], endMs:d.endMs||0, mood:d.mood||0};
+    console.log(`[UI] P${d.playerNum} song struct: ${(d.phrases||[]).length} phrases, mood=${d.mood}`);
   });
   // HW detail waveform from dbserver (150pts/sec — for zoom display)
   window.bridge.onWaveformDetail?.(d=>{
