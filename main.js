@@ -361,11 +361,25 @@ class LinkBridge{
     const b=this._readBeat();const q=quantum||4;
     return ((b%q)+q)%q;
   }
+  // peers 폴링 — setNumPeersCallback (ThreadSafeFunction) 경로를 회피.
+  // Link 내부 쓰레드에서 JS 콜백을 호출하다가 abort() 크래시가 발생해
+  // 콜백 등록을 제거하고 getStatus 폴링 시점에 동기 조회한다.
+  _readPeers(){
+    const L=this._link;if(!L)return 0;
+    try{
+      if(typeof L.getNumPeers==='function') return L.getNumPeers()|0;
+      if(typeof L.numPeers==='function') return L.numPeers()|0;
+      if('numPeers' in L) return (L.numPeers|0);
+    }catch(_){}
+    return 0;
+  }
   getStatus(){
     const quantum=4;
     const beat=this._enabled?this._readBeat():0;
     const phase=this._enabled?this._readPhase(quantum):0;
-    return {available:this._available,enabled:this._enabled,peers:this._peers,bpm:this._currentBpm,lastSent:this._lastSentBpm,beat,phase,quantum};
+    const peers=this._enabled?this._readPeers():0;
+    this._peers=peers;
+    return {available:this._available,enabled:this._enabled,peers,bpm:this._currentBpm,lastSent:this._lastSentBpm,beat,phase,quantum};
   }
   setEnabled(on){
     this._enabled=!!on;
@@ -374,12 +388,7 @@ class LinkBridge{
         try{
           this._link=new this._LinkCtor(120.0);
           this._link.enable(true);
-          // 피어 수 콜백 (버전별 API 차이 흡수)
-          if(typeof this._link.setNumPeersCallback==='function'){
-            this._link.setNumPeersCallback(n=>{this._peers=n|0;});
-          } else if(typeof this._link.on==='function'){
-            this._link.on('numPeers',n=>{this._peers=n|0;});
-          }
+          // 피어 수는 getStatus 폴링에서 동기 조회 (ThreadSafeFunction 콜백 abort 회피)
           console.log('[LINK] session started (BPM-only mode)');
         }catch(e){
           console.warn('[LINK] start error:',e.message);
