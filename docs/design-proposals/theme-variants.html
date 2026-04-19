@@ -247,33 +247,49 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .v-strip .ctl-mini .l-mst,.v-strip .ctl-mini .l-ab{font-size:8px}
 
 /* ═══════════════════════════════════════════════════════ */
-/* ═════════ E · TOWER — 세로 콘솔 column ═══════════════ */
+/* ═════════ E · TOWER — 세로 콘솔 column (콤팩트) ══════ */
 /* ═══════════════════════════════════════════════════════ */
-.v-tower-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--u2)}
-.v-tower{padding:var(--u3) var(--u2);gap:var(--u2);min-height:560px}
-.v-tower .tw-head{display:flex;flex-direction:column;align-items:center;gap:var(--u);padding-bottom:var(--u2);border-bottom:1px solid var(--t-bdr);height:auto}
-.v-tower .tw-pnum{font:700 26px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em}
-.v-tower .tw-pname{font:400 8px var(--t-sn);color:var(--t-tx3);letter-spacing:.2em;text-transform:uppercase}
-.v-tower .tw-state-row{display:flex;gap:var(--u);justify-content:center;flex-wrap:wrap}
-.v-tower .sync-cluster{margin:0;justify-content:center}
-.v-tower .tw-art{width:100%;aspect-ratio:1/1}
-.v-tower .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;min-height:32px}
-.v-tower .tw-title .d-artist{font-size:10px;color:var(--t-tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.v-tower .tw-title .d-track{font-size:11px;color:var(--t-tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.v-tower .tw-wf{height:40px;background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
-.v-tower .tw-tc{text-align:center;font:300 22px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 12px var(--t-accent-glow);line-height:1;padding:var(--u) 0}
+/* 폭 180px 고정. 4~6 덱을 가로로 나열 (DJM 채널 스트립과 동일 폭감) */
+.v-tower-grid{display:flex;flex-wrap:wrap;gap:var(--u2);justify-content:flex-start}
+.v-tower{width:180px;padding:var(--u2);gap:var(--u2);display:flex;flex-direction:column}
+/* HEAD — 한 줄 컴팩트: [#] [badge] [model] */
+.v-tower .tw-head{display:flex;flex-direction:column;gap:var(--u);padding-bottom:var(--u);border-bottom:1px solid var(--t-bdr);height:auto}
+.v-tower .tw-head-top{display:flex;align-items:baseline;gap:var(--u2);height:22px}
+.v-tower .tw-pname{font:400 7px var(--t-sn);color:var(--t-tx3);letter-spacing:.24em;text-transform:uppercase;line-height:1}
+.v-tower .tw-pnum{font:700 18px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em}
+.v-tower .tw-head-top .badge{margin-left:auto}
+.v-tower .tw-head-btm{display:flex;align-items:center;gap:var(--u);justify-content:space-between}
+.v-tower .tw-head-btm .hw-lbl{font-size:8px}
+.v-tower .sync-cluster{margin:0;gap:3px}
+.v-tower .sbtn{font-size:7px;padding:0 5px;height:16px}
+/* ART — 최대 140px, 가운데 정렬 */
+.v-tower .tw-art{width:140px;height:140px;margin:0 auto}
+.v-tower .tw-art .art-label{font-size:7px}
+/* TITLE */
+.v-tower .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;min-height:30px}
+.v-tower .tw-title .d-artist{font-size:10px;color:var(--t-tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.v-tower .tw-title .d-track{font-size:11px;color:var(--t-tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+/* WAVE */
+.v-tower .tw-wf{height:32px;background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
+/* TC */
+.v-tower .tw-tc{text-align:center;font:300 18px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 10px var(--t-accent-glow);line-height:1;padding:var(--u) 0}
 .v-tower .tw-tc.inactive{color:var(--t-tx3);text-shadow:none}
+/* BPM */
 .v-tower .tw-bpm{display:flex;flex-direction:column;align-items:center;gap:3px}
-.v-tower .tw-bpm-cur{font:700 17px var(--t-mn);color:var(--t-accent);padding:3px 10px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums}
+.v-tower .tw-bpm-cur{font:700 15px var(--t-mn);color:var(--t-accent);padding:2px 8px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1.1}
 .v-tower .tw-bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
-.v-tower .tw-bpm-meta{font:500 9px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums}
-.v-tower .tw-mixer{display:grid;grid-template-columns:1fr 1fr;gap:var(--u);align-items:stretch}
-.v-tower .tw-mixer .vu-strip{height:80px}
-.v-tower .tw-mixer .eq-strip{gap:var(--u)}
+.v-tower .tw-bpm-meta{font:500 8px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums}
+/* MIXER — VU 좌 | EQ 가로 우 */
+.v-tower .tw-mixer{display:grid;grid-template-columns:36px 1fr;gap:var(--u2);align-items:stretch;height:58px}
+.v-tower .tw-mixer .vu-strip{padding:2px}
+.v-tower .tw-mixer .eq-strip{flex-direction:row;justify-content:space-around;padding:2px 0;gap:var(--u)}
+.v-tower .tw-mixer .eq-knob svg{width:24px;height:24px}
+/* CTL */
 .v-tower .tw-ctl{display:flex;flex-direction:column;gap:var(--u);margin-top:auto}
 .v-tower .tw-ctl .t-row{display:flex;gap:var(--u)}
-.v-tower .tw-ctl .t-btn{flex:1;height:var(--h-btn-md);font-size:10px}
-.v-tower .tw-ctl .smpte-row{height:var(--h-btn-md)}
+.v-tower .tw-ctl .t-btn{flex:1;height:26px;font-size:9px}
+.v-tower .tw-ctl .smpte-row{height:22px}
+.v-tower .tw-ctl .l-mst,.v-tower .tw-ctl .l-ab{font-size:8px}
 
 </style>
 </head>
@@ -861,13 +877,15 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 
       <div class="deck v-tower">
         <div class="tw-head">
-          <div class="tw-pname">PLAYER</div>
-          <div class="tw-pnum">1</div>
-          <div class="tw-state-row">
+          <div class="tw-head-top">
+            <span class="tw-pname">PLAYER</span>
+            <span class="tw-pnum">1</span>
             <span class="badge play">PLAY</span>
-            <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
           </div>
-          <div class="sync-cluster"><span class="sbtn on">SYNC</span><span class="sbtn master">MASTER</span></div>
+          <div class="tw-head-btm">
+            <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
+            <div class="sync-cluster"><span class="sbtn on">SYNC</span><span class="sbtn master">MASTER</span></div>
+          </div>
         </div>
         <div class="art tw-art"><div class="art-fill"></div><div class="art-label">HOMEWORK</div></div>
         <div class="tw-title">
@@ -907,13 +925,15 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 
       <div class="deck v-tower">
         <div class="tw-head">
-          <div class="tw-pname">PLAYER</div>
-          <div class="tw-pnum">2</div>
-          <div class="tw-state-row">
+          <div class="tw-head-top">
+            <span class="tw-pname">PLAYER</span>
+            <span class="tw-pnum">2</span>
             <span class="badge cue">CUE</span>
-            <span class="hw-lbl" style="color:var(--t-accent)">VIRTUAL</span>
           </div>
-          <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
+          <div class="tw-head-btm">
+            <span class="hw-lbl" style="color:var(--t-accent)">VIRTUAL</span>
+            <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
+          </div>
         </div>
         <div class="art tw-art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.7"></div><div class="art-label">CURRENTS</div></div>
         <div class="tw-title">
@@ -954,13 +974,15 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 
       <div class="deck v-tower">
         <div class="tw-head">
-          <div class="tw-pname">PLAYER</div>
-          <div class="tw-pnum">3</div>
-          <div class="tw-state-row">
+          <div class="tw-head-top">
+            <span class="tw-pname">PLAYER</span>
+            <span class="tw-pnum">3</span>
             <span class="badge stop">STOP</span>
-            <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
           </div>
-          <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
+          <div class="tw-head-btm">
+            <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
+            <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
+          </div>
         </div>
         <div class="art tw-art"><div class="art-fill" style="background:linear-gradient(135deg,#1e90ff,#000080);opacity:.7"></div></div>
         <div class="tw-title">
@@ -1000,9 +1022,14 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 
       <div class="deck v-tower" style="opacity:.4">
         <div class="tw-head">
-          <div class="tw-pname">PLAYER</div>
-          <div class="tw-pnum" style="color:var(--t-tx4)">4</div>
-          <div class="tw-state-row"><span class="badge" style="color:var(--t-tx4)">EMPTY</span></div>
+          <div class="tw-head-top">
+            <span class="tw-pname">PLAYER</span>
+            <span class="tw-pnum" style="color:var(--t-tx4)">4</span>
+            <span class="badge" style="color:var(--t-tx4)">EMPTY</span>
+          </div>
+          <div class="tw-head-btm">
+            <span class="hw-lbl" style="color:var(--t-tx4)">—</span>
+          </div>
         </div>
         <div class="art tw-art" style="background:var(--t-bg);border-style:dashed"></div>
         <div class="tw-title"><div class="d-artist" style="color:var(--t-tx4)">—</div><div class="d-track" style="color:var(--t-tx4)">빈 덱</div></div>
