@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('bridge',{
   linkSetEnabled:(enabled)=>ipcRenderer.invoke('link:setEnabled',{enabled}),
   linkSetTempo:(bpm)=>ipcRenderer.send('link:setTempo',{bpm}),
   linkGetStatus:()=>ipcRenderer.invoke('link:getStatus'),
+  linkAlignBeat:(beat)=>ipcRenderer.invoke('link:alignBeat',{beat}),
   findRekordboxWaveform:(filename)=>ipcRenderer.invoke('bridge:findRekordboxWaveform',{filename}),
   rebindTCNet:(addr)=>ipcRenderer.invoke('bridge:rebindTCNet',{addr}),
   rebindPDJL:(addr)=>ipcRenderer.invoke('bridge:rebindPDJL',{addr}),

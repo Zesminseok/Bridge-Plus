@@ -394,6 +394,21 @@ class LinkBridge{
       }
     }
   }
+  // 세션 beat 를 강제 정렬 (탭 다운비트 / 마스터 덱 정렬용)
+  // beat: 0=다운비트, 1=2번째 비트 … quantum-1=마지막 비트
+  // API 변형 흡수: setBeat / forceBeat / forceBeatAtTime / beat= 속성
+  alignBeat(beat){
+    if(!this._enabled||!this._link)return false;
+    const b=Number.isFinite(+beat)?(+beat):0;
+    try{
+      const L=this._link;
+      if(typeof L.setBeat==='function'){ L.setBeat(b); return true; }
+      if(typeof L.forceBeat==='function'){ L.forceBeat(b); return true; }
+      if(typeof L.forceBeatAtTime==='function'){ L.forceBeatAtTime(b,0,4); return true; }
+      if('beat' in L){ L.beat=b; return true; }
+    }catch(e){ console.warn('[LINK] alignBeat err:',e.message); }
+    return false;
+  }
   setTempo(bpm){
     const v=parseFloat(bpm);
     if(!Number.isFinite(v)||v<20||v>999)return;
@@ -603,6 +618,7 @@ ipcMain.handle('artnet:setDmxHz',(_,{hz})=>{artnet.setDmxHz(hz);return{ok:true};
 ipcMain.handle('link:setEnabled',(_,{enabled})=>{link.setEnabled(enabled);return link.getStatus();});
 ipcMain.on('link:setTempo',(_,{bpm})=>{link.setTempo(bpm);});
 ipcMain.handle('link:getStatus',()=>link.getStatus());
+ipcMain.handle('link:alignBeat',(_,{beat})=>{const ok=link.alignBeat(beat);return {ok,status:link.getStatus()};});
 ipcMain.handle('artnet:stop',()=>{artnet.stop();return{ok:true};});
 ipcMain.on('artnet:setTc',(_,{hh,mm,ss,ff})=>{artnet.setTimecode(hh,mm,ss,ff);});
 ipcMain.handle('artnet:setFps',(_,{fps})=>{artnet.setFps(fps);return{ok:true};});
