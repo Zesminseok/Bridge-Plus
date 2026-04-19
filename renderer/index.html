@@ -4702,6 +4702,7 @@ function renderAblink(){
       <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkLinkEnabled" ${cfg.linkEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">Link 세션 참여 — BPM 송신 (단방향)</span></label></div>
       <div class="srw"><span class="srl">BPM 소스</span><select class="ss" data-cfg="linkSource">${[['mixer','Mixer BPM (DJM)'],['deck','선택 덱 BPM'],['master','Master 덱 BPM (Pro DJ Link)']].map(([v,l])=>`<option value="${v}" ${cfg.linkSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
       <div class="srw" id="linkDeckRow" style="${cfg.linkSource==='deck'?'':'display:none'}"><span class="srl">덱 선택</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${i+1}</option>`).join('')}</select></div>
+      <div class="srw" id="linkVdeckHintRow" style="${cfg.linkSource==='deck'?'':'display:none'}"><span class="srl"></span><span style="font:400 10px var(--sn);color:var(--tx3)">💡 선택 덱이 <b>버츄얼 덱</b>이면 BPM + 페이저가 자동 동기화됩니다 (하드웨어 덱은 BPM만 송신).</span></div>
       <div class="srw"><span class="srl">페이저 정렬</span><div style="display:flex;gap:6px;flex-wrap:wrap">
         <button id="btnLinkTap" class="mode-btn" style="padding:5px 10px;font:600 10px var(--lb);letter-spacing:.05em" title="지금 이 순간을 다운비트(beat 0)로 강제">탭 다운비트</button>
         <button id="btnLinkMaster" class="mode-btn" style="padding:5px 10px;font:600 10px var(--lb);letter-spacing:.05em" title="Pro DJ Link 마스터 덱의 beat-in-bar 에 세션 phase 정렬">마스터 덱 정렬</button>
@@ -4711,7 +4712,7 @@ function renderAblink(){
     <div class="al alw" style="margin-top:6px;margin-bottom:4px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
       <div style="font:400 10px var(--sn);color:var(--tx2)">
-        <b>단방향 브리지:</b> 선택된 소스의 BPM만 Link 세션에 공급. Link 세션의 phase 클럭은 활성화 시점부터 자체 ticking하며 Resolume·Live·Traktor 가 자동 동기화됩니다.<br>
+        <b>단방향 브리지:</b> 선택된 소스의 BPM을 Link 세션에 공급. BPM 소스='선택 덱' + 버츄얼 덱이면 페이저도 자동 정렬 (0.15 beat 드리프트 초과 시 보정). 하드웨어 덱은 master 플래그가 있어 '마스터 덱 정렬' 버튼으로 정렬.<br>
         <b>네이티브 모듈:</b> <code style="background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px">npm i abletonlink && npx electron-rebuild</code> 후 재시작.
       </div>
     </div>`;
@@ -4728,7 +4729,9 @@ function renderAblink(){
       const k=inp.dataset.cfg;
       if(k==='linkSource'){
         cfg[k]=e.target.value;_saveCfg();
-        const row=el.querySelector('#linkDeckRow');if(row)row.style.display=(cfg[k]==='deck')?'':'none';
+        const vis=(cfg[k]==='deck')?'':'none';
+        const row=el.querySelector('#linkDeckRow');if(row)row.style.display=vis;
+        const hintRow=el.querySelector('#linkVdeckHintRow');if(hintRow)hintRow.style.display=vis;
         const srcLbl=el.querySelector('#linkSrcLbl');if(srcLbl)srcLbl.textContent=cfg[k];
         return;
       }
@@ -4862,6 +4865,34 @@ window.addEventListener('DOMContentLoaded',()=>{
 // 250ms 주기로 선택된 소스의 BPM을 main 프로세스에 전달.
 // main 프로세스의 LinkBridge가 0.02 BPM 히스테리시스/레이트리밋으로 Link 세션에 공급.
 let _linkLastStatus={available:false,enabled:false,peers:0,bpm:0};
+// 버츄얼 덱 페이저 정렬 — 소스='deck' + 선택 덱이 virtual + 재생 중일 때
+// 드리프트 0.15 beat 초과 시에만 보정 (반복 setBeat 지터 회피).
+// 버츄얼 덱은 PDJL master 필드가 없어 'master' 소스로는 동작 불가 — 'deck' 전용.
+function _computeVirtualDeckPhase(slot){
+  const d=DECKS[slot];
+  if(!d || d.type!=='virtual' || !d.ld || !d.pl || !(d.bpm>0)) return null;
+  const beatMs=60000/(d.baseBpm||d.bpm);
+  const pos=+d.pos||0;
+  // Beat grid 우선 — NXS2/rekordbox 정확한 비트 위치
+  const bg=d._beatGrid;
+  if(bg && bg.length>0){
+    if(pos>=bg[bg.length-1].timeMs){
+      return ((bg[bg.length-1].beatInBar-1)%4);
+    }
+    let lo=0, hi=bg.length-1;
+    while(lo<hi){const mid=(lo+hi+1)>>1;if(bg[mid].timeMs<=pos)lo=mid;else hi=mid-1;}
+    const cur=bg[lo], nxt=bg[lo+1]||null;
+    const bInBar=(cur.beatInBar-1)%4; // 0..3
+    const span=nxt?(nxt.timeMs-cur.timeMs):beatMs;
+    const frac=span>0?Math.min(0.999,Math.max(0,(pos-cur.timeMs)/span)):0;
+    return bInBar+frac;
+  }
+  // Fallback — 단순 비트 계산
+  const barMs=beatMs*4;
+  const posInBar=((pos%barMs)+barMs)%barMs;
+  return Math.min(3.999,posInBar/beatMs);
+}
+let _lastLinkAlignAt=0;
 setInterval(async ()=>{
   if(!cfg.linkEnabled) return;
   const bpm = _computeLinkSourceBpm();
@@ -4875,6 +4906,23 @@ setInterval(async ()=>{
     const st=await window.bridge.linkGetStatus?.();
     if(st){ _linkLastStatus=st; _updateLinkUi(st); }
   }catch(_){}
+  // 버츄얼 덱 페이저 동기 — deck 소스 한정
+  if(cfg.linkSource==='deck' && _linkLastStatus?.enabled){
+    const slot=Math.max(0,Math.min(5,cfg.linkDeckIdx|0));
+    const target=_computeVirtualDeckPhase(slot);
+    if(target!=null){
+      const cur=+_linkLastStatus.phase||0;
+      // 원형 드리프트 (quantum=4): 최단 거리
+      let drift=target-cur;
+      if(drift>2) drift-=4; else if(drift<-2) drift+=4;
+      const now=Date.now();
+      // 0.15 beat 초과 OR 2초 이상 무보정 시 재정렬
+      if(Math.abs(drift)>0.15 || (now-_lastLinkAlignAt)>2000){
+        window.bridge.linkAlignBeat?.(target);
+        _lastLinkAlignAt=now;
+      }
+    }
+  }
 },250);
 // BPM 소스 계산 — 'mixer' | 'deck' | 'master'
 // DECKS 키는 숫자 슬롯(0-5) = 덱 1-6 (UI 표시용으로 +1)
