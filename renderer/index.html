@@ -804,6 +804,8 @@ const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIfac
   tcLtcA:'',tcLtcB:'',tcLtcM:'',tcMidiOutId:'',
   tcLtcACh:0,tcLtcBCh:0,tcLtcMCh:0,
   tcArtnetIp:'255.255.255.255',tcArtnetPort:'6454',
+  // Art-Net Engine
+  anEnabled:false,anIface:'',anDmxEnabled:false,anDmxUniverse:0,anDmxSource:'all',
   tcnetUnicast:false,tcnetAllIfaces:false};
 // Load persisted settings
 let cfg=Object.assign({},_CFG_DEF);
@@ -1004,14 +1006,75 @@ function _mtcSend(layer, ms, playing){
 }
 
 // ── Artnet Timecode ──────────────────────────────────
+// Drives the main-process ArtnetEngine when enabled; otherwise falls back to
+// legacy one-shot sends (bridge:artTimeCode). Engine handles drift/encoder/seek.
+let _artEnabled=false, _artLastOutKey='', _artLastMs=-1;
 function _artSend(ms, playing){
   if(!E)return;
   const fps=parseFloat(cfg.tcFps)||25, ri=Math.round(fps);
   const totalF=Math.floor(ms/1000*fps);
   const ff=totalF%ri, ss=Math.floor(totalF/ri)%60, mm=Math.floor(totalF/ri/60)%60, hh=Math.floor(totalF/ri/3600)%24;
   const type=TC_FPS_TYPE[cfg.tcFps]??1;
-  window.bridge.sendArtnet?.({ip:cfg.tcArtnetIp||'255.255.255.255',port:parseInt(cfg.tcArtnetPort)||6454,ff,ss,mm,hh,type});
+  if(_artEnabled){
+    window.bridge.artnetSetTc?.({hh,mm,ss,ff});
+    // Seek detect: >1-frame backward or >2-frame forward jump = forceResync
+    if(_artLastMs>=0){
+      const expectedDelta=1000/fps;
+      const delta=ms-_artLastMs;
+      if(delta<-expectedDelta||delta>expectedDelta*3){
+        window.bridge.artnetForceResync?.();
+      }
+    }
+    _artLastMs=ms;
+  } else {
+    window.bridge.sendArtnet?.({ip:cfg.tcArtnetIp||'255.255.255.255',port:parseInt(cfg.tcArtnetPort)||6454,ff,ss,mm,hh,type});
+  }
 }
+// Trigger forceResync on cue jump / track change (called from outside)
+function _artForceResync(){if(_artEnabled)window.bridge.artnetForceResync?.();_artLastMs=-1;}
+async function _artnetRestartIfEnabled(){
+  if(!_artEnabled)return;
+  await window.bridge.artnetStop?.();
+  const r=await window.bridge.artnetStart?.({
+    bindIp:cfg.anIface||'0.0.0.0',
+    destIp:cfg.tcArtnetIp||'255.255.255.255',
+    destPort:parseInt(cfg.tcArtnetPort)||6454,
+    fps:cfg.tcFps||'25',
+  });
+  _updateArtnetUi(r?.ok);
+}
+function _updateArtnetUi(running){
+  const dot=document.getElementById('anStatusDot');
+  const lbl=document.getElementById('anStatusLbl');
+  if(dot)dot.style.background=running?'#32be5a':'#555';
+  if(lbl)lbl.textContent=running?'송신 중':'정지';
+}
+// DMX builder: aggregates DJM state → Uint8Array, ships to engine at ~40Hz
+// (engine resends the buffer via OpDmx at its own rate)
+function _artDmxRefresh(){
+  if(!_artEnabled||!cfg.anDmxEnabled||cfg.anDmxSource==='off'){
+    window.bridge.artnetClearDmx?.();return;
+  }
+  const clamp=(v)=>Math.max(0,Math.min(255,v|0));
+  let buf;
+  if(cfg.anDmxSource==='fader'){
+    buf=new Uint8Array(6);
+    for(let i=0;i<6;i++)buf[i]=clamp(faders[i]??255);
+  } else if(cfg.anDmxSource==='vu'){
+    buf=new Uint8Array(6);
+    for(let i=0;i<6;i++)buf[i]=clamp(_djmChVu[i]||0);
+  } else { // 'all' — fader 1-6, VU 7-12, xf 13, master 14, booth 15, hpLvl 16
+    buf=new Uint8Array(16);
+    for(let i=0;i<6;i++)buf[i]=clamp(faders[i]??255);
+    for(let i=0;i<6;i++)buf[6+i]=clamp(_djmChVu[i]||0);
+    buf[12]=clamp(_djmXfader||0);
+    buf[13]=clamp(_djmMasterLvl||_djmMasterVu||0);
+    buf[14]=clamp(_djmBoothLvl||0);
+    buf[15]=clamp(_djmHpLevel||0);
+  }
+  window.bridge.artnetSetDmx?.(buf,cfg.anDmxUniverse|0);
+}
+setInterval(_artDmxRefresh,25);
 
 // ── Get source deck position / playing state for an output layer ────
 function _outSrcMs(key){
@@ -3159,6 +3222,7 @@ function doCueDown(slot){
     d.au.currentTime=d.cp;
     d.au.play().catch(()=>{});
     d.cu=true;d.pl=false;
+    _artForceResync?.();
   }
 }
 
@@ -3168,12 +3232,14 @@ function doCueUp(slot){
   d.au.currentTime=d.cp||0;
   d.pl=false;d.cu=true;
   _sendTCState(slot);
+  _artForceResync?.();
 }
 
 function doReturnToStart(slot){
   const d=DECKS[slot];if(!d?.ld||!d.au||d.type==='hw')return;
   d.au.pause();d.au.currentTime=0;d.pl=false;d.cu=false;d.cp=0;
   _sendTCState(slot);
+  _artForceResync?.();
 }
 
 function _deckLayerAssigned(slot,lyr){
@@ -3304,6 +3370,7 @@ function doSeek(slot,r){
   const d=DECKS[slot];if(!d?.au||!d.dur||d.type==='hw')return;
   const t=(r*d.dur)/1000;d.au.currentTime=t;
   if(!d.pl)d.cp=t; // update cue point when seeking while stopped
+  _artForceResync?.();
 }
 
 async function doToggleHW(slot){
@@ -4313,12 +4380,29 @@ function renderSettings(){
       <div class="srw"><span class="srl">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
       ${['A','B','M'].map(lyr=>`<div class="srw"><span class="srl">LTC — Layer ${lyr}</span><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select class="ss" data-cfg="tcLtc${lyr}" style="max-width:180px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg[`tcLtc${lyr}`]===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select><select class="ss" data-cfg="tcLtc${lyr}Ch" style="width:72px" disabled><option>감지 중…</option></select></div></div>`).join('')}
       <div class="srw"><span class="srl">MTC MIDI 출력</span><select class="ss" id="midiOutSel" style="max-width:200px"><option value="">—</option></select></div>
-      <div class="srw"><span class="srl">Artnet 대상 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
-      <div class="srw"><span class="srl">Artnet Port</span><input type="text" value="${cfg.tcArtnetPort}" data-cfg="tcArtnetPort" placeholder="6454" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:70px;text-align:right"></div>
     </div>
     <div class="al alw" style="margin-top:6px;margin-bottom:4px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
       <div style="font:400 10px var(--sn);color:var(--ylw)">LTC는 음원과 다른 장치로 출력해야 합니다. 덱 카드의 [TC] 버튼으로 모드를 선택하세요.</div>
+    </div>
+    <div class="sl mt">Art-Net 출력 <span id="anStatusDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#555;margin-left:6px;vertical-align:middle"></span></div>
+    <div class="sgr">
+      <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnEnabled" ${cfg.anEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">ArtTimeCode + DMX 송신 엔진 시작</span></label></div>
+      <div class="srw"><span class="srl">Art-Net 인터페이스</span><select class="ss" data-cfg="anIface">${ifaceOpts(allIfaces,'anIface')}</select></div>
+      <div class="srw"><span class="srl">대상 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:140px;text-align:right"></div>
+      <div class="srw"><span class="srl">Port</span><input type="text" value="${cfg.tcArtnetPort}" data-cfg="tcArtnetPort" placeholder="6454" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:70px;text-align:right"></div>
+      <div class="srw"><span class="srl">Frame Rate (TC)</span><span style="font:400 10px var(--mn);color:var(--tx3)">SMPTE 프레임레이트와 공유 (${cfg.tcFps} fps)</span></div>
+      <div class="srw"><span class="srl">DMX 출력</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnDmxEn" ${cfg.anDmxEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpDmx 0x5000 (40Hz)</span></label></div>
+      <div class="srw"><span class="srl">DMX Universe</span><input type="number" min="0" max="32767" value="${cfg.anDmxUniverse}" data-cfg="anDmxUniverse" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:80px;text-align:right"></div>
+      <div class="srw"><span class="srl">DMX 소스</span><select class="ss" data-cfg="anDmxSource">${[['off','Off'],['fader','DJM 페이더 (ch1-6)'],['vu','DJM VU (ch1-6)'],['all','DJM 전체 (fader+VU+xf+master)']].map(([v,l])=>`<option value="${v}" ${cfg.anDmxSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">송신 상태</span><span id="anStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">정지</span></div>
+    </div>
+    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
+      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span>
+      <div style="font:400 10px var(--sn);color:var(--tx2)">
+        <b>Art-Net 4 엔진:</b> 드리프트 보정 타이머 (2ms tick · fractional accumulator), forceResync on seek/cue, auto-increment encoder, OpDmx 512ch.<br>
+        인터페이스 선택 시 해당 NIC 서브넷 브로드캐스트로 송신합니다.
+      </div>
     </div>
     <div class="sl">정보</div>
     <div class="sgr">
@@ -4371,7 +4455,11 @@ function renderSettings(){
         const layer=k.slice(5,6); // 'A','B','M'
         _ltcSetDevice(layer,cfg[`tcLtc${layer}`],parseInt(e.target.value)||0);
       }
-      else if(k==='tcArtnetIp'||k==='tcArtnetPort'){cfg[k]=e.target.value;}
+      else if(k==='tcArtnetIp'||k==='tcArtnetPort'){cfg[k]=e.target.value;_saveCfg();_artnetRestartIfEnabled();return;}
+      else if(k==='anIface'){cfg[k]=e.target.value;_saveCfg();_artnetRestartIfEnabled();return;}
+      else if(k==='anDmxUniverse'){cfg[k]=parseInt(e.target.value)||0;_saveCfg();return;}
+      else if(k==='anDmxSource'){cfg[k]=e.target.value;_saveCfg();if(cfg.anDmxSource==='off')window.bridge.artnetClearDmx?.();return;}
+      else if(k==='tcFps'){cfg.tcFps=e.target.value;_saveCfg();window.bridge.artnetSetFps?.(cfg.tcFps);return;}
       else if(k==='tcnetIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindTCNet(e.target.value||null);return;}
       else if(k==='pdjlIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindPDJL(e.target.value||null);return;}
       else if(k==='tcnetMode'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.setTCNetMode(e.target.value||'auto');return;}
@@ -4415,7 +4503,49 @@ function renderSettings(){
     cfg.tcnetAllIfaces=e.target.checked;_saveCfg();
     if(E&&run)window.bridge.setTCNetUnicast(cfg.tcnetUnicast,e.target.checked);
   };}
+  // Art-Net controls
+  const chkAn=el.querySelector('#chkAnEnabled');
+  if(chkAn)chkAn.onchange=async e=>{
+    cfg.anEnabled=e.target.checked;_saveCfg();
+    if(cfg.anEnabled){
+      const r=await window.bridge.artnetStart?.({
+        bindIp:cfg.anIface||'0.0.0.0',
+        destIp:cfg.tcArtnetIp||'255.255.255.255',
+        destPort:parseInt(cfg.tcArtnetPort)||6454,
+        fps:cfg.tcFps||'25',
+      });
+      _artEnabled=!!r?.ok;
+      _updateArtnetUi(_artEnabled);
+      if(!r?.ok){e.target.checked=false;cfg.anEnabled=false;_saveCfg();alert('Art-Net 엔진 시작 실패: '+(r?.err||'unknown'));}
+    } else {
+      await window.bridge.artnetStop?.();
+      _artEnabled=false;_updateArtnetUi(false);
+    }
+  };
+  const chkDmx=el.querySelector('#chkAnDmxEn');
+  if(chkDmx)chkDmx.onchange=e=>{
+    cfg.anDmxEnabled=e.target.checked;_saveCfg();
+    if(!cfg.anDmxEnabled)window.bridge.artnetClearDmx?.();
+  };
+  _updateArtnetUi(_artEnabled);
+  el.querySelector('[data-cfg="anIface"]').value=cfg.anIface||'';
+  el.querySelector('[data-cfg="anDmxSource"]').value=cfg.anDmxSource||'all';
 }
+// Auto-start Art-Net engine at boot if user had it enabled last session
+window.addEventListener('DOMContentLoaded',()=>{
+  if(cfg.anEnabled){
+    window.bridge.artnetStart?.({
+      bindIp:cfg.anIface||'0.0.0.0',
+      destIp:cfg.tcArtnetIp||'255.255.255.255',
+      destPort:parseInt(cfg.tcArtnetPort)||6454,
+      fps:cfg.tcFps||'25',
+    }).then(r=>{
+      _artEnabled=!!r?.ok;
+      _updateArtnetUi(_artEnabled);
+      if(!r?.ok){console.warn('[ART] auto-start failed:',r?.err);}
+    });
+  }
+});
 
 // ════ History tracking ═══════════════════════════════
 const _histLog=[];

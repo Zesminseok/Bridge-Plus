@@ -63,26 +63,164 @@ function _registerBridgeAudioProtocol(){
   });
 }
 
-// Art-Net ArtTimeCode sender
+// ═══ Art-Net 4 Engine ════════════════════════════════════════════════
+// Features parity with SuperTimecodeConverter ArtnetOutput.h:
+//  • High-rate timer (setInterval 2ms) + fractional accumulator → drift-free
+//  • OpTimeCode 0x9700 19B + auto-increment encoder + seek detection
+//  • forceResync() for seek/hot-cue/track-change (eliminates 1-frame latency)
+//  • OpDmx 0x5000 DMX output (up to 512ch, sequenced 1-255)
+//  • Per-interface bind (SO_BROADCAST) + dest-port config
+//  • Pause/resume, range validation, send-error counter
+class ArtnetEngine{
+  constructor(){
+    this._sock=null;this._bindIp='0.0.0.0';this._destIp='255.255.255.255';this._destPort=6454;
+    this._timer=null;this._running=false;this._paused=false;
+    this._fps=25;this._fpsType=1;
+    this._target={hh:0,mm:0,ss:0,ff:0};
+    this._enc={hh:0,mm:0,ss:0,ff:0};
+    this._seeded=false;this._lastHR=0;this._errors=0;
+    this._dmxBuf=null;this._dmxUniverse=0;this._dmxSeq=0;this._dmxLastHR=0;this._dmxIntervalMs=25; // 40Hz
+  }
+  _now(){const[s,n]=process.hrtime();return s*1000+n/1e6;}
+  getStatus(){return{running:this._running,paused:this._paused,bindIp:this._bindIp,destIp:this._destIp,port:this._destPort,fps:this._fps,errors:this._errors};}
+  isRunning(){return this._running;}
+  setFps(fpsStr){
+    const m={'24':[24,0],'25':[25,1],'29.97':[30,2],'30':[30,3]};
+    const[n,t]=m[String(fpsStr)]||m['25'];
+    this._fps=n;this._fpsType=t;
+  }
+  setTimecode(hh,mm,ss,ff){this._target={hh:hh&0xFF,mm:mm&0xFF,ss:ss&0xFF,ff:ff&0xFF};}
+  setPaused(p){
+    const was=this._paused;this._paused=!!p;
+    if(was&&!this._paused){this._seeded=false;this._lastHR=this._now();}
+  }
+  setDmx(arr,universe){
+    if(!arr||!arr.length){this._dmxBuf=null;return;}
+    this._dmxBuf=Buffer.from(arr);
+    this._dmxUniverse=(universe|0)&0x7FFF;
+  }
+  clearDmx(){this._dmxBuf=null;}
+  forceResync(){
+    if(!this._running||this._paused||!this._sock)return;
+    this._seeded=false;
+    this._sendTc();
+    this._lastHR=this._now();
+  }
+  start({bindIp,destIp,destPort}={}){
+    return new Promise((resolve)=>{
+      this.stop();
+      this._bindIp=bindIp||'0.0.0.0';
+      this._destIp=destIp||'255.255.255.255';
+      this._destPort=(destPort|0)||6454;
+      const sock=dgram.createSocket({type:'udp4',reuseAddr:true});
+      sock.on('error',e=>{this._errors++;console.warn('[ART] sock err',e.message);});
+      const bindAddr=(this._bindIp&&this._bindIp!=='0.0.0.0'&&this._bindIp!=='auto')?this._bindIp:undefined;
+      try{
+        sock.bind(0,bindAddr,()=>{
+          try{sock.setBroadcast(true);}catch(_){}
+          this._sock=sock;this._running=true;this._paused=false;
+          this._seeded=false;this._errors=0;
+          this._lastHR=this._now();this._dmxLastHR=0;
+          this._timer=setInterval(()=>this._tick(),2);
+          console.log('[ART] started',this._bindIp,'->',this._destIp+':'+this._destPort);
+          resolve({ok:true});
+        });
+      }catch(e){console.warn('[ART] bind error',e.message);resolve({ok:false,err:e.message});}
+    });
+  }
+  stop(){
+    this._running=false;this._paused=false;
+    if(this._timer){clearInterval(this._timer);this._timer=null;}
+    if(this._sock){try{this._sock.close();}catch(_){}this._sock=null;}
+  }
+  _tick(){
+    if(!this._running||!this._sock)return;
+    const now=this._now();
+    if(!this._paused){
+      const iv=1000/this._fps;
+      let sent=0;
+      while((now-this._lastHR)>=iv&&sent<2){
+        this._sendTc();
+        this._lastHR+=iv;
+        sent++;
+      }
+      if((now-this._lastHR)>100)this._lastHR=now;
+    }
+    if(this._dmxBuf&&(now-this._dmxLastHR)>=this._dmxIntervalMs){
+      this._sendDmx();
+      this._dmxLastHR=now;
+    }
+  }
+  _incFrame(tc){
+    let{hh,mm,ss,ff}=tc;ff++;
+    const max=Math.round(this._fps);
+    if(ff>=max){ff=0;ss++;}
+    if(ss>=60){ss=0;mm++;}
+    if(mm>=60){mm=0;hh++;}
+    if(hh>=24){hh=0;}
+    return{hh,mm,ss,ff};
+  }
+  _toTotal(tc,max){return tc.hh*3600*max+tc.mm*60*max+tc.ss*max+tc.ff;}
+  _sendTc(){
+    const fps=this._fps,max=Math.round(fps);let tc;
+    const pending=this._target;
+    if(!this._seeded){tc={...pending};this._seeded=true;}
+    else{
+      tc=this._incFrame(this._enc);
+      const day=24*3600*max;
+      let raw=this._toTotal(pending,max)-this._toTotal(tc,max);
+      let diff=((raw%day)+day)%day;
+      if(diff>day/2)diff=day-diff;
+      if(diff>1)tc={...pending};
+    }
+    this._enc=tc;
+    if(tc.hh>23||tc.mm>59||tc.ss>59||tc.ff>=max)return;
+    const pkt=Buffer.alloc(19);
+    pkt.write('Art-Net\0',0,'ascii');
+    pkt.writeUInt16LE(0x9700,8);
+    pkt.writeUInt8(0,10);pkt.writeUInt8(0x0E,11);
+    pkt.writeUInt8(0,12);pkt.writeUInt8(0,13);
+    pkt.writeUInt8(tc.ff,14);pkt.writeUInt8(tc.ss,15);
+    pkt.writeUInt8(tc.mm,16);pkt.writeUInt8(tc.hh,17);
+    pkt.writeUInt8(this._fpsType&0x03,18);
+    try{this._sock.send(pkt,0,19,this._destPort,this._destIp);}
+    catch(e){this._errors++;}
+  }
+  _sendDmx(){
+    let n=this._dmxBuf.length;
+    if(n<2)n=2;if(n>512)n=512;if(n%2)n++;
+    const pkt=Buffer.alloc(18+n);
+    pkt.write('Art-Net\0',0,'ascii');
+    pkt.writeUInt16LE(0x5000,8);
+    pkt.writeUInt8(0,10);pkt.writeUInt8(0x0E,11);
+    this._dmxSeq=(this._dmxSeq%255)+1;
+    pkt.writeUInt8(this._dmxSeq,12);
+    pkt.writeUInt8(0,13);
+    pkt.writeUInt8(this._dmxUniverse&0xFF,14);
+    pkt.writeUInt8((this._dmxUniverse>>8)&0x7F,15);
+    pkt.writeUInt8((n>>8)&0xFF,16);
+    pkt.writeUInt8(n&0xFF,17);
+    this._dmxBuf.copy(pkt,18,0,Math.min(this._dmxBuf.length,n));
+    try{this._sock.send(pkt,0,pkt.length,this._destPort,this._destIp);}
+    catch(e){this._errors++;}
+  }
+}
+const artnet=new ArtnetEngine();
+
+// Legacy one-shot Art-Net ArtTimeCode (used by direct IPC call or fallback)
 const _artSocket=dgram.createSocket('udp4');
 _artSocket.bind(0,()=>{try{_artSocket.setBroadcast(true);}catch(_){}});
 function sendArtTimeCode(ip,port,hh,mm,ss,ff,type){
-  // Art-Net 4 — ArtTimeCode (OpCode 0x9700 LE)
-  // Spec: https://artisticlicence.com/WebSiteMaster/User%20Guides/art-net.pdf §14
+  if(artnet.isRunning()){artnet.setTimecode(hh,mm,ss,ff);return;}
   const pkt=Buffer.alloc(19);
-  pkt.write('Art-Net\0',0,'ascii');  // ID[8]
-  pkt.writeUInt16LE(0x9700,8);       // OpCode = OpTimeCode (LE)
-  pkt.writeUInt8(0x00,10);           // ProtVerHi
-  pkt.writeUInt8(0x0E,11);           // ProtVerLo = 14
-  pkt.writeUInt8(0,12);              // Filler1
-  pkt.writeUInt8(0,13);              // Filler2
-  pkt.writeUInt8(ff&0xFF,14);        // Frames  0-29
-  pkt.writeUInt8(ss&0xFF,15);        // Seconds 0-59
-  pkt.writeUInt8(mm&0xFF,16);        // Minutes 0-59
-  pkt.writeUInt8(hh&0xFF,17);        // Hours   0-23
-  pkt.writeUInt8(type&0x03,18);      // Type: 0=Film/24,1=EBU/25,2=DF/29.97,3=SMPTE/30
-  const target=ip||'255.255.255.255';
-  try{_artSocket.send(pkt,0,pkt.length,port||6454,target);}catch(e){console.warn('[ART]',e.message);}
+  pkt.write('Art-Net\0',0,'ascii');
+  pkt.writeUInt16LE(0x9700,8);
+  pkt.writeUInt8(0x00,10);pkt.writeUInt8(0x0E,11);
+  pkt.writeUInt8(0,12);pkt.writeUInt8(0,13);
+  pkt.writeUInt8(ff&0xFF,14);pkt.writeUInt8(ss&0xFF,15);
+  pkt.writeUInt8(mm&0xFF,16);pkt.writeUInt8(hh&0xFF,17);
+  pkt.writeUInt8(type&0x03,18);
+  try{_artSocket.send(pkt,0,pkt.length,port||6454,ip||'255.255.255.255');}catch(e){console.warn('[ART]',e.message);}
 }
 let win,bridge,iv;
 
@@ -246,6 +384,21 @@ ipcMain.handle('bridge:refreshMeta',()=>{bridge?.refreshAllMetadata();return{ok:
 ipcMain.handle('bridge:getInterfaces',()=>getAllInterfaces());
 ipcMain.handle('bridge:getDevices',()=>bridge?.getActiveDevices()||[]);
 ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTimeCode(ip,port,hh,mm,ss,ff,type);return{ok:true};});
+// ─── Art-Net Engine IPC ───────────────────────────────────────────
+ipcMain.handle('artnet:start',async(_,{bindIp,destIp,destPort,fps})=>{
+  if(fps)artnet.setFps(fps);
+  return await artnet.start({bindIp,destIp,destPort});
+});
+ipcMain.handle('artnet:stop',()=>{artnet.stop();return{ok:true};});
+ipcMain.on('artnet:setTc',(_,{hh,mm,ss,ff})=>{artnet.setTimecode(hh,mm,ss,ff);});
+ipcMain.handle('artnet:setFps',(_,{fps})=>{artnet.setFps(fps);return{ok:true};});
+ipcMain.handle('artnet:setPaused',(_,{paused})=>{artnet.setPaused(paused);return{ok:true};});
+ipcMain.handle('artnet:forceResync',()=>{artnet.forceResync();return{ok:true};});
+ipcMain.on('artnet:setDmx',(_,{data,universe})=>{
+  try{artnet.setDmx(data instanceof Uint8Array?data:Buffer.from(data||[]),universe||0);}catch(_){}
+});
+ipcMain.handle('artnet:clearDmx',()=>{artnet.clearDmx();return{ok:true};});
+ipcMain.handle('artnet:getStatus',()=>artnet.getStatus());
 ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
 ipcMain.handle('bridge:setVirtualArt',(_,{slot,jpegBase64})=>{
   if(bridge){bridge.setVirtualArt(slot,jpegBase64?Buffer.from(jpegBase64,'base64'):null);}
@@ -418,6 +571,7 @@ function doQuit(){
   setTimeout(()=>{
     try{bridge?.stop();}catch(e){console.warn('[APP] bridge.stop error:',e.message);}
     bridge=null;
+    try{artnet.stop();}catch(_){}
     try{_artSocket.close();}catch(_){}
     _cleaned=true;
     // 5. Wait 500ms for OptOut UDP (5×broadcast + per-iface + per-node) to flush + 250ms socket close
@@ -441,6 +595,7 @@ app.on('will-quit',()=>{
   if(!_cleaned){
     saveBounds();clearInterval(iv);
     try{bridge?.stop();}catch(_){}bridge=null;
+    try{artnet.stop();}catch(_){}
     try{_artSocket.close();}catch(_){}
     _cleaned=true;
   }
