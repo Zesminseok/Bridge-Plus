@@ -44,14 +44,25 @@
       "!package/**",
       "!juce-app/**",
       "!docs/**",
-      "!bridge-clone.js",
       "!.serena/**",
       "!.claude/**"
     ],
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] },
-        { "target": "zip", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "category": "public.app-category.music",
       "hardenedRuntime": false,
@@ -64,8 +75,18 @@
     },
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -73,5 +94,8 @@
       "allowToChangeInstallationDirectory": true,
       "perMachine": false
     }
+  },
+  "dependencies": {
+    "abletonlink": "^0.2.0-beta.0"
   }
 }

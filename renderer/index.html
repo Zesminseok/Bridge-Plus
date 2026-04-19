@@ -1436,24 +1436,6 @@ function _cdjColorToRGB(c){
   ];
   return map[c&0xF]||[0,0,0];
 }
-// CDJ color index → smooth bass/mid/treble via HSL-like frequency mapping
-// Each color gets a blended ratio instead of hard single-band dominance
-function _cdjColorTo3Band(c){
-  // CDJ colors map to a frequency "angle" — smooth sine-based blending
-  // 0=silent, 1=deep bass, 2=bass, 3=low-mid, 4=mid, 5=hi-mid, 6=treble, 7=sub+treble
-  const idx = c & 7;
-  if(idx===0) return [.15,.15,.15]; // gray = low energy across all bands
-  // Map color index to frequency angle (0=bass, π/2=mid, π=treble)
-  const angles = [0, 0, .25, .55, .75, 1.05, 1.35, 1.55]; // radians × π
-  const a = angles[idx] * Math.PI;
-  // Smooth cosine-bell overlap: each band peaks at its center angle
-  const bass   = Math.max(0, Math.cos(a) * 0.5 + 0.5);           // peaks at 0
-  const mid    = Math.max(0, Math.cos(a - Math.PI*0.5) * 0.5 + 0.5); // peaks at π/2
-  const treble = Math.max(0, Math.cos(a - Math.PI) * 0.5 + 0.5);     // peaks at π
-  // Purple (7) has sub-bass + treble
-  if(idx===7) return [.35, .1, .7];
-  return [bass, mid, treble];
-}
 // Direct CDJ color code → vivid RGB for HW waveform display
 // Matches CDJ-2000NXS2/CDJ-3000 hardware waveform palette
 function _cdjColorToRGB(c){
@@ -1527,16 +1509,6 @@ function _wfBlend(r,g,b2,dimF){
   const B=Math.min(255,Math.round(Math.pow(b2/mx,1.5)*255*dimF));
   return[R,G,B];
 }
-// 3BAND stacked rendering helper: returns [{color,h},...] from bottom to top
-function _wf3BandStack(r,g,b2,totalH,dimF){
-  // Perceptual gain: bass sqrt+boost, treble 0.5x — matches WebGL shader correction
-  const bH=Math.round(Math.sqrt(r)*1.4*totalH),mH=Math.round(g*totalH),tH=Math.round(b2*0.5*totalH);
-  return[
-    {R:Math.round(0x00*dimF),G:Math.round(0x55*dimF),B:Math.round(0xE1*dimF),h:bH},   // bass=blue
-    {R:Math.round(0xFF*dimF),G:Math.round(0xA6*dimF),B:Math.round(0x00*dimF),h:mH},   // mid=amber
-    {R:Math.round(0xFF*dimF),G:Math.round(0xFF*dimF),B:Math.round(0xFF*dimF),h:tH},   // treble=white
-  ];
-}
 
 // ═══ Waveform Bitmap Cache (OffscreenCanvas) ═══
 // Rekordbox-style: ImageData pixel control — vertical gradient per column
@@ -1600,15 +1572,6 @@ function _getZoomCueStateKey(d){
     c.colorB||0,
   ].join(':')).join('|');
   return `${cues}#cp:${d.cp||0}`;
-}
-
-function _getZoomBeatStateKey(d){
-  const bg=d._beatGrid;
-  if(bg&&bg.length){
-    const first=bg[0],last=bg[bg.length-1];
-    return `grid:${bg.length}:${first?.timeMs||0}:${last?.timeMs||0}`;
-  }
-  return `bpm:${d.baseBpm||d.bpm||0}:anchor:${d._barAnchorMs||0}`;
 }
 
 function _ensureZoomScrollingCache(d, prop, key, W, H, viewL, viewR, msPerPx, drawFn){
@@ -5608,14 +5571,9 @@ if(E){
 }
 
 function fTC(ms){if(ms==null||!isFinite(ms))return'--:--:--:--';if(ms<0)ms=0;const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000),f=Math.floor((ms%1000)/33.33);return z(h)+':'+z(m)+':'+z(s)+':'+z(f);}
-function fTm(ms){if(ms==null||!isFinite(ms)||ms<=0)return'0:00';return Math.floor(ms/60000)+':'+z(Math.floor((ms%60000)/1000));}
 // mm:ss.mm format (centiseconds)
 function fTmMs(ms){if(ms==null||!isFinite(ms))return'--:--.----';if(ms<0)ms=0;const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return m+':'+z(s)+'.'+z3(ml);}
 function z3(n){return n<10?'00'+n:n<100?'0'+n:''+n;}
-// Cue point time: mm:ss.cs (centiseconds, 2 digits)
-function fTcue(ms){if(ms==null||!isFinite(ms))return'--:--.---';if(ms<0)ms=0;const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),ml=Math.floor(ms%1000);return z(m)+':'+z(s)+'.'+z3(ml);}
-// Bar.Beat counter like Rekordbox ("8.2")
-function fBars(posMs,bpm){if(!bpm||!posMs)return'0.0';const bMs=60000/bpm,bar=Math.floor(posMs/(bMs*4))+1,beat=Math.floor((posMs%(bMs*4))/bMs)+1;return bar+'.'+beat;}
 function z(n){return String(Math.max(0,Math.round(n))).padStart(2,'0');}
 
 // initial state: no decks — created on CDJ connect or manual add

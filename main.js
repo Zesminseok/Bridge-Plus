@@ -611,7 +611,6 @@ ipcMain.handle('bridge:unregisterVirtualDeck',(_,{slot})=>{bridge?.unregisterVir
 ipcMain.handle('bridge:setHWMode',(_,{i,en})=>{bridge?.setHWMode(i,en);return{ok:true};});
 ipcMain.handle('bridge:refreshMeta',()=>{bridge?.refreshAllMetadata();return{ok:true};});
 ipcMain.handle('bridge:getInterfaces',()=>getAllInterfaces());
-ipcMain.handle('bridge:getDevices',()=>bridge?.getActiveDevices()||[]);
 ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTimeCode(ip,port,hh,mm,ss,ff,type);return{ok:true};});
 // ─── Art-Net Engine IPC ───────────────────────────────────────────
 ipcMain.handle('artnet:start',async(_,opts={})=>{
@@ -631,13 +630,11 @@ ipcMain.handle('link:alignBeat',(_,{beat})=>{const ok=link.alignBeat(beat);retur
 ipcMain.handle('artnet:stop',()=>{artnet.stop();return{ok:true};});
 ipcMain.on('artnet:setTc',(_,{hh,mm,ss,ff})=>{artnet.setTimecode(hh,mm,ss,ff);});
 ipcMain.handle('artnet:setFps',(_,{fps})=>{artnet.setFps(fps);return{ok:true};});
-ipcMain.handle('artnet:setPaused',(_,{paused})=>{artnet.setPaused(paused);return{ok:true};});
 ipcMain.handle('artnet:forceResync',()=>{artnet.forceResync();return{ok:true};});
 ipcMain.on('artnet:setDmx',(_,{data,universe})=>{
   try{artnet.setDmx(data instanceof Uint8Array?data:Buffer.from(data||[]),universe||0);}catch(_){}
 });
 ipcMain.handle('artnet:clearDmx',()=>{artnet.clearDmx();return{ok:true};});
-ipcMain.handle('artnet:getStatus',()=>artnet.getStatus());
 ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
 ipcMain.handle('bridge:setVirtualArt',(_,{slot,jpegBase64})=>{
   if(bridge){bridge.setVirtualArt(slot,jpegBase64?Buffer.from(jpegBase64,'base64'):null);}

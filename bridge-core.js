@@ -1473,16 +1473,6 @@ class BridgeCore {
     }
   }
 
-  /** Send to each Arena's originating source port (distinct from lPort). */
-  _sendToArenasSourcePort(buf){
-    if(!this.running||!this.txSocket) return;
-    for(const node of Object.values(this.nodes)){
-      if(Date.now()-node.lastSeen > 15000) continue;
-      if(!node.port || node.port === node.lPort) continue;  // lPort와 같으면 중복 전송 방지
-      try{ this.txSocket.send(buf, 0, buf.length, node.port, node.ip); }catch(_){}
-    }
-  }
-
   /** Send to each Arena's listener port (lPort from OptIn body[2-3]). */
   _sendToArenasLPort(buf){
     if(!this.running||!this.txSocket) return;
@@ -1893,52 +1883,6 @@ class BridgeCore {
     }
     if(this._pdjlSockets.length===0) console.warn('[PDJL] all ports failed');
   }
-
-  // ── DJM TCP probe — connect to DJM port 50003 when discovered ──
-  // [DISABLED 2026-04-19] STC 참조 구현에 없는 투기성 TCP 핸드셰이크.
-  // 호출부(line ~2557)도 비활성화됨. 함수 본문은 주석 보존.
-  /*
-  _probeDjmTCP(djmIp){
-    if(this._djmTcpProbed===djmIp) return;
-    this._djmTcpProbed=djmIp;
-    // Only probe TCP 50003 (50002 TCP is ECONNREFUSED on DJM-900NXS2)
-    const port=50003;
-    const tryHandshakes=[
-      // 1. Send nothing — passive listen (DJM might push data on its own after delay)
-      null,
-      // 2. Full PDJL keepalive (type 0x06) with magic bytes
-      ()=>{ const p=Buffer.alloc(11); PDJL.MAGIC.copy(p,0); p[10]=0x06; return p; },
-      // 3. PDJL opt-in subscribe (type 0x02 — used by CDJs to receive DJM status)
-      ()=>{ const p=Buffer.alloc(11); PDJL.MAGIC.copy(p,0); p[10]=0x02; return p; },
-      // 4. Raw 0x00 probe
-      ()=>Buffer.from([0x00]),
-    ];
-    let attempt=0;
-    const doAttempt=()=>{
-      if(attempt>=tryHandshakes.length) return;
-      const hs=tryHandshakes[attempt++];
-      const sock=net.createConnection({host:djmIp,port,timeout:10000});
-      sock.on('connect',()=>{
-        const hsDesc=hs?`hs#${attempt-1}`:'passive(no-send)';
-        console.log(`[DJM-TCP] connected ${djmIp}:${port} attempt=${hsDesc}`);
-        sock.on('data',buf=>{
-          const hex=buf.toString('hex');
-          console.log(`[DJM-TCP] DATA! ${djmIp}:${port} len=${buf.length} hex=${hex}`);
-          // Log every unique response
-          const key=`tcp_${port}_len${buf.length}_b0=${buf[0]}`;
-          if(!this._djmSeenTypes.has(key)){
-            this._djmSeenTypes.add(key);
-            console.log(`[DJM-TCP] FIRST-SEEN key=${key}`);
-          }
-        });
-        if(hs){ try{ sock.write(hs()); }catch(_){} }
-      });
-      sock.on('error',e=>{ console.log(`[DJM-TCP] ${djmIp}:${port} err: ${e.message}`); setTimeout(doAttempt,500); });
-      sock.on('timeout',()=>{ console.log(`[DJM-TCP] ${djmIp}:${port} timeout (no data)`); sock.destroy(); setTimeout(doAttempt,500); });
-    };
-    doAttempt();
-  }
-  */
 
   // Pro DJ Link keep-alive announcement on 50000
   // CDJs only send status to devices they see on the network
@@ -2566,8 +2510,6 @@ class BridgeCore {
         this.onDeviceList?.(this.devices);
         // 자동 모드일 때 DJM 서브넷과 매칭되는 인터페이스로 전환
         this._autoSelectPdjlForRemote(rinfo.address);
-        // [DISABLED 2026-04-19] STC는 DJM에 TCP 안 씀. 투기성 핸드셰이크가 DJM 상태머신에 잡음 발생 가능.
-        // this._probeDjmTCP(rinfo.address);
         if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
         // 15초 후 0x39 미수신이면 진단 로그
         setTimeout(()=>{
