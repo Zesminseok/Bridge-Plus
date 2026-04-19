@@ -4420,7 +4420,7 @@ function renderSettings(){
     <div class="sgr">
       <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkLinkEnabled" ${cfg.linkEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">Link 세션 참여 — BPM 송신 (단방향)</span></label></div>
       <div class="srw"><span class="srl">BPM 소스</span><select class="ss" data-cfg="linkSource">${[['mixer','Mixer BPM (DJM)'],['deck','선택 덱 BPM'],['master','Master 덱 BPM (Pro DJ Link)']].map(([v,l])=>`<option value="${v}" ${cfg.linkSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">덱 선택 (deck 모드)</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${['A','B','C','D','E','F'][i]}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">덱 선택 (deck 모드)</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${i+1}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">세션 상태</span><span id="linkStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">—</span></div>
       <div class="srw"><span class="srl">현재 송신 BPM</span><span id="linkBpmLbl" style="font:700 11px var(--mn);color:var(--grn)">—</span></div>
     </div>
@@ -4663,10 +4663,11 @@ setInterval(async ()=>{
   }catch(_){}
 },250);
 // BPM 소스 계산 — 'mixer' | 'deck' | 'master'
-// 덱 필드: DECKS[slot].bpm, DECKS[slot].master (Pro DJ Link master flag)
+// DECKS 키는 숫자 슬롯(0-5) = 덱 1-6 (UI 표시용으로 +1)
+// 덱 필드: DECKS[n].bpm, DECKS[n].master (Pro DJ Link master flag), DECKS[n].pl (playing)
 function _computeLinkSourceBpm(){
   const src=cfg.linkSource||'mixer';
-  const slots=['A','B','C','D','E','F'];
+  const slots=Object.keys(DECKS).map(Number).sort();
   if(src==='mixer'){
     // Mixer BPM = 현재 master 로 지정된 덱의 BPM (DJM 자체는 BPM 미송출)
     for(const k of slots){
@@ -4681,8 +4682,9 @@ function _computeLinkSourceBpm(){
     return 0;
   }
   if(src==='deck'){
-    const idx=Math.max(0,Math.min(5,cfg.linkDeckIdx|0));
-    const d=DECKS[slots[idx]];
+    // linkDeckIdx 는 0-기반 덱 번호 (덱 1 → 0)
+    const slot=Math.max(0,Math.min(5,cfg.linkDeckIdx|0));
+    const d=DECKS[slot];
     return (d && d.bpm>0) ? d.bpm : 0;
   }
   // 'master': Pro DJ Link master=true 인 덱의 BPM
