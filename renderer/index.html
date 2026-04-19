@@ -3149,12 +3149,13 @@ function doCueDown(slot){
   } else {
     d.cp=d.au.currentTime; // current position becomes new cue point
     d.cuw=false;
-    // Add to cuePoints list if not already there (virtual deck memory cue)
+    // 가상덱: 큐 버튼 누를 때마다 시작포인트가 갱신되므로 마커는 하나만 유지.
+    // 이전에 찍어둔 가상 큐(_virtualCue=true)는 제거하고 최신 위치 하나만 push.
+    // (HW 덱은 dbserver에서 배열을 통째로 replace 하므로 이 경로를 타지 않음.)
     if(!d.cuePoints)d.cuePoints=[];
+    d.cuePoints = d.cuePoints.filter(c=>!c._virtualCue);
     const cpMs=Math.round(d.cp*1000);
-    if(!d.cuePoints.find(c=>Math.abs(c.timeMs-cpMs)<50)){
-      d.cuePoints.push({name:'',timeMs:cpMs,hotCueNum:0,colorId:0,type:'memory'});
-    }
+    d.cuePoints.push({name:'CUE',timeMs:cpMs,hotCueNum:0,colorId:0,type:'memory',_virtualCue:true});
     d.au.currentTime=d.cp;
     d.au.play().catch(()=>{});
     d.cu=true;d.pl=false;
