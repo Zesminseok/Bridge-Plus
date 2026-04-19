@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8">
-<title>BRIDGE+ / Layout Variants — 5 concepts · Mono</title>
+<title>BRIDGE+ / Layout Variants — Tower · Card · Hero+List</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;border-radius:0!important}
 :root{
-  /* MONO palette */
   --bg:#0c0e12;
   --t-bg:#141414;          --t-bg2:#1a1a1a;        --t-bg3:#222;
   --t-bdr:#2a2a2a;         --t-bdr2:#3a3a3a;
@@ -21,14 +20,8 @@
   --t-sn:'Inter','Noto Sans KR',sans-serif;
   --t-seg:'JetBrains Mono',monospace;
   --t-label:'Inter',sans-serif;
-
-  /* 8px base grid units */
   --u:4px; --u2:8px; --u3:12px; --u4:16px; --u6:24px;
-
-  /* Fixed heights for rigid alignment */
-  --h-btn-lg:32px;   /* CUE / PLAY */
-  --h-btn-md:28px;   /* STOP · SMPTE · A·B */
-  --h-btn-sm:22px;
+  --h-btn-lg:32px;   --h-btn-md:28px;   --h-btn-sm:22px;
 }
 body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x:hidden;-webkit-font-smoothing:antialiased}
 .wrap{max-width:1520px;margin:0 auto;padding:24px}
@@ -49,7 +42,6 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .gi-play,.gi-pause,.gi-prev{width:1.15em;height:1.15em;vertical-align:-.22em;fill:currentColor}
 .gi-close{width:.9em;height:.9em}
 
-/* STAGE wrapper */
 .stage{padding:var(--u6) var(--u6) 28px;background:var(--t-bg);border:1px solid var(--t-bdr);margin-bottom:28px}
 .stage-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
 .stage-meta .title{font:700 13px var(--t-label);letter-spacing:.04em;color:var(--t-tx)}
@@ -58,56 +50,40 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .stage-hint{font:400 11px/1.6 var(--t-mn);color:var(--t-tx3);margin-bottom:var(--u4);padding-bottom:var(--u3);border-bottom:1px solid var(--t-bdr)}
 .stage-hint b{color:var(--t-accent);font-weight:700}
 
-.deck-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--u4)}
-.deck-grid.single{grid-template-columns:1fr}
+/* ════════════════════ COMMON PARTS ════════════════════ */
+.deck{background:var(--t-bg2);border:1px solid var(--t-bdr);display:flex;flex-direction:column}
 
-/* ════════════════════════ COMMON ════════════════════════ */
-.deck{background:var(--t-bg2);border:1px solid var(--t-bdr);padding:var(--u3) var(--u4);display:flex;flex-direction:column;gap:var(--u2)}
-
-/* HEADER row — 32px fixed */
-.d-hdr{display:flex;align-items:center;gap:var(--u2);height:32px;padding-bottom:var(--u2);border-bottom:1px solid var(--t-bdr)}
-.d-hdr-l{display:flex;align-items:baseline;gap:var(--u)}
-.d-pname{font:400 10px var(--t-sn);color:var(--t-tx3);letter-spacing:.04em;line-height:1}
-.d-pnum{font:700 18px var(--t-mn);color:var(--t-tx);letter-spacing:-.02em;line-height:1}
 .badge{font:700 9px var(--t-mn);padding:3px 7px;letter-spacing:.08em;background:transparent;border:1px solid var(--t-bdr2);line-height:1;height:18px;display:inline-flex;align-items:center}
 .badge.stop{color:var(--t-red);border-color:var(--t-red-bdr)}
 .badge.play{color:var(--t-accent);border-color:var(--t-accent-bdr);background:var(--t-accent-bg)}
 .badge.cue{color:var(--t-ylw);border-color:var(--t-ylw-bdr)}
-.sync-cluster{display:flex;gap:var(--u);margin-left:auto}
-.sbtn{font:700 8px var(--t-mn);padding:0 7px;border:1px solid var(--t-bdr2);color:var(--t-tx3);letter-spacing:.08em;cursor:pointer;height:20px;display:inline-flex;align-items:center;line-height:1}
+
+.sbtn{font:700 8px var(--t-mn);padding:0 6px;border:1px solid var(--t-bdr2);color:var(--t-tx3);letter-spacing:.08em;cursor:pointer;height:18px;display:inline-flex;align-items:center;line-height:1}
 .sbtn.on{background:var(--t-accent-bg);color:var(--t-accent);border-color:var(--t-accent-bdr)}
 .sbtn.master{border-color:var(--t-ylw-bdr);color:var(--t-ylw)}
-.hw-lbl{font:500 9px var(--t-mn);color:var(--t-tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:5px;line-height:1}
-.close-btn{width:22px;height:22px;border:1px solid var(--t-red-bdr);color:var(--t-red);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.sync-cluster{display:flex;gap:3px}
 
-/* TITLE row — 18px fixed */
-.d-title{display:flex;align-items:baseline;gap:var(--u2);font-size:13px;height:18px;line-height:18px}
-.d-artist{color:var(--t-tx2);font-weight:500}
-.d-dash{color:var(--t-tx4)}
-.d-track{color:var(--t-tx);font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hw-lbl{font:500 9px var(--t-mn);color:var(--t-tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px;line-height:1}
 
-/* ART — 1:1 forced */
 .art{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden;aspect-ratio:1/1;flex-shrink:0}
-.art-fill{position:absolute;inset:0;background:linear-gradient(135deg,var(--t-accent) 0%,var(--t-accent-dim) 100%);opacity:.5}
-.art-label{position:absolute;bottom:4px;left:4px;right:4px;font:500 7px var(--t-mn);color:#fff;letter-spacing:.1em;text-shadow:0 1px 2px rgba(0,0,0,.7);line-height:1}
+.art-fill{position:absolute;inset:0;background:linear-gradient(135deg,var(--t-accent) 0%,var(--t-accent-dim) 100%);opacity:.6}
+.art-label{position:absolute;bottom:4px;left:6px;right:6px;font:500 7px var(--t-mn);color:#fff;letter-spacing:.12em;text-shadow:0 1px 2px rgba(0,0,0,.7);line-height:1}
 
-/* WAVEFORM */
-.wf-detail,.wf-overview{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
+/* Waveform */
+.wf-box{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
 .wf-svg{width:100%;height:100%;display:block}
 .wf-playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--t-accent);box-shadow:0 0 8px var(--t-accent);left:50%}
-.wf-pos-box{position:absolute;top:0;bottom:0;border:1px solid var(--t-accent);width:30%;left:40%;pointer-events:none}
 
-/* VU strip — 가로 열배치 */
-.vu-strip{display:flex;flex-direction:row;gap:3px;align-items:stretch;background:var(--t-bg3);border:1px solid var(--t-bdr);padding:3px;flex-shrink:0}
-.vu-ch{display:flex;flex-direction:column;gap:2px;align-items:center}
-.vu-bar{flex:1;width:9px;background:var(--t-bg);position:relative;overflow:hidden;border:1px solid var(--t-bdr)}
-.vu-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,#808080 0%,#c0c0c0 58%,var(--t-ylw) 80%,var(--t-red) 100%)}
-.vu-fader-fill{position:absolute;bottom:0;left:0;right:0;background:var(--t-accent);opacity:.75}
-.vu-lbl{font:700 7px var(--t-mn);color:var(--t-tx4);letter-spacing:.04em;line-height:1}
+/* VU — 가로 형식 (horizontal bars, L/R/F stacked) */
+.vu-h{display:flex;flex-direction:column;gap:3px;background:var(--t-bg3);border:1px solid var(--t-bdr);padding:4px 5px}
+.vu-h .vu-row{display:flex;align-items:center;gap:5px}
+.vu-h .vu-lbl{font:700 7px var(--t-mn);color:var(--t-tx4);letter-spacing:.04em;line-height:1;width:9px;flex-shrink:0;text-align:center}
+.vu-h .vu-bar{flex:1;height:8px;background:var(--t-bg);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
+.vu-h .vu-fill{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,#808080 0%,#c0c0c0 58%,var(--t-ylw) 80%,var(--t-red) 100%)}
+.vu-h .vu-fader-fill{position:absolute;top:0;bottom:0;left:0;background:var(--t-accent);opacity:.78}
 
 /* EQ — 원형 노브 + 12시 디턴트 */
-.eq-strip{display:flex;flex-direction:column;gap:var(--u);justify-content:space-between;align-items:center;padding:2px 0;flex-shrink:0}
-.eq-strip.horizontal{flex-direction:row;gap:10px;padding:0}
+.eq-strip{display:flex;gap:var(--u2);align-items:center}
 .eq-knob{display:flex;flex-direction:column;align-items:center;gap:2px}
 .eq-knob svg{display:block}
 .eq-knob-circle{fill:none;stroke:var(--t-bdr2);stroke-width:1.2}
@@ -116,30 +92,24 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .eq-knob-pointer{stroke:var(--t-tx);stroke-width:1.5;stroke-linecap:round}
 .eq-lbl{font:700 7px var(--t-mn);color:var(--t-tx3);letter-spacing:.06em;line-height:1}
 
-/* TIMECODE */
-.tc-head{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--u);font:700 8px var(--t-mn);color:var(--t-tx4);letter-spacing:.14em;text-transform:uppercase;height:10px;line-height:1}
+/* TC / BPM */
 .tc-num{font:300 32px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 18px var(--t-accent-glow)}
 .tc-num.inactive{color:var(--t-tx3);text-shadow:none}
-
-/* BPM cluster */
-.tc-bpm{display:flex;align-items:center;gap:var(--u2);flex-wrap:wrap}
-.tc-bpm-base{font:600 13px var(--t-mn);color:var(--t-tx2);font-variant-numeric:tabular-nums;line-height:1}
-.tc-bpm-pitch{font:500 10px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;line-height:1}
-.tc-bpm-cur{font:700 16px var(--t-mn);color:var(--t-accent);font-variant-numeric:tabular-nums;letter-spacing:-.01em;padding:3px 8px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);line-height:1;display:inline-flex;align-items:baseline;gap:3px}
-.tc-bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
-.tc-bpm-lbl{font:500 7px var(--t-mn);color:var(--t-tx3);letter-spacing:.14em}
-.tc-key{font:700 10px var(--t-mn);color:var(--t-tx2);padding:3px 7px;border:1px solid var(--t-bdr2);line-height:1;display:inline-flex;align-items:center;height:22px}
-
+.bpm-cur{font:700 16px var(--t-mn);color:var(--t-accent);font-variant-numeric:tabular-nums;letter-spacing:-.01em;padding:3px 8px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);line-height:1;display:inline-flex;align-items:baseline;gap:3px}
+.bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
+.bpm-lbl{font:500 7px var(--t-mn);color:var(--t-tx3);letter-spacing:.14em}
+.tc-key{font:700 10px var(--t-mn);color:var(--t-tx2);padding:3px 7px;border:1px solid var(--t-bdr2);line-height:1;display:inline-flex;align-items:center}
+.bpm-meta{font:500 9px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;line-height:1}
 .phasor{display:flex;gap:var(--u);height:8px}
 .phs{width:8px;height:8px;border:1px solid var(--t-tx4)}
 .phs.on{background:var(--t-accent);border-color:var(--t-accent)}
 
-/* TRANSPORT / SMPTE — strict heights */
+/* Transport / SMPTE */
 .t-btn{border:1.5px solid var(--t-bdr2);background:transparent;color:var(--t-tx2);font:700 11px var(--t-mn);letter-spacing:.08em;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1}
 .t-btn:hover{border-color:var(--t-tx3)}
 .t-btn.lg{height:var(--h-btn-lg)}
 .t-btn.md{height:var(--h-btn-md)}
-.t-btn.sm{height:var(--h-btn-sm)}
+.t-btn.sm{height:var(--h-btn-sm);font-size:9px}
 .t-btn.cue{color:var(--t-ylw);border-color:var(--t-ylw-bdr)}
 .t-btn.cue.on{background:var(--t-ylw-bg);border-color:var(--t-ylw)}
 .t-btn.play{color:var(--t-accent);border-color:var(--t-accent-bdr)}
@@ -147,150 +117,138 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .t-btn.stop{color:var(--t-red);border-color:var(--t-red-bdr)}
 
 .smpte-row{display:flex;gap:var(--u);height:var(--h-btn-md);align-items:stretch}
+.smpte-row.sm{height:var(--h-btn-sm)}
 .l-mst{flex:1.3;background:transparent;border:1px solid var(--t-ylw-bdr);color:var(--t-ylw);font:700 9px var(--t-mn);letter-spacing:.08em;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
 .l-mst.on{background:var(--t-ylw-bg)}
 .l-ab{flex:1;background:transparent;border:1px solid var(--t-bdr2);color:var(--t-tx3);font:700 10px var(--t-mn);letter-spacing:.2em;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
 .l-ab.a.on{background:rgba(126,199,255,.14);border-color:var(--t-cool);color:var(--t-cool)}
 .l-ab.b.on{background:rgba(255,159,180,.14);border-color:var(--t-warm);color:var(--t-warm)}
 
-/* footer */
+.close-btn{width:22px;height:22px;border:1px solid var(--t-red-bdr);color:var(--t-red);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+
 .notes{margin-top:var(--u6);padding:var(--u4) 20px;background:#14161c;border:1px solid #2a2a33;font:400 11px/1.7 var(--t-mn);color:#8b8b98}
 .notes b{color:var(--t-accent);font-weight:700}
 
-/* ═══════════════════════════════════════════════════════ */
-/* ═════════ A · CANONICAL — 정렬·비율 수정판 ═════════════ */
-/* ═══════════════════════════════════════════════════════ */
-.v-canonical .wf-wrap{display:grid;grid-template-columns:96px 1fr 28px 32px;gap:var(--u2);height:96px}
-.v-canonical .art{width:96px;height:96px}
-.v-canonical .wf-col{display:flex;flex-direction:column;gap:var(--u);min-width:0}
-.v-canonical .wf-detail{flex:1}
-.v-canonical .wf-overview{height:24px}
-.v-canonical .tc-row{display:grid;grid-template-columns:1fr 104px;gap:var(--u3);align-items:stretch;min-height:108px}
-.v-canonical .tc-box{display:flex;flex-direction:column;justify-content:space-between;gap:var(--u);min-width:0}
-.v-canonical .rt-col{display:flex;flex-direction:column;gap:var(--u);justify-content:space-between}
-.v-canonical .t-row{display:flex;gap:var(--u);height:var(--h-btn-lg)}
-.v-canonical .t-row .t-btn{flex:1}
-/* 총 높이 엄격히 맞춤: 32 + 4 + 28 + 4 + 28 = 96 (wf-wrap 96과 일치) */
-
-/* ═══════════════════════════════════════════════════════ */
-/* ═════════ B · WAVE-FIRST — 파형 히어로 ════════════════ */
-/* ═══════════════════════════════════════════════════════ */
-.v-wave-first .wf-detail{height:120px}
-.v-wave-first .wf-overview{height:24px;margin-top:var(--u)}
-.v-wave-first .ctl-row{display:grid;grid-template-columns:64px 1fr auto auto 120px;gap:var(--u3);align-items:center;min-height:72px}
-.v-wave-first .art{width:64px;height:64px}
-.v-wave-first .tc-box{display:flex;flex-direction:column;gap:var(--u);min-width:0}
-.v-wave-first .tc-box .tc-num{font-size:24px}
-.v-wave-first .tc-bpm-cur{font-size:14px;padding:2px 7px}
-.v-wave-first .tc-bpm-base{font-size:12px}
-.v-wave-first .tc-bpm-pitch{font-size:10px}
-.v-wave-first .tc-key{font-size:10px;height:20px;padding:2px 6px}
-.v-wave-first .vu-strip{height:64px}
-.v-wave-first .eq-strip{flex-direction:row;gap:var(--u2);padding:0}
-.v-wave-first .ctl-col{display:flex;flex-direction:column;gap:var(--u)}
-.v-wave-first .t-row{display:flex;gap:var(--u)}
-.v-wave-first .t-row .t-btn{flex:1;height:var(--h-btn-md);font-size:10px}
-.v-wave-first .t-btn.stop{height:var(--h-btn-md)}
-
-/* ═══════════════════════════════════════════════════════ */
-/* ═════════ C · TC-HERO — 타임코드 최상위 ══════════════ */
-/* ═══════════════════════════════════════════════════════ */
-.v-tc-hero .hero-row{display:grid;grid-template-columns:1fr auto;gap:var(--u4);align-items:center;padding:var(--u) 0 var(--u2);border-bottom:1px solid var(--t-bdr)}
-.v-tc-hero .hero-tc{display:flex;flex-direction:column;gap:var(--u)}
-.v-tc-hero .hero-tc .tc-num{font-size:48px;font-weight:200}
-.v-tc-hero .hero-bpm{display:flex;flex-direction:column;align-items:flex-end;gap:var(--u)}
-.v-tc-hero .hero-bpm .tc-bpm-cur{font-size:20px;padding:4px 12px}
-.v-tc-hero .hero-bpm .meta-row{display:flex;gap:var(--u2);align-items:center}
-.v-tc-hero .id-row{display:flex;align-items:center;gap:var(--u2);height:48px}
-.v-tc-hero .id-row .art{width:48px;height:48px}
-.v-tc-hero .id-row .d-title{flex:1;min-width:0}
-.v-tc-hero .wf-detail{height:80px}
-.v-tc-hero .wf-overview{height:22px;margin-top:var(--u)}
-.v-tc-hero .ctl-row{display:grid;grid-template-columns:auto auto 1fr 120px;gap:var(--u3);align-items:center;min-height:64px}
-.v-tc-hero .vu-strip{height:56px}
-.v-tc-hero .eq-strip{flex-direction:row;gap:var(--u2);padding:0}
-.v-tc-hero .ctl-col{display:flex;flex-direction:column;gap:var(--u)}
-.v-tc-hero .t-row{display:flex;gap:var(--u)}
-.v-tc-hero .t-row .t-btn{flex:1;height:var(--h-btn-md)}
-.v-tc-hero .t-btn.stop{height:var(--h-btn-md)}
-
-/* ═══════════════════════════════════════════════════════ */
-/* ═════════ D · STRIP — 1덱=1행 (컴팩트 멀티덱) ════════ */
-/* ═══════════════════════════════════════════════════════ */
-.v-strip{padding:var(--u2) var(--u3);flex-direction:row;align-items:center;gap:var(--u3);min-height:72px;display:grid;grid-template-columns:56px 1fr 28px 80px 80px 100px;align-items:center}
-.v-strip .art{width:56px;height:56px}
-.v-strip .info{display:flex;flex-direction:column;gap:var(--u);min-width:0}
-.v-strip .info-top{display:flex;align-items:center;gap:var(--u2);height:20px}
-.v-strip .info-top .d-pnum{font-size:14px}
-.v-strip .info-top .d-pname{font-size:9px}
-.v-strip .info-top .badge{font-size:8px;padding:2px 5px;height:16px}
-.v-strip .info-top .hw-lbl{font-size:8px;margin-left:auto}
-.v-strip .info-top .sbtn{font-size:7px;padding:0 5px;height:16px}
-.v-strip .wf-mini{flex:1;height:28px;background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden;min-width:0}
-.v-strip .title-mini{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:14px;line-height:14px}
-.v-strip .title-mini .d-artist{color:var(--t-tx3);font-weight:500}
-.v-strip .title-mini .d-dash{margin:0 4px}
-.v-strip .title-mini .d-track{color:var(--t-tx);font-weight:500}
-.v-strip .vu-mini{display:flex;flex-direction:row;gap:2px;padding:2px;background:var(--t-bg3);border:1px solid var(--t-bdr);height:56px}
-.v-strip .vu-mini .vu-bar{width:6px}
-.v-strip .tc-mini{display:flex;flex-direction:column;gap:3px}
-.v-strip .tc-mini .tc-num-sm{font:300 18px var(--t-seg);color:var(--t-accent);font-variant-numeric:tabular-nums;line-height:1}
-.v-strip .tc-mini .tc-num-sm.inactive{color:var(--t-tx3)}
-.v-strip .tc-mini .bpm-sm{font:700 12px var(--t-mn);color:var(--t-accent);font-variant-numeric:tabular-nums;line-height:1}
-.v-strip .tc-mini .bpm-sm .tc-bpm-lbl{font-size:7px;margin-left:2px}
-.v-strip .tc-mini .bpm-sm.inactive{color:var(--t-tx2)}
-.v-strip .tc-mini .meta-sm{font:500 9px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;line-height:1}
-.v-strip .ctl-mini{display:flex;flex-direction:column;gap:var(--u)}
-.v-strip .ctl-mini .t-row{display:flex;gap:var(--u)}
-.v-strip .ctl-mini .t-btn{flex:1;height:22px;font-size:9px}
-.v-strip .ctl-mini .smpte-row{height:20px}
-.v-strip .ctl-mini .l-mst,.v-strip .ctl-mini .l-ab{font-size:8px}
-
-/* ═══════════════════════════════════════════════════════ */
-/* ═════════ E · TOWER — 세로 콘솔 column (콤팩트) ══════ */
-/* ═══════════════════════════════════════════════════════ */
-/* 폭 180px 고정. 4~6 덱을 가로로 나열 (DJM 채널 스트립과 동일 폭감) */
-.v-tower-grid{display:flex;flex-wrap:wrap;gap:var(--u2);justify-content:flex-start}
-.v-tower{width:180px;padding:var(--u2);gap:var(--u2);display:flex;flex-direction:column}
-/* HEAD — 한 줄 컴팩트: [#] [badge] [model] */
-.v-tower .tw-head{display:flex;flex-direction:column;gap:var(--u);padding-bottom:var(--u);border-bottom:1px solid var(--t-bdr);height:auto}
+/* ═════════════════════════════════════════════════════════ */
+/* ═════════ E · TOWER — 세로 콘솔 (VU 가로 수정) ════════ */
+/* ═════════════════════════════════════════════════════════ */
+.v-tower-grid{display:flex;flex-wrap:wrap;gap:var(--u2)}
+.v-tower{width:180px;padding:var(--u2);gap:var(--u2)}
+.v-tower .tw-head{display:flex;flex-direction:column;gap:var(--u);padding-bottom:var(--u);border-bottom:1px solid var(--t-bdr)}
 .v-tower .tw-head-top{display:flex;align-items:baseline;gap:var(--u2);height:22px}
 .v-tower .tw-pname{font:400 7px var(--t-sn);color:var(--t-tx3);letter-spacing:.24em;text-transform:uppercase;line-height:1}
 .v-tower .tw-pnum{font:700 18px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em}
 .v-tower .tw-head-top .badge{margin-left:auto}
 .v-tower .tw-head-btm{display:flex;align-items:center;gap:var(--u);justify-content:space-between}
 .v-tower .tw-head-btm .hw-lbl{font-size:8px}
-.v-tower .sync-cluster{margin:0;gap:3px}
-.v-tower .sbtn{font-size:7px;padding:0 5px;height:16px}
-/* ART — 최대 140px, 가운데 정렬 */
 .v-tower .tw-art{width:140px;height:140px;margin:0 auto}
 .v-tower .tw-art .art-label{font-size:7px}
-/* TITLE */
 .v-tower .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;min-height:30px}
-.v-tower .tw-title .d-artist{font-size:10px;color:var(--t-tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
-.v-tower .tw-title .d-track{font-size:11px;color:var(--t-tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
-/* WAVE */
-.v-tower .tw-wf{height:32px;background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
-/* TC */
+.v-tower .tw-title .tw-artist{font-size:10px;color:var(--t-tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.v-tower .tw-title .tw-track{font-size:11px;color:var(--t-tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.v-tower .tw-wf{height:32px}
 .v-tower .tw-tc{text-align:center;font:300 18px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 10px var(--t-accent-glow);line-height:1;padding:var(--u) 0}
 .v-tower .tw-tc.inactive{color:var(--t-tx3);text-shadow:none}
-/* BPM */
 .v-tower .tw-bpm{display:flex;flex-direction:column;align-items:center;gap:3px}
-.v-tower .tw-bpm-cur{font:700 15px var(--t-mn);color:var(--t-accent);padding:2px 8px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1.1}
-.v-tower .tw-bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
-.v-tower .tw-bpm-meta{font:500 8px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums}
-/* MIXER — VU 좌 | EQ 가로 우 */
-.v-tower .tw-mixer{display:grid;grid-template-columns:36px 1fr;gap:var(--u2);align-items:stretch;height:58px}
-.v-tower .tw-mixer .vu-strip{padding:2px}
-.v-tower .tw-mixer .eq-strip{flex-direction:row;justify-content:space-around;padding:2px 0;gap:var(--u)}
-.v-tower .tw-mixer .eq-knob svg{width:24px;height:24px}
-/* CTL */
+.v-tower .tw-bpm-cur{font-size:15px}
+/* 가로 VU — L/R/F 3행 stack 또는 VU/F 2행 stack */
+.v-tower .vu-h{width:100%}
 .v-tower .tw-ctl{display:flex;flex-direction:column;gap:var(--u);margin-top:auto}
 .v-tower .tw-ctl .t-row{display:flex;gap:var(--u)}
 .v-tower .tw-ctl .t-btn{flex:1;height:26px;font-size:9px}
 .v-tower .tw-ctl .smpte-row{height:22px}
 .v-tower .tw-ctl .l-mst,.v-tower .tw-ctl .l-ab{font-size:8px}
 
+/* ═════════════════════════════════════════════════════════ */
+/* ═════════ F · CARD — 앨범 아트 히어로 ═════════════════ */
+/* ═════════════════════════════════════════════════════════ */
+.v-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,360px));gap:var(--u3);justify-content:flex-start}
+.v-card{width:360px;padding:0;overflow:hidden;background:var(--t-bg2)}
+.v-card .cd-hero{position:relative;height:260px;overflow:hidden}
+.v-card .cd-hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,var(--t-accent) 0%,var(--t-accent-dim) 100%);opacity:.85}
+.v-card .cd-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.4) 70%,rgba(12,14,18,.95) 100%);pointer-events:none}
+.v-card .cd-top{position:absolute;top:0;left:0;right:0;padding:var(--u3) var(--u3) 0;display:flex;align-items:baseline;gap:var(--u2);z-index:2}
+.v-card .cd-top .tw-pname{font:400 7px var(--t-sn);color:rgba(255,255,255,.6);letter-spacing:.24em;text-transform:uppercase}
+.v-card .cd-top .tw-pnum{font:700 22px var(--t-mn);color:#fff;line-height:1;letter-spacing:-.02em;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+.v-card .cd-top .badge{margin-left:auto;background:rgba(0,0,0,.4);border-color:rgba(255,255,255,.2);color:#fff}
+.v-card .cd-top .badge.play{background:var(--t-accent-bg);border-color:var(--t-accent-bdr);color:#fff}
+.v-card .cd-top .close-btn{background:rgba(0,0,0,.4);border-color:rgba(255,255,255,.15)}
+.v-card .cd-info{position:absolute;bottom:var(--u3);left:var(--u3);right:var(--u3);z-index:2;color:#fff}
+.v-card .cd-artist{font:500 11px var(--t-sn);color:rgba(255,255,255,.7);letter-spacing:.04em;margin-bottom:2px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.v-card .cd-track{font:600 18px var(--t-sn);letter-spacing:-.01em;line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v-card .cd-body{padding:var(--u3)}
+.v-card .cd-tc-row{display:flex;align-items:baseline;justify-content:space-between;gap:var(--u2);margin-bottom:var(--u2)}
+.v-card .cd-tc{font-size:28px}
+.v-card .cd-bpm-col{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.v-card .cd-bpm-col .bpm-cur{font-size:16px}
+.v-card .cd-meta-row{display:flex;gap:var(--u2);align-items:center;margin-bottom:var(--u3);font-size:10px}
+.v-card .cd-meta-row .bpm-meta{font-size:10px}
+.v-card .cd-meta-row .sync-cluster{margin-left:auto}
+.v-card .cd-wf{height:48px;margin-bottom:var(--u2)}
+.v-card .cd-mix-row{display:grid;grid-template-columns:1fr auto;gap:var(--u2);margin-bottom:var(--u2);align-items:center}
+.v-card .cd-mix-row .eq-strip{gap:var(--u)}
+.v-card .cd-mix-row .eq-knob svg{width:26px;height:26px}
+.v-card .cd-ctl-row{display:grid;grid-template-columns:1fr 1fr 80px;gap:var(--u)}
+.v-card .cd-ctl-row .t-btn{height:var(--h-btn-md)}
+.v-card .cd-smpte-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--u);margin-top:var(--u);height:var(--h-btn-sm)}
+.v-card .cd-smpte-row .l-mst,.v-card .cd-smpte-row .l-ab{height:100%}
+
+/* ═════════════════════════════════════════════════════════ */
+/* ═════════ G · HERO+LIST — 마스터 집중 + 보조 리스트 ═══ */
+/* ═════════════════════════════════════════════════════════ */
+.v-hero-wrap{display:flex;flex-direction:column;gap:var(--u2)}
+/* Master: 큰 hero deck */
+.v-hero{padding:var(--u3) var(--u4);gap:var(--u3);display:grid;grid-template-columns:120px 1fr auto 140px;grid-template-rows:auto auto auto;grid-template-areas:
+  "art  title title  tc"
+  "art  wave  wave   tc"
+  "art  mix   ctl    ctl";
+  align-items:stretch}
+.v-hero .hh-art{grid-area:art;width:120px;height:120px}
+.v-hero .hh-title{grid-area:title;display:flex;flex-direction:column;gap:var(--u);justify-content:center}
+.v-hero .hh-title-top{display:flex;align-items:center;gap:var(--u2)}
+.v-hero .hh-pnum{font:700 20px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em}
+.v-hero .hh-pname{font:400 8px var(--t-sn);color:var(--t-tx3);letter-spacing:.24em;text-transform:uppercase}
+.v-hero .hh-title-top .sync-cluster{margin-left:auto}
+.v-hero .hh-artist{font:500 11px var(--t-sn);color:var(--t-tx3);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v-hero .hh-track{font:600 16px var(--t-sn);color:var(--t-tx);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v-hero .hh-wave{grid-area:wave;display:flex;flex-direction:column;gap:3px}
+.v-hero .hh-wave .wf-box{height:48px}
+.v-hero .hh-wave .wf-ov{height:16px}
+.v-hero .hh-tc{grid-area:tc;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:var(--u)}
+.v-hero .hh-tc-num{font:300 34px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 16px var(--t-accent-glow);line-height:1}
+.v-hero .hh-tc-num.inactive{color:var(--t-tx3);text-shadow:none}
+.v-hero .hh-bpm-cur{font:700 18px var(--t-mn);color:var(--t-accent);padding:3px 10px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1;display:inline-flex;align-items:baseline;gap:3px}
+.v-hero .hh-bpm-meta{font:500 10px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums}
+.v-hero .hh-mix{grid-area:mix;display:flex;align-items:center;gap:var(--u2)}
+.v-hero .hh-mix .vu-h{width:140px}
+.v-hero .hh-mix .eq-strip{gap:var(--u2)}
+.v-hero .hh-mix .eq-knob svg{width:28px;height:28px}
+.v-hero .hh-ctl{grid-area:ctl;display:flex;gap:var(--u);align-items:center;justify-content:flex-end}
+.v-hero .hh-ctl .t-btn{width:64px;height:var(--h-btn-md)}
+.v-hero .hh-ctl .smpte-row{height:var(--h-btn-md);gap:var(--u)}
+.v-hero .hh-ctl .smpte-row button{min-width:38px}
+
+/* Compact list row (보조 덱) */
+.v-row{padding:var(--u2) var(--u3);display:grid;grid-template-columns:auto auto 1fr auto auto auto auto;gap:var(--u2);align-items:center;height:60px}
+.v-row .rr-pill{display:flex;align-items:baseline;gap:var(--u)}
+.v-row .rr-pnum{font:700 16px var(--t-mn);color:var(--t-tx);line-height:1}
+.v-row .rr-pname{font:400 7px var(--t-sn);color:var(--t-tx3);letter-spacing:.24em;text-transform:uppercase;line-height:1}
+.v-row .rr-art{width:44px;height:44px}
+.v-row .rr-title{display:flex;flex-direction:column;gap:2px;min-width:0;max-width:320px}
+.v-row .rr-artist{font:500 10px var(--t-sn);color:var(--t-tx3);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v-row .rr-track{font:500 12px var(--t-sn);color:var(--t-tx2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v-row .rr-wave{width:160px;height:34px}
+.v-row .rr-tc-mini{font:300 15px var(--t-seg);color:var(--t-accent);font-variant-numeric:tabular-nums;line-height:1;letter-spacing:.02em}
+.v-row .rr-tc-mini.inactive{color:var(--t-tx3)}
+.v-row .rr-bpm-col{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+.v-row .rr-bpm-cur{font:700 12px var(--t-mn);color:var(--t-accent);padding:2px 6px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1}
+.v-row .rr-bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
+.v-row .rr-meta-mini{font:500 8px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;line-height:1}
+.v-row .rr-ctl{display:flex;gap:3px}
+.v-row .rr-ctl .t-btn{width:40px;height:26px;font-size:9px}
+.v-row .rr-smpte{display:flex;gap:3px;height:26px}
+.v-row .rr-smpte .l-mst{min-width:40px;font-size:8px}
+.v-row .rr-smpte .l-ab{min-width:22px;font-size:9px}
 </style>
 </head>
 <body>
@@ -302,7 +260,6 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
     <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 4h2v16H6zM20 4v16L9 12z"/></symbol>
     <symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 2.5 21 7.5v9L12 21.5 3 16.5v-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <!-- EQ knobs: HI=+30° boost, MID=0° center, LO=-20° cut -->
     <symbol id="eq-knob-hi" viewBox="-14 -14 28 28">
       <circle class="eq-knob-circle" r="10"/>
       <line class="eq-knob-center" x1="0" y1="-11.5" x2="0" y2="-9.5"/>
@@ -325,7 +282,6 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
       <line class="eq-knob-center" x1="0" y1="-11.5" x2="0" y2="-9.5"/>
       <line class="eq-knob-pointer" x1="0" y1="-4.5" x2="0" y2="-9"/>
     </symbol>
-    <!-- shared wave path -->
     <symbol id="wf-a" viewBox="0 0 400 70" preserveAspectRatio="none">
       <path d="M0,35 Q5,18 10,35 T20,22 T30,30 T40,10 T50,25 T60,18 T70,28 T80,8 T90,32 T100,14 T110,24 T120,6 T130,26 T140,20 T150,30 T160,12 T170,28 T180,16 T190,24 T200,10 T210,30 T220,18 T230,26 T240,8 T250,22 T260,14 T270,32 T280,20 T290,28 T300,10 T310,24 T320,16 T330,30 T340,12 T350,26 T360,20 T370,14 T380,28 T390,18 T400,24 L400,70 L0,70 Z" fill="currentColor" opacity=".85"/>
     </symbol>
@@ -342,544 +298,35 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
   <div class="hdr">
     <div>
       <h1>BRIDGE+ · Layout Variants</h1>
-      <div class="sub" style="margin-top:4px">5 concepts · strict 4px grid · color locked MONO</div>
+      <div class="sub" style="margin-top:4px">3 concepts · MONO locked · Tower VU 가로 수정</div>
     </div>
-    <div class="sub">2026-04-20 · re-aligned</div>
+    <div class="sub">2026-04-20</div>
   </div>
 
   <nav class="nav">
-    <a href="#va" class="on"><span class="n">A</span>CANONICAL</a>
-    <a href="#vb"><span class="n">B</span>WAVE FIRST</a>
-    <a href="#vc"><span class="n">C</span>TC HERO</a>
-    <a href="#vd"><span class="n">D</span>STRIP</a>
-    <a href="#ve"><span class="n">E</span>TOWER</a>
+    <a href="#ve" class="on"><span class="n">E</span>TOWER</a>
+    <a href="#vf"><span class="n">F</span>CARD</a>
+    <a href="#vg"><span class="n">G</span>HERO + LIST</a>
   </nav>
 
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- ═══════════ A · CANONICAL (정렬 수정판) ════════════ -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="stage" id="va">
-    <div class="stage-meta">
-      <div class="title"><span class="accent">A ·</span> CANONICAL · 기존 구조 재정렬</div>
-      <div class="sub">rigid 4px grid · fixed heights 32/28/22</div>
-    </div>
-    <div class="stage-hint">
-      기존 덱 구조 유지. <b>CUE/PLAY(32) + STOP(28) + SMPTE(28) = 88 + gap 8 = 96px</b> 로 맞춰 우측 컨트롤 열이 <b>wf-wrap 96px 와 정확히 동일 높이</b>. tc-box 는 flex justify-space-between 으로 같은 구간 내 수직 분산.
-    </div>
-    <div class="deck-grid">
-
-      <div class="deck v-canonical">
-        <div class="d-hdr">
-          <div class="d-hdr-l"><span class="d-pname">PLAYER</span><span class="d-pnum">1</span></div>
-          <span class="badge play">PLAY</span>
-          <div class="sync-cluster">
-            <span class="sbtn on">SYNC</span>
-            <span class="sbtn master">MASTER</span>
-          </div>
-          <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
-          <button class="close-btn" style="visibility:hidden"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
-        </div>
-        <div class="d-title">
-          <span class="d-artist">Daft Punk</span><span class="d-dash">—</span><span class="d-track">Children Of The Night</span>
-        </div>
-        <div class="wf-wrap">
-          <div class="art"><div class="art-fill"></div><div class="art-label">HOMEWORK</div></div>
-          <div class="wf-col">
-            <div class="wf-detail" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
-            <div class="wf-overview" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-ov-a"/></svg><div class="wf-pos-box"></div></div>
-          </div>
-          <div class="vu-strip">
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:78%"></div></div><span class="vu-lbl">VU</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:62%"></div></div><span class="vu-lbl">F</span></div>
-          </div>
-          <div class="eq-strip">
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
-          </div>
-        </div>
-        <div class="tc-row">
-          <div class="tc-box">
-            <div class="tc-head"><span>H</span><span>M</span><span>S</span><span>F</span></div>
-            <div class="tc-num">00:01:24:12</div>
-            <div class="tc-bpm">
-              <span class="tc-bpm-base">124.00</span>
-              <span class="tc-bpm-pitch">+3.23%</span>
-              <span class="tc-bpm-cur">128.00<span class="tc-bpm-lbl">BPM</span></span>
-              <span class="tc-key">8A</span>
-            </div>
-            <div class="phasor"><span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
-          </div>
-          <div class="rt-col">
-            <div class="t-row">
-              <button class="t-btn cue lg">CUE</button>
-              <button class="t-btn play lg on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
-            </div>
-            <button class="t-btn stop md"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-            <div class="smpte-row">
-              <button class="l-mst on">MASTER</button>
-              <button class="l-ab a on">A</button>
-              <button class="l-ab b">B</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="deck v-canonical">
-        <div class="d-hdr">
-          <div class="d-hdr-l"><span class="d-pname">PLAYER</span><span class="d-pnum">2</span></div>
-          <span class="badge cue">CUE</span>
-          <div class="sync-cluster">
-            <span class="sbtn">SYNC</span>
-            <span class="sbtn">MASTER</span>
-          </div>
-          <span class="hw-lbl" style="color:var(--t-accent)">VIRTUAL</span>
-          <button class="close-btn"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
-        </div>
-        <div class="d-title">
-          <span class="d-artist">Tame Impala</span><span class="d-dash">—</span><span class="d-track">Let It Happen (Soulwax Remix)</span>
-        </div>
-        <div class="wf-wrap">
-          <div class="art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.7"></div><div class="art-label">CURRENTS</div></div>
-          <div class="wf-col">
-            <div class="wf-detail" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
-            <div class="wf-overview" style="color:#666"><svg class="wf-svg"><use href="#wf-ov-a"/></svg></div>
-          </div>
-          <div class="vu-strip">
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">L</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">R</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:80%"></div></div><span class="vu-lbl">F</span></div>
-          </div>
-          <div class="eq-strip" style="visibility:hidden">
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg></div>
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg></div>
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg></div>
-          </div>
-        </div>
-        <div class="tc-row">
-          <div class="tc-box">
-            <div class="tc-head"><span>H</span><span>M</span><span>S</span><span>F</span></div>
-            <div class="tc-num inactive">00:00:48:00</div>
-            <div class="tc-bpm">
-              <span class="tc-bpm-base">120.00</span>
-              <span class="tc-bpm-pitch">-0.02%</span>
-              <span class="tc-bpm-cur inactive">119.98<span class="tc-bpm-lbl">BPM</span></span>
-              <span class="tc-key">5A</span>
-            </div>
-            <div class="phasor"><span class="phs"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
-          </div>
-          <div class="rt-col">
-            <div class="t-row">
-              <button class="t-btn cue lg on">CUE</button>
-              <button class="t-btn play lg"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
-            </div>
-            <button class="t-btn stop md"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-            <div class="smpte-row">
-              <button class="l-mst">MASTER</button>
-              <button class="l-ab a">A</button>
-              <button class="l-ab b on">B</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- ═══════════ B · WAVE-FIRST ════════════════════════ -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="stage" id="vb">
-    <div class="stage-meta">
-      <div class="title"><span class="accent">B ·</span> WAVE-FIRST · 파형 120px</div>
-      <div class="sub">ctl-row 64×72 aligned</div>
-    </div>
-    <div class="stage-hint">
-      파형을 <b>120px 최상단</b>에 배치. 하단 단일 행(72px)에 <b>[ART] [TC+BPM] [VU] [EQ] [Transport+SMPTE]</b>.
-      큐 맞추기·비트 매칭·라이브 진행 상황 모니터링에 최적.
-    </div>
-    <div class="deck-grid">
-
-      <div class="deck v-wave-first">
-        <div class="d-hdr">
-          <div class="d-hdr-l"><span class="d-pname">PLAYER</span><span class="d-pnum">1</span></div>
-          <span class="badge play">PLAY</span>
-          <div class="sync-cluster"><span class="sbtn on">SYNC</span><span class="sbtn master">MASTER</span></div>
-          <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
-          <button class="close-btn" style="visibility:hidden"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
-        </div>
-        <div class="d-title">
-          <span class="d-artist">Daft Punk</span><span class="d-dash">—</span><span class="d-track">Children Of The Night</span>
-        </div>
-        <div class="wf-detail" style="color:var(--t-accent)">
-          <svg class="wf-svg" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0,60 Q5,30 10,58 T20,35 T30,52 T40,18 T50,45 T60,28 T70,50 T80,14 T90,56 T100,22 T110,42 T120,10 T130,48 T140,34 T150,54 T160,20 T170,50 T180,26 T190,44 T200,16 T210,54 T220,30 T230,48 T240,12 T250,38 T260,24 T270,58 T280,36 T290,52 T300,18 T310,44 T320,28 T330,54 T340,22 T350,48 T360,34 T370,26 T380,52 T390,30 T400,44 L400,120 L0,120 Z" fill="currentColor" opacity=".85"/></svg>
-          <div class="wf-playhead"></div>
-        </div>
-        <div class="wf-overview" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-ov-a"/></svg><div class="wf-pos-box"></div></div>
-        <div class="ctl-row">
-          <div class="art"><div class="art-fill"></div></div>
-          <div class="tc-box">
-            <div class="tc-num">00:01:24:12</div>
-            <div class="tc-bpm">
-              <span class="tc-bpm-base">124.00</span>
-              <span class="tc-bpm-pitch">+3.23%</span>
-              <span class="tc-bpm-cur">128.00<span class="tc-bpm-lbl">BPM</span></span>
-              <span class="tc-key">8A</span>
-            </div>
-            <div class="phasor"><span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
-          </div>
-          <div class="vu-strip">
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:78%"></div></div><span class="vu-lbl">VU</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:62%"></div></div><span class="vu-lbl">F</span></div>
-          </div>
-          <div class="eq-strip">
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
-          </div>
-          <div class="ctl-col">
-            <div class="t-row">
-              <button class="t-btn cue md">CUE</button>
-              <button class="t-btn play md on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
-            </div>
-            <button class="t-btn stop md"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-            <div class="smpte-row">
-              <button class="l-mst on">MASTER</button>
-              <button class="l-ab a on">A</button>
-              <button class="l-ab b">B</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="deck v-wave-first">
-        <div class="d-hdr">
-          <div class="d-hdr-l"><span class="d-pname">PLAYER</span><span class="d-pnum">2</span></div>
-          <span class="badge cue">CUE</span>
-          <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
-          <span class="hw-lbl" style="color:var(--t-accent)">VIRTUAL</span>
-          <button class="close-btn"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
-        </div>
-        <div class="d-title">
-          <span class="d-artist">Tame Impala</span><span class="d-dash">—</span><span class="d-track">Let It Happen (Soulwax Remix)</span>
-        </div>
-        <div class="wf-detail" style="color:#888">
-          <svg class="wf-svg" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0,60 Q5,48 10,36 T20,28 T30,44 T40,32 T50,18 T60,40 T70,24 T80,46 T90,32 T100,14 T110,36 T120,20 T130,44 T140,28 T150,50 T160,18 T170,40 T180,24 T190,46 T200,32 T210,14 T220,36 T230,20 T240,44 T250,28 T260,52 T270,16 T280,42 T290,26 T300,48 T310,34 T320,52 T330,38 T340,24 T350,46 T360,32 T370,18 T380,42 T390,26 T400,50 L400,120 L0,120 Z" fill="currentColor" opacity=".6"/></svg>
-        </div>
-        <div class="wf-overview" style="color:#666"><svg class="wf-svg"><use href="#wf-ov-a"/></svg></div>
-        <div class="ctl-row">
-          <div class="art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.7"></div></div>
-          <div class="tc-box">
-            <div class="tc-num inactive">00:00:48:00</div>
-            <div class="tc-bpm">
-              <span class="tc-bpm-base">120.00</span>
-              <span class="tc-bpm-pitch">-0.02%</span>
-              <span class="tc-bpm-cur inactive">119.98<span class="tc-bpm-lbl">BPM</span></span>
-              <span class="tc-key">5A</span>
-            </div>
-            <div class="phasor"><span class="phs"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
-          </div>
-          <div class="vu-strip">
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">L</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">R</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:80%"></div></div><span class="vu-lbl">F</span></div>
-          </div>
-          <div class="eq-strip" style="visibility:hidden">
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg></div>
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg></div>
-            <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg></div>
-          </div>
-          <div class="ctl-col">
-            <div class="t-row">
-              <button class="t-btn cue md on">CUE</button>
-              <button class="t-btn play md"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
-            </div>
-            <button class="t-btn stop md"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-            <div class="smpte-row">
-              <button class="l-mst">MASTER</button>
-              <button class="l-ab a">A</button>
-              <button class="l-ab b on">B</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- ═══════════ C · TC-HERO ═══════════════════════════ -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="stage" id="vc">
-    <div class="stage-meta">
-      <div class="title"><span class="accent">C ·</span> TC-HERO · 타임코드 최상위 48px</div>
-      <div class="sub">hero + id + wave + ctl stacked</div>
-    </div>
-    <div class="stage-hint">
-      <b>덱 최상단에 타임코드 48px</b>, 우측에 BPM pill + meta row. 그 아래 헤더·아트·타이틀·웨이브·컨트롤 순.
-      SMPTE 쇼·리허설·타임 싱크 감시용 — 위치 판단 제1순위 상황.
-    </div>
-    <div class="deck-grid">
-
-      <div class="deck v-tc-hero">
-        <div class="hero-row">
-          <div class="hero-tc">
-            <div class="tc-head"><span>H</span><span>M</span><span>S</span><span>F</span></div>
-            <div class="tc-num">00:01:24:12</div>
-          </div>
-          <div class="hero-bpm">
-            <div class="tc-bpm-cur">128.00<span class="tc-bpm-lbl">BPM</span></div>
-            <div class="meta-row">
-              <span class="tc-bpm-base">124.00</span>
-              <span class="tc-bpm-pitch">+3.23%</span>
-              <span class="tc-key">8A</span>
-            </div>
-            <div class="phasor"><span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
-          </div>
-        </div>
-        <div class="d-hdr">
-          <div class="d-hdr-l"><span class="d-pname">PLAYER</span><span class="d-pnum">1</span></div>
-          <span class="badge play">PLAY</span>
-          <div class="sync-cluster"><span class="sbtn on">SYNC</span><span class="sbtn master">MASTER</span></div>
-          <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
-          <button class="close-btn" style="visibility:hidden"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
-        </div>
-        <div class="id-row">
-          <div class="art"><div class="art-fill"></div></div>
-          <div class="d-title"><span class="d-artist">Daft Punk</span><span class="d-dash">—</span><span class="d-track">Children Of The Night</span></div>
-        </div>
-        <div class="wf-detail" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
-        <div class="wf-overview" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-ov-a"/></svg><div class="wf-pos-box"></div></div>
-        <div class="ctl-row">
-          <div class="vu-strip">
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:78%"></div></div><span class="vu-lbl">VU</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:62%"></div></div><span class="vu-lbl">F</span></div>
-          </div>
-          <div class="eq-strip">
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
-          </div>
-          <div></div>
-          <div class="ctl-col">
-            <div class="t-row">
-              <button class="t-btn cue md">CUE</button>
-              <button class="t-btn play md on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
-            </div>
-            <div class="smpte-row">
-              <button class="l-mst on">MASTER</button>
-              <button class="l-ab a on">A</button>
-              <button class="l-ab b">B</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="deck v-tc-hero">
-        <div class="hero-row">
-          <div class="hero-tc">
-            <div class="tc-head"><span>H</span><span>M</span><span>S</span><span>F</span></div>
-            <div class="tc-num inactive">00:00:48:00</div>
-          </div>
-          <div class="hero-bpm">
-            <div class="tc-bpm-cur inactive">119.98<span class="tc-bpm-lbl">BPM</span></div>
-            <div class="meta-row">
-              <span class="tc-bpm-base">120.00</span>
-              <span class="tc-bpm-pitch">-0.02%</span>
-              <span class="tc-key">5A</span>
-            </div>
-            <div class="phasor"><span class="phs"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
-          </div>
-        </div>
-        <div class="d-hdr">
-          <div class="d-hdr-l"><span class="d-pname">PLAYER</span><span class="d-pnum">2</span></div>
-          <span class="badge cue">CUE</span>
-          <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
-          <span class="hw-lbl" style="color:var(--t-accent)">VIRTUAL</span>
-          <button class="close-btn"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
-        </div>
-        <div class="id-row">
-          <div class="art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.7"></div></div>
-          <div class="d-title"><span class="d-artist">Tame Impala</span><span class="d-dash">—</span><span class="d-track">Let It Happen (Soulwax Remix)</span></div>
-        </div>
-        <div class="wf-detail" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
-        <div class="wf-overview" style="color:#666"><svg class="wf-svg"><use href="#wf-ov-a"/></svg></div>
-        <div class="ctl-row">
-          <div class="vu-strip">
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">L</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">R</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:80%"></div></div><span class="vu-lbl">F</span></div>
-          </div>
-          <div class="eq-strip" style="visibility:hidden">
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">HI</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">MID</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">LO</span></div>
-          </div>
-          <div></div>
-          <div class="ctl-col">
-            <div class="t-row">
-              <button class="t-btn cue md on">CUE</button>
-              <button class="t-btn play md"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
-            </div>
-            <div class="smpte-row">
-              <button class="l-mst">MASTER</button>
-              <button class="l-ab a">A</button>
-              <button class="l-ab b on">B</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- ═══════════ D · STRIP — 1덱=1행 (신규) ═══════════ -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="stage" id="vd">
-    <div class="stage-meta">
-      <div class="title"><span class="accent">D ·</span> STRIP · 1 덱 = 1 행 · 72px</div>
-      <div class="sub">multi-deck monitoring / up to 6 decks visible</div>
-    </div>
-    <div class="stage-hint">
-      <b>덱 한 개 = 72px 높이 가로 스트립 한 행</b>. [아트56] + [식별/미니웨이브] + [VU] + [TC/BPM] + [Transport] + [SMPTE] 컬럼으로 그리드 정렬.
-      <b>다중 덱 동시 모니터링</b>(브리지+ 주력 상황)에 최적 — 4~6덱을 한 화면에 전부 표시.
-    </div>
-    <div class="deck-grid single" style="gap:var(--u)">
-
-      <div class="deck v-strip">
-        <div class="art"><div class="art-fill"></div></div>
-        <div class="info">
-          <div class="info-top">
-            <span class="d-pname">P</span><span class="d-pnum">1</span>
-            <span class="badge play">PLAY</span>
-            <div class="sync-cluster"><span class="sbtn on">SYNC</span><span class="sbtn master">MASTER</span></div>
-            <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
-          </div>
-          <div class="title-mini"><span class="d-artist">Daft Punk</span><span class="d-dash">—</span><span class="d-track">Children Of The Night</span></div>
-          <div class="wf-mini" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
-        </div>
-        <div class="vu-mini">
-          <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:78%"></div></div><span class="vu-lbl">V</span></div>
-          <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:62%"></div></div><span class="vu-lbl">F</span></div>
-        </div>
-        <div class="tc-mini">
-          <div class="tc-num-sm">00:01:24:12</div>
-          <div class="bpm-sm">128.00<span class="tc-bpm-lbl">BPM</span></div>
-          <div class="meta-sm">124.00 · +3.23% · 8A</div>
-        </div>
-        <div class="ctl-mini">
-          <div class="t-row">
-            <button class="t-btn cue">CUE</button>
-            <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
-          </div>
-          <button class="t-btn stop" style="height:22px"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-        </div>
-        <div class="ctl-mini">
-          <div class="smpte-row">
-            <button class="l-mst on">MST</button>
-            <button class="l-ab a on">A</button>
-            <button class="l-ab b">B</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="deck v-strip">
-        <div class="art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.7"></div></div>
-        <div class="info">
-          <div class="info-top">
-            <span class="d-pname">P</span><span class="d-pnum">2</span>
-            <span class="badge cue">CUE</span>
-            <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
-            <span class="hw-lbl" style="color:var(--t-accent)">VIRTUAL</span>
-          </div>
-          <div class="title-mini"><span class="d-artist">Tame Impala</span><span class="d-dash">—</span><span class="d-track">Let It Happen (Soulwax Remix)</span></div>
-          <div class="wf-mini" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
-        </div>
-        <div class="vu-mini">
-          <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">L</span></div>
-          <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">R</span></div>
-        </div>
-        <div class="tc-mini">
-          <div class="tc-num-sm inactive">00:00:48:00</div>
-          <div class="bpm-sm inactive">119.98<span class="tc-bpm-lbl">BPM</span></div>
-          <div class="meta-sm">120.00 · -0.02% · 5A</div>
-        </div>
-        <div class="ctl-mini">
-          <div class="t-row">
-            <button class="t-btn cue on">CUE</button>
-            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
-          </div>
-          <button class="t-btn stop" style="height:22px"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-        </div>
-        <div class="ctl-mini">
-          <div class="smpte-row">
-            <button class="l-mst">MST</button>
-            <button class="l-ab a">A</button>
-            <button class="l-ab b on">B</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="deck v-strip">
-        <div class="art"><div class="art-fill" style="background:linear-gradient(135deg,#1e90ff,#000080);opacity:.7"></div></div>
-        <div class="info">
-          <div class="info-top">
-            <span class="d-pname">P</span><span class="d-pnum">3</span>
-            <span class="badge stop">STOP</span>
-            <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
-            <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
-          </div>
-          <div class="title-mini"><span class="d-artist">Leon Vynehall</span><span class="d-dash">—</span><span class="d-track">Butterflies</span></div>
-          <div class="wf-mini" style="color:#555"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
-        </div>
-        <div class="vu-mini">
-          <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">V</span></div>
-          <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:0"></div></div><span class="vu-lbl">F</span></div>
-        </div>
-        <div class="tc-mini">
-          <div class="tc-num-sm inactive">00:00:00:00</div>
-          <div class="bpm-sm inactive">122.00<span class="tc-bpm-lbl">BPM</span></div>
-          <div class="meta-sm">122.00 · +0.00% · 10A</div>
-        </div>
-        <div class="ctl-mini">
-          <div class="t-row">
-            <button class="t-btn cue">CUE</button>
-            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
-          </div>
-          <button class="t-btn stop" style="height:22px"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-        </div>
-        <div class="ctl-mini">
-          <div class="smpte-row">
-            <button class="l-mst">MST</button>
-            <button class="l-ab a">A</button>
-            <button class="l-ab b">B</button>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- ═══════════ E · TOWER — 세로 콘솔 (신규) ═════════ -->
-  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ═══════════ E · TOWER (VU 가로형으로 수정) ═══════════ -->
+  <!-- ═══════════════════════════════════════════════════════ -->
   <div class="stage" id="ve">
     <div class="stage-meta">
-      <div class="title"><span class="accent">E ·</span> TOWER · 세로 콘솔 컬럼</div>
-      <div class="sub">DJM mixer channel strip style · 4 decks horizontal</div>
+      <div class="title"><span class="accent">E ·</span> TOWER · DJM 채널 스트립 (180px 고정)</div>
+      <div class="sub">VU horizontal · EQ 가로 row · 빈 공간 최소</div>
     </div>
     <div class="stage-hint">
-      <b>DJM 믹서 채널 스트립</b> 감성. 덱이 <b>세로로 긴 좁은 column</b>(폭 ~170px, 높이 560px) 으로 렌더링되어 4~6개가 가로로 나란히. 하드웨어 믹서와 시각적으로 일치.
-      상단 player # / art / title / wave / TC / BPM pill / VU+EQ 2열 믹서 / transport / SMPTE 순으로 세로 stack.
+      VU/F 를 <b>가로 bar</b>로 바꿔서 Virtual 덱(EQ 없음)에도 빈 공간이 거의 안 보이도록 수정.
+      HW: VU+F 2행, Virtual: L+R+F 3행. 각 덱 180px 폭으로 4~8 덱을 가로 나열.
     </div>
     <div class="v-tower-grid">
 
       <div class="deck v-tower">
         <div class="tw-head">
           <div class="tw-head-top">
-            <span class="tw-pname">PLAYER</span>
-            <span class="tw-pnum">1</span>
+            <span class="tw-pname">PLAYER</span><span class="tw-pnum">1</span>
             <span class="badge play">PLAY</span>
           </div>
           <div class="tw-head-btm">
@@ -889,32 +336,30 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         </div>
         <div class="art tw-art"><div class="art-fill"></div><div class="art-label">HOMEWORK</div></div>
         <div class="tw-title">
-          <div class="d-artist">Daft Punk</div>
-          <div class="d-track">Children Of The Night</div>
+          <div class="tw-artist">Daft Punk</div>
+          <div class="tw-track">Children Of The Night</div>
         </div>
-        <div class="tw-wf" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
+        <div class="wf-box tw-wf" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
         <div class="tw-tc">00:01:24:12</div>
         <div class="tw-bpm">
-          <div class="tw-bpm-cur">128.00<span class="tc-bpm-lbl">BPM</span></div>
-          <div class="tw-bpm-meta">124.00 · +3.23% · 8A</div>
+          <div class="bpm-cur tw-bpm-cur">128.00<span class="bpm-lbl">BPM</span></div>
+          <div class="bpm-meta">124.00 · +3.23% · 8A</div>
         </div>
-        <div class="tw-mixer">
-          <div class="vu-strip">
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:78%"></div></div><span class="vu-lbl">VU</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:62%"></div></div><span class="vu-lbl">F</span></div>
-          </div>
-          <div class="eq-strip">
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
-          </div>
+        <div class="vu-h">
+          <div class="vu-row"><span class="vu-lbl">VU</span><div class="vu-bar"><div class="vu-fill" style="width:78%"></div></div></div>
+          <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:62%"></div></div></div>
+        </div>
+        <div class="eq-strip" style="justify-content:space-around">
+          <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
+          <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
+          <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
         </div>
         <div class="tw-ctl">
           <div class="t-row">
-            <button class="t-btn cue md">CUE</button>
-            <button class="t-btn play md on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+            <button class="t-btn cue">CUE</button>
+            <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
           </div>
-          <button class="t-btn stop md"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
           <div class="smpte-row">
             <button class="l-mst on">MASTER</button>
             <button class="l-ab a on">A</button>
@@ -926,8 +371,7 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
       <div class="deck v-tower">
         <div class="tw-head">
           <div class="tw-head-top">
-            <span class="tw-pname">PLAYER</span>
-            <span class="tw-pnum">2</span>
+            <span class="tw-pname">PLAYER</span><span class="tw-pnum">2</span>
             <span class="badge cue">CUE</span>
           </div>
           <div class="tw-head-btm">
@@ -935,35 +379,29 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
             <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
           </div>
         </div>
-        <div class="art tw-art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.7"></div><div class="art-label">CURRENTS</div></div>
+        <div class="art tw-art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.75"></div><div class="art-label">CURRENTS</div></div>
         <div class="tw-title">
-          <div class="d-artist">Tame Impala</div>
-          <div class="d-track">Let It Happen (Soulwax)</div>
+          <div class="tw-artist">Tame Impala</div>
+          <div class="tw-track">Let It Happen (Soulwax)</div>
         </div>
-        <div class="tw-wf" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
+        <div class="wf-box tw-wf" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
         <div class="tw-tc inactive">00:00:48:00</div>
         <div class="tw-bpm">
-          <div class="tw-bpm-cur inactive">119.98<span class="tc-bpm-lbl">BPM</span></div>
-          <div class="tw-bpm-meta">120.00 · -0.02% · 5A</div>
+          <div class="bpm-cur tw-bpm-cur inactive">119.98<span class="bpm-lbl">BPM</span></div>
+          <div class="bpm-meta">120.00 · -0.02% · 5A</div>
         </div>
-        <div class="tw-mixer">
-          <div class="vu-strip">
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">L</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">R</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:80%"></div></div><span class="vu-lbl">F</span></div>
-          </div>
-          <div class="eq-strip" style="visibility:hidden">
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg></div>
-          </div>
+        <!-- Virtual: L/R/F 3행 (EQ 없음 → VU 가로형으로 공간 자연스러움) -->
+        <div class="vu-h">
+          <div class="vu-row"><span class="vu-lbl">L</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
+          <div class="vu-row"><span class="vu-lbl">R</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
+          <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:80%"></div></div></div>
         </div>
         <div class="tw-ctl">
           <div class="t-row">
-            <button class="t-btn cue md on">CUE</button>
-            <button class="t-btn play md"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+            <button class="t-btn cue on">CUE</button>
+            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
           </div>
-          <button class="t-btn stop md"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
           <div class="smpte-row">
             <button class="l-mst">MASTER</button>
             <button class="l-ab a">A</button>
@@ -975,8 +413,7 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
       <div class="deck v-tower">
         <div class="tw-head">
           <div class="tw-head-top">
-            <span class="tw-pname">PLAYER</span>
-            <span class="tw-pnum">3</span>
+            <span class="tw-pname">PLAYER</span><span class="tw-pnum">3</span>
             <span class="badge stop">STOP</span>
           </div>
           <div class="tw-head-btm">
@@ -984,34 +421,32 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
             <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
           </div>
         </div>
-        <div class="art tw-art"><div class="art-fill" style="background:linear-gradient(135deg,#1e90ff,#000080);opacity:.7"></div></div>
+        <div class="art tw-art"><div class="art-fill" style="background:linear-gradient(135deg,#1e90ff,#000080);opacity:.75"></div></div>
         <div class="tw-title">
-          <div class="d-artist">Leon Vynehall</div>
-          <div class="d-track">Butterflies</div>
+          <div class="tw-artist">Leon Vynehall</div>
+          <div class="tw-track">Butterflies</div>
         </div>
-        <div class="tw-wf" style="color:#555"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
+        <div class="wf-box tw-wf" style="color:#555"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
         <div class="tw-tc inactive">00:00:00:00</div>
         <div class="tw-bpm">
-          <div class="tw-bpm-cur inactive">122.00<span class="tc-bpm-lbl">BPM</span></div>
-          <div class="tw-bpm-meta">122.00 · +0.00% · 10A</div>
+          <div class="bpm-cur tw-bpm-cur inactive">122.00<span class="bpm-lbl">BPM</span></div>
+          <div class="bpm-meta">122.00 · +0.00% · 10A</div>
         </div>
-        <div class="tw-mixer">
-          <div class="vu-strip">
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">VU</span></div>
-            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:0"></div></div><span class="vu-lbl">F</span></div>
-          </div>
-          <div class="eq-strip">
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">HI</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">MID</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">LO</span></div>
-          </div>
+        <div class="vu-h">
+          <div class="vu-row"><span class="vu-lbl">VU</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
+          <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:0"></div></div></div>
+        </div>
+        <div class="eq-strip" style="justify-content:space-around">
+          <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">HI</span></div>
+          <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">MID</span></div>
+          <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">LO</span></div>
         </div>
         <div class="tw-ctl">
           <div class="t-row">
-            <button class="t-btn cue md">CUE</button>
-            <button class="t-btn play md"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+            <button class="t-btn cue">CUE</button>
+            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
           </div>
-          <button class="t-btn stop md"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
           <div class="smpte-row">
             <button class="l-mst">MASTER</button>
             <button class="l-ab a">A</button>
@@ -1020,11 +455,10 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         </div>
       </div>
 
-      <div class="deck v-tower" style="opacity:.4">
+      <div class="deck v-tower" style="opacity:.45">
         <div class="tw-head">
           <div class="tw-head-top">
-            <span class="tw-pname">PLAYER</span>
-            <span class="tw-pnum" style="color:var(--t-tx4)">4</span>
+            <span class="tw-pname">PLAYER</span><span class="tw-pnum" style="color:var(--t-tx4)">4</span>
             <span class="badge" style="color:var(--t-tx4)">EMPTY</span>
           </div>
           <div class="tw-head-btm">
@@ -1032,20 +466,19 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           </div>
         </div>
         <div class="art tw-art" style="background:var(--t-bg);border-style:dashed"></div>
-        <div class="tw-title"><div class="d-artist" style="color:var(--t-tx4)">—</div><div class="d-track" style="color:var(--t-tx4)">빈 덱</div></div>
-        <div class="tw-wf"></div>
+        <div class="tw-title">
+          <div class="tw-artist" style="color:var(--t-tx4)">—</div>
+          <div class="tw-track" style="color:var(--t-tx4)">빈 덱</div>
+        </div>
+        <div class="wf-box tw-wf"></div>
         <div class="tw-tc inactive">--:--:--:--</div>
         <div class="tw-bpm">
-          <div class="tw-bpm-cur inactive" style="color:var(--t-tx4)">---</div>
-          <div class="tw-bpm-meta" style="color:var(--t-tx4)">—</div>
+          <div class="bpm-cur tw-bpm-cur inactive" style="color:var(--t-tx4)">---</div>
         </div>
-        <div class="tw-mixer">
-          <div class="vu-strip" style="opacity:.4"><div class="vu-ch"><div class="vu-bar"></div></div><div class="vu-ch"><div class="vu-bar"></div></div></div>
-          <div class="eq-strip" style="opacity:.3">
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-neutral"/></svg></div>
-          </div>
+        <div class="vu-h" style="opacity:.35">
+          <div class="vu-row"><span class="vu-lbl">L</span><div class="vu-bar"></div></div>
+          <div class="vu-row"><span class="vu-lbl">R</span><div class="vu-bar"></div></div>
+          <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"></div></div>
         </div>
         <div class="tw-ctl"></div>
       </div>
@@ -1053,25 +486,276 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ═══════════ F · CARD — 앨범 아트 히어로 ═════════════ -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="stage" id="vf">
+    <div class="stage-meta">
+      <div class="title"><span class="accent">F ·</span> CARD · 앨범 아트 히어로 (360×600)</div>
+      <div class="sub">art-dominant · music-app aesthetic</div>
+    </div>
+    <div class="stage-hint">
+      덱을 <b>앨범 아트 히어로 카드</b>로 표현. 상단 260px 아트 영역 + 하단 정보/컨트롤. Spotify/Apple Music 감성.
+      트랙 <b>"식별"에 무게중심</b>, 라이브 중 시각적 리치함이 필요한 감성 이벤트용.
+    </div>
+    <div class="v-card-grid">
+
+      <div class="deck v-card">
+        <div class="cd-hero">
+          <div class="cd-hero-bg"></div>
+          <div class="cd-top">
+            <span class="tw-pname">PLAYER</span><span class="tw-pnum">1</span>
+            <span class="badge play">PLAY</span>
+            <button class="close-btn" style="visibility:hidden; margin-left:8px"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
+          </div>
+          <div class="cd-info">
+            <div class="cd-artist">Daft Punk · HOMEWORK</div>
+            <div class="cd-track">Children Of The Night</div>
+          </div>
+        </div>
+        <div class="cd-body">
+          <div class="cd-tc-row">
+            <div class="tc-num cd-tc">00:01:24:12</div>
+            <div class="cd-bpm-col">
+              <div class="bpm-cur">128.00<span class="bpm-lbl">BPM</span></div>
+              <div class="bpm-meta">124.00 · +3.23% · 8A</div>
+            </div>
+          </div>
+          <div class="cd-meta-row">
+            <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
+            <div class="phasor"><span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
+            <div class="sync-cluster"><span class="sbtn on">SYNC</span><span class="sbtn master">MASTER</span></div>
+          </div>
+          <div class="wf-box cd-wf" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
+          <div class="cd-mix-row">
+            <div class="vu-h">
+              <div class="vu-row"><span class="vu-lbl">VU</span><div class="vu-bar"><div class="vu-fill" style="width:78%"></div></div></div>
+              <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:62%"></div></div></div>
+            </div>
+            <div class="eq-strip">
+              <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
+              <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
+              <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
+            </div>
+          </div>
+          <div class="cd-ctl-row">
+            <button class="t-btn cue">CUE</button>
+            <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+            <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+          </div>
+          <div class="cd-smpte-row smpte-row sm">
+            <button class="l-mst on">MASTER</button>
+            <button class="l-ab a on">A</button>
+            <button class="l-ab b">B</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="deck v-card">
+        <div class="cd-hero">
+          <div class="cd-hero-bg" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.85"></div>
+          <div class="cd-top">
+            <span class="tw-pname">PLAYER</span><span class="tw-pnum">2</span>
+            <span class="badge cue">CUE</span>
+            <button class="close-btn" style="margin-left:8px"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
+          </div>
+          <div class="cd-info">
+            <div class="cd-artist">Tame Impala · CURRENTS</div>
+            <div class="cd-track">Let It Happen (Soulwax Remix)</div>
+          </div>
+        </div>
+        <div class="cd-body">
+          <div class="cd-tc-row">
+            <div class="tc-num cd-tc inactive">00:00:48:00</div>
+            <div class="cd-bpm-col">
+              <div class="bpm-cur inactive">119.98<span class="bpm-lbl">BPM</span></div>
+              <div class="bpm-meta">120.00 · -0.02% · 5A</div>
+            </div>
+          </div>
+          <div class="cd-meta-row">
+            <span class="hw-lbl" style="color:var(--t-accent)">VIRTUAL</span>
+            <div class="phasor"><span class="phs"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
+            <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
+          </div>
+          <div class="wf-box cd-wf" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
+          <div class="cd-mix-row">
+            <div class="vu-h">
+              <div class="vu-row"><span class="vu-lbl">L</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
+              <div class="vu-row"><span class="vu-lbl">R</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
+              <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:80%"></div></div></div>
+            </div>
+          </div>
+          <div class="cd-ctl-row">
+            <button class="t-btn cue on">CUE</button>
+            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+            <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+          </div>
+          <div class="cd-smpte-row smpte-row sm">
+            <button class="l-mst">MASTER</button>
+            <button class="l-ab a">A</button>
+            <button class="l-ab b on">B</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ═══════════ G · HERO + LIST — 마스터 집중 ══════════ -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="stage" id="vg">
+    <div class="stage-meta">
+      <div class="title"><span class="accent">G ·</span> HERO + LIST · 마스터 집중 + 보조 리스트</div>
+      <div class="sub">current master dominant · waiting decks compact</div>
+    </div>
+    <div class="stage-hint">
+      <b>마스터 덱(현재 재생)은 큰 hero 블록</b>(180px 높이)으로, 나머지 대기 덱들은 <b>60px 한 줄 리스트</b>로 표시.
+      실제 DJ 작업의 <b>시선 분배 패턴</b>을 그대로 반영 — 마스터에 90%, 나머지는 상태 감시만.
+    </div>
+    <div class="v-hero-wrap">
+
+      <!-- MASTER deck (hero) -->
+      <div class="deck v-hero">
+        <div class="art hh-art"><div class="art-fill"></div><div class="art-label">HOMEWORK</div></div>
+        <div class="hh-title">
+          <div class="hh-title-top">
+            <span class="hh-pname">PLAYER</span><span class="hh-pnum">1</span>
+            <span class="badge play">PLAY</span>
+            <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
+            <div class="sync-cluster"><span class="sbtn on">SYNC</span><span class="sbtn master">MASTER</span></div>
+          </div>
+          <div class="hh-artist">Daft Punk</div>
+          <div class="hh-track">Children Of The Night</div>
+        </div>
+        <div class="hh-wave">
+          <div class="wf-box" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
+          <div class="wf-box wf-ov" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-ov-a"/></svg></div>
+        </div>
+        <div class="hh-tc">
+          <div class="hh-tc-num">00:01:24:12</div>
+          <div class="hh-bpm-cur">128.00<span class="bpm-lbl">BPM</span></div>
+          <div class="hh-bpm-meta">124.00 · +3.23% · 8A</div>
+          <div class="phasor"><span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
+        </div>
+        <div class="hh-mix">
+          <div class="vu-h">
+            <div class="vu-row"><span class="vu-lbl">VU</span><div class="vu-bar"><div class="vu-fill" style="width:78%"></div></div></div>
+            <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:62%"></div></div></div>
+          </div>
+          <div class="eq-strip">
+            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
+            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
+            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
+          </div>
+        </div>
+        <div class="hh-ctl">
+          <button class="t-btn cue">CUE</button>
+          <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+          <div class="smpte-row">
+            <button class="l-mst on">MASTER</button>
+            <button class="l-ab a on">A</button>
+            <button class="l-ab b">B</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 보조 덱 list rows -->
+      <div class="deck v-row">
+        <div class="rr-pill"><span class="rr-pname">P</span><span class="rr-pnum">2</span></div>
+        <div class="art rr-art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.75"></div></div>
+        <div class="rr-title">
+          <div class="rr-artist">Tame Impala · CURRENTS</div>
+          <div class="rr-track">Let It Happen (Soulwax Remix)</div>
+        </div>
+        <div class="wf-box rr-wave" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
+        <div class="rr-bpm-col">
+          <div class="rr-tc-mini inactive">00:00:48:00</div>
+          <div class="rr-bpm-cur inactive">119.98 BPM</div>
+          <div class="rr-meta-mini">120.00 · -0.02% · 5A · <span style="color:var(--t-accent)">VIRTUAL</span></div>
+        </div>
+        <div class="rr-ctl">
+          <button class="t-btn cue on">CUE</button>
+          <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+        </div>
+        <div class="rr-smpte">
+          <button class="l-mst">MST</button>
+          <button class="l-ab a">A</button>
+          <button class="l-ab b on">B</button>
+        </div>
+      </div>
+
+      <div class="deck v-row">
+        <div class="rr-pill"><span class="rr-pname">P</span><span class="rr-pnum">3</span></div>
+        <div class="art rr-art"><div class="art-fill" style="background:linear-gradient(135deg,#1e90ff,#000080);opacity:.75"></div></div>
+        <div class="rr-title">
+          <div class="rr-artist">Leon Vynehall</div>
+          <div class="rr-track">Butterflies</div>
+        </div>
+        <div class="wf-box rr-wave" style="color:#555"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
+        <div class="rr-bpm-col">
+          <div class="rr-tc-mini inactive">00:00:00:00</div>
+          <div class="rr-bpm-cur inactive">122.00 BPM</div>
+          <div class="rr-meta-mini">122.00 · +0.00% · 10A · CDJ-3000</div>
+        </div>
+        <div class="rr-ctl">
+          <button class="t-btn cue">CUE</button>
+          <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+        </div>
+        <div class="rr-smpte">
+          <button class="l-mst">MST</button>
+          <button class="l-ab a">A</button>
+          <button class="l-ab b">B</button>
+        </div>
+      </div>
+
+      <div class="deck v-row" style="opacity:.5">
+        <div class="rr-pill"><span class="rr-pname">P</span><span class="rr-pnum" style="color:var(--t-tx4)">4</span></div>
+        <div class="art rr-art" style="background:var(--t-bg);border-style:dashed"></div>
+        <div class="rr-title">
+          <div class="rr-artist" style="color:var(--t-tx4)">—</div>
+          <div class="rr-track" style="color:var(--t-tx4)">빈 덱</div>
+        </div>
+        <div class="wf-box rr-wave"></div>
+        <div class="rr-bpm-col">
+          <div class="rr-tc-mini inactive">--:--:--:--</div>
+          <div class="rr-bpm-cur inactive" style="color:var(--t-tx4)">---</div>
+          <div class="rr-meta-mini" style="color:var(--t-tx4)">—</div>
+        </div>
+        <div class="rr-ctl" style="opacity:.5">
+          <button class="t-btn cue">CUE</button>
+          <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+        </div>
+        <div class="rr-smpte">
+          <button class="l-mst">MST</button>
+          <button class="l-ab a">A</button>
+          <button class="l-ab b">B</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <div class="notes">
-    <b>정렬 원칙 (모든 variant 공통)</b><br>
-    · 4px base grid · 모든 gap/padding 이 --u(4) ~ --u6(24) 배수<br>
-    · 버튼 높이 3단계 고정: --h-btn-lg(32) · --h-btn-md(28) · --h-btn-sm(22)<br>
-    · CANONICAL: CUE/PLAY(32) + STOP(28) + SMPTE(28) + gap 8 = <b>96px</b> 로 wf-wrap 96 과 정확히 동일<br>
-    · 컨테이너는 align-items:stretch + justify-content:space-between 으로 내부 요소 자동 수직 분배<br>
+    <b>3 개 컨셉</b><br>
+    · <b style="color:#ff6b2c">E · TOWER</b> — DJM 채널 스트립 감성. 180px 세로 column. VU/F 가로 bar 로 변경 → Virtual 덱(EQ 없음) 에도 빈 공간 최소.<br>
+    · <b style="color:#ff6b2c">F · CARD</b> — 앨범 아트 히어로 360×600. 뮤직 앱 감성, 시각적 풍부함 우선. 라운지·이벤트·감상 스타일.<br>
+    · <b style="color:#ff6b2c">G · HERO + LIST</b> — 마스터 1 개만 큰 hero 블록, 나머지는 60px 한 줄 리스트. 실제 DJ 시선 분배와 일치.<br>
     <br>
-    <b>5 레이아웃</b><br>
-    · <b style="color:#ff6b2c">A · CANONICAL</b> — 기존 구조 정렬 수정. 2덱 side-by-side, 가장 익숙.<br>
-    · <b style="color:#ff6b2c">B · WAVE-FIRST</b> — 파형 120px 히어로, 하단 단일 컨트롤 행. 비트매칭 전용.<br>
-    · <b style="color:#ff6b2c">C · TC-HERO</b> — 타임코드 48px 최상위. SMPTE 쇼·리허설용.<br>
-    · <b style="color:#ff6b2c">D · STRIP</b> — 1덱=1행 72px 가로 스트립. <b>다중 덱 동시 모니터링</b> 최적 (4~6덱).<br>
-    · <b style="color:#ff6b2c">E · TOWER</b> — DJM 믹서 채널 스트립 스타일. 세로 긴 column 가로 나열. 콘솔 감성.<br>
+    <b>공통 원칙</b><br>
+    · MONO 색 고정 · border-radius:0 · 4px 그리드 토큰 · 버튼 높이 32/28/22 단계<br>
+    · EQ 원형 노브 + 12시 디턴트 + 현재 위치 arc/pointer<br>
+    · VU 가로형 — L/R/F 세로 stack, 각 bar 가 왼→오 채움 (8px 높이)<br>
   </div>
 </div>
 
 <script>
 const links=document.querySelectorAll('.nav a');
-const ids=['va','vb','vc','vd','ve'];
+const ids=['ve','vf','vg'];
 const sections=ids.map(id=>document.getElementById(id));
 window.addEventListener('scroll',()=>{
   const y=window.scrollY+200;
