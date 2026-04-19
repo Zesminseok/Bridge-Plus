@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><title>Proposal G — Monolith · 라벨 제거 · 시각 우선</title>
+<style>
+/* ═════════════════════════════════════════════════════
+   MONOLITH — Claude original concept
+   원칙:
+   1) 라벨 텍스트(BPM/KEY/PLAYER/SMPTE/HI/MID/LO/L/R…) 제거
+      → 값 자체가 의미를 전달 · 위치/타이포그래피가 힌트
+   2) 상태는 색으로, 기능은 아이콘으로
+   3) 단일 hero 요소 per 덱: 큰 타이포 + 얇은 웨이브 라인
+   4) 4덱 동시 시인성 > 디테일 나열
+   ═════════════════════════════════════════════════════ */
+:root {
+  --bg:#050506;
+  --paper:#0c0d10;
+  --paper-2:#0f1115;
+  --ink:#f5f6fa;
+  --ink-2:#9aa0ab;
+  --ink-3:#4c525c;
+  --ink-4:#22262c;
+  --hair:#171a1f;
+  --hair-2:#0f1115;
+
+  --play:#7dd37a;
+  --cue:#f3c450;
+  --air:#ff5b4a;
+  --mst:#ffb861;
+  --cool:#7b9ed8;
+  --cool-2:#3f5578;
+
+  --r:10px;
+  --r-s:6px;
+
+  --sans:-apple-system,"SF Pro Display","Inter","Noto Sans KR",sans-serif;
+  --mono:"SF Mono","DM Mono","Menlo",monospace;
+  --seg:"DSEG7","SF Mono",monospace;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100vh; }
+body { background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:12px; overflow:hidden; -webkit-font-smoothing:antialiased; }
+
+.app { display:grid; grid-template-columns:56px 1fr; height:100vh; }
+
+/* ── Sidebar: icon-only, no verbose labels ────── */
+.rail { background:var(--bg); border-right:1px solid var(--hair); padding:12px 0; display:flex; flex-direction:column; align-items:center; gap:2px; }
+.rail .brand { font:800 10px var(--mono); color:var(--ink); letter-spacing:.2em; writing-mode:vertical-rl; margin:4px 0 14px; opacity:.9; }
+.rail .brand b { color:var(--play); }
+.rail a { width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; color:#555a63; cursor:pointer; transition:color .12s,background .12s; }
+.rail a:hover { color:var(--ink); background:var(--paper); }
+.rail a.on { color:var(--ink); background:var(--paper); box-shadow:inset 2px 0 0 var(--play); border-radius:0 8px 8px 0; }
+.rail .sp { flex:1; }
+.rail svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ── Center ───────────────────────────────────── */
+.main { display:grid; grid-template-rows:auto 1fr auto; overflow:hidden; }
+
+.top { display:flex; align-items:center; gap:20px; padding:14px 24px; border-bottom:1px solid var(--hair); }
+.top .t { font:300 14px var(--mono); letter-spacing:.18em; color:var(--ink-2); }
+.top .t b { color:var(--ink); font-weight:700; }
+.top .hint { font:500 9px var(--mono); letter-spacing:.3em; color:var(--ink-3); margin-left:-10px; }
+
+.pills { display:flex; gap:4px; background:var(--paper); border-radius:999px; padding:3px; margin-left:8px; }
+.pills b { background:transparent; border:0; padding:5px 14px; font:700 9px var(--mono); letter-spacing:.2em; color:var(--ink-3); border-radius:999px; cursor:pointer; }
+.pills b:hover { color:var(--ink-2); }
+.pills b.on { background:var(--ink-4); color:var(--ink); }
+
+.stats { margin-left:auto; display:flex; gap:16px; align-items:center; font:500 9px var(--mono); letter-spacing:.22em; color:var(--ink-3); }
+.stats .s { display:flex; align-items:center; gap:6px; }
+.stats .s::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--play); box-shadow:0 0 8px var(--play); }
+.stats .s.off::before { background:#252830; box-shadow:none; }
+.stats .s.warn::before { background:var(--cue); box-shadow:0 0 8px var(--cue); }
+
+.board { padding:14px 20px 16px; overflow-y:auto; display:grid; gap:10px; }
+.board.v1 { grid-template-columns:1fr; }
+.board.v2 { grid-template-columns:1fr 1fr; }
+.board.v3 { grid-template-columns:1fr 1fr 1fr; }
+.board::-webkit-scrollbar { width:6px; }
+.board::-webkit-scrollbar-thumb { background:var(--hair); border-radius:3px; }
+
+/* ═════════════════════════════════════════════
+   DECK CARD — Monolith layout
+   grid:  [ art ]  [ title + wave ]  [ hero BPM ]  [ actions ]
+   ═════════════════════════════════════════════ */
+.d { position:relative; background:var(--paper); border:1px solid var(--hair); border-radius:var(--r); overflow:hidden; transition:border-color .2s; }
+.d::before { content:""; position:absolute; inset:0; border-radius:var(--r); pointer-events:none; }
+.d[data-s="play"] { border-color:rgba(125,211,122,.35); }
+.d[data-s="play"]::before { box-shadow:inset 0 0 0 1px rgba(125,211,122,.2), 0 0 24px rgba(125,211,122,.08); }
+.d[data-s="cue"]  { border-color:rgba(243,196,80,.35); }
+.d[data-s="cue"]::before  { box-shadow:inset 0 0 0 1px rgba(243,196,80,.2); }
+.d[data-s="air"]::before  { box-shadow:inset 0 0 0 1px rgba(255,91,74,.35), 0 0 26px rgba(255,91,74,.1); border-color:rgba(255,91,74,.5); }
+.d[data-s="empty"] { border-style:dashed; background:transparent; }
+.d[data-s="empty"] .d-body { opacity:.35; }
+
+.d-grid {
+  display:grid;
+  grid-template-columns:72px 1fr auto auto;
+  align-items:center;
+  gap:16px;
+  padding:12px 16px;
+}
+
+/* — Col 1: artwork (no label, no "PLAYER" text) — */
+.d-art { width:72px; height:72px; border-radius:var(--r-s); overflow:hidden; background:var(--paper-2); position:relative; }
+.d-art img { width:100%; height:100%; object-fit:cover; }
+.d-art .n { position:absolute; top:4px; left:6px; font:300 11px var(--mono); color:rgba(255,255,255,.7); text-shadow:0 1px 2px rgba(0,0,0,.8); letter-spacing:-.02em; }
+
+/* — Col 2: title + waveform (only values, no labels) — */
+.d-mid { min-width:0; display:flex; flex-direction:column; gap:6px; }
+.d-title { display:flex; align-items:baseline; gap:10px; min-width:0; }
+.d-t { font:600 15px var(--sans); color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; letter-spacing:-.01em; }
+.d-a { font:400 11px var(--sans); color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; max-width:40%; }
+.d-badges { display:flex; gap:6px; margin-left:auto; align-items:center; flex-shrink:0; }
+.b-dot { width:7px; height:7px; border-radius:50%; }
+.b-dot.air { background:var(--air); box-shadow:0 0 10px var(--air); animation:p 1.4s ease-in-out infinite; }
+.b-mst svg { width:14px; height:14px; fill:var(--mst); }
+.b-snc svg { width:14px; height:14px; stroke:var(--play); fill:none; stroke-width:1.6; }
+@keyframes p { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+/* Wave row — overview + progress + phase in ONE strip, no text headers */
+.d-wave {
+  position:relative;
+  height:36px;
+  background:var(--paper-2);
+  border-radius:4px;
+  overflow:hidden;
+}
+.d-wave svg { width:100%; height:100%; display:block; }
+.d-wave .ph { position:absolute; top:0; bottom:0; width:2px; background:var(--ink); box-shadow:0 0 8px rgba(255,255,255,.6); }
+.d-wave .prog { position:absolute; left:0; bottom:0; height:2px; background:var(--ink); opacity:.6; }
+.d-wave .hc { position:absolute; top:0; bottom:0; width:1.5px; opacity:.6; }
+.d-wave .hc.b { background:var(--cool); }
+.d-wave .hc.r { background:var(--air); }
+.d-wave .hc.g { background:var(--play); }
+.d-wave .tm { position:absolute; right:6px; bottom:3px; font:500 9px var(--mono); color:var(--ink-2); letter-spacing:.04em; pointer-events:none; text-shadow:0 0 4px rgba(0,0,0,.8); }
+
+/* 4 beat phase dots — no label */
+.d-phase { display:flex; gap:5px; margin-left:10px; flex-shrink:0; }
+.d-phase i { width:6px; height:6px; border-radius:50%; background:var(--ink-4); transition:background .1s,box-shadow .1s; }
+.d-phase i.on { background:var(--play); box-shadow:0 0 6px var(--play); }
+
+/* — Col 3: HERO — big BPM + tiny key + minimal TC (no "BPM"/"KEY"/"FRAMES" labels) — */
+.d-hero { text-align:right; display:flex; flex-direction:column; gap:2px; align-items:flex-end; padding:0 2px; min-width:150px; }
+.d-bpm { font:300 30px var(--mono); color:var(--ink); letter-spacing:-.02em; line-height:1; font-variant-numeric:tabular-nums; }
+.d-bpm em { font-size:16px; color:var(--ink-2); font-style:normal; margin-left:2px; }
+.d-sub { display:flex; gap:10px; align-items:center; font:500 10px var(--mono); color:var(--ink-3); letter-spacing:.04em; }
+.d-key { padding:2px 7px; border-radius:3px; font:700 10px var(--mono); color:var(--cool); background:rgba(123,158,216,.1); letter-spacing:.02em; }
+.d-tc { font:500 11px var(--mono); color:var(--ink-2); font-variant-numeric:tabular-nums; letter-spacing:.05em; }
+.d[data-s="play"] .d-tc { color:var(--play); }
+.d[data-s="cue"]  .d-tc { color:var(--cue); }
+
+/* — Col 4: icon-only transport + layer chips — */
+.d-ops { display:flex; gap:6px; align-items:center; }
+.btn {
+  width:36px; height:36px;
+  border-radius:8px;
+  background:var(--paper-2);
+  border:1px solid var(--hair);
+  color:var(--ink-2);
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .12s;
+}
+.btn:hover:not(:disabled) { color:var(--ink); border-color:#2d323c; background:#15181e; }
+.btn:disabled { opacity:.3; cursor:not-allowed; }
+.btn svg { width:15px; height:15px; fill:currentColor; }
+.btn.cue { color:var(--cue); border-color:rgba(243,196,80,.3); }
+.btn.cue:hover:not(:disabled) { background:rgba(243,196,80,.1); }
+.btn.play { color:var(--play); border-color:rgba(125,211,122,.3); width:44px; }
+.btn.play:hover:not(:disabled) { background:rgba(125,211,122,.1); }
+.btn.play.on { background:var(--play); color:#050506; border-color:var(--play); }
+.btn.stop { color:var(--ink-3); }
+
+/* A/B SMPTE chips — tiny round, no "SMPTE" label */
+.d-lyr { display:flex; gap:3px; margin-left:8px; padding-left:10px; border-left:1px solid var(--hair); }
+.chip {
+  width:22px; height:22px; border-radius:6px;
+  background:transparent; border:1px solid var(--hair-2);
+  color:var(--ink-3); font:800 9px var(--mono); letter-spacing:0;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .12s;
+}
+.chip:hover { border-color:var(--ink-3); color:var(--ink-2); }
+.chip.on { background:var(--play); color:#050506; border-color:var(--play); }
+.chip.mst { width:auto; padding:0 8px; color:var(--ink-3); font-size:8px; letter-spacing:.2em; }
+.chip.mst.on { background:var(--mst); color:#050506; border-color:var(--mst); }
+
+/* — Bottom strip (optional VU + EQ, visible only when playing) — */
+.d-foot {
+  display:grid; grid-template-columns:auto 1fr auto; gap:12px;
+  padding:0 16px 10px; align-items:center;
+  opacity:.92;
+}
+.d[data-s="empty"] .d-foot,
+.d[data-s="stop"] .d-foot { display:none; }
+
+.vu { display:flex; gap:2px; }
+.vu b { width:2px; height:18px; background:var(--ink-4); border-radius:1px; }
+.vu b.L { background:linear-gradient(to top, var(--cool-2), var(--cool), var(--play)); height:18px; }
+.vu b.R { background:linear-gradient(to top, var(--cool-2), var(--cool), var(--play)); height:14px; }
+
+.eq { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; max-width:340px; }
+.eq b { height:2px; background:var(--hair); border-radius:1px; position:relative; }
+.eq b::after { content:""; position:absolute; top:-1px; height:4px; background:var(--ink-2); border-radius:1px; }
+.eq b.hi::after { left:50%; width:22%; }
+.eq b.mi::after { left:46%; width:12%; }
+.eq b.lo::after { left:50%; width:30%; }
+.eq b.tr::after { left:50%; width:8%; }
+
+.d-meta { font:500 9px var(--mono); letter-spacing:.15em; color:var(--ink-3); text-transform:uppercase; }
+
+/* ── Empty deck: just a dotted drop zone ────── */
+.d.empty-dz { padding:22px 24px; display:flex; align-items:center; gap:18px; cursor:pointer; }
+.d.empty-dz .plus { width:44px; height:44px; border-radius:8px; border:1px dashed var(--ink-4); display:flex; align-items:center; justify-content:center; color:var(--ink-3); font:300 24px var(--mono); }
+.d.empty-dz .t { font:500 12px var(--sans); color:var(--ink-2); }
+.d.empty-dz .t em { display:block; font:400 10px var(--mono); color:var(--ink-3); letter-spacing:.08em; font-style:normal; margin-top:3px; }
+.d.empty-dz .n { margin-left:auto; font:300 28px var(--mono); color:var(--ink-4); line-height:1; }
+
+/* Footer status */
+.foot { border-top:1px solid var(--hair); padding:8px 24px; display:flex; align-items:center; gap:18px; font:500 9px var(--mono); color:var(--ink-3); letter-spacing:.15em; }
+.foot b { color:var(--play); }
+.foot em { color:var(--cue); font-style:normal; }
+.foot .v { margin-left:auto; font-size:8px; color:var(--ink-4); letter-spacing:.25em; }
+</style></head>
+<body>
+<div class="app">
+
+  <!-- ── Rail: brand + icon-only tabs ─────────── -->
+  <div class="rail">
+    <div class="brand">BRIDGE<b>+</b></div>
+    <a class="on" title="Live"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="8"/></svg></a>
+    <a title="Mixer"><svg viewBox="0 0 24 24"><path d="M4 6h4M14 6h6M4 12h10M18 12h2M4 18h4M14 18h6"/><circle cx="10" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/></svg></a>
+    <a title="PDJL"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M6 8v8M18 8v8M8 18h8"/></svg></a>
+    <a title="TCNet"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg></a>
+    <a title="Art-Net"><svg viewBox="0 0 24 24"><path d="M12 3l9 17H3z"/></svg></a>
+    <a title="Link"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 010-5.7l3-3a4 4 0 115.7 5.7l-1 1M14 10a4 4 0 010 5.7l-3 3a4 4 0 11-5.7-5.7l1-1"/></svg></a>
+    <div class="sp"></div>
+    <a title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></a>
+  </div>
+
+  <section class="main">
+    <!-- ── Top ─────────────────────── -->
+    <div class="top">
+      <span class="t">BRIDGE<b>+</b></span>
+      <span class="hint">PRO DJ LINK</span>
+      <div class="pills">
+        <b class="on">1</b>
+        <b>2·2</b>
+        <b>3·2</b>
+      </div>
+      <div class="stats">
+        <span class="s">4 DECK</span>
+        <span class="s">TCNet A–H</span>
+        <span class="s off">Art-Net</span>
+        <span class="s">Link 2</span>
+      </div>
+    </div>
+
+    <!-- ── Board ──────────────────── -->
+    <div class="board v1">
+
+      <!-- ═══ Deck 1 — PLAY + MASTER + ON AIR ═══ -->
+      <article class="d" data-s="air">
+        <div class="d-grid">
+          <div class="d-art"><span class="n">1</span><img alt="" style="background:linear-gradient(135deg,#e45b9a,#2a1428);"></div>
+          <div class="d-mid">
+            <div class="d-title">
+              <span class="d-t">Children Of The Night</span>
+              <span class="d-a">Daft Punk</span>
+              <span class="d-badges">
+                <span class="b-snc" title="SYNC"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 010-5.7l3-3a4 4 0 115.7 5.7l-1 1M14 10a4 4 0 010 5.7l-3 3a4 4 0 11-5.7-5.7l1-1" fill="none" stroke-linecap="round"/></svg></span>
+                <span class="b-mst" title="MASTER"><svg viewBox="0 0 24 24"><path d="M3 8l4 10h10l4-10-5 3-4-6-4 6z"/></svg></span>
+                <span class="b-dot air" title="ON AIR"></span>
+              </span>
+            </div>
+            <div class="d-wave">
+              <svg viewBox="0 0 600 36" preserveAspectRatio="none">
+                <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8fe0cb"/><stop offset="100%" stop-color="#4a8a76"/></linearGradient></defs>
+                <path d="M0,18 Q8,6 16,18 T32,18 T48,18 T64,18 T80,18 T96,14 T112,22 T128,10 T144,26 T160,16 T176,18 T192,8 T208,28 T224,16 T240,18 T256,18 T272,18 T288,18 T304,18 T320,18 T336,18 T352,18 T368,18 T384,18 T400,18 T416,22 T432,14 T448,25 T464,10 T480,18 T496,18 T512,18 T528,18 T544,18 T560,18 T576,18 T592,18 L600,18 L600,36 L0,36 Z" fill="url(#wg)"/>
+              </svg>
+              <div class="hc b" style="left:22%;"></div>
+              <div class="hc r" style="left:45%;"></div>
+              <div class="hc g" style="left:75%;"></div>
+              <div class="ph" style="left:28%;"></div>
+              <div class="prog" style="width:28%;"></div>
+              <div class="tm">1:24 · 5:32</div>
+            </div>
+          </div>
+          <div class="d-hero">
+            <div class="d-bpm">128<em>.00</em></div>
+            <div class="d-sub">
+              <span class="d-key">8A</span>
+              <span class="d-phase"><i class="on"></i><i></i><i></i><i></i></span>
+              <span class="d-tc">00:01:24:18</span>
+            </div>
+          </div>
+          <div class="d-ops">
+            <button class="btn cue" title="CUE"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/></svg></button>
+            <button class="btn play on" title="PAUSE"><svg viewBox="0 0 24 24"><rect x="7" y="5" width="3.5" height="14"/><rect x="13.5" y="5" width="3.5" height="14"/></svg></button>
+            <button class="btn stop" title="STOP"><svg viewBox="0 0 24 24"><path d="M6 5v14l-3-7zM9 5h3v14H9zm5 0h10v14H14z"/></svg></button>
+            <div class="d-lyr">
+              <span class="chip mst on">◆</span>
+              <span class="chip on">A</span>
+              <span class="chip">B</span>
+            </div>
+          </div>
+        </div>
+        <div class="d-foot">
+          <div class="vu"><b class="L"></b><b class="L"></b><b class="R"></b><b class="R"></b></div>
+          <div class="eq"><b class="tr"></b><b class="hi"></b><b class="mi"></b><b class="lo"></b></div>
+          <div class="d-meta">CDJ-3000 · NET 1</div>
+        </div>
+      </article>
+
+      <!-- ═══ Deck 2 — CUE + ON AIR ═══ -->
+      <article class="d" data-s="cue">
+        <div class="d-grid">
+          <div class="d-art"><span class="n">2</span><img alt="" style="background:linear-gradient(135deg,#6aa5e5,#1a3556);"></div>
+          <div class="d-mid">
+            <div class="d-title">
+              <span class="d-t">One More Time</span>
+              <span class="d-a">Daft Punk</span>
+              <span class="d-badges">
+                <span class="b-dot air" title="ON AIR"></span>
+              </span>
+            </div>
+            <div class="d-wave">
+              <svg viewBox="0 0 600 36" preserveAspectRatio="none"><path d="M0,18 Q10,8 20,18 T40,18 T60,18 T80,18 T100,14 T120,22 T140,16 T160,18 T180,18 T200,18 T220,18 T240,18 T260,18 T280,18 T300,18 T320,18 T340,18 T360,18 T380,18 T400,18 T420,18 T440,18 T460,18 T480,18 T500,18 T520,18 T540,18 T560,18 T580,18 T600,18 L600,36 L0,36 Z" fill="#6aa5e5" opacity=".6"/></svg>
+              <div class="hc b" style="left:14%;"></div>
+              <div class="hc r" style="left:36%;"></div>
+              <div class="ph" style="left:12%;"></div>
+              <div class="prog" style="width:12%;"></div>
+              <div class="tm">0:48 · 5:20</div>
+            </div>
+          </div>
+          <div class="d-hero">
+            <div class="d-bpm">123<em>.00</em></div>
+            <div class="d-sub">
+              <span class="d-key">5A</span>
+              <span class="d-phase"><i></i><i class="on"></i><i></i><i></i></span>
+              <span class="d-tc">00:00:48:04</span>
+            </div>
+          </div>
+          <div class="d-ops">
+            <button class="btn cue" title="CUE"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/></svg></button>
+            <button class="btn play" title="PLAY"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg></button>
+            <button class="btn stop" title="STOP"><svg viewBox="0 0 24 24"><path d="M6 5v14l-3-7zM9 5h3v14H9zm5 0h10v14H14z"/></svg></button>
+            <div class="d-lyr">
+              <span class="chip mst">◇</span>
+              <span class="chip">A</span>
+              <span class="chip on">B</span>
+            </div>
+          </div>
+        </div>
+        <div class="d-foot">
+          <div class="vu"><b class="L" style="height:8px;"></b><b class="L" style="height:6px;"></b><b class="R" style="height:8px;"></b><b class="R" style="height:7px;"></b></div>
+          <div class="eq"><b class="tr"></b><b class="hi"></b><b class="mi"></b><b class="lo"></b></div>
+          <div class="d-meta">CDJ-3000 · NET 2</div>
+        </div>
+      </article>
+
+      <!-- ═══ Deck 3 — STOP (no foot) ═══ -->
+      <article class="d" data-s="stop">
+        <div class="d-grid">
+          <div class="d-art"><span class="n">3</span><img alt="" style="background:linear-gradient(135deg,#4a5066,#14161d);"></div>
+          <div class="d-mid">
+            <div class="d-title">
+              <span class="d-t">Get Lucky</span>
+              <span class="d-a">Daft Punk feat. Pharrell</span>
+              <span class="d-badges"></span>
+            </div>
+            <div class="d-wave">
+              <svg viewBox="0 0 600 36" preserveAspectRatio="none"><path d="M0,18 Q15,14 30,18 T60,18 T90,18 T120,18 T150,18 T180,18 T210,18 T240,18 T270,18 T300,18 T330,18 T360,18 T390,18 T420,18 T450,18 T480,18 T510,18 T540,18 T570,18 T600,18 L600,36 L0,36 Z" fill="#3b4152" opacity=".5"/></svg>
+              <div class="tm">0:00 · 4:08</div>
+            </div>
+          </div>
+          <div class="d-hero">
+            <div class="d-bpm" style="color:var(--ink-3);">116<em>.00</em></div>
+            <div class="d-sub">
+              <span class="d-key" style="color:var(--ink-3);background:rgba(76,82,92,.1);">F#m</span>
+              <span class="d-phase"><i></i><i></i><i></i><i></i></span>
+              <span class="d-tc" style="color:var(--ink-3);">00:00:00:00</span>
+            </div>
+          </div>
+          <div class="d-ops">
+            <button class="btn cue" title="CUE"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/></svg></button>
+            <button class="btn play" title="PLAY"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg></button>
+            <button class="btn stop" title="STOP"><svg viewBox="0 0 24 24"><path d="M6 5v14l-3-7zM9 5h3v14H9zm5 0h10v14H14z"/></svg></button>
+            <div class="d-lyr">
+              <span class="chip mst">◇</span>
+              <span class="chip">A</span>
+              <span class="chip">B</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ═══ Deck 4 — Empty / Virtual drop zone ═══ -->
+      <article class="d empty-dz" data-s="empty">
+        <div class="plus">+</div>
+        <div class="t">트랙을 드래그하거나 클릭하여 열기<em>MP3 · WAV · FLAC · AIFF · AAC · OGG · M4A</em></div>
+        <div class="n">4</div>
+      </article>
+
+    </div>
+
+    <!-- ── Foot status ───────── -->
+    <div class="foot">
+      <span><b>●</b> PDJL 523 pps</span>
+      <span><b>●</b> TCNet 120 pps</span>
+      <span><em>●</em> DJM-A9 응답 없음 (14s)</span>
+      <span class="v">v0.12.0 · MONOLITH</span>
+    </div>
+  </section>
+</div>
+</body></html>
