@@ -454,8 +454,13 @@ body { background:var(--bg); color:var(--ink); font-family:var(--sans); font-siz
 .d.empty-dz .n { margin-left:auto; font:300 28px var(--mono); color:var(--ink-4); line-height:1; }
 
 .foot { border-top:1px solid var(--hair); padding:7px 22px; display:flex; align-items:center; gap:18px; font:500 9px var(--mono); color:var(--ink-3); letter-spacing:.15em; }
-.foot b { color:var(--play); }
-.foot em { color:var(--cue); font-style:normal; }
+.foot span { display:inline-flex; align-items:center; gap:7px; }
+.foot span::before {
+  content:""; width:6px; height:6px; border-radius:50%;
+  background:var(--play); box-shadow:0 0 6px var(--play);
+}
+.foot span.warn::before { background:var(--cue); box-shadow:0 0 6px var(--cue); }
+.foot span.v::before { display:none; }
 .foot .v { margin-left:auto; font-size:8px; color:var(--ink-4); letter-spacing:.25em; }
 </style></head>
 <body>
@@ -531,7 +536,7 @@ body { background:var(--bg); color:var(--ink); font-family:var(--sans); font-siz
               <path d="M0,29 Q6,8 14,29 T28,29 T42,29 T56,29 T70,29 T84,29 T98,29 T112,29 T126,29 T140,29 T154,29 T168,29 T182,29 T196,29 T210,29 T224,29 T238,29 T252,29 T266,29 T280,29 T294,29 T308,29 T322,29 T336,29 T350,29 T364,29 T378,29 T392,11 T406,47 T420,14 T434,44 T448,17 T462,41 T476,20 T490,38 T504,29 T518,29 T532,29 T546,29 T560,29 T574,29 T588,29 T602,29 T616,29 T630,29 T644,29 T658,29 T672,29 T686,29 T700,29 T714,29 T728,29 T742,29 T756,29 T770,29 T784,29 T800,29 L800,58 L0,58 Z" fill="#8fe0cb" opacity=".82"/>
             </svg>
             <div class="ph-c"></div>
-            <div class="d-zoom"><button>−</button><button>RST</button><button>+</button></div>
+            <div class="d-zoom"><button>-</button><button>RST</button><button>+</button></div>
           </div>
         </div>
 
@@ -646,7 +651,7 @@ body { background:var(--bg); color:var(--ink); font-family:var(--sans); font-siz
             <div class="beatgrid"></div>
             <svg viewBox="0 0 800 58" preserveAspectRatio="none"><path d="M0,29 Q10,14 20,29 T40,29 T60,29 T80,29 T100,29 T120,29 T140,29 T160,29 T180,29 T200,29 T220,29 T240,29 T260,29 T280,29 T300,29 T320,29 T340,29 T360,29 T380,16 T400,42 T420,20 T440,38 T460,29 T480,29 T500,29 T520,29 T540,29 T560,29 T580,29 T600,29 T620,29 T640,29 T660,29 T680,29 T700,29 T720,29 T740,29 T760,29 T780,29 T800,29 L800,58 L0,58 Z" fill="#6aa5e5" opacity=".65"/></svg>
             <div class="ph-c"></div>
-            <div class="d-zoom"><button>−</button><button>RST</button><button>+</button></div>
+            <div class="d-zoom"><button>-</button><button>RST</button><button>+</button></div>
           </div>
         </div>
 
@@ -712,7 +717,7 @@ body { background:var(--bg); color:var(--ink); font-family:var(--sans); font-siz
 
         <div class="d-waves">
           <div class="d-wov"><svg viewBox="0 0 800 32" preserveAspectRatio="none"><path d="M0,16 Q20,13 40,16 T80,16 T120,16 T160,16 T200,16 T240,16 T280,16 T320,16 T360,16 T400,16 T440,16 T480,16 T520,16 T560,16 T600,16 T640,16 T680,16 T720,16 T760,16 T800,16 L800,32 L0,32 Z" fill="#3b4152" opacity=".5"/></svg></div>
-          <div class="d-wz"><div style="display:flex;align-items:center;justify-content:center;height:100%;font:500 10px var(--mono);color:var(--ink-3);letter-spacing:.14em;">CUE · 1:20.000</div><div class="d-zoom"><button>−</button><button>RST</button><button>+</button></div></div>
+          <div class="d-wz"><div style="display:flex;align-items:center;justify-content:center;height:100%;font:500 10px var(--mono);color:var(--ink-3);letter-spacing:.14em;">CUE · 1:20.000</div><div class="d-zoom"><button>-</button><button>RST</button><button>+</button></div></div>
         </div>
 
         <div class="d-inst">
@@ -764,9 +769,9 @@ body { background:var(--bg); color:var(--ink); font-family:var(--sans); font-siz
     </div>
 
     <div class="foot">
-      <span><b>●</b> PDJL 523 pps</span>
-      <span><b>●</b> TCNet 120 pps</span>
-      <span><em>●</em> DJM-A9 응답 없음 (14s)</span>
+      <span>PDJL 523 pps</span>
+      <span>TCNet 120 pps</span>
+      <span class="warn">DJM-A9 응답 없음 (14s)</span>
       <span class="v">v0.12.0 · TIMECODE FIRST</span>
     </div>
   </section>
