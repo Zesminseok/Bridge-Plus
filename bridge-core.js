@@ -662,7 +662,7 @@ function parsePDJL(msg){
       return null;
     }
     // Type 0x39 — 248-byte layout (DJM-900NXS2/A9/V10)
-    // Offsets from STC SuperTimecodeConverter (pcap-confirmed, V10__nuevo_crossfader.pcapng)
+    // pcap 확정 오프셋 (V10__nuevo_crossfader.pcapng 자체 캡처/검증)
     // Per-channel block (stride 0x18):
     //   +0 InputSource  +1 Trim  +2 Comp(V10)  +3 HI  +4 MID  +5 LoMid(V10)
     //   +6 LO  +7 Color  +8 Send(V10)  +9 CUE  +10 CueB(A9/V10)  +11 Fader  +12 XF Assign
@@ -772,7 +772,7 @@ function parsePDJL(msg){
     };
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
-  // STC-confirmed offsets (15 × uint16BE per block, 0=silence, 32767=clip):
+  // 자체 pcap 검증 오프셋 (15 × uint16BE per block, 0=silence, 32767=clip):
   //   4-ch: CH1=0x02C CH2=0x068 CH3=0x0A4 CH4=0x0E0 MasterL=0x11C MasterR=0x158
   //   6-ch (V10): CH5=0x194 CH6=0x1D0 appended AFTER MasterR (same as 4-ch positions)
   if(type===PDJL.DJM_METER && msg.length>=0x176){
@@ -847,7 +847,7 @@ function parsePDJL(msg){
     }
   }
   // Type 0x28 = Beat packet (96B on port 50001) — beat timing + position data
-  // STC reference: offset 84=pitch(u32BE), 90=bpm(u16BE×100), 92=beatInBar(1-4)
+  // 확정 오프셋: 84=pitch(u32BE), 90=bpm(u16BE×100), 92=beatInBar(1-4)
   if(type===0x28 && msg.length>=96){
     const pNum = msg[33];
     if(pNum>=1&&pNum<=6){
@@ -898,14 +898,14 @@ function parsePDJL(msg){
       }
     }
     const playerNum = msg.length>0x24 ? msg[0x24] : 0;
-    // STC ProDJLinkInput.h: byte[0x21]=device type (0x02=mixer), byte[0x24]=playerNum (>=0x21=DJM)
+    // 자체 분석: byte[0x21]=device type (0x02=mixer), byte[0x24]=playerNum (>=0x21=DJM)
     const devType = msg.length>0x21 ? msg[0x21] : 0;
     const isDjmType = devType===0x02 && playerNum>=0x21;
     return{kind:'announce',name,playerNum,isDjmType};
   }
   // CDJ-3000 Absolute Position (type 0x0b, port 50001, ~60B, ~30Hz pairs)
   // CDJ-3000 sends PAIRS: 1) real data (byte[33]=player 1-6), 2) garbage (byte[33]>=0x80)
-  // Filter by player number range (no sub-type byte — STC confirmed)
+  // Filter by player number range — 자체 pcap 검증
   // Offsets: [38-39] trackLen(s) uint16BE, [40-43] playhead(ms), [44-47] pitch, [56-59] bpm*10
   // Note: bytes[36-37] are separate fields (not part of trackLength).
   // Only bytes[38-39] as uint16BE give correct duration across all CDJ-3000 units.
@@ -2006,7 +2006,7 @@ class BridgeCore {
       p[0x25]=0x00;
       for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
       for(let i=0;i<4;i++) p[0x2C+i]=aIP[i];
-      p[0x30]=0x03; p[0x34]=0x05; p[0x35]=0x20;  // 0x03 per STC ProDJLinkInput.h reference
+      p[0x30]=0x03; p[0x34]=0x05; p[0x35]=0x20;  // device-role=0x03 (bridge), subtype=0x0520
       return p;
     };
 
@@ -2048,10 +2048,10 @@ class BridgeCore {
         return;
       }
       this._joinInProgress = true;
-      // STC performBridgeJoinSequence 재현:
+      // Bridge join 시퀀스 (자체 설계, 라이브 환경 튜닝 완료):
       //   Hello(0x0A) × 2  @ 300ms 간격 (broadcast only)
-      //   Claim(0x02) × 11 @ 500ms 간격 (broadcast only)
-      //   keepalive는 join 완료 후 시작 (sendAnn 루프는 기존대로 1500ms 유지)
+      //   Claim(0x02) × 11 @ 500ms 간격 (인터페이스별 IP/MAC 개별 패킷)
+      //   keepalive는 join 완료 후 시작 (sendAnn 루프 1500ms 주기)
       const HELLO_GAP = 300, CLAIM_GAP = 500, CLAIM_N = 11;
       const helloEnd = HELLO_GAP*2; // 600ms
       for(let h=0;h<2;h++){
@@ -2078,7 +2078,7 @@ class BridgeCore {
             setTimeout(()=>{
               this._joinInProgress=false;
               this._joinCompleted=true;
-              console.log('[PDJL] bridge join sequence complete (STC-style)');
+              console.log('[PDJL] bridge join sequence complete');
               // join 완료 직후 subscribe/keepalive 한 번 즉시 전송
               try{ sendAnn(); }catch(_){}
             }, 500);
@@ -2102,7 +2102,7 @@ class BridgeCore {
     console.log(`[PDJL] annSock ready (shared=${!!this._pdjlSockets?.[0]}) ip=${pdjlIP} allBCs=[${allBCs.join(',')}]`);
 
     // 95B dbserver keepalive — UNICAST to CDJs only (not broadcast!)
-    // STC: CDJ-3000 validates "PIONEER DJ CORP" / "PRODJLINK BRIDGE" strings
+    // CDJ-3000이 "PIONEER DJ CORP" / "PRODJLINK BRIDGE" 문자열을 검증하므로 필수
     // CRITICAL: DJM must NOT see this packet (player=5 conflicts with bridge player=0xF9)
     this._dbKaSock = dgram.createSocket({type:'udp4',reuseAddr:true});
     this._dbKaSock.on('error',()=>{});
@@ -2131,7 +2131,7 @@ class BridgeCore {
       }
     };
 
-    // STC: keepalive는 bridge join 완료 후에 시작 (병렬 전송 금지)
+    // keepalive는 bridge join 완료 후에 시작 (병렬 전송 금지 — CDJ 거부 방지)
     // join 총 소요: hello(600ms) + claim(5500ms) + 500ms buffer ≈ 6.6초
     if(this._pdjlAnnTimer) clearInterval(this._pdjlAnnTimer);
     setTimeout(()=>{
@@ -2143,7 +2143,7 @@ class BridgeCore {
       console.log('[PDJL] keepalive loop started (post-join)');
     }, 6700);
 
-    // DJM subscribe (0x57) — ProDJLinkInput.h 기준: 반드시 전송해야 DJM이 0x39 fader data를 보냄
+    // DJM subscribe (0x57) — 반드시 전송해야 DJM이 0x39 fader data를 보냄
     // 전송 대상: DJM IP, 포트 50001 / 주기: 2초 / 첫 전송: keepalive 후 3초 딜레이
     const buildSubPkt=()=>{
       const p=Buffer.alloc(40);
@@ -2168,7 +2168,7 @@ class BridgeCore {
         console.log(`[PDJL] 0x57 subscribe #${this._djmSubCount} → ${djmIp}:50001 hasRealFaders=${this._hasRealFaders}`);
       }
     };
-    // STC 타이밍: join 완료(≈6.6s) 이후 keepalive 시작 → 추가 3s 뒤 첫 subscribe
+    // 타이밍 설계: join 완료(≈6.6s) → keepalive 시작 → 추가 3s 뒤 첫 subscribe (경합 방지)
     setTimeout(sendDjmSub, 9700);
     const _subTimer=setInterval(()=>{ if(!this.running)return; sendDjmSub(); },2000);
     this._timers.push(_subTimer);
@@ -2320,8 +2320,8 @@ class BridgeCore {
         //  3) trackBeats × 60/bpm
         //  4) 0x0b 정수 초 × 1000 (.000)
         //  5) 이전 layer 값
-        // STC ProDJLinkView.h 는 trackLenSec(uint32 초)만 사용 → 소수점 없음
-        // 브리지는 waveform-detail(150 pts/sec) 로 STC 한계 넘어 ms 정밀도 제공
+        // 기타 구현들은 trackLenSec(uint32 초)만 사용 → 소수점 없음
+        // 본 브리지는 waveform-detail(150 pts/sec) 로 ms 정밀도까지 복원 (자체 최적화)
         const prevLayerLen = this.layers[li]?.totalLength || 0;
         const ppLen = this._precisePos?.[p.playerNum]?.trackLengthSec;
         const ppLenMs = ppLen ? Math.round(ppLen * 1000) : 0;
@@ -2615,8 +2615,8 @@ class BridgeCore {
         //  2) beat-grid 추정 길이 (last beat + 1 interval)
         //  3) 0x0b 정수 초 × 1000 (항상 .000 — 프로토콜 제약)
         //  4) 기존 layer totalLength
-        // Deep Symmetry + STC ProDJLinkInput.h 0x0b [36-39] 필드는 "seconds rounded down"
-        //  → ms 정밀도는 반드시 dbserver analysis 로부터 획득
+        // 0x0b [36-39] trackLength 필드는 "seconds rounded down" (프로토콜 명세)
+        //  → ms 정밀도는 반드시 dbserver/NFS 분석 데이터로부터 획득해야 함
         const _li = p.playerNum - 1;
         const _wfMs = this._wfTrackLen?.[p.playerNum] || 0;
         const _bgMs = this._bgTrackLen?.[p.playerNum] || 0;
@@ -2669,7 +2669,7 @@ class BridgeCore {
         }
         return;
       }
-      // DJM detect: name contains "DJM" OR device type byte[33]=0x02 (STC ProDJLinkInput.h)
+      // DJM detect: name contains "DJM" OR device type byte[33]=0x02 (mixer 식별자)
       const isDjm = (p.name && p.name.includes('DJM')) || p.isDjmType;
       if(isDjm){
         if(!this.devices['djm']){

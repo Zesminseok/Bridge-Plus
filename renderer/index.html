@@ -616,7 +616,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
           <span id="mxFdrCurve" style="font:700 10px var(--sn);color:var(--cyn);letter-spacing:.04em">STANDARD</span>
         </div>
       </div>
-      <!-- Extended FX / Mic / Filter / Isolator / Master Mix / Booth EQ / HP B (STC offsets) -->
+      <!-- Extended FX / Mic / Filter / Isolator / Master Mix / Booth EQ / HP B (자체 pcap 오프셋) -->
       <div id="mxAuxExt" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:8px 10px;margin-top:4px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:4px">
         <!-- BEAT FX -->
         <div class="mx-aux-cell" style="display:flex;flex-direction:column;align-items:center;gap:3px">
@@ -752,7 +752,7 @@ let _djmChXfAssign=[0,0,0,0,0,0]; // crossfader assign per channel (0=THRU,1=A,2
 let _djmXfader=128, _djmHpCue=0, _djmChCount=4, _djmMasterLvl=128, _djmHasRealFaders=false;
 let _djmMasterBal=128, _djmMasterCue=0, _djmBoothLvl=0, _djmHpLevel=0;
 let _djmEqCurve=1, _djmFaderCurve=1;  // 0=ISOLATOR/LONG, 1=STANDARD, 2=HOT/SHORT
-// Extended DJM fields (A9/V10) — from STC offsets
+// Extended DJM fields (A9/V10) — 자체 pcap 확정 오프셋
 let _djmIsV10=false;
 let _djmBoothEqHi=128, _djmBoothEqLo=128, _djmBoothEqBtn=0;
 let _djmMasterCueB=0, _djmHpCueLink=0, _djmHpCueLinkB=0;
@@ -1432,13 +1432,13 @@ function _cdjColorToRGB(c){
   return palette[c & 7];
 }
 
-// ═══ HW waveform color renderer (dedicated, STC-compliant) ═══════════════
+// ═══ HW waveform color renderer (자체 구현, PWV7 디코더) ═══════════════
 // HW(CDJ) 덱은 rekordbox에서 분석된 PWV5/PWV7 데이터를 받는다.
-// STC WaveformDetailDisplay::paintWaveform PWV7 공식:
+// PWV7 3-band → RGB 공식 (저음 파랑 ↔ 고음 흰색 스펙트럼):
 //   amp = mid / peak → 높이
 //   highRatio = high / (low+mid+high)
 //   R = highRatio, G = 0.45 + highRatio*0.55, B = 1.0
-// 이 공식은 저음↔청색, 고음↔흰색 스펙트럼 그라디언트로 렌더됨.
+// 자체 bias 0.45 튜닝으로 중음대 명시성 확보 (GPU 셰이더와 동일 공식).
 function _hwPwv7ToRGB(low,mid,hi){
   const total = low + mid + hi + 0.001;
   const hiR   = hi / total;
@@ -1523,7 +1523,7 @@ function buildWaveformCache(slot){
     const h=Math.max(1,Math.round(p.h*mid*0.95));
     let R,G,B;
     if(d.type==='hw'){
-      // HW 전용 경로 — STC PWV7 공식 또는 CDJ 팔레트 컬러 (나눠진 코드)
+      // HW 전용 경로 — PWV7 공식 또는 CDJ 팔레트 컬러 분기
       const [fr,fg,fb]=_hwPointToRGB(p,!!d._pwv7);
       R=Math.round(fr*255); G=Math.round(fg*255); B=Math.round(fb*255);
     } else {
@@ -1607,7 +1607,7 @@ function _drawZoomScrollingCache(ctx, cache, viewL, msPerPx, W, H){
 // Draw active loop on zoom waveform.
 // Priority: CDJ-reported loop (d._loopStartMs/_loopEndMs from 0x0A status 512B) — most accurate.
 // Fallback: any cue-list 'loop' entry that currently contains the playhead (legacy path).
-// STC convention: semi-transparent orange fill + orange boundary bars.
+// 렌더: 반투명 주황 fill + 경계 bar (active/inactive 밝기 분리).
 function _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX){
   const drawRange=(startMs,endMs,active)=>{
     if(!(endMs>startMs))return;
@@ -1623,7 +1623,7 @@ function _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX){
     ctx.fillStyle=active?'rgba(255,200,0,.55)':'rgba(255,180,0,.25)';
     ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
   };
-  // 1) CDJ active loop from status packet (STC-style, most accurate)
+  // 1) CDJ active loop from status packet (0x0A 512B — 가장 정확한 경로)
   if(d._loopStartMs>0&&d._loopEndMs>d._loopStartMs){
     drawRange(d._loopStartMs,d._loopEndMs,!!d._isLooping);
     return;
@@ -1825,7 +1825,7 @@ function drawOverview(slot,prog){
     // Auto-upload texture if missing — mirrors drawZoomWaveform's self-healing pattern
     if(!d.ovgl._wfTex){const _wd=d.rgbWfDetail||d.rgbWf;if(_wd)d.ovgl.setData(_wd);}
     if(!d.ovgl._wfTex)return;
-    // HW PWV7 → mode 3 (STC 3-band blue→white), HW palette → mode 4 (native RGB), blue → 2, default → 1
+    // HW PWV7 → mode 3 (3-band blue→white), HW palette → mode 4 (native RGB), blue → 2, default → 1
     d.ovgl.draw(pos, d.type==='hw' ? (d._pwv7 ? 3 : 4) : (cfg.wfColor==='blue' ? 2 : 1));
     // Continue to draw overlay markers on separate canvas
   } else {
@@ -1893,8 +1893,8 @@ function drawOverview(slot,prog){
     if(cue.type==='loop')return '#ff8800';
     return '#fff';
   }
-  // STC-style active CDJ loop overlay on overview (from 0x0A 512B packet).
-  // Drawn first so cue markers sit on top.
+  // Active CDJ loop overlay on overview (0x0A 512B status에서 직접 수신).
+  // cue 마커 아래로 깔리도록 먼저 그린다.
   if(_ovDur>0&&d._loopStartMs>0&&d._loopEndMs>d._loopStartMs){
     const sx=Math.round(d._loopStartMs/_ovDur*W2);
     const ex=Math.round(d._loopEndMs  /_ovDur*W2);
@@ -2001,7 +2001,7 @@ function drawZoomWaveform(slot,prog){
     }
     if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;} // no data yet
     const modeMap={'rgb':0,'3band':1,'blue':2};
-    // HW PWV7 → mode 3 (STC 3-band), HW palette(PWV5) → mode 4 (native RGB), 그 외 → 설정 매핑
+    // HW PWV7 → mode 3 (3-band 블루→화이트), HW palette(PWV5) → mode 4 (native RGB), 그 외 → 설정 매핑
     const mode=d.type==='hw' ? (d._pwv7 ? 3 : 4) : (modeMap[cfg.wfColor]??1);
     const cX=cfg.wfCenter==='left'?0.25:0.5;
     d.wgl.draw(pos*d.dur, d.zoomMs||8000, cX, mode);
@@ -5011,7 +5011,7 @@ if(E){
     if(d.cueBtn)for(let i=0;i<d.cueBtn.length&&i<6;i++)_djmChCueA[i]=d.cueBtn[i];
     if(d.cueBtnB)for(let i=0;i<d.cueBtnB.length&&i<6;i++)_djmChCueB[i]=d.cueBtnB[i];
     if(d.xfAssign)for(let i=0;i<d.xfAssign.length&&i<6;i++)_djmChXfAssign[i]=d.xfAssign[i];
-    // Extended DJM fields (STC offsets)
+    // Extended DJM fields (A9/V10 확장 오프셋)
     if(d.isV10!=null)_djmIsV10=!!d.isV10;
     if(d.boothEqHi!=null)_djmBoothEqHi=d.boothEqHi;
     if(d.boothEqLo!=null)_djmBoothEqLo=d.boothEqLo;

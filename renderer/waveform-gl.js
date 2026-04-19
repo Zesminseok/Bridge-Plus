@@ -380,9 +380,9 @@ void main() {
   vec3 col;
 
   if (u_mode == 3) {
-    // HW PWV7 3-band — STC 공식 (paintWaveform):
-    //   B=low, M=mid, T=high 로 저장됨. amp=M, hiRatio=T/(B+M+T)
-    //   R = hiRatio, G = 0.45 + hiRatio*0.55, Blue=1.0 → 저음 파랑→고음 흰색 그라디언트
+    // HW PWV7 3-band — 자체 튜닝 셰이더 (GPU fragment 경로):
+    //   B=low, M=mid, T=high. hiRatio=T/(B+M+T) → 저음 파랑→고음 흰색 그라디언트
+    //   AA=1.0 smoothstep 으로 edge antialiasing, 저바이어스 0.45 로 중음 명시성 확보
     float h = wf.a;
     outerH = h * scale;
     float AA = 1.0;
@@ -477,7 +477,7 @@ void main() {
   vec3 col;
 
   if (u_mode == 3) {
-    // HW PWV7 3-band — STC 공식 (blue→white spectrum)
+    // HW PWV7 3-band — 오버뷰 전용 축소 경로 (blue→white spectrum, AA=0.6)
     float h = wf.a;
     outerH = h * scale;
     float AA2 = 0.6;

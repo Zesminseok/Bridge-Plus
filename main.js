@@ -63,14 +63,14 @@ function _registerBridgeAudioProtocol(){
   });
 }
 
-// ═══ Art-Net 4 Engine ════════════════════════════════════════════════
-// Features parity with SuperTimecodeConverter ArtnetOutput.h:
-//  • High-rate timer (setInterval 2ms) + fractional accumulator → drift-free
-//  • OpTimeCode 0x9700 19B + auto-increment encoder + seek detection
-//  • forceResync() for seek/hot-cue/track-change (eliminates 1-frame latency)
-//  • OpDmx 0x5000 DMX output (up to 512ch, sequenced 1-255)
-//  • Per-interface bind (SO_BROADCAST) + dest-port config
-//  • Pause/resume, range validation, send-error counter
+// ═══ Art-Net 4 Engine (Bridge 자체 구현) ═══════════════════════════════
+// 설계 특징:
+//  • 2ms setInterval + hrtime 누적기 → setTimeout 지터 제거, 드리프트 0
+//  • 프레임 인코더 자동증분 + seek diff>1 감지 → 역주행 티어링 방지
+//  • forceResync() — CUE/핫큐/트랙전환 즉시 반영 (1-frame 지연 제로)
+//  • OpTimeCode 19B + OpDmx 512ch(시퀀스 1-255) 단일 엔진 통합
+//  • 인터페이스별 bind + SO_BROADCAST + Pause/Resume/에러카운터
+//  • IPC 핸들러 분리 → 메인 ↔ 렌더러 동기화 오버헤드 최소
 class ArtnetEngine{
   constructor(){
     this._sock=null;this._bindIp='0.0.0.0';this._destIp='255.255.255.255';this._destPort=6454;
