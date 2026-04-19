@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8">
-<title>BRIDGE+ / Layout Variants — Tower · Card · Hero+List</title>
+<title>BRIDGE+ / Layout Variants — Tower · Card · Matrix</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;border-radius:0!important}
 :root{
   --bg:#0c0e12;
-  --t-bg:#141414;          --t-bg2:#1a1a1a;        --t-bg3:#222;
-  --t-bdr:#2a2a2a;         --t-bdr2:#3a3a3a;
+  --t-bg:#141414;          --t-bg2:#1a1a1a;        --t-bg3:#202023;
+  --t-bdr:#2a2a2d;         --t-bdr2:#3a3a3d;
   --t-tx:#f2f2f2;          --t-tx2:#c8c8c8;        --t-tx3:#888;         --t-tx4:#444;
   --t-accent:#ff6b2c;      --t-accent-dim:#a34418;
   --t-accent-bg:rgba(255,107,44,.1);
@@ -36,7 +36,6 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .nav a.on{border-color:var(--t-accent);color:var(--t-accent);background:var(--t-accent-bg)}
 .nav a .n{font-family:var(--t-mn);color:inherit;opacity:.6}
 
-/* SVG sprite helper */
 .gi{display:inline-block;width:1em;height:1em;vertical-align:-.12em;fill:currentColor;flex:none;pointer-events:none}
 .gi-hex{width:1.05em;height:1.05em;vertical-align:-.18em}
 .gi-play,.gi-pause,.gi-prev{width:1.15em;height:1.15em;vertical-align:-.22em;fill:currentColor}
@@ -50,41 +49,40 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .stage-hint{font:400 11px/1.6 var(--t-mn);color:var(--t-tx3);margin-bottom:var(--u4);padding-bottom:var(--u3);border-bottom:1px solid var(--t-bdr)}
 .stage-hint b{color:var(--t-accent);font-weight:700}
 
-/* ════════════════════ COMMON PARTS ════════════════════ */
+/* ════════════════════ COMMON ════════════════════ */
 .deck{background:var(--t-bg2);border:1px solid var(--t-bdr);display:flex;flex-direction:column}
 
-.badge{font:700 9px var(--t-mn);padding:3px 7px;letter-spacing:.08em;background:transparent;border:1px solid var(--t-bdr2);line-height:1;height:18px;display:inline-flex;align-items:center}
+.badge{font:700 9px var(--t-mn);padding:3px 7px;letter-spacing:.08em;background:transparent;border:1px solid var(--t-bdr2);line-height:1;height:18px;display:inline-flex;align-items:center;flex-shrink:0}
 .badge.stop{color:var(--t-red);border-color:var(--t-red-bdr)}
 .badge.play{color:var(--t-accent);border-color:var(--t-accent-bdr);background:var(--t-accent-bg)}
 .badge.cue{color:var(--t-ylw);border-color:var(--t-ylw-bdr)}
 
-.sbtn{font:700 8px var(--t-mn);padding:0 6px;border:1px solid var(--t-bdr2);color:var(--t-tx3);letter-spacing:.08em;cursor:pointer;height:18px;display:inline-flex;align-items:center;line-height:1}
+.sbtn{font:700 8px var(--t-mn);padding:0 6px;border:1px solid var(--t-bdr2);color:var(--t-tx3);letter-spacing:.08em;cursor:pointer;height:18px;display:inline-flex;align-items:center;line-height:1;flex-shrink:0}
 .sbtn.on{background:var(--t-accent-bg);color:var(--t-accent);border-color:var(--t-accent-bdr)}
 .sbtn.master{border-color:var(--t-ylw-bdr);color:var(--t-ylw)}
-.sync-cluster{display:flex;gap:3px}
+.sync-cluster{display:flex;gap:3px;flex-shrink:0}
 
-.hw-lbl{font:500 9px var(--t-mn);color:var(--t-tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px;line-height:1}
+.hw-lbl{font:500 9px var(--t-mn);color:var(--t-tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px;line-height:1;flex-shrink:0}
 
 .art{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden;aspect-ratio:1/1;flex-shrink:0}
 .art-fill{position:absolute;inset:0;background:linear-gradient(135deg,var(--t-accent) 0%,var(--t-accent-dim) 100%);opacity:.6}
 .art-label{position:absolute;bottom:4px;left:6px;right:6px;font:500 7px var(--t-mn);color:#fff;letter-spacing:.12em;text-shadow:0 1px 2px rgba(0,0,0,.7);line-height:1}
 
-/* Waveform */
 .wf-box{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
 .wf-svg{width:100%;height:100%;display:block}
 .wf-playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--t-accent);box-shadow:0 0 8px var(--t-accent);left:50%}
 
-/* VU — 가로 형식 (horizontal bars, L/R/F stacked) */
-.vu-h{display:flex;flex-direction:column;gap:3px;background:var(--t-bg3);border:1px solid var(--t-bdr);padding:4px 5px}
+/* VU — 가로 (L/R/F 세로 stack, 각 bar 가로 fill) */
+.vu-h{display:flex;flex-direction:column;gap:3px;background:var(--t-bg3);border:1px solid var(--t-bdr);padding:5px 6px}
 .vu-h .vu-row{display:flex;align-items:center;gap:5px}
 .vu-h .vu-lbl{font:700 7px var(--t-mn);color:var(--t-tx4);letter-spacing:.04em;line-height:1;width:9px;flex-shrink:0;text-align:center}
 .vu-h .vu-bar{flex:1;height:8px;background:var(--t-bg);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
 .vu-h .vu-fill{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,#808080 0%,#c0c0c0 58%,var(--t-ylw) 80%,var(--t-red) 100%)}
 .vu-h .vu-fader-fill{position:absolute;top:0;bottom:0;left:0;background:var(--t-accent);opacity:.78}
 
-/* EQ — 원형 노브 + 12시 디턴트 */
-.eq-strip{display:flex;gap:var(--u2);align-items:center}
-.eq-knob{display:flex;flex-direction:column;align-items:center;gap:2px}
+/* EQ */
+.eq-strip{display:flex;gap:var(--u2);align-items:center;justify-content:space-around}
+.eq-knob{display:flex;flex-direction:column;align-items:center;gap:3px}
 .eq-knob svg{display:block}
 .eq-knob-circle{fill:none;stroke:var(--t-bdr2);stroke-width:1.2}
 .eq-knob-center{stroke:var(--t-tx3);stroke-width:1.2}
@@ -100,12 +98,12 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .bpm-lbl{font:500 7px var(--t-mn);color:var(--t-tx3);letter-spacing:.14em}
 .tc-key{font:700 10px var(--t-mn);color:var(--t-tx2);padding:3px 7px;border:1px solid var(--t-bdr2);line-height:1;display:inline-flex;align-items:center}
 .bpm-meta{font:500 9px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;line-height:1}
-.phasor{display:flex;gap:var(--u);height:8px}
+.phasor{display:flex;gap:var(--u);height:8px;flex-shrink:0}
 .phs{width:8px;height:8px;border:1px solid var(--t-tx4)}
 .phs.on{background:var(--t-accent);border-color:var(--t-accent)}
 
-/* Transport / SMPTE */
-.t-btn{border:1.5px solid var(--t-bdr2);background:transparent;color:var(--t-tx2);font:700 11px var(--t-mn);letter-spacing:.08em;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1}
+/* Transport */
+.t-btn{border:1.5px solid var(--t-bdr2);background:transparent;color:var(--t-tx2);font:700 11px var(--t-mn);letter-spacing:.08em;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;padding:0}
 .t-btn:hover{border-color:var(--t-tx3)}
 .t-btn.lg{height:var(--h-btn-lg)}
 .t-btn.md{height:var(--h-btn-md)}
@@ -116,139 +114,176 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
 .t-btn.play.on{background:var(--t-accent-bg);border-color:var(--t-accent);color:var(--t-accent)}
 .t-btn.stop{color:var(--t-red);border-color:var(--t-red-bdr)}
 
+/* SMPTE */
 .smpte-row{display:flex;gap:var(--u);height:var(--h-btn-md);align-items:stretch}
-.smpte-row.sm{height:var(--h-btn-sm)}
-.l-mst{flex:1.3;background:transparent;border:1px solid var(--t-ylw-bdr);color:var(--t-ylw);font:700 9px var(--t-mn);letter-spacing:.08em;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
+.l-mst{flex:1.3;background:transparent;border:1px solid var(--t-ylw-bdr);color:var(--t-ylw);font:700 9px var(--t-mn);letter-spacing:.08em;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;padding:0}
 .l-mst.on{background:var(--t-ylw-bg)}
-.l-ab{flex:1;background:transparent;border:1px solid var(--t-bdr2);color:var(--t-tx3);font:700 10px var(--t-mn);letter-spacing:.2em;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
+.l-ab{flex:1;background:transparent;border:1px solid var(--t-bdr2);color:var(--t-tx3);font:700 10px var(--t-mn);letter-spacing:.2em;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;padding:0}
 .l-ab.a.on{background:rgba(126,199,255,.14);border-color:var(--t-cool);color:var(--t-cool)}
 .l-ab.b.on{background:rgba(255,159,180,.14);border-color:var(--t-warm);color:var(--t-warm)}
 
-.close-btn{width:22px;height:22px;border:1px solid var(--t-red-bdr);color:var(--t-red);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.close-btn{width:22px;height:22px;border:1px solid var(--t-red-bdr);color:var(--t-red);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
 
 .notes{margin-top:var(--u6);padding:var(--u4) 20px;background:#14161c;border:1px solid #2a2a33;font:400 11px/1.7 var(--t-mn);color:#8b8b98}
 .notes b{color:var(--t-accent);font-weight:700}
 
 /* ═════════════════════════════════════════════════════════ */
-/* ═════════ E · TOWER — 세로 콘솔 (VU 가로 수정) ════════ */
+/* ═════════ E · TOWER — 다듬음 (180×auto) ════════════════ */
 /* ═════════════════════════════════════════════════════════ */
 .v-tower-grid{display:flex;flex-wrap:wrap;gap:var(--u2)}
-.v-tower{width:180px;padding:var(--u2);gap:var(--u2)}
-.v-tower .tw-head{display:flex;flex-direction:column;gap:var(--u);padding-bottom:var(--u);border-bottom:1px solid var(--t-bdr)}
-.v-tower .tw-head-top{display:flex;align-items:baseline;gap:var(--u2);height:22px}
-.v-tower .tw-pname{font:400 7px var(--t-sn);color:var(--t-tx3);letter-spacing:.24em;text-transform:uppercase;line-height:1}
-.v-tower .tw-pnum{font:700 18px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em}
+.v-tower{width:180px;padding:var(--u3) var(--u3) var(--u2);gap:var(--u3)}
+
+/* HEAD — 2 행 compact */
+.v-tower .tw-head{display:flex;flex-direction:column;gap:var(--u2);padding-bottom:var(--u2);border-bottom:1px solid var(--t-bdr)}
+.v-tower .tw-head-top{display:flex;align-items:center;gap:var(--u2);height:22px}
+.v-tower .tw-pname{font:500 8px var(--t-sn);color:var(--t-tx3);letter-spacing:.22em;text-transform:uppercase;line-height:1}
+.v-tower .tw-pnum{font:700 20px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em}
 .v-tower .tw-head-top .badge{margin-left:auto}
-.v-tower .tw-head-btm{display:flex;align-items:center;gap:var(--u);justify-content:space-between}
+.v-tower .tw-head-btm{display:flex;align-items:center;justify-content:space-between;height:18px}
 .v-tower .tw-head-btm .hw-lbl{font-size:8px}
-.v-tower .tw-art{width:140px;height:140px;margin:0 auto}
-.v-tower .tw-art .art-label{font-size:7px}
-.v-tower .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;min-height:30px}
-.v-tower .tw-title .tw-artist{font-size:10px;color:var(--t-tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
-.v-tower .tw-title .tw-track{font-size:11px;color:var(--t-tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
-.v-tower .tw-wf{height:32px}
-.v-tower .tw-tc{text-align:center;font:300 18px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 10px var(--t-accent-glow);line-height:1;padding:var(--u) 0}
+
+/* ART — 1:1, 가운데, label 하단 */
+.v-tower .tw-art{width:156px;height:156px;margin:0 auto}
+
+/* TITLE — 고정 2행 (artist + track) */
+.v-tower .tw-title{display:flex;flex-direction:column;gap:3px;text-align:center;min-height:34px;justify-content:center}
+.v-tower .tw-title .tw-artist{font:500 10px var(--t-sn);color:var(--t-tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.v-tower .tw-title .tw-track{font:500 12px var(--t-sn);color:var(--t-tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+
+/* WAVE — 한 줄 36px */
+.v-tower .tw-wf{height:36px}
+
+/* TC — 가운데, 여백 통일 */
+.v-tower .tw-tc{text-align:center;font:300 20px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 10px var(--t-accent-glow);line-height:1;padding:var(--u) 0}
 .v-tower .tw-tc.inactive{color:var(--t-tx3);text-shadow:none}
-.v-tower .tw-bpm{display:flex;flex-direction:column;align-items:center;gap:3px}
-.v-tower .tw-bpm-cur{font-size:15px}
-/* 가로 VU — L/R/F 3행 stack 또는 VU/F 2행 stack */
+
+/* BPM — pill + meta stacked center */
+.v-tower .tw-bpm{display:flex;flex-direction:column;align-items:center;gap:var(--u)}
+.v-tower .tw-bpm-cur{font-size:15px;padding:4px 10px}
+
+/* VU horizontal — 전체 폭 */
 .v-tower .vu-h{width:100%}
+
+/* EQ — 3 knobs 가로 균등 */
+.v-tower .tw-eq{padding:2px 6px}
+
+/* CTL — margin-top:auto 로 하단 고정 */
 .v-tower .tw-ctl{display:flex;flex-direction:column;gap:var(--u);margin-top:auto}
-.v-tower .tw-ctl .t-row{display:flex;gap:var(--u)}
-.v-tower .tw-ctl .t-btn{flex:1;height:26px;font-size:9px}
-.v-tower .tw-ctl .smpte-row{height:22px}
-.v-tower .tw-ctl .l-mst,.v-tower .tw-ctl .l-ab{font-size:8px}
+.v-tower .tw-ctl .t-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--u)}
+.v-tower .tw-ctl .t-btn{height:26px;font-size:9px}
+.v-tower .tw-ctl .t-btn.stop{height:24px}
+.v-tower .tw-ctl .smpte-row{height:24px;gap:3px}
+.v-tower .tw-ctl .l-mst,.v-tower .tw-ctl .l-ab{font-size:8px;padding:0}
 
 /* ═════════════════════════════════════════════════════════ */
-/* ═════════ F · CARD — 앨범 아트 히어로 ═════════════════ */
+/* ═════════ F · CARD — 다듬음 (360×auto) ═════════════════ */
 /* ═════════════════════════════════════════════════════════ */
 .v-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,360px));gap:var(--u3);justify-content:flex-start}
 .v-card{width:360px;padding:0;overflow:hidden;background:var(--t-bg2)}
-.v-card .cd-hero{position:relative;height:260px;overflow:hidden}
+
+/* HERO — 아트워크 배경 */
+.v-card .cd-hero{position:relative;height:240px;overflow:hidden}
 .v-card .cd-hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,var(--t-accent) 0%,var(--t-accent-dim) 100%);opacity:.85}
-.v-card .cd-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.4) 70%,rgba(12,14,18,.95) 100%);pointer-events:none}
-.v-card .cd-top{position:absolute;top:0;left:0;right:0;padding:var(--u3) var(--u3) 0;display:flex;align-items:baseline;gap:var(--u2);z-index:2}
-.v-card .cd-top .tw-pname{font:400 7px var(--t-sn);color:rgba(255,255,255,.6);letter-spacing:.24em;text-transform:uppercase}
+.v-card .cd-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.35) 70%,rgba(12,14,18,.96) 100%);pointer-events:none}
+
+/* TOP overlay — grid 정렬 */
+.v-card .cd-top{position:absolute;top:0;left:0;right:0;padding:var(--u3) var(--u4);display:grid;grid-template-columns:auto auto auto 1fr auto;gap:var(--u2);align-items:center;z-index:2;height:44px}
+.v-card .cd-top .tw-pname{font:500 8px var(--t-sn);color:rgba(255,255,255,.65);letter-spacing:.22em;text-transform:uppercase;line-height:1}
 .v-card .cd-top .tw-pnum{font:700 22px var(--t-mn);color:#fff;line-height:1;letter-spacing:-.02em;text-shadow:0 2px 8px rgba(0,0,0,.5)}
-.v-card .cd-top .badge{margin-left:auto;background:rgba(0,0,0,.4);border-color:rgba(255,255,255,.2);color:#fff}
-.v-card .cd-top .badge.play{background:var(--t-accent-bg);border-color:var(--t-accent-bdr);color:#fff}
-.v-card .cd-top .close-btn{background:rgba(0,0,0,.4);border-color:rgba(255,255,255,.15)}
-.v-card .cd-info{position:absolute;bottom:var(--u3);left:var(--u3);right:var(--u3);z-index:2;color:#fff}
-.v-card .cd-artist{font:500 11px var(--t-sn);color:rgba(255,255,255,.7);letter-spacing:.04em;margin-bottom:2px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.v-card .cd-top .badge{background:rgba(0,0,0,.38);border-color:rgba(255,255,255,.22);color:#fff}
+.v-card .cd-top .badge.play{background:var(--t-accent-bg);border-color:var(--t-accent-bdr)}
+.v-card .cd-top .close-btn{background:rgba(0,0,0,.38);border-color:rgba(255,255,255,.18);justify-self:end}
+
+/* INFO overlay — bottom */
+.v-card .cd-info{position:absolute;bottom:var(--u4);left:var(--u4);right:var(--u4);z-index:2;color:#fff}
+.v-card .cd-artist{font:500 11px var(--t-sn);color:rgba(255,255,255,.7);letter-spacing:.04em;margin-bottom:var(--u);text-shadow:0 1px 4px rgba(0,0,0,.6);line-height:1.2}
 .v-card .cd-track{font:600 18px var(--t-sn);letter-spacing:-.01em;line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.v-card .cd-body{padding:var(--u3)}
-.v-card .cd-tc-row{display:flex;align-items:baseline;justify-content:space-between;gap:var(--u2);margin-bottom:var(--u2)}
-.v-card .cd-tc{font-size:28px}
-.v-card .cd-bpm-col{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+
+/* BODY — 내부 섹션 간 --u3 로 균등 */
+.v-card .cd-body{padding:var(--u3) var(--u4) var(--u4);display:flex;flex-direction:column;gap:var(--u3)}
+
+/* TC row — 좌 TC / 우 BPM col */
+.v-card .cd-tc-row{display:grid;grid-template-columns:1fr auto;gap:var(--u2);align-items:center}
+.v-card .cd-tc{font-size:28px;line-height:1}
+.v-card .cd-bpm-col{display:flex;flex-direction:column;align-items:flex-end;gap:var(--u)}
 .v-card .cd-bpm-col .bpm-cur{font-size:16px}
-.v-card .cd-meta-row{display:flex;gap:var(--u2);align-items:center;margin-bottom:var(--u3);font-size:10px}
-.v-card .cd-meta-row .bpm-meta{font-size:10px}
-.v-card .cd-meta-row .sync-cluster{margin-left:auto}
-.v-card .cd-wf{height:48px;margin-bottom:var(--u2)}
-.v-card .cd-mix-row{display:grid;grid-template-columns:1fr auto;gap:var(--u2);margin-bottom:var(--u2);align-items:center}
-.v-card .cd-mix-row .eq-strip{gap:var(--u)}
+.v-card .cd-bpm-col .bpm-meta{font-size:10px}
+
+/* META row — 3열 grid 엄격 정렬 */
+.v-card .cd-meta-row{display:grid;grid-template-columns:auto 1fr auto;gap:var(--u2);align-items:center;height:18px}
+.v-card .cd-meta-row .phasor{justify-self:center}
+
+/* WAVE */
+.v-card .cd-wf{height:48px}
+
+/* MIX row — VU 좌 / EQ 우 */
+.v-card .cd-mix-row{display:grid;grid-template-columns:1fr auto;gap:var(--u3);align-items:stretch;min-height:56px}
+.v-card .cd-mix-row .eq-strip{padding:0 var(--u);gap:var(--u2)}
 .v-card .cd-mix-row .eq-knob svg{width:26px;height:26px}
-.v-card .cd-ctl-row{display:grid;grid-template-columns:1fr 1fr 80px;gap:var(--u)}
+
+/* CTL row — CUE/PLAY/STOP 3 등분 */
+.v-card .cd-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--u)}
 .v-card .cd-ctl-row .t-btn{height:var(--h-btn-md)}
-.v-card .cd-smpte-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--u);margin-top:var(--u);height:var(--h-btn-sm)}
-.v-card .cd-smpte-row .l-mst,.v-card .cd-smpte-row .l-ab{height:100%}
+
+/* SMPTE row — ctl 과 동일 높이 28 */
+.v-card .cd-smpte-row{height:var(--h-btn-md);gap:var(--u)}
 
 /* ═════════════════════════════════════════════════════════ */
-/* ═════════ G · HERO+LIST — 마스터 집중 + 보조 리스트 ═══ */
+/* ═════════ G · MATRIX — 2×2 격자 다덱 뷰 ══════════════ */
 /* ═════════════════════════════════════════════════════════ */
-.v-hero-wrap{display:flex;flex-direction:column;gap:var(--u2)}
-/* Master: 큰 hero deck */
-.v-hero{padding:var(--u3) var(--u4);gap:var(--u3);display:grid;grid-template-columns:120px 1fr auto 140px;grid-template-rows:auto auto auto;grid-template-areas:
-  "art  title title  tc"
-  "art  wave  wave   tc"
-  "art  mix   ctl    ctl";
-  align-items:stretch}
-.v-hero .hh-art{grid-area:art;width:120px;height:120px}
-.v-hero .hh-title{grid-area:title;display:flex;flex-direction:column;gap:var(--u);justify-content:center}
-.v-hero .hh-title-top{display:flex;align-items:center;gap:var(--u2)}
-.v-hero .hh-pnum{font:700 20px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em}
-.v-hero .hh-pname{font:400 8px var(--t-sn);color:var(--t-tx3);letter-spacing:.24em;text-transform:uppercase}
-.v-hero .hh-title-top .sync-cluster{margin-left:auto}
-.v-hero .hh-artist{font:500 11px var(--t-sn);color:var(--t-tx3);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.v-hero .hh-track{font:600 16px var(--t-sn);color:var(--t-tx);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.v-hero .hh-wave{grid-area:wave;display:flex;flex-direction:column;gap:3px}
-.v-hero .hh-wave .wf-box{height:48px}
-.v-hero .hh-wave .wf-ov{height:16px}
-.v-hero .hh-tc{grid-area:tc;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:var(--u)}
-.v-hero .hh-tc-num{font:300 34px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 16px var(--t-accent-glow);line-height:1}
-.v-hero .hh-tc-num.inactive{color:var(--t-tx3);text-shadow:none}
-.v-hero .hh-bpm-cur{font:700 18px var(--t-mn);color:var(--t-accent);padding:3px 10px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1;display:inline-flex;align-items:baseline;gap:3px}
-.v-hero .hh-bpm-meta{font:500 10px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums}
-.v-hero .hh-mix{grid-area:mix;display:flex;align-items:center;gap:var(--u2)}
-.v-hero .hh-mix .vu-h{width:140px}
-.v-hero .hh-mix .eq-strip{gap:var(--u2)}
-.v-hero .hh-mix .eq-knob svg{width:28px;height:28px}
-.v-hero .hh-ctl{grid-area:ctl;display:flex;gap:var(--u);align-items:center;justify-content:flex-end}
-.v-hero .hh-ctl .t-btn{width:64px;height:var(--h-btn-md)}
-.v-hero .hh-ctl .smpte-row{height:var(--h-btn-md);gap:var(--u)}
-.v-hero .hh-ctl .smpte-row button{min-width:38px}
+.v-matrix-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--u3)}
 
-/* Compact list row (보조 덱) */
-.v-row{padding:var(--u2) var(--u3);display:grid;grid-template-columns:auto auto 1fr auto auto auto auto;gap:var(--u2);align-items:center;height:60px}
-.v-row .rr-pill{display:flex;align-items:baseline;gap:var(--u)}
-.v-row .rr-pnum{font:700 16px var(--t-mn);color:var(--t-tx);line-height:1}
-.v-row .rr-pname{font:400 7px var(--t-sn);color:var(--t-tx3);letter-spacing:.24em;text-transform:uppercase;line-height:1}
-.v-row .rr-art{width:44px;height:44px}
-.v-row .rr-title{display:flex;flex-direction:column;gap:2px;min-width:0;max-width:320px}
-.v-row .rr-artist{font:500 10px var(--t-sn);color:var(--t-tx3);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.v-row .rr-track{font:500 12px var(--t-sn);color:var(--t-tx2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.v-row .rr-wave{width:160px;height:34px}
-.v-row .rr-tc-mini{font:300 15px var(--t-seg);color:var(--t-accent);font-variant-numeric:tabular-nums;line-height:1;letter-spacing:.02em}
-.v-row .rr-tc-mini.inactive{color:var(--t-tx3)}
-.v-row .rr-bpm-col{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
-.v-row .rr-bpm-cur{font:700 12px var(--t-mn);color:var(--t-accent);padding:2px 6px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1}
-.v-row .rr-bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
-.v-row .rr-meta-mini{font:500 8px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;line-height:1}
-.v-row .rr-ctl{display:flex;gap:3px}
-.v-row .rr-ctl .t-btn{width:40px;height:26px;font-size:9px}
-.v-row .rr-smpte{display:flex;gap:3px;height:26px}
-.v-row .rr-smpte .l-mst{min-width:40px;font-size:8px}
-.v-row .rr-smpte .l-ab{min-width:22px;font-size:9px}
+/* 한 박스: 가로 476px × 세로 196 정도, 3 영역 grid */
+.v-matrix{padding:var(--u3) var(--u4);display:grid;
+  grid-template-columns:112px 1fr 132px;
+  grid-template-rows:auto auto 1fr auto;
+  grid-template-areas:
+    "head head   head"
+    "art  title  title"
+    "art  wave   tc"
+    "art  mix    ctl";
+  gap:var(--u2) var(--u3);
+  align-items:center}
+
+/* HEAD — 한 줄 */
+.v-matrix .mx-head{grid-area:head;display:flex;align-items:center;gap:var(--u2);padding-bottom:var(--u2);border-bottom:1px solid var(--t-bdr);height:26px}
+.v-matrix .mx-head .mx-pname{font:500 8px var(--t-sn);color:var(--t-tx3);letter-spacing:.22em;text-transform:uppercase;line-height:1}
+.v-matrix .mx-head .mx-pnum{font:700 18px var(--t-mn);color:var(--t-tx);line-height:1;letter-spacing:-.02em}
+.v-matrix .mx-head .sync-cluster{margin-left:auto}
+
+/* ART */
+.v-matrix .mx-art{grid-area:art;width:112px;height:112px;align-self:start}
+
+/* TITLE */
+.v-matrix .mx-title{grid-area:title;display:flex;flex-direction:column;gap:3px;min-width:0;align-self:end;padding-bottom:var(--u)}
+.v-matrix .mx-artist{font:500 10px var(--t-sn);color:var(--t-tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.v-matrix .mx-track{font:600 13px var(--t-sn);color:var(--t-tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+
+/* WAVE — title 아래 */
+.v-matrix .mx-wave{grid-area:wave;height:36px}
+
+/* TC — wave 오른쪽 (compact) */
+.v-matrix .mx-tc{grid-area:tc;display:flex;flex-direction:column;align-items:flex-end;gap:3px;justify-content:center}
+.v-matrix .mx-tc-num{font:300 18px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-shadow:0 0 10px var(--t-accent-glow);line-height:1}
+.v-matrix .mx-tc-num.inactive{color:var(--t-tx3);text-shadow:none}
+.v-matrix .mx-bpm-cur{font:700 13px var(--t-mn);color:var(--t-accent);padding:2px 7px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg);font-variant-numeric:tabular-nums;line-height:1}
+.v-matrix .mx-bpm-cur.inactive{color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent}
+.v-matrix .mx-meta{font:500 8px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums;line-height:1}
+
+/* MIX — title 아래 row (VU + EQ) */
+.v-matrix .mx-mix{grid-area:mix;display:grid;grid-template-columns:1fr auto;gap:var(--u2);align-items:stretch;height:48px}
+.v-matrix .mx-mix .vu-h{height:100%}
+.v-matrix .mx-mix .eq-strip{padding:0;gap:var(--u)}
+.v-matrix .mx-mix .eq-knob svg{width:22px;height:22px}
+
+/* CTL — ctl stack */
+.v-matrix .mx-ctl{grid-area:ctl;display:flex;flex-direction:column;gap:var(--u);height:100%;justify-content:space-between}
+.v-matrix .mx-ctl .t-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--u)}
+.v-matrix .mx-ctl .t-btn{height:24px;font-size:9px}
+.v-matrix .mx-ctl .t-btn.stop{height:22px}
+.v-matrix .mx-ctl .smpte-row{height:22px;gap:3px}
+.v-matrix .mx-ctl .l-mst,.v-matrix .mx-ctl .l-ab{font-size:8px}
+
 </style>
 </head>
 <body>
@@ -288,17 +323,14 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
     <symbol id="wf-b" viewBox="0 0 400 70" preserveAspectRatio="none">
       <path d="M0,35 Q5,28 10,20 T20,15 T30,24 T40,18 T50,10 T60,22 T70,14 T80,26 T90,18 T100,8 T110,20 T120,12 T130,24 T140,16 T150,28 T160,10 T170,22 T180,14 T190,26 T200,18 T210,8 T220,20 T230,12 T240,24 T250,16 T260,28 T270,10 T280,22 T290,14 T300,26 T310,18 T320,30 T330,22 T340,14 T350,26 T360,18 T370,10 T380,22 T390,14 T400,26 L400,70 L0,70 Z" fill="currentColor" opacity=".6"/>
     </symbol>
-    <symbol id="wf-ov-a" viewBox="0 0 400 28" preserveAspectRatio="none">
-      <path d="M0,14 Q10,4 20,14 T40,10 T60,14 T80,6 T100,12 T120,8 T140,14 T160,4 T180,12 T200,8 T220,16 T240,6 T260,14 T280,10 T300,4 T320,12 T340,8 T360,14 T380,6 T400,12 L400,28 L0,28 Z" fill="currentColor" opacity=".4"/>
-    </symbol>
   </defs>
 </svg>
 
 <div class="wrap">
   <div class="hdr">
     <div>
-      <h1>BRIDGE+ · Layout Variants</h1>
-      <div class="sub" style="margin-top:4px">3 concepts · MONO locked · Tower VU 가로 수정</div>
+      <h1>BRIDGE+ · Layout Variants v3</h1>
+      <div class="sub" style="margin-top:4px">Tower · Card · Matrix — aligned & trimmed</div>
     </div>
     <div class="sub">2026-04-20</div>
   </div>
@@ -306,20 +338,19 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
   <nav class="nav">
     <a href="#ve" class="on"><span class="n">E</span>TOWER</a>
     <a href="#vf"><span class="n">F</span>CARD</a>
-    <a href="#vg"><span class="n">G</span>HERO + LIST</a>
+    <a href="#vg"><span class="n">G</span>MATRIX</a>
   </nav>
 
   <!-- ═══════════════════════════════════════════════════════ -->
-  <!-- ═══════════ E · TOWER (VU 가로형으로 수정) ═══════════ -->
+  <!-- ═══════════ E · TOWER — 다듬음 ═══════════════════════ -->
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="stage" id="ve">
     <div class="stage-meta">
-      <div class="title"><span class="accent">E ·</span> TOWER · DJM 채널 스트립 (180px 고정)</div>
-      <div class="sub">VU horizontal · EQ 가로 row · 빈 공간 최소</div>
+      <div class="title"><span class="accent">E ·</span> TOWER · 채널 스트립 (180px)</div>
+      <div class="sub">aligned · 12/8/4 rhythm · art 156</div>
     </div>
     <div class="stage-hint">
-      VU/F 를 <b>가로 bar</b>로 바꿔서 Virtual 덱(EQ 없음)에도 빈 공간이 거의 안 보이도록 수정.
-      HW: VU+F 2행, Virtual: L+R+F 3행. 각 덱 180px 폭으로 4~8 덱을 가로 나열.
+      섹션 간 <b>--u3(12px)</b> 일관 간격, 헤더 2행 (#+배지 / 모델+SYNC), 아트 156×156 가운데, 타이틀 2행 고정 34px, wave 36, TC 20, BPM pill+meta 스택, VU 가로, EQ 3개 균등, 트랜스포트 2열 grid + STOP + SMPTE 순으로 아래 고정.
     </div>
     <div class="v-tower-grid">
 
@@ -349,7 +380,7 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           <div class="vu-row"><span class="vu-lbl">VU</span><div class="vu-bar"><div class="vu-fill" style="width:78%"></div></div></div>
           <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:62%"></div></div></div>
         </div>
-        <div class="eq-strip" style="justify-content:space-around">
+        <div class="eq-strip tw-eq">
           <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
           <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
           <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
@@ -390,7 +421,6 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           <div class="bpm-cur tw-bpm-cur inactive">119.98<span class="bpm-lbl">BPM</span></div>
           <div class="bpm-meta">120.00 · -0.02% · 5A</div>
         </div>
-        <!-- Virtual: L/R/F 3행 (EQ 없음 → VU 가로형으로 공간 자연스러움) -->
         <div class="vu-h">
           <div class="vu-row"><span class="vu-lbl">L</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
           <div class="vu-row"><span class="vu-lbl">R</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
@@ -436,7 +466,7 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
           <div class="vu-row"><span class="vu-lbl">VU</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
           <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:0"></div></div></div>
         </div>
-        <div class="eq-strip" style="justify-content:space-around">
+        <div class="eq-strip tw-eq">
           <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">HI</span></div>
           <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">MID</span></div>
           <div class="eq-knob"><svg width="26" height="26"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">LO</span></div>
@@ -474,29 +504,30 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         <div class="tw-tc inactive">--:--:--:--</div>
         <div class="tw-bpm">
           <div class="bpm-cur tw-bpm-cur inactive" style="color:var(--t-tx4)">---</div>
+          <div class="bpm-meta" style="color:var(--t-tx4)">—</div>
         </div>
         <div class="vu-h" style="opacity:.35">
           <div class="vu-row"><span class="vu-lbl">L</span><div class="vu-bar"></div></div>
           <div class="vu-row"><span class="vu-lbl">R</span><div class="vu-bar"></div></div>
           <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"></div></div>
         </div>
-        <div class="tw-ctl"></div>
+        <div class="tw-ctl" style="margin-top:auto"></div>
       </div>
 
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════ -->
-  <!-- ═══════════ F · CARD — 앨범 아트 히어로 ═════════════ -->
+  <!-- ═══════════ F · CARD — 다듬음 ════════════════════════ -->
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="stage" id="vf">
     <div class="stage-meta">
-      <div class="title"><span class="accent">F ·</span> CARD · 앨범 아트 히어로 (360×600)</div>
-      <div class="sub">art-dominant · music-app aesthetic</div>
+      <div class="title"><span class="accent">F ·</span> CARD · 아트 히어로 (360×auto)</div>
+      <div class="sub">hero 240 · body 12px 리듬 · ctl 3등분</div>
     </div>
     <div class="stage-hint">
-      덱을 <b>앨범 아트 히어로 카드</b>로 표현. 상단 260px 아트 영역 + 하단 정보/컨트롤. Spotify/Apple Music 감성.
-      트랙 <b>"식별"에 무게중심</b>, 라이브 중 시각적 리치함이 필요한 감성 이벤트용.
+      상단 240px 아트 hero + 하단 body 를 <b>12px 리듬</b>으로 섹션 분리. 상단 overlay 는 grid 5열(pname/pnum/badge/spacer/close).
+      <b>CUE / PLAY / STOP 3 등분</b>, SMPTE 도 동일 높이 28px 로 리듬 통일.
     </div>
     <div class="v-card-grid">
 
@@ -504,9 +535,11 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         <div class="cd-hero">
           <div class="cd-hero-bg"></div>
           <div class="cd-top">
-            <span class="tw-pname">PLAYER</span><span class="tw-pnum">1</span>
+            <span class="tw-pname">PLAYER</span>
+            <span class="tw-pnum">1</span>
             <span class="badge play">PLAY</span>
-            <button class="close-btn" style="visibility:hidden; margin-left:8px"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
+            <span></span>
+            <button class="close-btn" style="visibility:hidden"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
           </div>
           <div class="cd-info">
             <div class="cd-artist">Daft Punk · HOMEWORK</div>
@@ -543,7 +576,7 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
             <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
             <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
           </div>
-          <div class="cd-smpte-row smpte-row sm">
+          <div class="cd-smpte-row smpte-row">
             <button class="l-mst on">MASTER</button>
             <button class="l-ab a on">A</button>
             <button class="l-ab b">B</button>
@@ -555,9 +588,11 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         <div class="cd-hero">
           <div class="cd-hero-bg" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.85"></div>
           <div class="cd-top">
-            <span class="tw-pname">PLAYER</span><span class="tw-pnum">2</span>
+            <span class="tw-pname">PLAYER</span>
+            <span class="tw-pnum">2</span>
             <span class="badge cue">CUE</span>
-            <button class="close-btn" style="margin-left:8px"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
+            <span></span>
+            <button class="close-btn"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
           </div>
           <div class="cd-info">
             <div class="cd-artist">Tame Impala · CURRENTS</div>
@@ -590,7 +625,7 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
             <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
             <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
           </div>
-          <div class="cd-smpte-row smpte-row sm">
+          <div class="cd-smpte-row smpte-row">
             <button class="l-mst">MASTER</button>
             <button class="l-ab a">A</button>
             <button class="l-ab b on">B</button>
@@ -602,56 +637,54 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
   </div>
 
   <!-- ═══════════════════════════════════════════════════════ -->
-  <!-- ═══════════ G · HERO + LIST — 마스터 집중 ══════════ -->
+  <!-- ═══════════ G · MATRIX — 2×2 격자 (신규) ═════════════ -->
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="stage" id="vg">
     <div class="stage-meta">
-      <div class="title"><span class="accent">G ·</span> HERO + LIST · 마스터 집중 + 보조 리스트</div>
-      <div class="sub">current master dominant · waiting decks compact</div>
+      <div class="title"><span class="accent">G ·</span> MATRIX · 2×2 격자 (가로 박스)</div>
+      <div class="sub">4 decks visible · horizontal box · 112/1fr/132 columns</div>
     </div>
     <div class="stage-hint">
-      <b>마스터 덱(현재 재생)은 큰 hero 블록</b>(180px 높이)으로, 나머지 대기 덱들은 <b>60px 한 줄 리스트</b>로 표시.
-      실제 DJ 작업의 <b>시선 분배 패턴</b>을 그대로 반영 — 마스터에 90%, 나머지는 상태 감시만.
+      2×2 격자에 <b>가로로 넓은 박스</b> 4개. 한 박스는 3 영역: <b>[아트 112] [웨이브+타이틀+믹서] [TC+BPM+컨트롤 132]</b>.
+      TOWER 의 세로 나열 대비 더 <b>정보 밀도 높고 데스크탑 화면에 효율적</b>. 4 덱 상황 감시용.
     </div>
-    <div class="v-hero-wrap">
+    <div class="v-matrix-grid">
 
-      <!-- MASTER deck (hero) -->
-      <div class="deck v-hero">
-        <div class="art hh-art"><div class="art-fill"></div><div class="art-label">HOMEWORK</div></div>
-        <div class="hh-title">
-          <div class="hh-title-top">
-            <span class="hh-pname">PLAYER</span><span class="hh-pnum">1</span>
-            <span class="badge play">PLAY</span>
-            <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
-            <div class="sync-cluster"><span class="sbtn on">SYNC</span><span class="sbtn master">MASTER</span></div>
-          </div>
-          <div class="hh-artist">Daft Punk</div>
-          <div class="hh-track">Children Of The Night</div>
+      <div class="deck v-matrix">
+        <div class="mx-head">
+          <span class="mx-pname">PLAYER</span>
+          <span class="mx-pnum">1</span>
+          <span class="badge play">PLAY</span>
+          <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
+          <div class="sync-cluster"><span class="sbtn on">SYNC</span><span class="sbtn master">MASTER</span></div>
         </div>
-        <div class="hh-wave">
-          <div class="wf-box" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
-          <div class="wf-box wf-ov" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-ov-a"/></svg></div>
+        <div class="art mx-art"><div class="art-fill"></div><div class="art-label">HOMEWORK</div></div>
+        <div class="mx-title">
+          <div class="mx-artist">Daft Punk</div>
+          <div class="mx-track">Children Of The Night</div>
         </div>
-        <div class="hh-tc">
-          <div class="hh-tc-num">00:01:24:12</div>
-          <div class="hh-bpm-cur">128.00<span class="bpm-lbl">BPM</span></div>
-          <div class="hh-bpm-meta">124.00 · +3.23% · 8A</div>
-          <div class="phasor"><span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span></div>
+        <div class="wf-box mx-wave" style="color:var(--t-accent)"><svg class="wf-svg"><use href="#wf-a"/></svg><div class="wf-playhead"></div></div>
+        <div class="mx-tc">
+          <div class="mx-tc-num">00:01:24:12</div>
+          <div class="mx-bpm-cur">128.00 BPM</div>
+          <div class="mx-meta">124.00 · +3.23% · 8A</div>
         </div>
-        <div class="hh-mix">
+        <div class="mx-mix">
           <div class="vu-h">
             <div class="vu-row"><span class="vu-lbl">VU</span><div class="vu-bar"><div class="vu-fill" style="width:78%"></div></div></div>
             <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:62%"></div></div></div>
           </div>
           <div class="eq-strip">
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
-            <div class="eq-knob"><svg width="28" height="28"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
+            <div class="eq-knob"><svg width="22" height="22"><use href="#eq-knob-hi"/></svg><span class="eq-lbl">HI</span></div>
+            <div class="eq-knob"><svg width="22" height="22"><use href="#eq-knob-mid"/></svg><span class="eq-lbl">MID</span></div>
+            <div class="eq-knob"><svg width="22" height="22"><use href="#eq-knob-lo"/></svg><span class="eq-lbl">LO</span></div>
           </div>
         </div>
-        <div class="hh-ctl">
-          <button class="t-btn cue">CUE</button>
-          <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+        <div class="mx-ctl">
+          <div class="t-row">
+            <button class="t-btn cue">CUE</button>
+            <button class="t-btn play on"><svg class="gi gi-pause"><use href="#i-pause"/></svg></button>
+          </div>
           <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
           <div class="smpte-row">
             <button class="l-mst on">MASTER</button>
@@ -661,95 +694,133 @@ body{font:14px/1.5 var(--t-sn);background:var(--bg);color:var(--t-tx);overflow-x
         </div>
       </div>
 
-      <!-- 보조 덱 list rows -->
-      <div class="deck v-row">
-        <div class="rr-pill"><span class="rr-pname">P</span><span class="rr-pnum">2</span></div>
-        <div class="art rr-art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.75"></div></div>
-        <div class="rr-title">
-          <div class="rr-artist">Tame Impala · CURRENTS</div>
-          <div class="rr-track">Let It Happen (Soulwax Remix)</div>
+      <div class="deck v-matrix">
+        <div class="mx-head">
+          <span class="mx-pname">PLAYER</span>
+          <span class="mx-pnum">2</span>
+          <span class="badge cue">CUE</span>
+          <span class="hw-lbl" style="color:var(--t-accent)">VIRTUAL</span>
+          <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
         </div>
-        <div class="wf-box rr-wave" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
-        <div class="rr-bpm-col">
-          <div class="rr-tc-mini inactive">00:00:48:00</div>
-          <div class="rr-bpm-cur inactive">119.98 BPM</div>
-          <div class="rr-meta-mini">120.00 · -0.02% · 5A · <span style="color:var(--t-accent)">VIRTUAL</span></div>
+        <div class="art mx-art"><div class="art-fill" style="background:linear-gradient(135deg,#9932cc,#4b0082);opacity:.75"></div><div class="art-label">CURRENTS</div></div>
+        <div class="mx-title">
+          <div class="mx-artist">Tame Impala</div>
+          <div class="mx-track">Let It Happen (Soulwax Remix)</div>
         </div>
-        <div class="rr-ctl">
-          <button class="t-btn cue on">CUE</button>
-          <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+        <div class="wf-box mx-wave" style="color:#888"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
+        <div class="mx-tc">
+          <div class="mx-tc-num inactive">00:00:48:00</div>
+          <div class="mx-bpm-cur inactive">119.98 BPM</div>
+          <div class="mx-meta">120.00 · -0.02% · 5A</div>
+        </div>
+        <div class="mx-mix">
+          <div class="vu-h">
+            <div class="vu-row"><span class="vu-lbl">L</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
+            <div class="vu-row"><span class="vu-lbl">R</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
+            <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:80%"></div></div></div>
+          </div>
+        </div>
+        <div class="mx-ctl">
+          <div class="t-row">
+            <button class="t-btn cue on">CUE</button>
+            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+          </div>
           <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-        </div>
-        <div class="rr-smpte">
-          <button class="l-mst">MST</button>
-          <button class="l-ab a">A</button>
-          <button class="l-ab b on">B</button>
+          <div class="smpte-row">
+            <button class="l-mst">MASTER</button>
+            <button class="l-ab a">A</button>
+            <button class="l-ab b on">B</button>
+          </div>
         </div>
       </div>
 
-      <div class="deck v-row">
-        <div class="rr-pill"><span class="rr-pname">P</span><span class="rr-pnum">3</span></div>
-        <div class="art rr-art"><div class="art-fill" style="background:linear-gradient(135deg,#1e90ff,#000080);opacity:.75"></div></div>
-        <div class="rr-title">
-          <div class="rr-artist">Leon Vynehall</div>
-          <div class="rr-track">Butterflies</div>
+      <div class="deck v-matrix">
+        <div class="mx-head">
+          <span class="mx-pname">PLAYER</span>
+          <span class="mx-pnum">3</span>
+          <span class="badge stop">STOP</span>
+          <span class="hw-lbl"><svg class="gi gi-hex"><use href="#i-hex"/></svg>CDJ-3000</span>
+          <div class="sync-cluster"><span class="sbtn">SYNC</span><span class="sbtn">MASTER</span></div>
         </div>
-        <div class="wf-box rr-wave" style="color:#555"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
-        <div class="rr-bpm-col">
-          <div class="rr-tc-mini inactive">00:00:00:00</div>
-          <div class="rr-bpm-cur inactive">122.00 BPM</div>
-          <div class="rr-meta-mini">122.00 · +0.00% · 10A · CDJ-3000</div>
+        <div class="art mx-art"><div class="art-fill" style="background:linear-gradient(135deg,#1e90ff,#000080);opacity:.75"></div></div>
+        <div class="mx-title">
+          <div class="mx-artist">Leon Vynehall</div>
+          <div class="mx-track">Butterflies</div>
         </div>
-        <div class="rr-ctl">
-          <button class="t-btn cue">CUE</button>
-          <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+        <div class="wf-box mx-wave" style="color:#555"><svg class="wf-svg"><use href="#wf-b"/></svg></div>
+        <div class="mx-tc">
+          <div class="mx-tc-num inactive">00:00:00:00</div>
+          <div class="mx-bpm-cur inactive">122.00 BPM</div>
+          <div class="mx-meta">122.00 · +0.00% · 10A</div>
+        </div>
+        <div class="mx-mix">
+          <div class="vu-h">
+            <div class="vu-row"><span class="vu-lbl">VU</span><div class="vu-bar"><div class="vu-fill" style="width:0"></div></div></div>
+            <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"><div class="vu-fader-fill" style="width:0"></div></div></div>
+          </div>
+          <div class="eq-strip">
+            <div class="eq-knob"><svg width="22" height="22"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">HI</span></div>
+            <div class="eq-knob"><svg width="22" height="22"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">MID</span></div>
+            <div class="eq-knob"><svg width="22" height="22"><use href="#eq-knob-neutral"/></svg><span class="eq-lbl">LO</span></div>
+          </div>
+        </div>
+        <div class="mx-ctl">
+          <div class="t-row">
+            <button class="t-btn cue">CUE</button>
+            <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
+          </div>
           <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-        </div>
-        <div class="rr-smpte">
-          <button class="l-mst">MST</button>
-          <button class="l-ab a">A</button>
-          <button class="l-ab b">B</button>
+          <div class="smpte-row">
+            <button class="l-mst">MASTER</button>
+            <button class="l-ab a">A</button>
+            <button class="l-ab b">B</button>
+          </div>
         </div>
       </div>
 
-      <div class="deck v-row" style="opacity:.5">
-        <div class="rr-pill"><span class="rr-pname">P</span><span class="rr-pnum" style="color:var(--t-tx4)">4</span></div>
-        <div class="art rr-art" style="background:var(--t-bg);border-style:dashed"></div>
-        <div class="rr-title">
-          <div class="rr-artist" style="color:var(--t-tx4)">—</div>
-          <div class="rr-track" style="color:var(--t-tx4)">빈 덱</div>
+      <div class="deck v-matrix" style="opacity:.45">
+        <div class="mx-head">
+          <span class="mx-pname">PLAYER</span>
+          <span class="mx-pnum" style="color:var(--t-tx4)">4</span>
+          <span class="badge" style="color:var(--t-tx4)">EMPTY</span>
         </div>
-        <div class="wf-box rr-wave"></div>
-        <div class="rr-bpm-col">
-          <div class="rr-tc-mini inactive">--:--:--:--</div>
-          <div class="rr-bpm-cur inactive" style="color:var(--t-tx4)">---</div>
-          <div class="rr-meta-mini" style="color:var(--t-tx4)">—</div>
+        <div class="art mx-art" style="background:var(--t-bg);border-style:dashed"></div>
+        <div class="mx-title">
+          <div class="mx-artist" style="color:var(--t-tx4)">—</div>
+          <div class="mx-track" style="color:var(--t-tx4)">빈 덱</div>
         </div>
-        <div class="rr-ctl" style="opacity:.5">
-          <button class="t-btn cue">CUE</button>
-          <button class="t-btn play"><svg class="gi gi-play"><use href="#i-play"/></svg></button>
-          <button class="t-btn stop"><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+        <div class="wf-box mx-wave"></div>
+        <div class="mx-tc">
+          <div class="mx-tc-num inactive">--:--:--:--</div>
+          <div class="mx-bpm-cur inactive" style="color:var(--t-tx4)">---</div>
+          <div class="mx-meta" style="color:var(--t-tx4)">—</div>
         </div>
-        <div class="rr-smpte">
-          <button class="l-mst">MST</button>
-          <button class="l-ab a">A</button>
-          <button class="l-ab b">B</button>
+        <div class="mx-mix" style="opacity:.4">
+          <div class="vu-h">
+            <div class="vu-row"><span class="vu-lbl">L</span><div class="vu-bar"></div></div>
+            <div class="vu-row"><span class="vu-lbl">R</span><div class="vu-bar"></div></div>
+            <div class="vu-row"><span class="vu-lbl">F</span><div class="vu-bar"></div></div>
+          </div>
         </div>
+        <div class="mx-ctl"></div>
       </div>
 
     </div>
   </div>
 
   <div class="notes">
-    <b>3 개 컨셉</b><br>
-    · <b style="color:#ff6b2c">E · TOWER</b> — DJM 채널 스트립 감성. 180px 세로 column. VU/F 가로 bar 로 변경 → Virtual 덱(EQ 없음) 에도 빈 공간 최소.<br>
-    · <b style="color:#ff6b2c">F · CARD</b> — 앨범 아트 히어로 360×600. 뮤직 앱 감성, 시각적 풍부함 우선. 라운지·이벤트·감상 스타일.<br>
-    · <b style="color:#ff6b2c">G · HERO + LIST</b> — 마스터 1 개만 큰 hero 블록, 나머지는 60px 한 줄 리스트. 실제 DJ 시선 분배와 일치.<br>
+    <b>3 컨셉</b><br>
+    · <b style="color:#ff6b2c">E · TOWER</b> — DJM 채널 스트립. 180 폭 세로 콘솔, VU 가로 bar. 다덱 콘솔 감성.<br>
+    · <b style="color:#ff6b2c">F · CARD</b> — 앨범 아트 히어로 360. 시각적 풍부, 감성 이벤트용. CUE/PLAY/STOP 3등분 정렬.<br>
+    · <b style="color:#ff6b2c">G · MATRIX</b> — 2×2 격자 가로 박스. 한 박스 [아트 112 / 웨이브+타이틀+믹서 / TC+BPM+컨트롤 132]. 정보 밀도 최고.<br>
     <br>
-    <b>공통 원칙</b><br>
-    · MONO 색 고정 · border-radius:0 · 4px 그리드 토큰 · 버튼 높이 32/28/22 단계<br>
+    <b>정렬 원칙 (공통)</b><br>
+    · 4px 기반 --u/u2/u3/u4/u6 토큰 · 섹션 간 --u3(12) 리듬<br>
+    · 버튼 높이 3 단계: 32(lg) / 28(md) / 22-24(sm)<br>
+    · Transport + SMPTE 동일 높이로 수직 정렬<br>
+    · hero 이미지는 aspect-ratio + 고정 폭, 그리드 1fr 폭주 방지<br>
     · EQ 원형 노브 + 12시 디턴트 + 현재 위치 arc/pointer<br>
-    · VU 가로형 — L/R/F 세로 stack, 각 bar 가 왼→오 채움 (8px 높이)<br>
+    · VU 가로형 — L/R/F 세로 stack, 각 bar 왼→오 채움 (8px)<br>
   </div>
 </div>
 
