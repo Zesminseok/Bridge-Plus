@@ -464,6 +464,30 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 <script src="./waveform-gl.js"></script>
 </head><body>
 
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 2.5 21 7.5v9L12 21.5 3 16.5v-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="currentColor"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 4h4v16H7zM13 4h4v16h-4z" fill="currentColor"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><path d="M5 5h14v14H5z" fill="currentColor"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 4h2v16H6zM20 4v16L9 12z" fill="currentColor"/></symbol>
+    <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+<style>
+  .gi{display:inline-block;width:1em;height:1em;vertical-align:-.12em;fill:currentColor;flex:none}
+  .gi-hex{width:1.1em;height:1.1em;vertical-align:-.2em}
+  .gi-close{width:.95em;height:.95em}
+  .gi-play,.gi-pause,.gi-prev,.gi-stop{width:1.2em;height:1.2em;vertical-align:-.25em}
+  .gi-plus{width:1em;height:1em}
+  .gi-chv{width:.9em;height:.9em;vertical-align:-.1em}
+  .gi-dot{width:.7em;height:.7em;vertical-align:-.05em}
+</style>
 <div class="hdr">
   <div class="logo"><div class="li">B+</div>
     <div><div style="font:800 13px var(--sn);letter-spacing:-.02em;color:var(--tx)">BRIDGE+</div><div style="font:500 9px var(--lb);color:var(--tx3);letter-spacing:.08em">PRO DJ LINK</div></div>
@@ -506,7 +530,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
   </div>
   <div class="sl" id="outLayersHdr" onclick="toggleOutLayers()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
     <span>OUTPUT LAYERS</span>
-    <span id="outLayersChevron" style="font-size:9px;color:var(--tx3);transition:transform .2s;display:inline-block;transform:rotate(0deg)">▼</span>
+    <span id="outLayersChevron" style="color:var(--tx3);transition:transform .2s;display:inline-flex;align-items:center;transform:rotate(0deg);font-size:10px"><svg class="gi gi-chv"><use href="#i-chevron-down"/></svg></span>
   </div>
   <div class="out-layers" id="outLayers" style="display:none"></div>
   <div class="mode-bar">
@@ -527,7 +551,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
       <div class="sl" id="vtLabel">INPUT LAYERS — VIRTUAL</div>
       <div class="deck-row" id="vtRow"></div>
       <button class="add-deck-btn" id="addDeckBtn" style="margin-top:8px">
-        <span style="font-size:18px;line-height:1">＋</span>
+        <span style="font-size:18px;line-height:1;display:inline-flex;align-items:center"><svg class="gi gi-plus"><use href="#i-plus"/></svg></span>
         <span>Virtual 덱 추가 <span style="color:var(--tx3);font-size:9px">(최대 6개)</span></span>
       </button>
     </div>
@@ -716,8 +740,8 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center">
-        <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').textContent=_djmLogOpen?'▾':'▸'" style="flex:1"><span>▸</span> DJM PACKET LOG</div>
-        <button id="mxCaptureBtn" style="font:600 9px var(--mn);padding:2px 8px;border-radius:3px;border:1px solid rgba(255,80,80,.4);background:rgba(255,80,80,.1);color:#ff8080;cursor:pointer" onclick="_toggleDjmCapture()">● REC</button>
+        <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').style.transform=_djmLogOpen?'rotate(90deg)':'rotate(0deg)'" style="flex:1"><span style="display:inline-flex;align-items:center;transition:transform .15s"><svg class="gi gi-chv"><use href="#i-chevron-right"/></svg></span> DJM PACKET LOG</div>
+        <button id="mxCaptureBtn" style="font:600 9px var(--mn);padding:2px 8px;border-radius:3px;border:1px solid rgba(255,80,80,.4);background:rgba(255,80,80,.1);color:#ff8080;cursor:pointer;display:inline-flex;align-items:center;gap:4px" onclick="_toggleDjmCapture()"><svg class="gi gi-dot"><use href="#i-dot"/></svg>REC</button>
       </div>
       <div class="mx-log" id="mxLogPanel" style="display:none"></div>
     </div>
@@ -781,12 +805,12 @@ async function _toggleDjmCapture(){
   if(_djmCapturing){
     await window.bridge.djmCaptureStop();
     _djmCapturing=false;
-    if(btn){btn.textContent='● REC';btn.style.background='rgba(255,80,80,.1)';btn.style.color='#ff8080';}
+    if(btn){btn.innerHTML='<svg class="gi gi-dot"><use href="#i-dot"/></svg>REC';btn.style.background='rgba(255,80,80,.1)';btn.style.color='#ff8080';}
   } else {
     const r=await window.bridge.djmCaptureStart();
     if(r.ok){
       _djmCapturing=true;
-      if(btn){btn.textContent='■ STOP';btn.style.background='rgba(255,40,40,.6)';btn.style.color='#fff';}
+      if(btn){btn.innerHTML='<svg class="gi gi-stop" style="width:.85em;height:.85em;vertical-align:-.1em"><use href="#i-stop"/></svg>STOP';btn.style.background='rgba(255,40,40,.6)';btn.style.color='#fff';}
       _djmLog.push(`[CAPTURE] 저장 경로: ${r.path}`);
     }
   }
@@ -2135,7 +2159,7 @@ function switchMode(mode){
     });
     document.getElementById('modeHW').classList.remove('ac');
     document.getElementById('modeVt').classList.add('ac');
-    document.getElementById('modeHint').textContent='＋ 버튼으로 덱 추가 후 파일 로드';
+    document.getElementById('modeHint').textContent='+ 버튼으로 덱 추가 후 파일 로드';
   }
   renderDecks();
 }
@@ -2215,7 +2239,7 @@ function renderDecks(){
   }
 
   document.getElementById('addDeckBtn').style.display=(!isHWMode&&slots.length<MAX_DECKS)?'':'none';
-  document.getElementById('vtLabel').textContent=vtS.length?'VIRTUAL DECKS':'VIRTUAL DECKS — 아래 ＋ 버튼으로 덱을 추가하세요';
+  document.getElementById('vtLabel').textContent=vtS.length?'VIRTUAL DECKS':'VIRTUAL DECKS — 아래 + 버튼으로 덱을 추가하세요';
 
   // DJM 연결 상태를 mode-bar에 표시
   const djmDevs=pdjlDevices.filter(d=>d.type==='DJM');
@@ -2257,7 +2281,7 @@ function deckHTML(slot){
   /* Empty virtual deck: simple drop zone */
   if(!d.ld && !isHW){
     return`<div class="dk" id="dk${slot}" data-st="empty" data-type="virtual">
-      <div class="dtop"><div class="dhd"><div class="dhd-l"><span class="did" id="did${slot}" style="color:var(--tx3)">PLAYER <span class="did-n">${slot+1}</span></span><span class="dbadge bm">EMPTY</span></div><div class="dhd-r"><div class="dht"><button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button></div></div></div></div>
+      <div class="dtop"><div class="dhd"><div class="dhd-l"><span class="did" id="did${slot}" style="color:var(--tx3)">PLAYER <span class="did-n">${slot+1}</span></span><span class="dbadge bm">EMPTY</span></div><div class="dhd-r"><div class="dht"><button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button></div></div></div></div>
       <div class="ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">드래그 또는 클릭하여 열기</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG · M4A</div></div>
     </div>`;
   }
@@ -2278,8 +2302,8 @@ function deckHTML(slot){
       <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:1px 5px;font-size:7px;min-width:42px">MASTER</span>
     </div>
     <div class="dk-hdr-r">
-      <span class="dhwl" id="dhwl${slot}" style="font:500 9px var(--mn);color:var(--tx3);letter-spacing:.04em">${isHW?(d.model?'⬡ '+d.model:''):''}${!isHW?'':''}</span>
-      ${isHW?'':`<button class="dhtb cdl" data-a="remove" data-i="${slot}">✕</button>`}
+      <span class="dhwl" id="dhwl${slot}" style="font:500 9px var(--mn);color:var(--tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+d.model:''):''}</span>
+      ${isHW?'':`<button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>`}
     </div>
   </div>
   <div class="dk-title-row">
@@ -2329,9 +2353,9 @@ function deckHTML(slot){
     <div class="dk-layer-lbl">&nbsp;</div>
     <div class="dk-tp-top">
       <button class="dkbtn dkcue" ${cueAc}>CUE</button>
-      <button class="dkbtn dkplay" ${playAc}>${isLoaded&&d.pl?'⏸':'▶'}</button>
+      <button class="dkbtn dkplay" ${playAc}>${isLoaded&&d.pl?'<svg class="gi gi-pause"><use href="#i-pause"/></svg>':'<svg class="gi gi-play"><use href="#i-play"/></svg>'}</button>
     </div>
-    <button class="dkbtn dkstop" ${stopAc}>⏮</button>
+    <button class="dkbtn dkstop" ${stopAc}><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
   </div>`;
   /* SECTION 4: SMPTE layer — MASTER small + A/B large */
 
@@ -3636,7 +3660,7 @@ function tick(){
       wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;
     }else if(wfbEl)wfbEl.innerHTML='';
     const dhwlEl=document.getElementById('dhwl'+slot);
-    if(dhwlEl)dhwlEl.textContent=d.type==='hw'?(d.model?'⬡ '+d.model:'⬡ HW'):'◎ VIRTUAL';
+    if(dhwlEl){const _hxSvg='<svg class="gi gi-hex"><use href="#i-hex"/></svg>';const _cirSvg='<svg class="gi gi-hex"><use href="#i-circle"/></svg>';dhwlEl.innerHTML=d.type==='hw'?(d.model?_hxSvg+' '+d.model:_hxSvg+' HW'):_cirSvg+' VIRTUAL';}
 
     // VU meter — ALWAYS for virtual, only run-gated for HW
     // Peak meter: returns instantaneous peak (0-1) from time domain buffer
@@ -3740,7 +3764,7 @@ function tick(){
     // CUE/PLAY button states — CDJ-3000 style
     const pb=el.querySelector('[data-a="play"]');
     if(pb){
-      pb.textContent=d.pl?'⏸':'▶';
+      pb.innerHTML=d.pl?'<svg class="gi gi-pause"><use href="#i-pause"/></svg>':'<svg class="gi gi-play"><use href="#i-play"/></svg>';
       pb.classList.toggle('ac',d.pl);
       pb.classList.toggle('blink',d.cu&&!d.pl); // blink in CUE state
       pb.classList.remove('blink');
@@ -5181,7 +5205,7 @@ if(E){
       if(newTid>0) dk._trackId=newTid;
     }
     // Always update model name (even when no track loaded)
-    if(status.name&&!dk.model){dk.model=status.name;const _hwlEl=document.getElementById('dhwl'+layerIndex);if(_hwlEl)_hwlEl.textContent='⬡ '+status.name;else patchDeck(layerIndex);}
+    if(status.name&&!dk.model){dk.model=status.name;const _hwlEl=document.getElementById('dhwl'+layerIndex);if(_hwlEl)_hwlEl.innerHTML='<svg class="gi gi-hex"><use href="#i-hex"/></svg> '+status.name;else patchDeck(layerIndex);}
     else if(status.name)dk.model=status.name;
     // If track ejected (hasTrack went false for 2+ consecutive status), reset
     if(!status.hasTrack){
