@@ -59,43 +59,47 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
 .d-track{color:var(--t-tx);font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* waveform wrapper */
-.wf-wrap{display:grid;grid-template-columns:72px 1fr 36px 48px;gap:8px;margin-bottom:12px;height:108px}
-.art{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
+.wf-wrap{display:grid;grid-template-columns:96px 1fr auto auto;gap:8px;margin-bottom:12px;height:96px;align-items:stretch}
+.art{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden;aspect-ratio:1/1;width:96px;height:96px}
 .art-fill{position:absolute;inset:0;background:linear-gradient(135deg,var(--t-accent) 0%,var(--t-accent-dim) 100%);opacity:.5}
 .art-label{position:absolute;bottom:6px;left:6px;right:6px;font:500 8px var(--t-mn);color:#fff;letter-spacing:.1em;text-shadow:0 1px 2px rgba(0,0,0,.7)}
 
-.wf-col{display:flex;flex-direction:column;gap:4px}
+.wf-col{display:flex;flex-direction:column;gap:4px;min-width:0}
 .wf-detail{flex:1;background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
-.wf-overview{height:28px;background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
+.wf-overview{height:24px;background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;overflow:hidden}
 .wf-svg{width:100%;height:100%;display:block}
 .wf-playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--t-accent);box-shadow:0 0 8px var(--t-accent);left:50%}
 .wf-pos-box{position:absolute;top:0;bottom:0;border:1px solid var(--t-accent);width:30%;left:40%;pointer-events:none}
 
-.vu-strip{display:flex;flex-direction:column;gap:4px}
-.vu-bar{flex:1;background:var(--t-bg3);position:relative;overflow:hidden;border:1px solid var(--t-bdr)}
-.vu-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,var(--t-grn) 0%,var(--t-grn) 60%,var(--t-ylw) 80%,var(--t-red) 100%)}
-.vu-fill.l{height:72%}
-.vu-fill.r{height:65%}
-.vu-lbl{font:700 7px var(--t-mn);color:var(--t-tx4);text-align:center;letter-spacing:.1em}
+/* VU strip — L / R / F 세로 바가 '열(column)'로 나란히 */
+.vu-strip{display:flex;flex-direction:row;gap:3px;align-items:stretch;background:var(--t-bg3);border:1px solid var(--t-bdr);padding:3px}
+.vu-strip.hw{/* HW: VU + F 2열 */}
+.vu-ch{display:flex;flex-direction:column;gap:2px;align-items:center;min-width:10px}
+.vu-bar{flex:1;width:10px;background:var(--t-bg);position:relative;overflow:hidden;border:1px solid var(--t-bdr)}
+.vu-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,var(--t-grn) 0%,var(--t-grn) 55%,var(--t-ylw) 78%,var(--t-red) 100%)}
+.vu-fader-fill{position:absolute;bottom:0;left:0;right:0;background:var(--t-accent);opacity:.75}
+.vu-lbl{font:700 7px var(--t-mn);color:var(--t-tx4);letter-spacing:.04em;line-height:1}
 
-.eq-strip{display:grid;grid-template-rows:1fr 1fr 1fr;gap:4px}
-.eq-knob{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;display:flex;align-items:center;justify-content:center;font:700 8px var(--t-mn);color:var(--t-tx3);letter-spacing:.06em}
-.eq-knob::after{content:'';position:absolute;top:4px;left:4px;right:4px;height:2px;background:var(--t-accent);opacity:.6}
+.eq-strip{display:grid;grid-template-rows:1fr 1fr 1fr;gap:3px;width:28px}
+.eq-knob{background:var(--t-bg3);border:1px solid var(--t-bdr);position:relative;display:flex;align-items:center;justify-content:center;font:700 8px var(--t-mn);color:var(--t-tx3);letter-spacing:.04em}
+.eq-knob::after{content:'';position:absolute;top:3px;left:3px;right:3px;height:2px;background:var(--t-accent);opacity:.6}
 
-/* timecode + transport row */
-.tc-row{display:grid;grid-template-columns:1fr 180px;gap:16px;align-items:center}
-.tc-box{display:flex;flex-direction:column;gap:4px}
+/* timecode + transport + SMPTE layer — 3 columns */
+.tc-row{display:grid;grid-template-columns:1fr 110px 82px;gap:12px;align-items:stretch}
+.tc-box{display:flex;flex-direction:column;gap:4px;min-width:0}
 .tc-head{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font:700 8px var(--t-mn);color:var(--t-tx4);letter-spacing:.14em;text-transform:uppercase}
 .tc-num{font:300 34px var(--t-seg);color:var(--t-accent);letter-spacing:.04em;line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 18px var(--t-accent-glow)}
-.tc-bpm{display:flex;align-items:baseline;gap:6px}
-.tc-bpm-v{font:300 20px var(--t-mn);color:var(--t-tx);font-variant-numeric:tabular-nums}
-.tc-bpm-l{font:500 8px var(--t-mn);color:var(--t-tx3);letter-spacing:.12em}
-.tc-pitch{font:500 10px var(--t-mn);color:var(--t-accent);font-variant-numeric:tabular-nums}
-.phasor{display:flex;gap:4px;margin-top:6px}
+.tc-bpm{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.tc-bpm-base{font:600 14px var(--t-mn);color:var(--t-tx2);font-variant-numeric:tabular-nums}
+.tc-bpm-pitch{font:500 11px var(--t-mn);color:var(--t-tx3);font-variant-numeric:tabular-nums}
+.tc-bpm-cur{font:700 17px var(--t-mn);color:var(--t-accent);font-variant-numeric:tabular-nums;letter-spacing:-.01em;padding:2px 8px;border:1px solid var(--t-accent-bdr);background:var(--t-accent-bg)}
+.tc-bpm-lbl{font:500 8px var(--t-mn);color:var(--t-tx3);letter-spacing:.14em;margin-left:2px}
+.tc-key{font:700 11px var(--t-mn);color:var(--t-tx2);padding:2px 6px;border:1px solid var(--t-bdr2)}
+.phasor{display:flex;gap:4px;margin-top:2px}
 .phs{width:8px;height:8px;border:1px solid var(--t-tx4)}
 .phs.on{background:var(--t-grn);border-color:var(--t-grn)}
 
-.transport{display:flex;flex-direction:column;gap:6px}
+.transport{display:flex;flex-direction:column;gap:6px;justify-content:center}
 .t-row{display:flex;gap:6px}
 .t-btn{flex:1;height:34px;border:1.5px solid var(--t-bdr2);background:transparent;color:var(--t-tx2);font:700 11px var(--t-mn);letter-spacing:.08em;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .t-btn:hover{border-color:var(--t-tx3)}
@@ -105,11 +109,13 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
 .t-btn.play.on{background:var(--t-grn-bg);border-color:var(--t-grn);color:var(--t-grn)}
 .t-btn.stop{color:var(--t-red);border-color:var(--t-red-bdr);height:26px}
 
-/* SMPTE layer */
-.layer-row{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px;margin-top:8px;padding-top:10px;border-top:1px solid var(--t-bdr)}
-.l-mst{height:22px;padding:0 10px;background:transparent;border:1px solid var(--t-ylw-bdr);color:var(--t-ylw);font:700 9px var(--t-mn);letter-spacing:.08em;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:62px}
+/* SMPTE layer — 세로 3행: 레이블 / MASTER / A·B */
+.layer-col{display:flex;flex-direction:column;gap:4px}
+.layer-lbl{font:700 9px var(--t-mn);color:var(--t-tx3);letter-spacing:.14em;text-align:center;margin-bottom:2px}
+.l-mst{height:26px;background:transparent;border:1px solid var(--t-ylw-bdr);color:var(--t-ylw);font:700 9px var(--t-mn);letter-spacing:.08em;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .l-mst.on{background:var(--t-ylw-bg)}
-.l-ab{height:22px;background:transparent;border:1px solid var(--t-bdr2);color:var(--t-tx3);font:700 10px var(--t-mn);letter-spacing:.2em;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.l-ab-row{display:flex;gap:3px;flex:1}
+.l-ab{flex:1;height:26px;background:transparent;border:1px solid var(--t-bdr2);color:var(--t-tx3);font:700 10px var(--t-mn);letter-spacing:.2em;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .l-ab.a.on{background:rgba(77,212,230,.12);border-color:#4dd4e6;color:#4dd4e6}
 .l-ab.b.on{background:rgba(255,126,179,.12);border-color:#ff7eb3;color:#ff7eb3}
 
@@ -300,7 +306,7 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
     </div>
     <div class="deck-grid">
 
-      <!-- DECK 1 (HW, playing, master) -->
+      <!-- DECK 1 (HW: CDJ-3000, playing, master) — VU: 2열 [VU][F] + EQ -->
       <div class="deck">
         <div class="d-hdr">
           <div class="d-hdr-l">
@@ -338,10 +344,9 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
               <div class="wf-pos-box"></div>
             </div>
           </div>
-          <div class="vu-strip">
-            <div class="vu-bar"><div class="vu-fill l"></div></div>
-            <div class="vu-bar"><div class="vu-fill r"></div></div>
-            <div class="vu-lbl">L · R</div>
+          <div class="vu-strip hw">
+            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:78%"></div></div><span class="vu-lbl">VU</span></div>
+            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:62%"></div></div><span class="vu-lbl">F</span></div>
           </div>
           <div class="eq-strip">
             <div class="eq-knob">HI</div>
@@ -355,9 +360,10 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
             <div class="tc-head"><span>H</span><span>M</span><span>S</span><span>F</span></div>
             <div class="tc-num">00:01:24:12</div>
             <div class="tc-bpm">
-              <span class="tc-bpm-v">128.00</span>
-              <span class="tc-bpm-l">BPM · 8A</span>
-              <span class="tc-pitch" style="margin-left:auto">+0.0%</span>
+              <span class="tc-bpm-base">124.00</span>
+              <span class="tc-bpm-pitch">+3.23%</span>
+              <span class="tc-bpm-cur">128.00<span class="tc-bpm-lbl">BPM</span></span>
+              <span class="tc-key">8A</span>
             </div>
             <div class="phasor">
               <span class="phs on"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span>
@@ -370,16 +376,18 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
             </div>
             <button class="t-btn stop"><svg class="gi gi-prev icon-prev"><use href="#i-prev"/></svg></button>
           </div>
-        </div>
-
-        <div class="layer-row">
-          <button class="l-mst on">SMPTE</button>
-          <button class="l-ab a on">A</button>
-          <button class="l-ab b">B</button>
+          <div class="layer-col">
+            <div class="layer-lbl">SMPTE</div>
+            <button class="l-mst on">MASTER</button>
+            <div class="l-ab-row">
+              <button class="l-ab a on">A</button>
+              <button class="l-ab b">B</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- DECK 2 (Virtual, paused, not master) -->
+      <!-- DECK 2 (Virtual, CUE stand-by) — VU: 3열 [L][R][F], no EQ -->
       <div class="deck">
         <div class="d-hdr">
           <div class="d-hdr-l">
@@ -391,7 +399,7 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
             <span class="sbtn">SYNC</span>
             <span class="sbtn">MASTER</span>
           </div>
-          <span class="hw-lbl" style="color:var(--t-pur,var(--t-accent))">VIRTUAL</span>
+          <span class="hw-lbl" style="color:var(--t-accent)">VIRTUAL</span>
           <button class="close-btn"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
         </div>
 
@@ -416,14 +424,9 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
             </div>
           </div>
           <div class="vu-strip">
-            <div class="vu-bar"><div class="vu-fill l" style="height:0"></div></div>
-            <div class="vu-bar"><div class="vu-fill r" style="height:0"></div></div>
-            <div class="vu-lbl">L · R</div>
-          </div>
-          <div class="eq-strip">
-            <div class="eq-knob">HI</div>
-            <div class="eq-knob">MID</div>
-            <div class="eq-knob">LO</div>
+            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">L</span></div>
+            <div class="vu-ch"><div class="vu-bar"><div class="vu-fill" style="height:0"></div></div><span class="vu-lbl">R</span></div>
+            <div class="vu-ch"><div class="vu-bar"><div class="vu-fader-fill" style="height:80%"></div></div><span class="vu-lbl">F</span></div>
           </div>
         </div>
 
@@ -432,9 +435,10 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
             <div class="tc-head"><span>H</span><span>M</span><span>S</span><span>F</span></div>
             <div class="tc-num" style="color:var(--t-tx3);text-shadow:none">00:00:48:00</div>
             <div class="tc-bpm">
-              <span class="tc-bpm-v">119.98</span>
-              <span class="tc-bpm-l">BPM · 5A</span>
-              <span class="tc-pitch" style="margin-left:auto;color:var(--t-tx3)">-0.02%</span>
+              <span class="tc-bpm-base">120.00</span>
+              <span class="tc-bpm-pitch">-0.02%</span>
+              <span class="tc-bpm-cur" style="color:var(--t-tx2);border-color:var(--t-bdr2);background:transparent">119.98<span class="tc-bpm-lbl">BPM</span></span>
+              <span class="tc-key">5A</span>
             </div>
             <div class="phasor">
               <span class="phs"></span><span class="phs"></span><span class="phs"></span><span class="phs"></span>
@@ -447,12 +451,14 @@ body{font:14px/1.5 -apple-system,"Noto Sans KR",sans-serif;background:#0c0e12;co
             </div>
             <button class="t-btn stop"><svg class="gi gi-prev icon-prev"><use href="#i-prev"/></svg></button>
           </div>
-        </div>
-
-        <div class="layer-row">
-          <button class="l-mst">SMPTE</button>
-          <button class="l-ab a">A</button>
-          <button class="l-ab b on">B</button>
+          <div class="layer-col">
+            <div class="layer-lbl">SMPTE</div>
+            <button class="l-mst">MASTER</button>
+            <div class="l-ab-row">
+              <button class="l-ab a">A</button>
+              <button class="l-ab b on">B</button>
+            </div>
+          </div>
         </div>
       </div>
 
