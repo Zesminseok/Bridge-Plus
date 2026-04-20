@@ -747,7 +747,10 @@ body[data-layout="card"] .sl{color:var(--tx3)}
 
 /* ═════════ ROW 레이아웃 — 1 덱 1 풀폭 행, 세로 스크롤 ═════════ */
 body[data-layout="row"] .deck-row{flex-direction:column;gap:10px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px}
-body[data-layout="row"] .dk.rw-dk{padding:10px 14px;display:flex;flex-direction:column;gap:8px;border-radius:8px;min-width:0}
+body[data-layout="row"] .dk.rw-dk{padding:10px 14px;display:flex;flex-direction:column;gap:8px;border-radius:8px;min-width:0;flex-shrink:0}
+body[data-layout="row"] .dk.rw-dk[data-st="empty"]{min-height:180px}
+body[data-layout="row"] .rw-title-inline > span[id^="dtn"].scrolling{text-overflow:clip}
+body[data-layout="row"] .rw-title-inline > span[id^="dtn"].scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
 body[data-layout="row"] .rw-head{display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr);height:26px;flex-shrink:0}
 body[data-layout="row"] .rw-head .dk-num{font:800 20px var(--lb);color:var(--tx);line-height:1;flex-shrink:0}
 body[data-layout="row"] .rw-title-inline{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;padding:0 10px;overflow:hidden}
@@ -838,7 +841,11 @@ body[data-layout="card"] .cd-top .dbadge{background:rgba(0,0,0,.38);border-color
 body[data-layout="card"] .cd-top .dhwl{color:#fff!important}
 body[data-layout="card"] .cd-info{position:absolute;bottom:12px;left:14px;right:14px;z-index:3;color:#fff}
 body[data-layout="card"] .cd-info .cd-artist{font:500 11px var(--sn);color:rgba(255,255,255,.7);margin-bottom:2px;text-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-body[data-layout="card"] .cd-info .cd-track{font:600 16px var(--sn);line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+body[data-layout="card"] .cd-info .cd-track{font:600 16px var(--sn);line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;position:relative}
+body[data-layout="card"] .cd-info .cd-track.scrolling{text-overflow:clip}
+body[data-layout="card"] .cd-info .cd-track.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
+body[data-layout="card"] .cd-bpm-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:6px;align-items:center;justify-content:flex-end}
+body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]{flex-wrap:nowrap!important}
 body[data-layout="card"] .cd-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:rgba(26,27,33,.95)}
 body[data-layout="card"] .cd-wf{display:flex;flex-direction:column;gap:4px}
 body[data-layout="card"] .cd-wf .dwov{height:20px;border-radius:3px;margin:0}
@@ -3001,8 +3008,10 @@ function deckHTMLCard(slot){
       <div class="cd-tc-row">
         <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
         <div class="cd-bpm-col">
-          <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:6px;flex-shrink:0"></div>
-          <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+          <div class="cd-bpm-row">
+            <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:6px;flex-shrink:0"></div>
+            <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+          </div>
           ${phas}
         </div>
       </div>
