@@ -30,3 +30,7 @@ out/
 *.blockmap
 *.exe
 *.nsis.7z
+
+# Playwright MCP cache & ad-hoc screenshots
+.playwright-mcp/
+atelier-*.png

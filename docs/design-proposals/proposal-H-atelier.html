@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Proposal H · ATELIER — Editorial Studio Dark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   ATELIER · Editorial Studio Dark
+   ───────────────────────────────────────────────────────────
+   한 덱 = 한 챕터. 매거진 스프레드처럼 구성하고,
+   빈티지 스튜디오 기기의 아이보리+황동 팔레트를 다크 모드로.
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  /* ── Grounds ─────────────────────────── */
+  --ink-void:#08070a;         /* absolute ground */
+  --ink-coal:#0d0b0a;         /* app bg */
+  --ink-deck:#14110d;         /* deck card */
+  --ink-inset:#0a0907;        /* inset surfaces (wave, meter) */
+  --ink-rail:#0a0908;         /* rail */
+  --ink-lift:#1b1711;         /* elevated */
+
+  /* ── Hairlines ───────────────────────── */
+  --rule:rgba(201,148,74,.09);      /* default editorial rule */
+  --rule-soft:rgba(245,234,212,.05);
+  --rule-strong:rgba(201,148,74,.22);
+  --rule-div:#261f15;
+
+  /* ── Ink (text) ───────────────────────── */
+  --ivory:#f3ead4;             /* primary */
+  --ivory-2:#c8bca0;           /* secondary */
+  --ivory-3:#85785f;           /* tertiary */
+  --ivory-4:#4b4232;           /* faint */
+  --ivory-5:#2c2619;           /* near invisible */
+
+  /* ── Accents ──────────────────────────── */
+  --brass:#c9944a;             /* master / MST */
+  --brass-bright:#e2b268;
+  --brass-dim:#8a6631;
+  --amber:#efa73a;             /* playing */
+  --amber-glow:rgba(239,167,58,.35);
+  --sage:#9eb285;              /* cue */
+  --rust:#c4553e;              /* air / live */
+  --rust-glow:rgba(196,85,62,.4);
+  --ice:#6b89a6;               /* sync */
+  --mauve:#a88bb0;             /* layer B */
+
+  /* ── Geometry ─────────────────────────── */
+  --r-sm:3px;
+  --r-md:6px;
+  --r-lg:10px;
+
+  /* ── Fonts ────────────────────────────── */
+  --serif:'Fraunces','Noto Sans KR',ui-serif,Georgia,serif;
+  --sans:'Inter','Noto Sans KR',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100vh;}
+body{
+  background:var(--ink-coal);
+  color:var(--ivory);
+  font:400 12px/1.5 var(--sans);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  font-feature-settings:"ss01","ss02","cv11";
+}
+
+/* ── Grain overlay (atmospheric) ───────── */
+body::before{
+  content:"";
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.92 0 0 0 0 0.83 0 0 0 .04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  pointer-events:none;
+  z-index:9999;
+  mix-blend-mode:overlay;
+  opacity:.55;
+}
+
+/* ═══════════════════════════════════════════════
+   APP SHELL
+   ═══════════════════════════════════════════════ */
+.app{
+  display:grid;
+  grid-template-columns:68px 1fr 190px;
+  grid-template-rows:54px 1fr 36px;
+  grid-template-areas:
+    "rail  head  head"
+    "rail  main  aside"
+    "rail  foot  foot";
+  height:100vh;
+  position:relative;
+}
+
+/* ── Rail (left) ──────────────────────────── */
+.rail{
+  grid-area:rail;
+  background:var(--ink-rail);
+  border-right:1px solid var(--rule-div);
+  display:flex;flex-direction:column;align-items:center;
+  padding:14px 0 12px;
+  position:relative;
+}
+.rail::after{
+  content:"";position:absolute;top:0;right:-1px;bottom:0;
+  width:1px;background:linear-gradient(180deg,transparent,var(--brass-dim) 20%,var(--brass-dim) 80%,transparent);
+  opacity:.12;
+}
+.rail .sig{
+  font:700 9px/1 var(--mono);
+  letter-spacing:.3em;color:var(--brass);
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  margin-bottom:16px;padding:4px 0;
+}
+.rail .sig span{color:var(--ivory-3);}
+.rail nav{display:flex;flex-direction:column;gap:2px;}
+.rail a{
+  width:44px;height:44px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:3px;
+  color:var(--ivory-4);
+  border:1px solid transparent;
+  border-radius:var(--r-sm);
+  cursor:pointer;
+  transition:color .18s,border-color .18s,background .18s;
+  position:relative;
+}
+.rail a svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;}
+.rail a .lab{font:500 7px/1 var(--mono);letter-spacing:.16em;opacity:.8;}
+.rail a:hover{color:var(--ivory-2);}
+.rail a.on{
+  color:var(--brass);
+  background:linear-gradient(180deg,rgba(201,148,74,.08),rgba(201,148,74,.02));
+  border-color:var(--rule-strong);
+}
+.rail a.on::before{
+  content:"";position:absolute;left:-1px;top:8px;bottom:8px;width:2px;
+  background:var(--brass);box-shadow:0 0 8px var(--brass-dim);
+}
+.rail .sp{flex:1;}
+.rail .plate{
+  font:500 7px/1.3 var(--mono);letter-spacing:.15em;
+  color:var(--ivory-4);text-align:center;padding-top:8px;
+  border-top:1px solid var(--rule-soft);width:36px;
+}
+.rail .plate b{color:var(--ivory-3);display:block;font-weight:600;}
+
+/* ── Head (top bar) ───────────────────────── */
+.head{
+  grid-area:head;
+  background:var(--ink-coal);
+  border-bottom:1px solid var(--rule-div);
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  padding:0 22px;
+  gap:24px;
+  position:relative;
+}
+.head::after{
+  content:"";position:absolute;left:22px;right:22px;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--rule-strong) 8%,var(--rule-strong) 92%,transparent);
+}
+.brand{display:flex;align-items:baseline;gap:10px;}
+.brand .mark{
+  font:700 28px/1 var(--serif);
+  font-variation-settings:"opsz" 144,"SOFT" 50;
+  color:var(--ivory);letter-spacing:-.03em;
+  font-style:italic;
+}
+.brand .mark b{color:var(--brass);font-style:normal;font-weight:900;font-variation-settings:"opsz" 144,"WONK" 1;}
+.brand .tag{
+  font:600 8px/1 var(--mono);letter-spacing:.32em;
+  color:var(--ivory-3);text-transform:uppercase;
+  padding-left:10px;border-left:1px solid var(--rule-div);
+}
+.brand .tag em{font-style:normal;color:var(--brass);font-weight:700;}
+
+.breadcrumb{
+  display:flex;align-items:center;gap:10px;
+  justify-self:start;margin-left:8px;
+  font:400 11px var(--serif);font-variation-settings:"opsz" 14;
+  color:var(--ivory-3);
+}
+.breadcrumb b{color:var(--ivory-2);font-weight:500;}
+.breadcrumb .dash{color:var(--ivory-5);letter-spacing:.3em;}
+
+.meters{
+  display:flex;align-items:center;gap:18px;
+  justify-self:end;
+}
+.m-pill{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 12px;
+  background:var(--ink-deck);
+  border:1px solid var(--rule-div);
+  border-radius:20px;
+  font:500 9px/1 var(--mono);letter-spacing:.14em;
+  color:var(--ivory-2);
+}
+.m-pill .dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--sage);box-shadow:0 0 6px var(--sage);
+}
+.m-pill.off .dot{background:var(--ivory-5);box-shadow:none;}
+.m-pill.hot .dot{background:var(--rust);box-shadow:0 0 8px var(--rust-glow);animation:pulse 1.4s ease-in-out infinite;}
+.m-pill b{color:var(--ivory);font-weight:600;}
+.m-pill .unit{color:var(--ivory-4);font-size:8px;}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.48}}
+
+.clock{
+  font:500 11px/1 var(--mono);letter-spacing:.08em;
+  color:var(--ivory-2);
+  padding-left:14px;border-left:1px solid var(--rule-div);
+}
+.clock b{color:var(--brass);font-weight:600;}
+
+/* ═══════════════════════════════════════════════
+   MAIN · 2×2 DECK GRID
+   ═══════════════════════════════════════════════ */
+.main{
+  grid-area:main;
+  padding:18px 22px;
+  overflow:hidden;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:1fr 1fr;
+  gap:14px;
+}
+
+/* ── Deck chapter ──────────────────────────── */
+.deck{
+  position:relative;
+  background:var(--ink-deck);
+  border:1px solid var(--rule-div);
+  border-radius:var(--r-lg);
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  padding:14px 18px 14px;
+  gap:12px;
+  overflow:hidden;
+  min-height:0;
+}
+.deck::before{
+  content:"";position:absolute;inset:0;border-radius:var(--r-lg);
+  background:radial-gradient(ellipse at 20% 0%,rgba(201,148,74,.04),transparent 55%);
+  pointer-events:none;
+}
+.deck.live{
+  border-color:rgba(196,85,62,.32);
+  box-shadow:0 0 0 1px rgba(196,85,62,.12), 0 20px 40px -20px rgba(196,85,62,.18);
+}
+.deck.live::after{
+  content:"";position:absolute;left:14px;right:14px;top:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--rust),transparent);
+  animation:pulse 2.2s ease-in-out infinite;
+}
+.deck.play{
+  border-color:rgba(201,148,74,.28);
+}
+
+/* Chapter masthead — "1. MASTER" layout */
+.mast{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:baseline;
+  gap:16px;
+  padding-bottom:8px;
+  border-bottom:1px solid var(--rule);
+}
+.mast-num{
+  font:800 42px/.85 var(--serif);
+  font-variation-settings:"opsz" 144,"SOFT" 30,"WONK" 0;
+  color:var(--brass);
+  font-style:italic;
+  letter-spacing:-.03em;
+  display:flex;align-items:baseline;gap:8px;
+  text-shadow:0 1px 0 rgba(0,0,0,.6);
+}
+.mast-num sup{
+  font:600 8px/1 var(--mono);
+  color:var(--ivory-3);
+  letter-spacing:.24em;
+  font-style:normal;
+  transform:translateY(-18px);
+}
+.mast-id{
+  display:flex;flex-direction:column;gap:3px;min-width:0;
+}
+.mast-t{
+  font:500 15px/1.2 var(--serif);
+  font-variation-settings:"opsz" 18;
+  color:var(--ivory);
+  letter-spacing:-.01em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.mast-a{
+  font:400 10px/1.3 var(--sans);
+  color:var(--ivory-3);
+  letter-spacing:.02em;
+  display:flex;align-items:center;gap:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mast-a em{font-style:italic;color:var(--ivory-2);font-family:var(--serif);font-variation-settings:"opsz" 14;}
+.mast-a .sep{color:var(--ivory-5);letter-spacing:.2em;}
+.mast-r{
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+}
+.badge{
+  font:700 8px/1 var(--mono);
+  letter-spacing:.24em;
+  padding:5px 8px;
+  border-radius:3px;
+  border:1px solid var(--rule-strong);
+  color:var(--ivory-3);
+  text-transform:uppercase;
+}
+.badge.on.mst{color:var(--brass);border-color:var(--brass-dim);background:rgba(201,148,74,.08);}
+.badge.on.air{color:var(--rust);border-color:rgba(196,85,62,.4);background:rgba(196,85,62,.1);animation:pulse 1.4s infinite;}
+.badge.on.sync{color:var(--sage);border-color:rgba(158,178,133,.35);background:rgba(158,178,133,.07);}
+.badge.cdj{
+  color:var(--ivory-3);border-color:var(--rule-div);
+  font:600 8px/1 var(--mono);background:var(--ink-inset);
+}
+
+/* Waveform row */
+.wave{
+  position:relative;
+  background:var(--ink-inset);
+  border:1px solid var(--rule-div);
+  border-radius:var(--r-sm);
+  min-height:80px;
+  height:100%;
+  overflow:hidden;
+}
+.wave svg{width:100%;height:100%;display:block;}
+.wave .nc{
+  position:absolute;top:50%;left:38%;
+  width:1px;height:80%;
+  background:var(--ivory);transform:translateY(-50%);
+  box-shadow:0 0 6px var(--brass-bright);
+}
+.wave .grid{position:absolute;inset:0;background-image:
+  linear-gradient(90deg,transparent calc(12.5% - 1px),var(--rule-soft) 12.5%,transparent calc(12.5% + 1px));
+  background-size:12.5% 100%;pointer-events:none;}
+.wave .tick{
+  position:absolute;bottom:4px;
+  font:500 7px/1 var(--mono);color:var(--ivory-4);letter-spacing:.1em;
+}
+
+/* Phasor rail — quarter beat indicators */
+.phasor{
+  position:absolute;top:6px;right:8px;
+  display:flex;gap:3px;padding:3px 5px;
+  background:rgba(8,7,10,.7);backdrop-filter:blur(4px);
+  border-radius:4px;border:1px solid var(--rule-soft);
+}
+.phasor i{
+  width:9px;height:9px;border-radius:2px;
+  background:var(--ivory-5);
+  transition:all .1s;
+}
+.phasor i.on{background:var(--amber);box-shadow:0 0 6px var(--amber-glow);}
+
+/* ── Instrument Cluster (bottom row of deck) ── */
+.cluster{
+  display:grid;
+  grid-template-columns:auto 1fr auto auto;
+  gap:18px;
+  align-items:center;
+  padding-top:4px;
+}
+
+/* Timecode Hero */
+.tc{
+  display:flex;flex-direction:column;gap:2px;
+  padding-right:14px;border-right:1px solid var(--rule);
+}
+.tc .lab{
+  font:500 7px/1 var(--mono);letter-spacing:.28em;
+  color:var(--ivory-4);text-transform:uppercase;
+}
+.tc .big{
+  font:500 32px/1 var(--mono);
+  color:var(--ivory);letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;
+  text-shadow:0 0 20px rgba(243,234,212,.08);
+}
+.tc .big s{color:var(--ivory-4);text-decoration:none;}
+.tc .sub{
+  font:400 9px/1 var(--mono);color:var(--ivory-3);letter-spacing:.06em;
+  font-variant-numeric:tabular-nums;
+  display:flex;gap:10px;
+}
+.tc .sub em{color:var(--brass);font-style:normal;}
+.deck.play .tc .big{color:var(--amber);text-shadow:0 0 24px var(--amber-glow);}
+
+/* BPM / Key cluster */
+.stats{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.stats .bpm-row{display:flex;align-items:baseline;gap:10px;}
+.stats .bpm{
+  font:600 22px/1 var(--serif);
+  font-variation-settings:"opsz" 24;
+  color:var(--ivory);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;
+}
+.stats .bpm i{color:var(--ivory-3);font-size:10px;font-weight:400;font-style:normal;margin-left:3px;}
+.stats .pitch{
+  font:500 10px/1 var(--mono);color:var(--brass);letter-spacing:.04em;
+  padding:2px 6px;border:1px solid var(--rule-strong);border-radius:3px;
+}
+.stats .key{
+  font:600 11px/1 var(--mono);color:var(--ivory-2);letter-spacing:.1em;
+  padding:2px 6px;background:rgba(107,137,166,.12);
+  border:1px solid rgba(107,137,166,.3);color:var(--ice);
+  border-radius:3px;
+}
+.stats .meta-row{display:flex;gap:14px;align-items:center;}
+.stats .mi{display:flex;flex-direction:column;gap:1px;}
+.stats .mi .l{font:500 7px/1 var(--mono);letter-spacing:.22em;color:var(--ivory-4);text-transform:uppercase;}
+.stats .mi .v{font:500 10px/1 var(--mono);color:var(--ivory-2);font-variant-numeric:tabular-nums;}
+
+/* VU meter (dual-channel) */
+.vu{
+  display:flex;flex-direction:column;gap:3px;
+  padding-left:14px;border-left:1px solid var(--rule);
+}
+.vu .lab{font:500 7px/1 var(--mono);letter-spacing:.28em;color:var(--ivory-4);text-transform:uppercase;}
+.vu-bars{display:flex;gap:3px;align-items:flex-end;height:44px;}
+.vu .col{
+  position:relative;width:9px;height:100%;
+  background:var(--ink-inset);
+  border:1px solid var(--rule-soft);
+  border-radius:1px;
+  overflow:hidden;
+}
+.vu .fill{
+  position:absolute;left:0;right:0;bottom:0;
+  background:linear-gradient(0deg,
+    var(--sage) 0%,
+    var(--sage) 60%,
+    var(--amber) 75%,
+    var(--brass-bright) 88%,
+    var(--rust) 100%);
+}
+.vu .col::after{
+  content:"";position:absolute;inset:0;
+  background-image:repeating-linear-gradient(0deg,
+    transparent 0,transparent 3px,
+    rgba(8,7,10,.6) 3px,rgba(8,7,10,.6) 4px);
+  pointer-events:none;
+}
+.vu .scale{
+  font:500 6px/1 var(--mono);color:var(--ivory-5);
+  display:flex;justify-content:space-between;width:100%;
+  letter-spacing:.08em;
+}
+
+/* EQ knobs (brass lineage) */
+.eq{
+  display:flex;gap:10px;align-items:flex-end;
+  padding-left:16px;border-left:1px solid var(--rule);
+}
+.knob{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.knob .dial{
+  width:32px;height:32px;position:relative;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 30% 25%,#3a2d17 0%,#1a140a 55%,#0c0907 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,210,140,.25),
+    inset 0 -2px 4px rgba(0,0,0,.8),
+    0 2px 3px rgba(0,0,0,.6);
+  border:1px solid var(--rule-strong);
+}
+.knob .dial::before{
+  content:"";position:absolute;inset:4px;border-radius:50%;
+  background:radial-gradient(circle at 30% 28%,#6b4f22 0%,#3a2a10 58%,#1a110a 100%);
+  box-shadow:inset 0 1px 2px rgba(255,210,140,.18);
+}
+.knob .dial::after{
+  content:"";position:absolute;top:4px;left:50%;
+  width:2px;height:11px;
+  background:linear-gradient(180deg,var(--brass-bright),var(--brass-dim));
+  border-radius:1px;
+  transform-origin:50% 12px;
+  transform:translateX(-50%) rotate(var(--rot,0deg));
+  box-shadow:0 0 3px var(--brass-dim);
+}
+.knob .lab{font:600 8px/1 var(--mono);letter-spacing:.2em;color:var(--ivory-3);text-transform:uppercase;}
+.knob .val{font:500 8px/1 var(--mono);color:var(--brass);font-variant-numeric:tabular-nums;margin-top:-2px;}
+
+/* ═══════════════════════════════════════════════
+   ASIDE · RIGHT COLUMN (master mix panel)
+   ═══════════════════════════════════════════════ */
+.aside{
+  grid-area:aside;
+  background:var(--ink-coal);
+  border-left:1px solid var(--rule-div);
+  padding:16px 16px 14px;
+  overflow-y:auto;
+  display:flex;flex-direction:column;gap:16px;
+}
+.panel-h{
+  display:flex;align-items:baseline;justify-content:space-between;
+  padding-bottom:8px;border-bottom:1px solid var(--rule);
+}
+.panel-h h3{
+  font:500 12px/1 var(--serif);font-variation-settings:"opsz" 14;
+  color:var(--ivory);letter-spacing:-.01em;font-style:italic;
+}
+.panel-h .sect{
+  font:600 8px/1 var(--mono);letter-spacing:.28em;
+  color:var(--ivory-4);text-transform:uppercase;
+}
+
+/* Master VU large */
+.mvu{
+  display:grid;grid-template-columns:auto 1fr auto;gap:10px;
+  align-items:center;
+}
+.mvu .scale-l,.mvu .scale-r{
+  display:flex;flex-direction:column;justify-content:space-between;
+  height:110px;
+  font:500 6.5px/1 var(--mono);color:var(--ivory-5);
+  letter-spacing:.08em;
+}
+.mvu .bars{
+  display:flex;gap:6px;height:110px;
+  padding:6px;background:var(--ink-inset);
+  border:1px solid var(--rule-div);border-radius:var(--r-sm);
+}
+.mvu .chan{position:relative;width:16px;height:100%;background:#050404;border-radius:1px;overflow:hidden;}
+.mvu .chan .fill{
+  position:absolute;left:0;right:0;bottom:0;
+  background:linear-gradient(0deg,
+    #3f5038 0%,
+    var(--sage) 45%,
+    var(--amber) 72%,
+    var(--brass-bright) 85%,
+    var(--rust) 100%);
+  transition:height .3s cubic-bezier(.2,.8,.2,1);
+}
+.mvu .chan::after{
+  content:"";position:absolute;inset:0;
+  background-image:repeating-linear-gradient(0deg,
+    transparent 0,transparent 4px,rgba(8,7,10,.65) 4px,rgba(8,7,10,.65) 5px);
+}
+.mvu .chan .peak{
+  position:absolute;left:0;right:0;height:2px;
+  background:var(--ivory);box-shadow:0 0 4px var(--ivory);
+}
+
+.crossfade{
+  display:flex;flex-direction:column;gap:6px;
+}
+.crossfade .track{
+  position:relative;height:10px;
+  background:var(--ink-inset);
+  border:1px solid var(--rule-div);
+  border-radius:5px;
+}
+.crossfade .track::before{
+  content:"";position:absolute;top:50%;left:50%;
+  width:1px;height:14px;background:var(--rule-strong);
+  transform:translate(-50%,-50%);
+}
+.crossfade .thumb{
+  position:absolute;top:50%;left:58%;
+  width:20px;height:16px;
+  background:linear-gradient(180deg,#c9944a,#6b4f22);
+  border-radius:2px;transform:translate(-50%,-50%);
+  border:1px solid #1a140a;
+  box-shadow:0 2px 4px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,220,170,.3);
+}
+.crossfade .labels{
+  display:flex;justify-content:space-between;
+  font:600 7px/1 var(--mono);letter-spacing:.28em;
+  color:var(--ivory-4);
+}
+.crossfade .labels b{color:var(--ivory-2);}
+
+/* Compact deck list / session */
+.log{display:flex;flex-direction:column;gap:2px;}
+.log .row{
+  display:grid;grid-template-columns:18px 1fr auto;
+  gap:8px;padding:5px 0;
+  border-bottom:1px dotted var(--rule-soft);
+  font:500 9px/1.3 var(--mono);letter-spacing:.04em;
+  color:var(--ivory-3);
+}
+.log .row:last-child{border-bottom:none;}
+.log .row b{
+  color:var(--brass);font-weight:600;
+  font:italic 500 10px/1.3 var(--serif);font-variation-settings:"opsz" 11;letter-spacing:0;
+}
+.log .row .tm{color:var(--ivory-4);font-variant-numeric:tabular-nums;}
+.log .row.hot b{color:var(--rust);}
+
+/* Footer gear state */
+.foot{
+  grid-area:foot;
+  background:var(--ink-coal);
+  border-top:1px solid var(--rule-div);
+  display:flex;align-items:center;
+  padding:0 22px;gap:20px;
+  font:500 9px/1 var(--mono);letter-spacing:.15em;
+  color:var(--ivory-3);
+}
+.foot .item{display:flex;align-items:center;gap:8px;}
+.foot .item b{color:var(--ivory-2);font-weight:500;}
+.foot .item .tag{
+  font:700 7px/1 var(--mono);letter-spacing:.24em;
+  color:var(--ivory-4);padding:3px 6px;border:1px solid var(--rule-div);
+  border-radius:2px;
+}
+.foot .item.ok .tag{color:var(--sage);border-color:rgba(158,178,133,.25);}
+.foot .item.warn .tag{color:var(--brass);border-color:var(--rule-strong);}
+.foot .sp{flex:1;}
+.foot .sig{
+  font:400 10px var(--serif);font-variation-settings:"opsz" 11;
+  font-style:italic;color:var(--ivory-4);letter-spacing:0;
+}
+.foot .sig em{color:var(--brass);font-style:normal;font-weight:600;}
+
+/* ── Waveform paths ───────────────────────── */
+.wfill-a{fill:url(#gradA);opacity:.9;}
+.wfill-b{fill:url(#gradB);opacity:.85;}
+.wfill-c{fill:url(#gradC);opacity:.85;}
+.wfill-d{fill:url(#gradD);opacity:.85;}
+
+/* ── Small utils ──────────────────────────── */
+.tiny{font:500 7px/1 var(--mono);letter-spacing:.24em;color:var(--ivory-4);text-transform:uppercase;}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- ══════ RAIL ══════ -->
+  <aside class="rail">
+    <div class="sig"><span>ATELIER</span> · BRIDGE+</div>
+    <nav>
+      <a class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg><span class="lab">LIVE</span></a>
+      <a><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="lab">MIX</span></a>
+      <a><svg viewBox="0 0 24 24"><path d="M4 12h4l2-7 4 14 2-7h4"/></svg><span class="lab">PDJL</span></a>
+      <a><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/><circle cx="12" cy="12" r="9"/></svg><span class="lab">TCNET</span></a>
+      <a><svg viewBox="0 0 24 24"><path d="M12 3l9 7-3 11H6L3 10z"/></svg><span class="lab">ART-N</span></a>
+      <a><svg viewBox="0 0 24 24"><path d="M5 12c3-4 11-4 14 0M7 16c2-2 8-2 10 0M10 19c.5-.5 3.5-.5 4 0"/></svg><span class="lab">LINK</span></a>
+    </nav>
+    <div class="sp"></div>
+    <a><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span class="lab">SET</span></a>
+    <div class="plate"><b>V·1.0</b>R/2026</div>
+  </aside>
+
+  <!-- ══════ HEAD ══════ -->
+  <header class="head">
+    <div class="brand">
+      <div class="mark">Bridge<b>+</b></div>
+      <div class="tag">The <em>Atelier</em> Edition · №.08</div>
+    </div>
+    <div class="breadcrumb">
+      <span>SESSION</span><span class="dash">———</span>
+      <b>Warehouse · Room 02</b><span class="dash">——</span>
+      <em>"Sundown Set"</em>
+    </div>
+    <div class="meters">
+      <div class="m-pill hot"><span class="dot"></span>ON AIR · <b>01:42:18</b></div>
+      <div class="m-pill"><span class="dot"></span>PDJL · <b>4</b><span class="unit">/6</span></div>
+      <div class="m-pill"><span class="dot"></span>LINK · <b>128.00</b></div>
+      <div class="m-pill off"><span class="dot"></span>ART-NET</div>
+      <div class="clock">22:41<b>:07</b></div>
+    </div>
+  </header>
+
+  <!-- ══════ MAIN GRID ══════ -->
+  <main class="main">
+
+    <!-- ═══ DECK 1 — MASTER, PLAYING ═══ -->
+    <section class="deck play live">
+      <div class="mast">
+        <div class="mast-num">1<sup>№</sup></div>
+        <div class="mast-id">
+          <div class="mast-t">Children Of The Night</div>
+          <div class="mast-a">
+            <em>Daft Punk</em><span class="sep">—</span>
+            <span>Homework, remastered</span><span class="sep">·</span>
+            <span>Track 03 of 16</span>
+          </div>
+        </div>
+        <div class="mast-r">
+          <div class="badge cdj">CDJ-3000</div>
+          <div class="badge on sync">SYNC</div>
+          <div class="badge on mst">MASTER</div>
+          <div class="badge on air">ON AIR</div>
+        </div>
+      </div>
+
+      <div class="wave">
+        <svg viewBox="0 0 400 80" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="gradA" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#efa73a" stop-opacity=".95"/>
+              <stop offset="60%" stop-color="#c9944a" stop-opacity=".85"/>
+              <stop offset="100%" stop-color="#6b4f22" stop-opacity=".5"/>
+            </linearGradient>
+          </defs>
+          <path class="wfill-a" d="M0,40 Q4,22 8,40 T16,34 T24,44 T32,28 T40,42 T48,20 T56,40 T64,36 T72,46 T80,26 T88,38 T96,42 T104,18 T112,40 T120,32 T128,44 T136,22 T144,40 T152,30 T160,46 T168,34 T176,38 T184,26 T192,44 T200,32 T208,40 T216,24 T224,42 T232,36 T240,48 T248,28 T256,40 T264,34 T272,42 T280,22 T288,40 T296,30 T304,44 T312,36 T320,40 T328,26 T336,42 T344,32 T352,46 T360,38 T368,40 T376,30 T384,44 T392,36 T400,40 L400,80 L0,80 Z"/>
+        </svg>
+        <div class="grid"></div>
+        <div class="nc"></div>
+        <div class="tick" style="left:6px;">00:00</div>
+        <div class="tick" style="right:6px;">06:14</div>
+        <div class="phasor">
+          <i class="on"></i><i></i><i></i><i></i>
+        </div>
+      </div>
+
+      <div class="cluster">
+        <div class="tc">
+          <div class="lab">Elapsed</div>
+          <div class="big">01:24<s>:</s>18</div>
+          <div class="sub"><span>REM <em>04:50</em></span><span>BAR 42</span></div>
+        </div>
+        <div class="stats">
+          <div class="bpm-row">
+            <div class="bpm">128<i>.00</i></div>
+            <div class="pitch">+0.00%</div>
+            <div class="key">8A</div>
+          </div>
+          <div class="meta-row">
+            <div class="mi"><span class="l">CUE</span><span class="v">0:32.100</span></div>
+            <div class="mi"><span class="l">LOOP</span><span class="v">—</span></div>
+            <div class="mi"><span class="l">SLIP</span><span class="v">OFF</span></div>
+          </div>
+        </div>
+        <div class="vu">
+          <div class="lab">VU</div>
+          <div class="vu-bars">
+            <div class="col"><div class="fill" style="height:72%"></div></div>
+            <div class="col"><div class="fill" style="height:68%"></div></div>
+          </div>
+        </div>
+        <div class="eq">
+          <div class="knob"><div class="dial" style="--rot:45deg"></div><div class="lab">HI</div><div class="val">+2</div></div>
+          <div class="knob"><div class="dial" style="--rot:-10deg"></div><div class="lab">MID</div><div class="val">-1</div></div>
+          <div class="knob"><div class="dial" style="--rot:28deg"></div><div class="lab">LOW</div><div class="val">+1</div></div>
+          <div class="knob"><div class="dial" style="--rot:80deg"></div><div class="lab">TRIM</div><div class="val">+4</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ DECK 2 — PLAYING, SYNC ═══ -->
+    <section class="deck play">
+      <div class="mast">
+        <div class="mast-num">2<sup>№</sup></div>
+        <div class="mast-id">
+          <div class="mast-t">Around The World (Jean-Baptiste Rework)</div>
+          <div class="mast-a">
+            <em>Daft Punk</em><span class="sep">—</span>
+            <span>Discovery Anniversary Edition</span><span class="sep">·</span>
+            <span>Track 08 of 14</span>
+          </div>
+        </div>
+        <div class="mast-r">
+          <div class="badge cdj">CDJ-3000</div>
+          <div class="badge on sync">SYNC</div>
+          <div class="badge">MST</div>
+          <div class="badge">AIR</div>
+        </div>
+      </div>
+
+      <div class="wave">
+        <svg viewBox="0 0 400 80" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="gradB" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#9eb285" stop-opacity=".9"/>
+              <stop offset="70%" stop-color="#5d7050" stop-opacity=".7"/>
+              <stop offset="100%" stop-color="#2a3a26" stop-opacity=".4"/>
+            </linearGradient>
+          </defs>
+          <path class="wfill-b" d="M0,40 Q6,28 12,40 T24,34 T36,44 T48,24 T60,40 T72,32 T84,42 T96,22 T108,44 T120,30 T132,46 T144,32 T156,40 T168,26 T180,42 T192,36 T204,44 T216,28 T228,40 T240,34 T252,42 T264,22 T276,46 T288,30 T300,40 T312,26 T324,44 T336,36 T348,42 T360,28 T372,40 T384,32 T396,42 T400,36 L400,80 L0,80 Z"/>
+        </svg>
+        <div class="grid"></div>
+        <div class="nc" style="left:22%;"></div>
+        <div class="tick" style="left:6px;">00:00</div>
+        <div class="tick" style="right:6px;">05:42</div>
+        <div class="phasor">
+          <i></i><i class="on"></i><i></i><i></i>
+        </div>
+      </div>
+
+      <div class="cluster">
+        <div class="tc">
+          <div class="lab">Elapsed</div>
+          <div class="big">00:48<s>:</s>04</div>
+          <div class="sub"><span>REM <em>04:54</em></span><span>BAR 24</span></div>
+        </div>
+        <div class="stats">
+          <div class="bpm-row">
+            <div class="bpm">123<i>.00</i></div>
+            <div class="pitch">−3.91%</div>
+            <div class="key">5A</div>
+          </div>
+          <div class="meta-row">
+            <div class="mi"><span class="l">CUE</span><span class="v">—</span></div>
+            <div class="mi"><span class="l">LOOP</span><span class="v">16b</span></div>
+            <div class="mi"><span class="l">SLIP</span><span class="v">ON</span></div>
+          </div>
+        </div>
+        <div class="vu">
+          <div class="lab">VU</div>
+          <div class="vu-bars">
+            <div class="col"><div class="fill" style="height:55%"></div></div>
+            <div class="col"><div class="fill" style="height:60%"></div></div>
+          </div>
+        </div>
+        <div class="eq">
+          <div class="knob"><div class="dial" style="--rot:-30deg"></div><div class="lab">HI</div><div class="val">-4</div></div>
+          <div class="knob"><div class="dial" style="--rot:0deg"></div><div class="lab">MID</div><div class="val">0</div></div>
+          <div class="knob"><div class="dial" style="--rot:22deg"></div><div class="lab">LOW</div><div class="val">+2</div></div>
+          <div class="knob"><div class="dial" style="--rot:50deg"></div><div class="lab">TRIM</div><div class="val">+1</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ DECK 3 — CUED ═══ -->
+    <section class="deck">
+      <div class="mast">
+        <div class="mast-num">3<sup>№</sup></div>
+        <div class="mast-id">
+          <div class="mast-t">Technologic</div>
+          <div class="mast-a">
+            <em>Daft Punk</em><span class="sep">—</span>
+            <span>Human After All</span><span class="sep">·</span>
+            <span>Track 04 of 10</span>
+          </div>
+        </div>
+        <div class="mast-r">
+          <div class="badge cdj">XDJ-RX3</div>
+          <div class="badge">SYNC</div>
+          <div class="badge">MST</div>
+          <div class="badge">AIR</div>
+        </div>
+      </div>
+
+      <div class="wave">
+        <svg viewBox="0 0 400 80" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="gradC" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#6b89a6" stop-opacity=".85"/>
+              <stop offset="70%" stop-color="#3d5570" stop-opacity=".65"/>
+              <stop offset="100%" stop-color="#1a2632" stop-opacity=".4"/>
+            </linearGradient>
+          </defs>
+          <path class="wfill-c" d="M0,40 Q8,32 16,40 T32,36 T48,42 T64,28 T80,40 T96,34 T112,42 T128,24 T144,40 T160,32 T176,44 T192,34 T208,40 T224,30 T240,42 T256,36 T272,40 T288,26 T304,42 T320,34 T336,40 T352,30 T368,42 T384,36 T400,40 L400,80 L0,80 Z"/>
+        </svg>
+        <div class="grid"></div>
+        <div class="nc" style="left:8%;background:var(--sage);"></div>
+        <div class="tick" style="left:6px;">00:00</div>
+        <div class="tick" style="right:6px;">04:44</div>
+        <div class="phasor">
+          <i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+
+      <div class="cluster">
+        <div class="tc">
+          <div class="lab">Cue Point</div>
+          <div class="big" style="color:var(--sage);text-shadow:0 0 18px rgba(158,178,133,.35);">00:16<s>:</s>00</div>
+          <div class="sub"><span>STANDBY</span><span>BAR 8</span></div>
+        </div>
+        <div class="stats">
+          <div class="bpm-row">
+            <div class="bpm">125<i>.00</i></div>
+            <div class="pitch">+0.00%</div>
+            <div class="key">6A</div>
+          </div>
+          <div class="meta-row">
+            <div class="mi"><span class="l">CUE</span><span class="v">0:16.000</span></div>
+            <div class="mi"><span class="l">LOOP</span><span class="v">—</span></div>
+            <div class="mi"><span class="l">SLIP</span><span class="v">OFF</span></div>
+          </div>
+        </div>
+        <div class="vu">
+          <div class="lab">PFL</div>
+          <div class="vu-bars">
+            <div class="col"><div class="fill" style="height:42%"></div></div>
+            <div class="col"><div class="fill" style="height:38%"></div></div>
+          </div>
+        </div>
+        <div class="eq">
+          <div class="knob"><div class="dial" style="--rot:0deg"></div><div class="lab">HI</div><div class="val">0</div></div>
+          <div class="knob"><div class="dial" style="--rot:0deg"></div><div class="lab">MID</div><div class="val">0</div></div>
+          <div class="knob"><div class="dial" style="--rot:0deg"></div><div class="lab">LOW</div><div class="val">0</div></div>
+          <div class="knob"><div class="dial" style="--rot:35deg"></div><div class="lab">TRIM</div><div class="val">+2</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ DECK 4 — LOADED, WAITING ═══ -->
+    <section class="deck">
+      <div class="mast">
+        <div class="mast-num">4<sup>№</sup></div>
+        <div class="mast-id">
+          <div class="mast-t">Something About Us</div>
+          <div class="mast-a">
+            <em>Daft Punk</em><span class="sep">—</span>
+            <span>Discovery</span><span class="sep">·</span>
+            <span>Track 10 of 14</span>
+          </div>
+        </div>
+        <div class="mast-r">
+          <div class="badge cdj">VDJ · Virtual</div>
+          <div class="badge">SYNC</div>
+          <div class="badge">MST</div>
+          <div class="badge">AIR</div>
+        </div>
+      </div>
+
+      <div class="wave">
+        <svg viewBox="0 0 400 80" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="gradD" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#a88bb0" stop-opacity=".7"/>
+              <stop offset="70%" stop-color="#5a4466" stop-opacity=".55"/>
+              <stop offset="100%" stop-color="#261a2c" stop-opacity=".35"/>
+            </linearGradient>
+          </defs>
+          <path class="wfill-d" d="M0,40 Q10,36 20,40 T40,38 T60,42 T80,34 T100,40 T120,36 T140,42 T160,32 T180,40 T200,34 T220,42 T240,36 T260,40 T280,32 T300,42 T320,38 T340,40 T360,34 T380,42 T400,38 L400,80 L0,80 Z"/>
+        </svg>
+        <div class="grid"></div>
+        <div class="nc" style="left:2%;"></div>
+        <div class="tick" style="left:6px;">00:00</div>
+        <div class="tick" style="right:6px;">03:52</div>
+        <div class="phasor">
+          <i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+
+      <div class="cluster">
+        <div class="tc">
+          <div class="lab">Cue Point</div>
+          <div class="big" style="color:var(--ivory-3);">00:00<s>:</s>00</div>
+          <div class="sub"><span>LOADED</span><span>—</span></div>
+        </div>
+        <div class="stats">
+          <div class="bpm-row">
+            <div class="bpm" style="color:var(--ivory-3);">—</div>
+            <div class="pitch" style="color:var(--ivory-4);border-color:var(--rule);">—</div>
+            <div class="key" style="color:var(--ivory-4);background:transparent;border-color:var(--rule);">—</div>
+          </div>
+          <div class="meta-row">
+            <div class="mi"><span class="l">CUE</span><span class="v">—</span></div>
+            <div class="mi"><span class="l">LOOP</span><span class="v">—</span></div>
+            <div class="mi"><span class="l">SLIP</span><span class="v">—</span></div>
+          </div>
+        </div>
+        <div class="vu">
+          <div class="lab">PFL</div>
+          <div class="vu-bars">
+            <div class="col"><div class="fill" style="height:0%"></div></div>
+            <div class="col"><div class="fill" style="height:0%"></div></div>
+          </div>
+        </div>
+        <div class="eq">
+          <div class="knob"><div class="dial" style="--rot:0deg"></div><div class="lab">HI</div><div class="val">0</div></div>
+          <div class="knob"><div class="dial" style="--rot:0deg"></div><div class="lab">MID</div><div class="val">0</div></div>
+          <div class="knob"><div class="dial" style="--rot:0deg"></div><div class="lab">LOW</div><div class="val">0</div></div>
+          <div class="knob"><div class="dial" style="--rot:0deg"></div><div class="lab">TRIM</div><div class="val">0</div></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ══════ ASIDE ══════ -->
+  <aside class="aside">
+
+    <div class="panel-h">
+      <h3>Master</h3>
+      <span class="sect">№·01</span>
+    </div>
+    <div class="mvu">
+      <div class="scale-l">
+        <span>+6</span><span>+3</span><span>0</span><span>-6</span><span>-18</span><span>-∞</span>
+      </div>
+      <div class="bars">
+        <div class="chan"><div class="fill" style="height:72%"></div><div class="peak" style="bottom:80%"></div></div>
+        <div class="chan"><div class="fill" style="height:68%"></div><div class="peak" style="bottom:76%"></div></div>
+        <div class="chan"><div class="fill" style="height:55%"></div><div class="peak" style="bottom:64%"></div></div>
+        <div class="chan"><div class="fill" style="height:60%"></div><div class="peak" style="bottom:68%"></div></div>
+      </div>
+      <div class="scale-r">
+        <span>L1</span><span>R1</span><span>L2</span><span>R2</span>
+      </div>
+    </div>
+
+    <div class="panel-h">
+      <h3>Crossfade</h3>
+      <span class="sect">№·02</span>
+    </div>
+    <div class="crossfade">
+      <div class="track"><div class="thumb"></div></div>
+      <div class="labels"><b>◁ A · CH1</b><span>XF</span><b>B · CH2 ▷</b></div>
+    </div>
+
+    <div class="panel-h">
+      <h3>Session Log</h3>
+      <span class="sect">№·03</span>
+    </div>
+    <div class="log">
+      <div class="row"><span class="tm">41'12"</span><b><em>Children Of The Night</em></b><span>D1</span></div>
+      <div class="row"><span class="tm">38'44"</span><b>Around The World</b><span>D2</span></div>
+      <div class="row hot"><span class="tm">35'02"</span><b>— mix —</b><span>XF</span></div>
+      <div class="row"><span class="tm">30'18"</span><b>Digital Love</b><span>D1</span></div>
+      <div class="row"><span class="tm">26'55"</span><b>Superheroes</b><span>D2</span></div>
+      <div class="row"><span class="tm">22'04"</span><b>Voyager</b><span>D1</span></div>
+      <div class="row"><span class="tm">18'30"</span><b><em>One More Time</em></b><span>D2</span></div>
+    </div>
+
+    <div class="panel-h">
+      <h3>Art-Net</h3>
+      <span class="sect">№·04</span>
+    </div>
+    <div class="log">
+      <div class="row"><span class="tm">U.000</span><b>STROBE · 128 @ red</b><span>→</span></div>
+      <div class="row"><span class="tm">U.001</span><b>WASH · phase-sync</b><span>→</span></div>
+      <div class="row"><span class="tm">U.002</span><b>SMOKE</b><span>off</span></div>
+    </div>
+
+  </aside>
+
+  <!-- ══════ FOOT ══════ -->
+  <footer class="foot">
+    <div class="item ok"><span class="tag">PDJL</span><b>4 decks</b> · 2 CDJ-3000 · XDJ-RX3 · VDJ</div>
+    <div class="item ok"><span class="tag">TCNET</span><b>Layer A–H</b> · 180 Hz</div>
+    <div class="item warn"><span class="tag">ABL-LINK</span><b>2 peers</b> · 128.00 BPM</div>
+    <div class="item"><span class="tag">ART-N</span><b>idle</b> · 4 universes armed</div>
+    <div class="sp"></div>
+    <div class="item"><span class="tag">CPU</span><b>12%</b> · 47 MB</div>
+    <div class="sig">Proposal <em>H · Atelier</em> — engraved by claude</div>
+  </footer>
+
+</div>
+
+<script>
+/* Animate phasor (1/4 beat rotation synced to 128 BPM feel) */
+(() => {
+  const all = [...document.querySelectorAll('.deck')];
+  const tempos = [128, 123, 0, 0];
+  all.forEach((d, i) => {
+    const dots = d.querySelectorAll('.phasor i');
+    if (!dots.length || !tempos[i]) return;
+    const interval = (60000 / tempos[i]);
+    let q = [...dots].findIndex(x => x.classList.contains('on'));
+    if (q < 0) q = 0;
+    setInterval(() => {
+      dots.forEach(x => x.classList.remove('on'));
+      q = (q + 1) % dots.length;
+      dots[q].classList.add('on');
+    }, interval);
+  });
+
+  /* Animate VU meters subtly — breathe */
+  const vus = document.querySelectorAll('.vu .fill, .mvu .chan .fill');
+  vus.forEach((el) => {
+    const base = parseFloat(el.style.height) || 0;
+    if (!base) return;
+    setInterval(() => {
+      const jitter = (Math.random() - .5) * 12;
+      el.style.height = Math.max(0, Math.min(100, base + jitter)) + '%';
+    }, 200 + Math.random() * 120);
+  });
+
+  /* Live clock update (HH:MM:SS) */
+  const clock = document.querySelector('.clock');
+  if (clock) {
+    setInterval(() => {
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      const ss = String(d.getSeconds()).padStart(2,'0');
+      clock.innerHTML = `${hh}:${mm}<b>:${ss}</b>`;
+    }, 1000);
+  }
+})();
+</script>
+</body>
+</html>
