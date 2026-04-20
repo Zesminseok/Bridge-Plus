@@ -10,6 +10,84 @@
 @font-face{font-family:'DSEG7';src:url('./fonts/DSEG7Classic-Regular.woff2') format('woff2');font-display:swap}
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
+  /* ═══ Layer 1 · PRIMITIVE — 원시 색/크기 값 (직접 참조하지 말 것) ═══ */
+  /* Orange scale (MONO accent) */
+  --c-orange-300:#ffb180;--c-orange-400:#ff8a4a;--c-orange-500:#ff6b2c;--c-orange-600:#a34418;--c-orange-700:#8b3a10;
+  --c-orange-50:rgba(255,107,44,.08);--c-orange-100:rgba(255,107,44,.15);--c-orange-200:rgba(255,107,44,.35);
+  /* Violet scale (Onyx accent) */
+  --c-violet-300:#a4a4ff;--c-violet-400:#8787ff;--c-violet-500:#7575ef;--c-violet-600:#6a6adf;
+  --c-violet-50:rgba(135,135,255,.08);--c-violet-100:rgba(135,135,255,.15);--c-violet-200:rgba(135,135,255,.25);
+  /* Neutral greens/yellows/reds */
+  --c-green-400:#4ae183;--c-green-500:#34d399;--c-green-50:rgba(74,225,131,.1);--c-green-100:rgba(74,225,131,.2);
+  --c-yellow-400:#ffd16d;--c-yellow-500:#efc20a;--c-yellow-50:rgba(239,194,10,.1);--c-yellow-100:rgba(239,194,10,.22);
+  --c-red-400:#ffb4ab;--c-red-500:#ff3b3b;--c-red-50:rgba(255,80,80,.1);
+  --c-blue-400:#a4c9ff;--c-blue-500:#0267b8;--c-cyan-400:#4dd4e6;--c-pink-400:#ff7eb3;
+  /* Gray scale */
+  --c-gray-50:#e2e2e9;--c-gray-100:#c0c0cc;--c-gray-200:#8b8b98;--c-gray-300:#42424e;
+  --c-gray-400:#282a2f;--c-gray-500:#1e2024;--c-gray-600:#1a1b21;--c-gray-700:#111318;--c-gray-800:#0c0e12;
+  /* MONO neutral (더 중립적) */
+  --c-mono-50:#f2f2f2;--c-mono-100:#c8c8c8;--c-mono-200:#888;--c-mono-300:#4a4a4a;
+  --c-mono-500:#2a2a2a;--c-mono-600:#222;--c-mono-700:#1a1a1a;--c-mono-800:#141414;--c-mono-900:#0c0c0c;
+  /* Fonts */
+  --f-sans-kr:'Noto Sans KR',-apple-system,sans-serif;
+  --f-sans-en:'Inter','Noto Sans KR',-apple-system,sans-serif;
+  --f-mono-legacy:'DM Mono',monospace;
+  --f-mono-en:'JetBrains Mono','DM Mono',monospace;
+  --f-label:'Space Grotesk','Noto Sans KR',sans-serif;
+  --f-seg:'DSEG7',monospace;
+  /* Spacing tokens (4px base) */
+  --s-0:0;--s-1:2px;--s-2:4px;--s-3:6px;--s-4:8px;--s-5:12px;--s-6:16px;--s-8:24px;--s-10:32px;
+  /* Radius */
+  --r-none:0;--r-sm:3px;--r-md:6px;--r-lg:10px;--r-xl:12px;--r-pill:999px;
+  /* Transition */
+  --t-fast:.1s;--t-base:.15s;--t-slow:.3s;
+
+  /* ═══ Layer 2 · SEMANTIC — 의미 기반 토큰 (기본 Onyx 테마) ═══ */
+  --color-bg-app:var(--c-gray-700);
+  --color-bg-surface:var(--c-gray-600);
+  --color-bg-elevated:var(--c-gray-500);
+  --color-bg-input:var(--c-gray-400);
+  --color-bg-lowest:var(--c-gray-800);
+  --color-border-subtle:rgba(60,60,80,.12);
+  --color-border-default:rgba(60,60,80,.25);
+  --color-text-primary:var(--c-gray-50);
+  --color-text-secondary:var(--c-gray-100);
+  --color-text-tertiary:var(--c-gray-200);
+  --color-text-disabled:var(--c-gray-300);
+  --color-accent:var(--c-violet-400);
+  --color-accent-dim:var(--c-violet-600);
+  --color-accent-bg:var(--c-violet-50);
+  --color-accent-border:var(--c-violet-200);
+  --color-accent-glow:rgba(135,135,255,.3);
+  --color-state-play:var(--c-green-400);
+  --color-state-cue:var(--c-yellow-400);
+  --color-state-stop:var(--c-red-400);
+  --color-layer-a:var(--c-cyan-400);
+  --color-layer-b:var(--c-pink-400);
+  --color-master:var(--c-yellow-400);
+  --color-phase-on:var(--c-violet-400);
+  --color-timecode:var(--c-gray-50);
+  --color-timecode-glow:var(--c-green-50);
+  --font-body:var(--f-sans-kr);
+  --font-heading:var(--f-sans-kr);
+  --font-label:var(--f-label);
+  --font-numeric:var(--f-mono-legacy);
+  --font-timecode:var(--f-seg);
+  --font-display:var(--f-mono-legacy);
+  --radius-card:var(--r-xl);
+  --radius-button:var(--r-pill);
+  --radius-input:var(--r-md);
+
+  /* ═══ Layer 3 · COMPONENT — 컴포넌트 기본값 ═══ */
+  --artwork-size:96px;--artwork-radius:var(--r-md);--artwork-object-fit:cover;
+  --timecode-size:31px;--timecode-letter-spacing:.04em;
+  --bpm-pill-size:15px;--bpm-pill-padding:2px 6px;--bpm-pill-height:24px;--bpm-pill-radius:var(--r-pill);
+  --phase-width:22px;--phase-height:22px;--phase-gap:2px;--phase-radius:var(--r-sm);
+  --vu-bar-width:10px;
+  --eq-knob-size:22px;
+  --btn-height-sm:22px;--btn-height-md:28px;--btn-height-lg:32px;
+
+  /* ═══ LEGACY alias — 기존 코드 호환 유지 ═══ */
   --bg:#111318;--bg2:#1a1b21;--bg3:#1e2024;--bg4:#282a2f;
   --bg-lowest:#0c0e12;--bg-highest:#333539;
   --bdr:rgba(60,60,80,.12);--bdr2:rgba(60,60,80,.25);
@@ -466,30 +544,105 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-log{max-height:180px;overflow-y:auto;background:rgba(12,14,18,.8);border:1px solid var(--bdr);border-radius:6px;padding:6px 8px;font:400 9px/1.5 var(--mn);color:var(--tx3);white-space:pre;tab-size:2}
 
 /* ═══════════════════════════════════════════════════════════════ */
+/* ═════════ COMPONENT BASE (c-*) — 테마 독립, 토큰으로 제어 ═════ */
+/* ═══════════════════════════════════════════════════════════════ */
+/* 기존 .dkart / .dtc / .dphs / .dbadge 등은 아래 컴포넌트의 alias 로 */
+/* 동작하여 기존 JS 바인딩(id 유지) + 테마 토큰만 바꿔 전체 전환 가능 */
+
+/* ── Artwork ── */
+.c-artwork{width:var(--artwork-size);height:var(--artwork-size);aspect-ratio:1;flex-shrink:0;overflow:hidden;background:var(--color-bg-lowest);border:var(--artwork-border,1px solid var(--color-border-default));border-radius:var(--artwork-radius);position:relative;cursor:pointer;transition:filter var(--t-base)}
+.c-artwork:hover{filter:brightness(.6)}
+.c-artwork img{width:100%;height:100%;object-fit:var(--artwork-object-fit);display:block}
+.c-artwork::after{content:'⏏';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;background:rgba(0,0,0,0);pointer-events:none;opacity:0;transition:all var(--t-base)}
+.c-artwork:hover::after{background:rgba(0,0,0,.5);opacity:1}
+
+/* ── Timecode ── */
+.c-timecode{font:normal var(--timecode-size) var(--font-timecode);color:var(--color-timecode);letter-spacing:var(--timecode-letter-spacing);white-space:nowrap;-webkit-font-smoothing:none;transition:color var(--t-slow);line-height:1;font-variant-numeric:tabular-nums}
+.c-timecode[data-state="inactive"],.c-timecode.inactive{color:var(--color-text-disabled)}
+
+/* ── BPM Pill ── */
+.c-bpm-pill{font:700 var(--bpm-pill-size)/1 var(--font-numeric);color:var(--color-accent);padding:var(--bpm-pill-padding);border:1px solid var(--color-accent-border);background:var(--color-accent-bg);border-radius:var(--bpm-pill-radius);height:var(--bpm-pill-height);box-sizing:border-box;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1}
+.c-bpm-pill[data-state="inactive"],.c-bpm-pill.inactive{color:var(--color-text-secondary);border-color:var(--color-border-default);background:transparent}
+.c-bpm-pill__lbl{font:500 7px var(--font-numeric);color:var(--color-text-tertiary);letter-spacing:.14em}
+
+/* ── Key Box ── */
+.c-key-box{font:700 11px/1 var(--font-numeric);color:var(--color-text-secondary);padding:2px 7px;border:1px solid var(--color-border-default);border-radius:var(--radius-button);display:inline-flex;align-items:center;height:var(--bpm-pill-height);box-sizing:border-box;letter-spacing:.04em}
+
+/* ── Phase Meter (기본 2×2 grid) ── */
+.c-phase{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);grid-auto-flow:row;gap:var(--phase-gap);width:var(--phase-width);height:var(--phase-height);flex-shrink:0}
+.c-phase--horizontal{display:flex;flex-direction:row;gap:var(--phase-gap);width:auto;height:var(--phase-height,12px)}
+.c-phase--horizontal .c-phase__seg{flex:1}
+.c-phase__seg{border-radius:var(--phase-radius);background:rgba(255,255,255,.06);position:relative;overflow:hidden}
+.c-phase__seg[data-active="true"],.c-phase__seg.on{background:rgba(255,255,255,.12)}
+.c-phase__fill{position:absolute;inset:0;border-radius:var(--phase-radius);background:var(--color-phase-on);opacity:0;transition:opacity var(--t-fast)}
+
+/* ── VU Bar / EQ Knob / Buttons 은 기존 .dvu-* / .deq-* / .dkbtn 구조 그대로 유지 ── */
+/* Phase 6.3 에서 점진 마이그레이션 */
+
+/* ═══════════════════════════════════════════════════════════════ */
 /* ═════════ LAYOUT VARIANTS CSS (독립 스코프) ═══════════════════ */
 /* ═══════════════════════════════════════════════════════════════ */
 
-/* ═════════ MONO 컬러/폰트 팔레트 — 새 레이아웃 전역 공통 ═════════ */
+/* ═════════ THEME: MONO (E/F/G 레이아웃 공통) — SEMANTIC 토큰만 override ═════════ */
 body[data-layout="row"],
 body[data-layout="tower"],
 body[data-layout="card"]{
-  /* 배경 — 더 중립적인 그레이 톤 */
-  --bg:#141414; --bg2:#1a1a1a; --bg3:#222; --bg4:#2a2a2a;
-  --bg-lowest:#0c0c0c; --bg-highest:#333;
-  --bdr:rgba(70,70,70,.2); --bdr2:rgba(110,110,110,.35);
-  /* 텍스트 */
-  --tx:#f2f2f2; --tx2:#c8c8c8; --tx3:#888; --tx4:#4a4a4a;
-  /* Accent — 오렌지 (MONO) */
-  --key:#ff6b2c; --key2:#a34418; --key-dim:#8b3a10;
-  --grn:#ff8a4a; --grn2:#d97030;
-  --blu:#7ec7ff; --blu2:#5090c0;
-  --ylw:#ffcc66; --ylw2:#d4aa50;
-  --red:#ff6b2c; --pur:#ff6b2c; --org:#ff6b2c;
-  /* 폰트 */
-  --sn:'Inter','Noto Sans KR',-apple-system,sans-serif;
-  --mn:'JetBrains Mono','DM Mono',monospace;
-  --lb:'Inter','Space Grotesk','Noto Sans KR',sans-serif;
-  /* --seg 는 유지 (타임코드 DSEG7) */
+  /* SEMANTIC — 의미 토큰 재정의로 전체 앱 색/폰트 전환 */
+  --color-bg-app:var(--c-mono-800);
+  --color-bg-surface:var(--c-mono-700);
+  --color-bg-elevated:var(--c-mono-600);
+  --color-bg-input:var(--c-mono-500);
+  --color-bg-lowest:var(--c-mono-900);
+  --color-border-subtle:rgba(70,70,70,.2);
+  --color-border-default:rgba(110,110,110,.35);
+  --color-text-primary:var(--c-mono-50);
+  --color-text-secondary:var(--c-mono-100);
+  --color-text-tertiary:var(--c-mono-200);
+  --color-text-disabled:var(--c-mono-300);
+  --color-accent:var(--c-orange-500);
+  --color-accent-dim:var(--c-orange-600);
+  --color-accent-bg:var(--c-orange-50);
+  --color-accent-border:var(--c-orange-200);
+  --color-accent-glow:rgba(255,107,44,.28);
+  --color-state-play:var(--c-orange-500);
+  --color-state-cue:#ffcc66;
+  --color-state-stop:var(--c-orange-500);
+  --color-phase-on:var(--c-orange-500);
+  --color-timecode:var(--c-mono-50);
+  --color-timecode-glow:var(--color-accent-glow);
+  --color-master:#ffcc66;
+  --color-layer-a:#7ec7ff;
+  --color-layer-b:#ff9fb4;
+  --font-body:var(--f-sans-en);
+  --font-heading:var(--f-sans-en);
+  --font-label:var(--f-sans-en);
+  --font-numeric:var(--f-mono-en);
+  --font-display:var(--f-mono-en);
+  --radius-card:var(--r-none);
+  --radius-button:var(--r-none);
+  --radius-input:var(--r-none);
+
+  /* LEGACY alias — 새 SEMANTIC 토큰을 기존 variable 에 반영 (호환) */
+  --bg:var(--color-bg-app);
+  --bg2:var(--color-bg-surface);
+  --bg3:var(--color-bg-elevated);
+  --bg4:var(--color-bg-input);
+  --bg-lowest:var(--color-bg-lowest);
+  --bdr:var(--color-border-subtle);
+  --bdr2:var(--color-border-default);
+  --tx:var(--color-text-primary);
+  --tx2:var(--color-text-secondary);
+  --tx3:var(--color-text-tertiary);
+  --tx4:var(--color-text-disabled);
+  --key:var(--color-accent);
+  --key2:var(--color-accent-dim);
+  --key-dim:var(--c-orange-700);
+  --grn:var(--c-orange-400);
+  --grn2:#d97030;
+  --blu:#7ec7ff;--blu2:#5090c0;
+  --ylw:#ffcc66;--ylw2:#d4aa50;
+  --red:var(--color-accent);--pur:var(--color-accent);--org:var(--color-accent);
+  --sn:var(--font-body);--mn:var(--font-numeric);--lb:var(--font-label);
 }
 /* 로고 gradient 도 MONO 오렌지로 */
 body[data-layout="row"] .li,
