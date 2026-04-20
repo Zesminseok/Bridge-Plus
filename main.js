@@ -816,12 +816,14 @@ function doQuit(){
       console.log('[APP] cleanup done — force exiting');
       try{if(splash&&!splash.isDestroyed())splash.destroy();}catch(_){}
       try{if(win&&!win.isDestroyed())win.destroy();}catch(_){}
-      // Force process exit — app.quit() alone doesn't always work
-      process.exit(0);
+      // abletonlink native thread sleep_for 루프가 프로세스 종료 시점에도 살아있어
+      // process.exit() → libc atexit → C++ dtor 가 abort 를 발생시킴.
+      // app.exit() 는 Chromium shutdown 후 OS 로 바로 반환 → native dtor 경로 우회.
+      app.exit(0);
     },500);
   },100);
   // Safety net: force exit after 2s no matter what
-  setTimeout(()=>{console.log('[APP] safety net exit');process.exit(0);},2000).unref();
+  setTimeout(()=>{console.log('[APP] safety net exit');app.exit(0);},2000).unref();
 }
 app.on('window-all-closed',(e)=>{
   // Prevent default quit — we handle it in doQuit
