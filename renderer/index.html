@@ -72,7 +72,8 @@
   --font-heading:var(--f-sans-kr);
   --font-label:var(--f-label);
   --font-numeric:var(--f-mono-legacy);
-  --font-timecode:var(--f-seg);
+  /* 타임코드 — 7-segment(DSEG7) 대신 고정폭 monospace 를 기본으로 */
+  --font-timecode:var(--f-mono-legacy);
   --font-display:var(--f-mono-legacy);
   --radius-card:var(--r-xl);
   --radius-button:var(--r-pill);
@@ -93,7 +94,9 @@
   --bdr:rgba(60,60,80,.12);--bdr2:rgba(60,60,80,.25);
   --tx:#e2e2e9;--tx2:#c0c0cc;--tx3:#8b8b98;--tx4:#42424e;
   --key:#8787ff;--key2:#6a6adf;--key-dim:#7575ef;--grn:#4ae183;--grn2:#34d399;--blu:#a4c9ff;--blu2:#0267b8;--ylw:#ffd16d;--ylw2:#efc20a;--red:#ffb4ab;--pur:#a78bfa;--org:#fb923c;
-  --mn:'DM Mono',monospace;--sn:'Noto Sans KR',-apple-system,sans-serif;--lb:'Space Grotesk','Noto Sans KR',sans-serif;--seg:'DSEG7',monospace
+  --mn:'DM Mono',monospace;--sn:'Noto Sans KR',-apple-system,sans-serif;--lb:'Space Grotesk','Noto Sans KR',sans-serif;
+  /* --seg 는 SEMANTIC font-timecode 를 참조 (기본 monospace, DSEG7 은 --f-seg primitive 로 옵션 보존) */
+  --seg:var(--font-timecode)
 }
 .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
 .active-glow{}
@@ -162,7 +165,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dbadge{font:600 9px var(--mn);padding:2px 6px;border-radius:999px;letter-spacing:.06em}
 .dbadge.br{background:rgba(255,80,80,.12);color:var(--red);border:1px solid rgba(255,80,80,.2)}
 .dbadge.br.off{background:rgba(60,60,80,.25);color:rgba(120,100,120,.5);border:1px solid rgba(80,60,80,.2);animation:none;box-shadow:none}
-.dtc{font:normal 31px var(--seg);color:var(--tx4);letter-spacing:.04em;transition:color .2s;white-space:nowrap;-webkit-font-smoothing:none}
+.dtc{font:300 31px var(--font-timecode,var(--seg));color:var(--tx4);letter-spacing:.02em;transition:color .2s;white-space:nowrap;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 .dk[data-st="play"] .dtc,.dk[data-st="scratch"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
 .dwov{height:14px;margin:0 0 3px;background:var(--bg-lowest);border-radius:3px;overflow:hidden;cursor:pointer;position:relative}
@@ -617,6 +620,7 @@ body[data-layout="card"]{
   --font-heading:var(--f-sans-en);
   --font-label:var(--f-sans-en);
   --font-numeric:var(--f-mono-en);
+  --font-timecode:var(--f-mono-en);
   --font-display:var(--f-mono-en);
   --radius-card:var(--r-none);
   --radius-button:var(--r-none);
