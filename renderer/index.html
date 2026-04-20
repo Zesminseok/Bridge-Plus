@@ -786,13 +786,13 @@ body[data-layout="row"] .rw-ddz{padding:40px;text-align:center}
 
 /* ═════════ TOWER 레이아웃 — 200px 세로 컬럼, 가로 스크롤 ═════════ */
 body[data-layout="tower"] .deck-row{flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding-bottom:8px;align-items:flex-start;max-width:100%}
-body[data-layout="tower"] .dk.tw-dk{width:210px;min-width:210px;flex-shrink:0;padding:10px;display:flex;flex-direction:column;gap:8px;border-radius:6px}
+body[data-layout="tower"] .dk.tw-dk{width:240px;min-width:240px;flex-shrink:0;padding:10px;display:flex;flex-direction:column;gap:8px;border-radius:6px}
 body[data-layout="tower"] .tw-head{display:flex;flex-direction:column;gap:5px;padding-bottom:6px;border-bottom:1px solid var(--bdr)}
 body[data-layout="tower"] .tw-head-top{display:flex;align-items:center;gap:5px;height:22px}
 body[data-layout="tower"] .tw-head-top .dk-player-lbl{font:500 7px var(--sn);color:var(--tx3);letter-spacing:.22em;text-transform:uppercase}
 body[data-layout="tower"] .tw-head-top .dk-num{font:700 18px var(--mn);color:var(--tx);line-height:1}
 body[data-layout="tower"] .tw-head-btm{display:flex;align-items:center;gap:4px;height:18px}
-body[data-layout="tower"] .tw-art-wrap .dkart{width:190px;height:190px;aspect-ratio:1;border-radius:4px;overflow:hidden;border:1px solid var(--bdr);margin:0 auto}
+body[data-layout="tower"] .tw-art-wrap .dkart{width:220px;height:220px;aspect-ratio:1;border-radius:4px;overflow:hidden;border:1px solid var(--bdr);margin:0 auto}
 body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block}
 body[data-layout="tower"] .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;min-height:32px;justify-content:center}
 body[data-layout="tower"] .tw-title span[id^="dta"]{font:500 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
@@ -804,6 +804,10 @@ body[data-layout="tower"] .tw-wf .dwz{height:100%;border-radius:3px;margin:0}
 body[data-layout="tower"] .tw-tc{text-align:center}
 body[data-layout="tower"] .tw-tc .dtc{font:300 22px var(--font-timecode);color:var(--color-timecode);-webkit-font-smoothing:antialiased;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.02em}
 body[data-layout="tower"] .tw-bpm{display:flex;flex-direction:column;gap:4px;align-items:center}
+body[data-layout="tower"] .tw-bpm-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:5px;align-items:center;justify-content:center;width:100%}
+body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]{flex-wrap:nowrap!important;gap:4px!important}
+body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling{text-align:left}
+body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
 body[data-layout="tower"] .tw-bpm .dk-bpm-cur{font-size:13px;height:22px;padding:2px 7px}
 body[data-layout="tower"] .tw-bpm .dphs{display:flex;gap:3px;width:80%;height:10px}
 body[data-layout="tower"] .tw-bpm .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
@@ -2925,8 +2929,10 @@ function deckHTMLTower(slot){
       <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
     </div>
     <div class="tw-bpm">
-      <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:center"></div>
-      <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+      <div class="tw-bpm-row">
+        <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;justify-content:center"></div>
+        <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+      </div>
       ${phas}
     </div>
     ${vuStrip}
