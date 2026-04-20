@@ -461,6 +461,120 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-log-toggle:hover{color:var(--tx2)}
 .mx-log{max-height:180px;overflow-y:auto;background:rgba(12,14,18,.8);border:1px solid var(--bdr);border-radius:6px;padding:6px 8px;font:400 9px/1.5 var(--mn);color:var(--tx3);white-space:pre;tab-size:2}
 
+/* ═══════════════════════════════════════════════════════════════ */
+/* ═════════ LAYOUT VARIANTS CSS (독립 스코프) ═══════════════════ */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* ═════════ ROW 레이아웃 — 1 덱 1 풀폭 행, 세로 스크롤 ═════════ */
+body[data-layout="row"] .deck-row{flex-direction:column;gap:10px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px}
+body[data-layout="row"] .dk.rw-dk{padding:10px 14px;display:flex;flex-direction:column;gap:8px;border-radius:8px;min-width:0}
+body[data-layout="row"] .rw-head{display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr);height:26px;flex-shrink:0}
+body[data-layout="row"] .rw-head .dk-num{font:800 20px var(--lb);color:var(--tx);line-height:1;flex-shrink:0}
+body[data-layout="row"] .rw-title-inline{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;padding:0 10px;overflow:hidden}
+body[data-layout="row"] .rw-title-inline > span[id^="dta"]{font:500 12px var(--sn);color:var(--tx3);flex-shrink:0;max-width:40%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body[data-layout="row"] .rw-title-inline > span[id^="dtn"]{font:600 13px var(--sn);color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body[data-layout="row"] .rw-body{display:grid;grid-template-columns:180px minmax(0,1fr) 48px 40px 320px;grid-template-rows:180px;gap:12px;align-items:stretch}
+body[data-layout="row"] .rw-art-wrap{grid-column:1;width:180px;height:180px}
+body[data-layout="row"] .rw-art-wrap .dkart{width:100%;height:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--bdr)}
+body[data-layout="row"] .rw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block}
+body[data-layout="row"] .rw-wf-wrap{grid-column:2;display:flex;flex-direction:column;gap:4px;min-width:0}
+body[data-layout="row"] .rw-wf-wrap .dwov{height:28px;border-radius:4px;margin:0}
+body[data-layout="row"] .rw-wf-wrap .dwz-row{flex:1;min-height:0}
+body[data-layout="row"] .rw-wf-wrap .dwz{height:100%;border-radius:4px;margin:0}
+body[data-layout="row"] .rw-body .dvu-strip{grid-column:3;width:48px;height:180px;flex-direction:row;border-radius:4px;padding:4px;gap:3px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1)}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-ch{flex-direction:column;gap:3px;align-items:center;flex:1;min-width:0}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-hbar{width:10px;flex:1;height:auto;min-height:0;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-hfill{position:absolute;bottom:0;left:0;right:0;top:auto;width:auto;height:0}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-lbl{font:700 7px var(--mn);color:var(--tx4);letter-spacing:.04em;line-height:1;flex-shrink:0}
+body[data-layout="row"] .rw-body .deq-strip{grid-column:4;width:40px;height:180px;flex-direction:column;padding:4px 0;gap:8px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:4px}
+body[data-layout="row"] .rw-tail{grid-column:5;display:flex;flex-direction:column;gap:4px;height:180px;min-width:0}
+body[data-layout="row"] .rw-tail .dtc{font-size:44px;line-height:1;color:var(--tx);text-shadow:0 0 14px rgba(74,225,131,.2);font-family:var(--seg);-webkit-font-smoothing:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body[data-layout="row"] .rw-tail .rw-bpm-row{display:flex;align-items:center;gap:8px;min-height:26px}
+body[data-layout="row"] .rw-tail .rw-bpm-row .dk-bpm-cur{font-size:17px;height:28px;padding:3px 10px}
+body[data-layout="row"] .rw-tail .rw-phasor-row{height:12px;margin-top:2px}
+body[data-layout="row"] .rw-tail .rw-phasor-row .dphs{display:flex;gap:3px;width:100%;height:100%}
+body[data-layout="row"] .rw-tail .rw-phasor-row .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
+body[data-layout="row"] .rw-tail .rw-phasor-row .dphs-fill{position:absolute;inset:0;width:0;background:var(--grn);opacity:0}
+body[data-layout="row"] .rw-ctl-sec{display:flex;flex-direction:column;gap:2px}
+body[data-layout="row"] .rw-ctl-lbl{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
+body[data-layout="row"] .rw-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:28px}
+body[data-layout="row"] .rw-ctl-row .dkbtn,body[data-layout="row"] .rw-ctl-row .dksm-btn{height:100%;border-radius:4px;font-size:10px;min-height:0}
+body[data-layout="row"] .rw-ddz{padding:40px;text-align:center}
+
+/* ═════════ TOWER 레이아웃 — 200px 세로 컬럼, 가로 스크롤 ═════════ */
+body[data-layout="tower"] .deck-row{flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding-bottom:8px;align-items:flex-start;max-width:100%}
+body[data-layout="tower"] .dk.tw-dk{width:210px;min-width:210px;flex-shrink:0;padding:10px;display:flex;flex-direction:column;gap:8px;border-radius:6px}
+body[data-layout="tower"] .tw-head{display:flex;flex-direction:column;gap:5px;padding-bottom:6px;border-bottom:1px solid var(--bdr)}
+body[data-layout="tower"] .tw-head-top{display:flex;align-items:center;gap:5px;height:22px}
+body[data-layout="tower"] .tw-head-top .dk-player-lbl{font:500 7px var(--sn);color:var(--tx3);letter-spacing:.22em;text-transform:uppercase}
+body[data-layout="tower"] .tw-head-top .dk-num{font:700 18px var(--mn);color:var(--tx);line-height:1}
+body[data-layout="tower"] .tw-head-btm{display:flex;align-items:center;gap:4px;height:18px}
+body[data-layout="tower"] .tw-art-wrap .dkart{width:190px;height:190px;aspect-ratio:1;border-radius:4px;overflow:hidden;border:1px solid var(--bdr);margin:0 auto}
+body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block}
+body[data-layout="tower"] .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;min-height:32px;justify-content:center}
+body[data-layout="tower"] .tw-title span[id^="dta"]{font:500 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+body[data-layout="tower"] .tw-title span[id^="dtn"]{font:600 12px var(--sn);color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+body[data-layout="tower"] .tw-wf{display:flex;flex-direction:column;gap:3px}
+body[data-layout="tower"] .tw-wf .dwov{height:14px;border-radius:3px;margin:0}
+body[data-layout="tower"] .tw-wf .dwz-row{height:44px}
+body[data-layout="tower"] .tw-wf .dwz{height:100%;border-radius:3px;margin:0}
+body[data-layout="tower"] .tw-tc{text-align:center}
+body[data-layout="tower"] .tw-tc .dtc{font-size:22px;font-family:var(--seg);color:var(--tx);-webkit-font-smoothing:none;line-height:1;font-variant-numeric:tabular-nums}
+body[data-layout="tower"] .tw-bpm{display:flex;flex-direction:column;gap:4px;align-items:center}
+body[data-layout="tower"] .tw-bpm .dk-bpm-cur{font-size:13px;height:22px;padding:2px 7px}
+body[data-layout="tower"] .tw-bpm .dphs{display:flex;gap:3px;width:80%;height:10px}
+body[data-layout="tower"] .tw-bpm .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
+body[data-layout="tower"] .tw-bpm .dphs-fill{position:absolute;inset:0;width:0;background:var(--grn);opacity:0}
+body[data-layout="tower"] .tw-dk .dvu-strip{flex-direction:row;width:100%;height:auto;padding:4px 5px;gap:3px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1);border-radius:3px}
+body[data-layout="tower"] .tw-dk .dvu-strip .dvu-ch{flex-direction:row;gap:5px;align-items:center;flex:1;min-width:0}
+body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hbar{flex:1;height:8px;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden;width:auto;min-height:0}
+body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:0;height:auto}
+body[data-layout="tower"] .tw-dk .dvu-strip .dvu-lbl{width:10px;text-align:center;flex-shrink:0;font-size:7px}
+body[data-layout="tower"] .tw-dk .deq-strip{flex-direction:row;width:100%;height:auto;padding:6px 4px;gap:4px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:3px}
+body[data-layout="tower"] .tw-ctl-sec{display:flex;flex-direction:column;gap:2px}
+body[data-layout="tower"] .tw-ctl-lbl{font:700 7px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
+body[data-layout="tower"] .tw-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;height:26px}
+body[data-layout="tower"] .tw-ctl-row .dkbtn,body[data-layout="tower"] .tw-ctl-row .dksm-btn{height:100%;border-radius:3px;font-size:9px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:0}
+
+/* ═════════ CARD 레이아웃 — 앨범 히어로, 최대 2열, 세로 스크롤 ═════════ */
+body[data-layout="card"] .deck-row{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px}
+body[data-layout="card"] .dk.cd-dk{display:flex;flex-direction:column;gap:0;padding:0;border-radius:10px;overflow:hidden;min-width:0}
+body[data-layout="card"] .cd-hero{position:relative;height:240px;overflow:hidden;background:var(--bg-lowest)}
+body[data-layout="card"] .cd-hero .dkart{position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:0;aspect-ratio:auto}
+body[data-layout="card"] .cd-hero .dkart img{width:100%;height:100%;object-fit:cover;display:block}
+body[data-layout="card"] .cd-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,transparent 30%,transparent 60%,rgba(12,14,18,.96) 100%);pointer-events:none;z-index:2}
+body[data-layout="card"] .cd-top{position:absolute;top:0;left:0;right:0;padding:10px 14px;display:flex;align-items:center;gap:8px;z-index:3;height:44px}
+body[data-layout="card"] .cd-top .dk-player-lbl{font:500 8px var(--sn);color:rgba(255,255,255,.65);letter-spacing:.22em;text-transform:uppercase}
+body[data-layout="card"] .cd-top .dk-num{font:700 22px var(--mn);color:#fff;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+body[data-layout="card"] .cd-top .dbadge{background:rgba(0,0,0,.38);border-color:rgba(255,255,255,.22);color:#fff}
+body[data-layout="card"] .cd-top .dhwl{color:#fff!important}
+body[data-layout="card"] .cd-info{position:absolute;bottom:12px;left:14px;right:14px;z-index:3;color:#fff}
+body[data-layout="card"] .cd-info .cd-artist{font:500 11px var(--sn);color:rgba(255,255,255,.7);margin-bottom:2px;text-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body[data-layout="card"] .cd-info .cd-track{font:600 16px var(--sn);line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+body[data-layout="card"] .cd-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:rgba(26,27,33,.95)}
+body[data-layout="card"] .cd-wf{display:flex;flex-direction:column;gap:4px}
+body[data-layout="card"] .cd-wf .dwov{height:20px;border-radius:3px;margin:0}
+body[data-layout="card"] .cd-wf .dwz-row{height:54px}
+body[data-layout="card"] .cd-wf .dwz{height:100%;border-radius:4px;margin:0}
+body[data-layout="card"] .cd-tc-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+body[data-layout="card"] .cd-tc-row .dtc{font-size:28px;font-family:var(--seg);color:var(--tx);-webkit-font-smoothing:none;line-height:1}
+body[data-layout="card"] .cd-bpm-col{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+body[data-layout="card"] .cd-bpm-col .dphs{display:flex;gap:3px;width:100%;height:10px;min-width:80px}
+body[data-layout="card"] .cd-bpm-col .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
+body[data-layout="card"] .cd-bpm-col .dphs-fill{position:absolute;inset:0;width:0;background:var(--grn);opacity:0}
+body[data-layout="card"] .cd-mix-row{display:flex;gap:10px;align-items:stretch;min-height:56px}
+body[data-layout="card"] .cd-mix-row .dvu-strip{flex:1;flex-direction:row;padding:5px 7px;gap:4px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1);border-radius:4px;width:auto;height:auto}
+body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-ch{flex-direction:row;gap:5px;align-items:center;flex:1;min-width:0}
+body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hbar{flex:1;height:8px;width:auto;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden;min-height:0}
+body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;width:0;height:auto}
+body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-lbl{width:12px;text-align:center;font-size:7px;flex-shrink:0}
+body[data-layout="card"] .cd-mix-row .deq-strip{flex-direction:row;padding:6px 10px;gap:8px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:4px;width:auto;height:auto}
+body[data-layout="card"] .cd-ctl-sec{display:flex;flex-direction:column;gap:3px}
+body[data-layout="card"] .cd-ctl-lbl{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
+body[data-layout="card"] .cd-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:28px}
+body[data-layout="card"] .cd-ctl-row .dkbtn,body[data-layout="card"] .cd-ctl-row .dksm-btn{height:100%;border-radius:4px;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:0}
+body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
+
 </style>
 <script src="./waveform-gl.js"></script>
 </head><body>
@@ -846,8 +960,8 @@ const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIfac
   // Ableton Link
   linkEnabled:false,linkSource:'mixer',linkDeckIdx:0,
   tcnetUnicast:false,tcnetAllIfaces:false,
-  // Layout 테마 (default/tower/card/row)
-  layout:'default'};
+  // Layout 테마 (default/tower/card/row) — 첫 실행 기본값 tower
+  layout:'tower'};
 // Load persisted settings
 let cfg=Object.assign({},_CFG_DEF);
 try{const _s=localStorage.getItem('bridge_cfg');if(_s){const _p=JSON.parse(_s);Object.assign(cfg,_p);}}catch(_){}
@@ -2224,7 +2338,16 @@ function renderDecks(){
   updateHeader();
 }
 
+/* Layout dispatcher — cfg.layout 에 따라 deckHTML 변형 선택 */
 function deckHTML(slot){
+  const L=cfg.layout||'default';
+  if(L==='row')return deckHTMLRow(slot);
+  if(L==='tower')return deckHTMLTower(slot);
+  if(L==='card')return deckHTMLCard(slot);
+  return deckHTMLDefault(slot);
+}
+
+function deckHTMLDefault(slot){
   const d=DECKS[slot];
   const isHW=d.type==='hw';
   const phas=`<div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>`;
@@ -2343,6 +2466,276 @@ function deckHTML(slot){
     <div class="dshim"></div>
     ${hdr}
     <div class="dk-body">${sec1}${sec2}${sec3}${sec4}</div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* ═══════════ LAYOUT VARIANTS — deckHTMLRow / Tower / Card ═════ */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* Shared helpers for all layout variants */
+function _deckCommonParts(slot){
+  const d=DECKS[slot];
+  const isHW=d.type==='hw';
+  const isLoaded=d.ld;
+  const artSrc=isLoaded?(d.art||d.artUrl||''):'';
+  const tcStr=isLoaded?'00:00:00:00':'--:--:--:--';
+  const tcDim=isLoaded?'':'style="color:var(--tx4)"';
+  const phas=`<div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>`;
+  const vuStrip=isHW
+    ?`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">VU</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur)"></div></div></div></div>`
+    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}" style="background:#5af"></div></div></div><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}" style="background:#5af"></div></div></div><div class="dvu-ch dvu-fader" data-slot="${slot}"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur);height:100%"></div></div></div></div>`;
+  const _nEqBands=(_djmProfile?.ids?.length||3);
+  const _showEqLbl=_nEqBands<=3;
+  const _mkKnob=(id,lbl)=>`<div class="deq-knob"><svg id="${id}" viewBox="-12 -12 24 24" width="22" height="22">
+    <circle r="9" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="2"/>
+    <path id="${id}arc" fill="none" stroke="rgba(124,111,205,.6)" stroke-width="2" stroke-linecap="round" d=""/>
+    <line x1="0" y1="-3.5" x2="0" y2="-8" stroke="rgba(255,255,255,.9)" stroke-width="1.5" stroke-linecap="round" id="${id}tick"/>
+  </svg>${_showEqLbl?`<span class="deq-lbl">${lbl}</span>`:''}</div>`;
+  const eqStrip=isHW
+    ?`<div class="deq-strip" id="deqstrip${slot}">${_mkKnob('deqH'+slot,'HI')}${_mkKnob('deqM'+slot,'MID')}${_mkKnob('deqL'+slot,'LO')}</div>`
+    :'';
+  const cueAc=isLoaded?`data-a="cue" data-i="${slot}"`:' disabled';
+  const playAc=isLoaded?`data-a="play" data-i="${slot}"`:' disabled';
+  const stopAc=isLoaded?`data-a="stop" data-i="${slot}"`:' disabled';
+  const aAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="A"`:' disabled';
+  const bAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="B"`:' disabled';
+  // Waveform canvases (overview + zoom) — 모든 layout 공통 포함
+  const wfOverview=`<div class="dwov" id="dwov${slot}" style="${isLoaded?'':'display:flex;align-items:center;justify-content:center'}">
+    ${isLoaded?`<canvas id="wov${slot}"></canvas><canvas id="wovol${slot}" class="dwov-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;background:transparent"></canvas><div class="dwov-prog" id="dwov-prog${slot}"></div>`:`<span style="font:400 9px var(--mn);color:var(--tx4)">NO TRACK</span>`}
+  </div>`;
+  const wfZoom=`<div class="dwz" id="dwz${slot}" style="position:relative;${isLoaded?'':'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px'}">
+    ${isLoaded
+      ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div>`
+      :`<span style="font:400 11px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span>`
+    }
+  </div>`;
+  // Art
+  const artEl=`<div class="dkart" id="dart${slot}" ${isLoaded?`data-a="eject" data-i="${slot}"`:''}>${artSrc?`<img src="${artSrc}" alt="" onerror="this.src='assets/default-art.png'">`:`<img src="assets/default-art.png" alt="">`}</div>`;
+  // Play button icon
+  const playBtnContent=isLoaded&&d.pl?'<svg class="gi gi-pause"><use href="#i-pause"/></svg>':'<svg class="gi gi-play"><use href="#i-play"/></svg>';
+  return {d,isHW,isLoaded,artSrc,tcStr,tcDim,phas,vuStrip,eqStrip,
+    cueAc,playAc,stopAc,aAc,bAc,wfOverview,wfZoom,artEl,playBtnContent};
+}
+
+/* ═════════ Row 레이아웃 — 1 덱 1 풀폭 행, 세로 스크롤 ═════════ */
+function deckHTMLRow(slot){
+  const P=_deckCommonParts(slot);
+  const {d,isHW,isLoaded,phas,vuStrip,eqStrip,cueAc,playAc,stopAc,aAc,bAc,wfOverview,wfZoom,artEl,playBtnContent,tcStr,tcDim}=P;
+  /* Empty virtual deck */
+  if(!d.ld && !isHW){
+    return`<div class="dk rw-dk" id="dk${slot}" data-st="empty" data-type="virtual">
+      <div class="rw-head">
+        <span class="dk-num" id="did${slot}" style="opacity:.5">${slot+1}</span>
+        <span class="dk-player-lbl">PLAYER</span>
+        <span class="dbadge bm">EMPTY</span>
+        <div class="rw-title-inline"><span style="color:var(--tx4)">빈 덱</span></div>
+        <button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="ddz rw-ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">드래그 또는 클릭하여 열기</div></div>
+    </div>`;
+  }
+  return`<div class="dk rw-dk" id="dk${slot}" data-st="stop" data-type="${isHW?'hw':'virtual'}">
+    <div class="dshim"></div>
+    <div class="rw-head">
+      <span class="dk-num" id="did${slot}">${slot+1}</span>
+      <span class="dk-player-lbl">PLAYER</span>
+      <span class="dbadge bm" id="dbg${slot}">STOP</span>
+      <span class="dbadge br off" id="dair${slot}">ON AIR</span>
+      <div class="dksm" id="dksm${slot}" style="gap:3px">
+        <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}" style="padding:1px 5px;font-size:7px;min-width:32px">SYNC</span>
+        <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:1px 5px;font-size:7px;min-width:42px">MASTER</span>
+      </div>
+      <div class="rw-title-inline">
+        <span id="dta${slot}">${isLoaded?(d.ar||''):''}</span>
+        <span class="dk-title-sep" id="dtsep${slot}" ${(isLoaded&&d.ar)?'':'style="display:none"'}>—</span>
+        <span id="dtn${slot}">${isLoaded?(d.tn||'—'):'—'}</span>
+      </div>
+      <span class="dhwl" id="dhwl${slot}" style="font:500 9px var(--mn);color:var(--tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+d.model:''):''}</span>
+      ${isHW?'':`<button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>`}
+    </div>
+    <div class="rw-body">
+      <div class="rw-art-wrap">${artEl}</div>
+      <div class="rw-wf-wrap">
+        ${wfOverview}
+        <div class="dwz-row">${wfZoom}</div>
+      </div>
+      ${vuStrip}
+      ${eqStrip}
+      <div class="rw-tail">
+        <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
+        <div class="rw-bpm-row">
+          <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:6px;flex-shrink:0"></div>
+          <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+        </div>
+        <div class="rw-phasor-row">${phas}</div>
+        <div class="rw-ctl-sec">
+          <div class="rw-ctl-lbl">TRANSPORT</div>
+          <div class="rw-ctl-row">
+            <button class="dkbtn dkcue" ${cueAc}>CUE</button>
+            <button class="dkbtn dkplay" ${playAc}>${playBtnContent}</button>
+            <button class="dkbtn dkstop" ${stopAc}><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+          </div>
+        </div>
+        <div class="rw-ctl-sec">
+          <div class="rw-ctl-lbl">SMPTE</div>
+          <div class="rw-ctl-row">
+            <span class="dksm-btn dksm-master${d.mtcMaster?' on':''}" id="dmst${slot}" data-a="mtc-master" data-i="${slot}" style="display:flex;align-items:center;justify-content:center;cursor:pointer">MASTER</span>
+            <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
+            <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
+          </div>
+        </div>
+        <div class="dk-tc-time" id="dtime${slot}" style="font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ═════════ Tower 레이아웃 — 200px 세로 컬럼, 가로 스크롤 ═════════ */
+function deckHTMLTower(slot){
+  const P=_deckCommonParts(slot);
+  const {d,isHW,isLoaded,phas,vuStrip,eqStrip,cueAc,playAc,stopAc,aAc,bAc,wfOverview,wfZoom,artEl,playBtnContent,tcStr,tcDim}=P;
+  if(!d.ld && !isHW){
+    return`<div class="dk tw-dk" id="dk${slot}" data-st="empty" data-type="virtual">
+      <div class="tw-head">
+        <div class="tw-head-top">
+          <span class="dk-player-lbl" style="font-size:7px">PLAYER</span>
+          <span class="dk-num" id="did${slot}" style="font-size:18px;opacity:.5">${slot+1}</span>
+          <span class="dbadge bm" style="margin-left:auto">EMPTY</span>
+        </div>
+      </div>
+      <div class="ddz tw-ddz" data-a="open" data-i="${slot}" style="padding:40px 10px;text-align:center">
+        <div class="ddzi" style="margin:0 auto 8px">+</div>
+        <div style="font:400 10px var(--sn);color:var(--tx3)">클릭하여 열기</div>
+      </div>
+    </div>`;
+  }
+  return`<div class="dk tw-dk" id="dk${slot}" data-st="stop" data-type="${isHW?'hw':'virtual'}">
+    <div class="dshim"></div>
+    <div class="tw-head">
+      <div class="tw-head-top">
+        <span class="dk-player-lbl" style="font-size:7px">PLAYER</span>
+        <span class="dk-num" id="did${slot}" style="font-size:18px">${slot+1}</span>
+        <span class="dbadge bm" id="dbg${slot}" style="margin-left:auto">STOP</span>
+      </div>
+      <div class="tw-head-btm">
+        <span class="dhwl" id="dhwl${slot}" style="font:500 8px var(--mn);color:var(--tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:3px">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+d.model:''):'VIRTUAL'}</span>
+        <div class="dksm" id="dksm${slot}" style="gap:2px;margin-left:auto">
+          <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}" style="padding:1px 4px;font-size:6px;min-width:26px">SYNC</span>
+          <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:1px 4px;font-size:6px;min-width:34px">MASTER</span>
+        </div>
+        ${isHW?'':`<button class="dhtb cdl" data-a="remove" data-i="${slot}" style="padding:2px 5px"><svg class="gi gi-close"><use href="#i-close"/></svg></button>`}
+      </div>
+      <span class="dbadge br off" id="dair${slot}" style="display:none"></span>
+    </div>
+    <div class="tw-art-wrap">${artEl}</div>
+    <div class="tw-title">
+      <span id="dta${slot}">${isLoaded?(d.ar||''):''}</span>
+      <span class="dk-title-sep" id="dtsep${slot}" style="display:none">—</span>
+      <span id="dtn${slot}">${isLoaded?(d.tn||'—'):'—'}</span>
+    </div>
+    <div class="tw-wf">${wfOverview}<div class="dwz-row">${wfZoom}</div></div>
+    <div class="tw-tc">
+      <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
+    </div>
+    <div class="tw-bpm">
+      <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:center"></div>
+      <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+      ${phas}
+    </div>
+    ${vuStrip}
+    ${eqStrip}
+    <div class="tw-ctl-sec">
+      <div class="tw-ctl-lbl">TRANSPORT</div>
+      <div class="tw-ctl-row">
+        <button class="dkbtn dkcue" ${cueAc}>CUE</button>
+        <button class="dkbtn dkplay" ${playAc}>${playBtnContent}</button>
+        <button class="dkbtn dkstop" ${stopAc}><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+      </div>
+    </div>
+    <div class="tw-ctl-sec">
+      <div class="tw-ctl-lbl">SMPTE</div>
+      <div class="tw-ctl-row">
+        <span class="dksm-btn dksm-master${d.mtcMaster?' on':''}" id="dmst${slot}" data-a="mtc-master" data-i="${slot}">MASTER</span>
+        <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
+        <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
+      </div>
+    </div>
+    <div class="dk-tc-time" id="dtime${slot}" style="font:500 8px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums;text-align:center;display:none">${isLoaded?'0:00':'--:--'}</div>
+  </div>`;
+}
+
+/* ═════════ Card 레이아웃 — 앨범 아트 히어로, 최대 2열 ═════════ */
+function deckHTMLCard(slot){
+  const P=_deckCommonParts(slot);
+  const {d,isHW,isLoaded,phas,vuStrip,eqStrip,cueAc,playAc,stopAc,aAc,bAc,wfOverview,wfZoom,artEl,playBtnContent,tcStr,tcDim,artSrc}=P;
+  if(!d.ld && !isHW){
+    return`<div class="dk cd-dk" id="dk${slot}" data-st="empty" data-type="virtual">
+      <div class="cd-hero cd-hero-empty">
+        <div class="cd-top">
+          <span class="dk-player-lbl">PLAYER</span>
+          <span class="dk-num" id="did${slot}">${slot+1}</span>
+          <span class="dbadge bm" style="margin-left:auto">EMPTY</span>
+          <button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
+        </div>
+      </div>
+      <div class="ddz cd-ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">드래그 또는 클릭하여 열기</div></div>
+    </div>`;
+  }
+  return`<div class="dk cd-dk" id="dk${slot}" data-st="stop" data-type="${isHW?'hw':'virtual'}">
+    <div class="dshim"></div>
+    <div class="cd-hero">
+      ${artEl}
+      <div class="cd-top">
+        <span class="dk-player-lbl">PLAYER</span>
+        <span class="dk-num" id="did${slot}">${slot+1}</span>
+        <span class="dbadge bm" id="dbg${slot}">STOP</span>
+        <span class="dbadge br off" id="dair${slot}">ON AIR</span>
+        <div class="dksm" id="dksm${slot}" style="gap:3px;margin-left:auto">
+          <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}" style="padding:1px 5px;font-size:7px;min-width:32px">SYNC</span>
+          <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:1px 5px;font-size:7px;min-width:42px">MASTER</span>
+        </div>
+        <span class="dhwl" id="dhwl${slot}" style="font:500 9px var(--mn);color:#fff;letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+d.model:''):'VIRTUAL'}</span>
+        ${isHW?'':`<button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>`}
+      </div>
+      <div class="cd-info">
+        <div class="cd-artist" id="dta${slot}">${isLoaded?(d.ar||''):''}</div>
+        <span class="dk-title-sep" id="dtsep${slot}" style="display:none">—</span>
+        <div class="cd-track" id="dtn${slot}">${isLoaded?(d.tn||'—'):'—'}</div>
+      </div>
+    </div>
+    <div class="cd-body">
+      <div class="cd-wf">${wfOverview}<div class="dwz-row">${wfZoom}</div></div>
+      <div class="cd-tc-row">
+        <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
+        <div class="cd-bpm-col">
+          <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:6px;flex-shrink:0"></div>
+          <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+          ${phas}
+        </div>
+      </div>
+      <div class="cd-mix-row">
+        ${vuStrip}
+        ${eqStrip}
+      </div>
+      <div class="cd-ctl-sec">
+        <div class="cd-ctl-lbl">TRANSPORT</div>
+        <div class="cd-ctl-row">
+          <button class="dkbtn dkcue" ${cueAc}>CUE</button>
+          <button class="dkbtn dkplay" ${playAc}>${playBtnContent}</button>
+          <button class="dkbtn dkstop" ${stopAc}><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+        </div>
+      </div>
+      <div class="cd-ctl-sec">
+        <div class="cd-ctl-lbl">SMPTE</div>
+        <div class="cd-ctl-row">
+          <span class="dksm-btn dksm-master${d.mtcMaster?' on':''}" id="dmst${slot}" data-a="mtc-master" data-i="${slot}">MASTER</span>
+          <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
+          <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
+        </div>
+      </div>
+      <div class="dk-tc-time" id="dtime${slot}" style="font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
+    </div>
   </div>`;
 }
 
