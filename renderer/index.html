@@ -465,6 +465,124 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 /* ═════════ LAYOUT VARIANTS CSS (독립 스코프) ═══════════════════ */
 /* ═══════════════════════════════════════════════════════════════ */
 
+/* ═════════ MONO 컬러/폰트 팔레트 — 새 레이아웃 전역 공통 ═════════ */
+body[data-layout="row"],
+body[data-layout="tower"],
+body[data-layout="card"]{
+  /* 배경 — 더 중립적인 그레이 톤 */
+  --bg:#141414; --bg2:#1a1a1a; --bg3:#222; --bg4:#2a2a2a;
+  --bg-lowest:#0c0c0c; --bg-highest:#333;
+  --bdr:rgba(70,70,70,.2); --bdr2:rgba(110,110,110,.35);
+  /* 텍스트 */
+  --tx:#f2f2f2; --tx2:#c8c8c8; --tx3:#888; --tx4:#4a4a4a;
+  /* Accent — 오렌지 (MONO) */
+  --key:#ff6b2c; --key2:#a34418; --key-dim:#8b3a10;
+  --grn:#ff8a4a; --grn2:#d97030;
+  --blu:#7ec7ff; --blu2:#5090c0;
+  --ylw:#ffcc66; --ylw2:#d4aa50;
+  --red:#ff6b2c; --pur:#ff6b2c; --org:#ff6b2c;
+  /* 폰트 */
+  --sn:'Inter','Noto Sans KR',-apple-system,sans-serif;
+  --mn:'JetBrains Mono','DM Mono',monospace;
+  --lb:'Inter','Space Grotesk','Noto Sans KR',sans-serif;
+  /* --seg 는 유지 (타임코드 DSEG7) */
+}
+/* 로고 gradient 도 MONO 오렌지로 */
+body[data-layout="row"] .li,
+body[data-layout="tower"] .li,
+body[data-layout="card"] .li{background:linear-gradient(135deg,#a34418,#ff6b2c);color:#fff}
+/* Sidebar ON 상태 색도 오렌지로 */
+body[data-layout="row"] .sbi.on,
+body[data-layout="tower"] .sbi.on,
+body[data-layout="card"] .sbi.on{background:rgba(255,107,44,.1);color:#ff6b2c}
+/* Header/status 도트 */
+body[data-layout="row"] .hdr .dot,
+body[data-layout="tower"] .hdr .dot,
+body[data-layout="card"] .hdr .dot{background:var(--key)}
+/* 선택 상자 focus */
+body[data-layout="row"] select.ss:focus,
+body[data-layout="tower"] select.ss:focus,
+body[data-layout="card"] select.ss:focus{border-color:rgba(255,107,44,.4)}
+/* 전역 border-radius 0 — MONO 테마의 핵심 특징 (각진 UI) */
+body[data-layout="row"] *,
+body[data-layout="tower"] *,
+body[data-layout="card"] *{border-radius:0!important}
+
+/* DK 카드 및 보더 톤 통일 */
+body[data-layout="row"] .dk,
+body[data-layout="tower"] .dk,
+body[data-layout="card"] .dk{border-color:rgba(70,70,70,.3);background:var(--bg2)}
+body[data-layout="row"] .dk[data-st="play"],
+body[data-layout="tower"] .dk[data-st="play"],
+body[data-layout="card"] .dk[data-st="play"]{border-color:rgba(255,107,44,.35);background:var(--bg2)}
+body[data-layout="row"] .dk[data-st="cue"],
+body[data-layout="tower"] .dk[data-st="cue"],
+body[data-layout="card"] .dk[data-st="cue"]{border-color:rgba(255,204,102,.28);background:var(--bg2)}
+
+/* Header / 사이드바 / 탭 / bbar 톤 통일 */
+body[data-layout="row"] .hdr,
+body[data-layout="tower"] .hdr,
+body[data-layout="card"] .hdr{background:var(--bg);border-bottom:1px solid var(--bdr)}
+body[data-layout="row"] .sidebar,
+body[data-layout="tower"] .sidebar,
+body[data-layout="card"] .sidebar{background:var(--bg-lowest);border-right:1px solid var(--bdr)}
+body[data-layout="row"] .tabs,
+body[data-layout="tower"] .tabs,
+body[data-layout="card"] .tabs{background:var(--bg-lowest);border-bottom:1px solid var(--bdr)}
+body[data-layout="row"] .bbar,
+body[data-layout="tower"] .bbar,
+body[data-layout="card"] .bbar{background:var(--bg-lowest);border-top:1px solid var(--bdr)}
+body[data-layout="row"] .tab.on,
+body[data-layout="tower"] .tab.on,
+body[data-layout="card"] .tab.on{color:var(--key)}
+body[data-layout="row"] .tab.on::after,
+body[data-layout="tower"] .tab.on::after,
+body[data-layout="card"] .tab.on::after{background:var(--key)}
+
+/* 버튼 톤 (transport, sync, master) — 기존 violet/green 하드코드 → accent 오렌지 */
+body[data-layout="row"] .dkbtn.dkplay,
+body[data-layout="tower"] .dkbtn.dkplay,
+body[data-layout="card"] .dkbtn.dkplay{border-color:rgba(255,107,44,.2);color:rgba(255,107,44,.55)}
+body[data-layout="row"] .dkbtn.dkplay.ac,
+body[data-layout="tower"] .dkbtn.dkplay.ac,
+body[data-layout="card"] .dkbtn.dkplay.ac{border-color:var(--key);color:var(--key);background:rgba(255,107,44,.15)}
+body[data-layout="row"] .dksm-btn.on,
+body[data-layout="tower"] .dksm-btn.on,
+body[data-layout="card"] .dksm-btn.on{background:rgba(255,107,44,.12);color:var(--key);border-color:rgba(255,107,44,.4)}
+body[data-layout="row"] .dksm-btn.dksm-master.on,
+body[data-layout="tower"] .dksm-btn.dksm-master.on,
+body[data-layout="card"] .dksm-btn.dksm-master.on{background:rgba(255,204,102,.12);color:var(--ylw);border-color:rgba(255,204,102,.4)}
+body[data-layout="row"] .dbadge.bm,
+body[data-layout="tower"] .dbadge.bm,
+body[data-layout="card"] .dbadge.bm{color:var(--tx3);border:1px solid var(--bdr2)}
+body[data-layout="row"] .dk[data-st="play"] .dbadge.bm,
+body[data-layout="tower"] .dk[data-st="play"] .dbadge.bm,
+body[data-layout="card"] .dk[data-st="play"] .dbadge.bm{color:var(--key);background:rgba(255,107,44,.1);border-color:rgba(255,107,44,.35)}
+body[data-layout="row"] .dk[data-st="cue"] .dbadge.bm,
+body[data-layout="tower"] .dk[data-st="cue"] .dbadge.bm,
+body[data-layout="card"] .dk[data-st="cue"] .dbadge.bm{color:var(--ylw);background:rgba(255,204,102,.1);border-color:rgba(255,204,102,.35)}
+body[data-layout="row"] .dk-bpm-cur,
+body[data-layout="tower"] .dk-bpm-cur,
+body[data-layout="card"] .dk-bpm-cur{color:var(--key);border:1px solid rgba(255,107,44,.35);background:rgba(255,107,44,.08)}
+body[data-layout="row"] .dk-key-box,
+body[data-layout="tower"] .dk-key-box,
+body[data-layout="card"] .dk-key-box{color:var(--tx2);border:1px solid var(--bdr2);background:transparent}
+
+/* Phasor on 상태 */
+body[data-layout="row"] .dphs-fill,
+body[data-layout="tower"] .dphs-fill,
+body[data-layout="card"] .dphs-fill{background:var(--key)}
+
+/* SVG 아이콘 (gi, gi-play 등) — currentColor 기반이라 버튼 색 따라감 (자동) */
+
+/* 설정/mixer/tcnet 각 섹션 panel 톤도 bg2 기반 */
+body[data-layout="row"] .sgr,
+body[data-layout="tower"] .sgr,
+body[data-layout="card"] .sgr{background:var(--bg2);border:1px solid var(--bdr)}
+body[data-layout="row"] .sl,
+body[data-layout="tower"] .sl,
+body[data-layout="card"] .sl{color:var(--tx3)}
+
 /* ═════════ ROW 레이아웃 — 1 덱 1 풀폭 행, 세로 스크롤 ═════════ */
 body[data-layout="row"] .deck-row{flex-direction:column;gap:10px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px}
 body[data-layout="row"] .dk.rw-dk{padding:10px 14px;display:flex;flex-direction:column;gap:8px;border-radius:8px;min-width:0}
