@@ -263,7 +263,8 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dvu-ch{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;height:100%}
 .dvu-lbl{font:700 7px var(--mn);color:#fff;height:8px;line-height:8px;flex-shrink:0;letter-spacing:-.3px}
 .dvu-hbar{flex:1;width:100%;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;position:relative}
-.dvu-hfill{position:absolute;bottom:0;left:0;right:0;height:0%;border-radius:2px;transition:height .05s}
+/* 기본 (세로 bar): JS 가 --vu-level 설정 → height 로 채움 */
+.dvu-hfill{position:absolute;bottom:0;left:0;right:0;height:var(--vu-level,0);border-radius:2px;transition:height .05s,width .05s}
 .dvu-fader{cursor:ns-resize}.dvu-fader .dvu-hbar{cursor:ns-resize}
 /* EQ knob strip: HW mode only, right of VU strip */
 .deq-strip{display:flex;flex-direction:column;justify-content:space-around;align-items:center;width:30px;flex-shrink:0;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-left:none;border-radius:0 6px 6px 0;padding:2px 1px;overflow:hidden}
@@ -753,6 +754,9 @@ body[data-layout="row"] .rw-title-inline{flex:1;min-width:0;display:flex;align-i
 body[data-layout="row"] .rw-title-inline > span[id^="dta"]{font:500 12px var(--sn);color:var(--tx3);flex-shrink:0;max-width:40%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body[data-layout="row"] .rw-title-inline > span[id^="dtn"]{font:600 13px var(--sn);color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body[data-layout="row"] .rw-body{display:grid;grid-template-columns:180px minmax(0,1fr) 48px 40px 320px;grid-template-rows:180px;gap:12px;align-items:stretch}
+/* Virtual 덱 (EQ 없음): EQ 열 제거, tail 이 그 자리까지 확장 (tail 4열째로 이동) */
+body[data-layout="row"] .rw-body.no-eq{grid-template-columns:180px minmax(0,1fr) 48px 372px}
+body[data-layout="row"] .rw-body.no-eq .rw-tail{grid-column:4}
 body[data-layout="row"] .rw-art-wrap{grid-column:1;width:180px;height:180px}
 body[data-layout="row"] .rw-art-wrap .dkart{width:100%;height:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--bdr)}
 body[data-layout="row"] .rw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block}
@@ -763,11 +767,11 @@ body[data-layout="row"] .rw-wf-wrap .dwz{height:100%;border-radius:4px;margin:0}
 body[data-layout="row"] .rw-body .dvu-strip{grid-column:3;width:48px;height:180px;flex-direction:row;border-radius:4px;padding:4px;gap:3px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1)}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-ch{flex-direction:column;gap:3px;align-items:center;flex:1;min-width:0}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-hbar{width:10px;flex:1;height:auto;min-height:0;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden}
-body[data-layout="row"] .rw-body .dvu-strip .dvu-hfill{position:absolute;bottom:0;left:0;right:0;top:auto;width:auto;height:0}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-hfill{position:absolute;bottom:0;left:0;right:0;top:auto;width:auto;height:var(--vu-level,0)}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-lbl{font:700 7px var(--mn);color:var(--tx4);letter-spacing:.04em;line-height:1;flex-shrink:0}
 body[data-layout="row"] .rw-body .deq-strip{grid-column:4;width:40px;height:180px;flex-direction:column;padding:4px 0;gap:8px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:4px}
 body[data-layout="row"] .rw-tail{grid-column:5;display:flex;flex-direction:column;gap:4px;height:180px;min-width:0}
-body[data-layout="row"] .rw-tail .dtc{font:300 44px var(--font-timecode);line-height:1;color:var(--color-timecode);text-shadow:0 0 14px var(--color-timecode-glow);-webkit-font-smoothing:antialiased;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+body[data-layout="row"] .rw-tail .dtc{font:300 38px var(--font-timecode);line-height:1;color:var(--color-timecode);text-shadow:0 0 12px var(--color-timecode-glow);-webkit-font-smoothing:antialiased;white-space:nowrap;overflow:hidden;text-overflow:clip;font-variant-numeric:tabular-nums;letter-spacing:.02em}
 body[data-layout="row"] .rw-tail .rw-bpm-row{display:flex;align-items:center;gap:8px;min-height:26px}
 body[data-layout="row"] .rw-tail .rw-bpm-row .dk-bpm-cur{font-size:17px;height:28px;padding:3px 10px}
 body[data-layout="row"] .rw-tail .rw-phasor-row{height:12px;margin-top:2px}
@@ -776,7 +780,7 @@ body[data-layout="row"] .rw-tail .rw-phasor-row .dphs-seg{flex:1;border:1px soli
 body[data-layout="row"] .rw-tail .rw-phasor-row .dphs-fill{position:absolute;inset:0;background:var(--key);opacity:0;transition:opacity .06s}
 body[data-layout="row"] .rw-ctl-sec{display:flex;flex-direction:column;gap:2px}
 body[data-layout="row"] .rw-ctl-lbl{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
-body[data-layout="row"] .rw-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:28px}
+body[data-layout="row"] .rw-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:24px}
 body[data-layout="row"] .rw-ctl-row .dkbtn,body[data-layout="row"] .rw-ctl-row .dksm-btn{height:100%;border-radius:4px;font-size:10px;min-height:0}
 body[data-layout="row"] .rw-ddz{padding:40px;text-align:center}
 
@@ -807,7 +811,7 @@ body[data-layout="tower"] .tw-bpm .dphs-fill{position:absolute;inset:0;backgroun
 body[data-layout="tower"] .tw-dk .dvu-strip{flex-direction:row;width:100%;height:auto;padding:4px 5px;gap:3px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1);border-radius:3px}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-ch{flex-direction:row;gap:5px;align-items:center;flex:1;min-width:0}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hbar{flex:1;height:8px;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden;width:auto;min-height:0}
-body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:0;height:auto}
+body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:var(--vu-level,0);height:100%}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-lbl{width:10px;text-align:center;flex-shrink:0;font-size:7px}
 body[data-layout="tower"] .tw-dk .deq-strip{flex-direction:row;width:100%;height:auto;padding:6px 4px;gap:4px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:3px}
 body[data-layout="tower"] .tw-ctl-sec{display:flex;flex-direction:column;gap:2px}
@@ -816,7 +820,8 @@ body[data-layout="tower"] .tw-ctl-row{display:grid;grid-template-columns:1fr 1fr
 body[data-layout="tower"] .tw-ctl-row .dkbtn,body[data-layout="tower"] .tw-ctl-row .dksm-btn{height:100%;border-radius:3px;font-size:9px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:0}
 
 /* ═════════ CARD 레이아웃 — 앨범 히어로, 최대 2열, 세로 스크롤 ═════════ */
-body[data-layout="card"] .deck-row{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px}
+/* auto-fill + minmax(280, 440): 덱 폭 280~440 고정 범위 → 1개 덱이어도 440 이하 */
+body[data-layout="card"] .deck-row{display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 440px));gap:12px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px;justify-content:start}
 body[data-layout="card"] .dk.cd-dk{display:flex;flex-direction:column;gap:0;padding:0;border-radius:10px;overflow:hidden;min-width:0}
 body[data-layout="card"] .cd-hero{position:relative;height:240px;overflow:hidden;background:var(--bg-lowest)}
 body[data-layout="card"] .cd-hero .dkart{position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:0;aspect-ratio:auto}
@@ -845,7 +850,7 @@ body[data-layout="card"] .cd-mix-row{display:flex;gap:10px;align-items:stretch;m
 body[data-layout="card"] .cd-mix-row .dvu-strip{flex:1;flex-direction:row;padding:5px 7px;gap:4px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1);border-radius:4px;width:auto;height:auto}
 body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-ch{flex-direction:row;gap:5px;align-items:center;flex:1;min-width:0}
 body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hbar{flex:1;height:8px;width:auto;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden;min-height:0}
-body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;width:0;height:auto}
+body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:var(--vu-level,0);height:100%}
 body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-lbl{width:12px;text-align:center;font-size:7px;flex-shrink:0}
 body[data-layout="card"] .cd-mix-row .deq-strip{flex-direction:row;padding:6px 10px;gap:8px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:4px;width:auto;height:auto}
 body[data-layout="card"] .cd-ctl-sec{display:flex;flex-direction:column;gap:3px}
@@ -3160,7 +3165,7 @@ function bindDeck(slot){
       faders[slot]=val;
       window.bridge.setFader?.(slot,val);
       const fill=document.getElementById('dvuF'+slot);
-      if(fill)fill.style.height=Math.round(pct*100)+'%';
+      if(fill)fill.style.setProperty('--vu-level',Math.round(pct*100)+'%');
     };
     faderEl.addEventListener('pointerdown',e=>{
       e.preventDefault();_setFaderFromY(e);
@@ -4337,12 +4342,12 @@ function tick(){
     // dB scale: peak 1.0 → 0dB, -60dB floor, +6dB headroom so loud music fills to top
     // dB scale: -45dBFS floor (조용한 소리는 낮게, 큰 소리만 높게)
     // -30dBFS≈33%, -20dBFS≈56%, -10dBFS≈78%, 0dBFS=100%
-    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-45;const h=Math.min(100,Math.max(0,(db+45)*100/45));el2.style.height=h+'%';el2.style.background=h>90?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 55%,#ff6b6b 100%)':h>70?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 100%)':'var(--grn)';};
+    const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-45;const h=Math.min(100,Math.max(0,(db+45)*100/45));el2.style.setProperty('--vu-level',h+'%');el2.style.background=h>90?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 55%,#ff6b6b 100%)':h>70?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 100%)':'var(--grn)';};
     if(d.type==='hw'){
       _vuBar('dvuL'+slot,d.vuL||0);
       // Fader bar (linear, not dB)
       const fEl=document.getElementById('dvuF'+slot);
-      if(fEl){const h=Math.round((d._faderSmooth||0)*100);fEl.style.height=h+'%';fEl.style.background='var(--pur)';}
+      if(fEl){const h=Math.round((d._faderSmooth||0)*100);fEl.style.setProperty('--vu-level',h+'%');fEl.style.background='var(--pur)';}
       // EQ knobs: rotate indicator tick + draw arc based on DJM EQ values
       // eq array: [0=TRIM, 1=HI, 2=MID, 3=LOW, 4=COLOR] — center=128 (0dB)
       const eq=eqBands[slot]||[128,128,128,128,128];
@@ -4539,7 +4544,13 @@ function tick(){
       }
       // Clockwise visual mapping: TL(1)→TR(2)→BR(3)→BL(4)
       // DOM segments: _1=TL, _2=TR, _3=BL, _4=BR → remap beat3→_4, beat4→_3
-      const _cwMap=[null,1,2,4,3];
+      // Phase Meter beat → segment 매핑
+      // 2×2 grid (default 레이아웃): TL(1)→TR(2)→BR(3)→BL(4) clockwise
+      //   DOM 순서 _1=TL _2=TR _3=BL _4=BR → beat3→seg4, beat4→seg3
+      // 1×4 가로 바 (row/tower/card): DOM 그대로 좌→우 (1,2,3,4)
+      const _layoutNow=document.body.dataset.layout||'';
+      const _isPhaseHoriz=(_layoutNow==='row'||_layoutNow==='tower'||_layoutNow==='card');
+      const _cwMap=_isPhaseHoriz?[null,1,2,3,4]:[null,1,2,4,3];
       for(let b=1;b<=4;b++){
         const si=_cwMap[b];
         const seg=document.getElementById('dphs'+slot+'_'+si);
@@ -4802,7 +4813,7 @@ function updateMixer(){
     if(cap)cap.style.bottom='calc('+fPct+'% - 5px)';
     // VU meter
     const vuFill=document.getElementById('mxVu'+i);
-    if(vuFill){const h=Math.min(100,meter*100);vuFill.style.height=h+'%';vuFill.style.background=h>90?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 55%,#ff6b6b 100%)':h>70?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 100%)':'var(--grn)';}
+    if(vuFill){const h=Math.min(100,meter*100);vuFill.style.setProperty('--vu-level',h+'%');vuFill.style.background=h>90?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 55%,#ff6b6b 100%)':h>70?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 100%)':'var(--grn)';}
     if(!_mxPeaks[i])_mxPeaks[i]=0;
     if(meter>_mxPeaks[i])_mxPeaks[i]=meter;
     else _mxPeaks[i]=Math.max(meter,_mxPeaks[i]*0.97);
