@@ -813,17 +813,18 @@ function doQuit(){
     _cleaned=true;
     // 5. Wait 500ms for OptOut UDP (5×broadcast + per-iface + per-node) to flush + 250ms socket close
     setTimeout(()=>{
-      console.log('[APP] cleanup done — force exiting');
+      console.log('[APP] cleanup done — force exiting via SIGKILL');
       try{if(splash&&!splash.isDestroyed())splash.destroy();}catch(_){}
       try{if(win&&!win.isDestroyed())win.destroy();}catch(_){}
-      // abletonlink native thread sleep_for 루프가 프로세스 종료 시점에도 살아있어
-      // process.exit() → libc atexit → C++ dtor 가 abort 를 발생시킴.
-      // app.exit() 는 Chromium shutdown 후 OS 로 바로 반환 → native dtor 경로 우회.
-      app.exit(0);
+      // abletonlink native callback_handler thread (sleep_for 루프) 이 프로세스
+      // 종료 시점에도 살아있어 app.exit()/process.exit() 의 libc atexit/C++ dtor
+      // 경로에서 스레드 소유권 경합 → std::terminate → abort.
+      // SIGKILL 은 커널 레벨 즉시 회수 → dtor 경로 완전 우회 (cleanup 은 이미 완료).
+      try{process.kill(process.pid,'SIGKILL');}catch(_){app.exit(0);}
     },500);
   },100);
-  // Safety net: force exit after 2s no matter what
-  setTimeout(()=>{console.log('[APP] safety net exit');app.exit(0);},2000).unref();
+  // Safety net: SIGKILL after 2s no matter what
+  setTimeout(()=>{try{process.kill(process.pid,'SIGKILL');}catch(_){app.exit(0);}},2000).unref();
 }
 app.on('window-all-closed',(e)=>{
   // Prevent default quit — we handle it in doQuit
@@ -840,10 +841,10 @@ app.on('will-quit',()=>{
     _cleaned=true;
   }
   // abletonlink v0.2.0 NAPI 바인딩에 스레드 종료 API가 없어 native callback
-  // thread (sleep_for 루프)가 프로세스 종료 시점에도 살아있다.
-  // process.exit() → libc atexit → C++ static dtor 가 스레드 소유권 경합으로
-  // abort 를 발생시킴. app.exit() 는 Chromium shutdown 후 OS 로 바로 반환하므로
-  // native dtor 경로를 건너뛴다.
-  setTimeout(()=>app.exit(0),300).unref();
+  // thread (sleep_for 루프) 가 프로세스 종료 시점에도 살아있다.
+  // app.exit()/process.exit() 도 내부적으로 libc exit → atexit → C++ static dtor
+  // → abletonlink 스레드 소유권 경합 → abort 발생.
+  // SIGKILL 은 커널이 즉시 프로세스 회수 → dtor 경로 건너뛰기 (cleanup 이미 끝).
+  setTimeout(()=>{try{process.kill(process.pid,'SIGKILL');}catch(_){app.exit(0);}},300).unref();
 });
 app.on('activate',()=>{if(!_quitting&&BrowserWindow.getAllWindows().length===0)createWindow();});
