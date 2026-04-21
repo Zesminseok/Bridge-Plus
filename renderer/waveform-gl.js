@@ -27,6 +27,9 @@ class WaveformGL {
       res:     gl.getUniformLocation(this._prog, 'u_res'),
       centerX: gl.getUniformLocation(this._prog, 'u_centerX'),
       mode:    gl.getUniformLocation(this._prog, 'u_mode'),
+      viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
+      paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+      sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
     };
   }
 
@@ -49,6 +52,9 @@ class WaveformGL {
           res:     gl.getUniformLocation(this._prog, 'u_res'),
           centerX: gl.getUniformLocation(this._prog, 'u_centerX'),
           mode:    gl.getUniformLocation(this._prog, 'u_mode'),
+          viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
+          paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+          sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
         };
       } catch(e) { console.warn('[WGL] recover failed:', e.message); return; }
     }
@@ -93,15 +99,15 @@ class WaveformGL {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
-  /** Render waveform. mode: 0=rgb 1=3band 2=blue */
-  draw(posMs, zoomMs, centerX, mode) {
+  /** Render waveform. mode keeps data layout; viewMode: 0=A, 1=B, 2=C. */
+  draw(posMs, zoomMs, centerX, mode, viewMode = 0, paletteMode = 1, sharpness = 0) {
     if (!this._wfTex) return;
     // Detect WebGL context reset: canvas.width assignment clears all GPU objects
     // gl.isProgram() returns false for handles invalidated by context reset
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
-    const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${mode}`;
+    const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${mode}|${viewMode}|${paletteMode}|${sharpness}`;
     if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
@@ -115,6 +121,9 @@ class WaveformGL {
     gl.uniform2f(this._locs.res,     cv.width, cv.height);
     gl.uniform1f(this._locs.centerX, centerX);
     gl.uniform1i(this._locs.mode,    mode | 0);
+    gl.uniform1i(this._locs.viewMode, viewMode | 0);
+    gl.uniform1i(this._locs.paletteMode, paletteMode | 0);
+    gl.uniform1f(this._locs.sharpness, Math.max(0, Math.min(1, sharpness || 0)));
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this._dirty = false;
     this._lastDrawKey = drawKey;
@@ -186,6 +195,9 @@ class OverviewGL {
       pos:  gl.getUniformLocation(this._prog, 'u_pos'),
       res:  gl.getUniformLocation(this._prog, 'u_res'),
       mode: gl.getUniformLocation(this._prog, 'u_mode'),
+      viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
+      paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+      sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
     };
   }
 
@@ -204,6 +216,9 @@ class OverviewGL {
           pos:  gl.getUniformLocation(this._prog, 'u_pos'),
           res:  gl.getUniformLocation(this._prog, 'u_res'),
           mode: gl.getUniformLocation(this._prog, 'u_mode'),
+          viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
+          paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+          sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
         };
       } catch(e) { console.warn('[WGL] ovgl recover failed:', e.message); return; }
     }
@@ -245,12 +260,12 @@ class OverviewGL {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
-  draw(pos, mode) {
+  draw(pos, mode, viewMode = 0, paletteMode = 1, sharpness = 0) {
     if (!this._wfTex) return;
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
-    const drawKey = `${cv.width}x${cv.height}|${pos}|${mode}`;
+    const drawKey = `${cv.width}x${cv.height}|${pos}|${mode}|${viewMode}|${paletteMode}|${sharpness}`;
     if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
@@ -261,6 +276,9 @@ class OverviewGL {
     gl.uniform1f(this._locs.pos,  pos);
     gl.uniform2f(this._locs.res,  cv.width, cv.height);
     gl.uniform1i(this._locs.mode, mode | 0);
+    gl.uniform1i(this._locs.viewMode, viewMode | 0);
+    gl.uniform1i(this._locs.paletteMode, paletteMode | 0);
+    gl.uniform1f(this._locs.sharpness, Math.max(0, Math.min(1, sharpness || 0)));
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this._dirty = false;
     this._lastDrawKey = drawKey;
@@ -331,15 +349,58 @@ uniform float u_durMs;
 uniform vec2  u_res;
 uniform float u_centerX;
 uniform int   u_mode;
+uniform int   uViewMode;
+uniform int   uPaletteMode;
+uniform float uSharpness;
 out vec4 fragColor;
 const vec4 BG = vec4(0.067, 0.075, 0.094, 1.0);
 
 vec4 sampleSmooth(float t) {
   float texel = 1.0 / float(textureSize(u_wf, 0).x);
-  vec4 a = texture(u_wf, vec2(clamp(t - texel, 0.0, 1.0), 0.5)) * 0.08;
-  a += texture(u_wf, vec2(clamp(t,             0.0, 1.0), 0.5)) * 0.84;
-  a += texture(u_wf, vec2(clamp(t + texel, 0.0, 1.0), 0.5)) * 0.08;
-  return a;
+  vec4 center = texture(u_wf, vec2(clamp(t, 0.0, 1.0), 0.5));
+  vec4 sm = texture(u_wf, vec2(clamp(t - texel, 0.0, 1.0), 0.5)) * 0.08;
+  sm += center * 0.84;
+  sm += texture(u_wf, vec2(clamp(t + texel, 0.0, 1.0), 0.5)) * 0.08;
+  return mix(center, sm, clamp(uSharpness, 0.0, 1.0));
+}
+
+vec3 monoColor(float e) {
+  e = clamp(e, 0.0, 1.0);
+  if (uPaletteMode == 0) {
+    vec3 navy = vec3(0.015, 0.045, 0.12);
+    vec3 cyan = vec3(0.02, 0.58, 1.0);
+    vec3 white = vec3(0.92, 0.98, 1.0);
+    return e < 0.72 ? mix(navy, cyan, e / 0.72) : mix(cyan, white, (e - 0.72) / 0.28);
+  }
+  vec3 brown = vec3(0.12, 0.045, 0.018);
+  vec3 orange = vec3(1.0, 0.42, 0.17);
+  vec3 warmWhite = vec3(1.0, 0.92, 0.78);
+  return e < 0.70 ? mix(brown, orange, e / 0.70) : mix(orange, warmWhite, (e - 0.70) / 0.30);
+}
+
+vec3 multiColor(float B, float M, float T, bool hwPwv7) {
+  if (hwPwv7) {
+    if (uPaletteMode == 0) {
+      vec3 low = vec3(0.125, 0.325, 0.85);
+      vec3 mid = vec3(0.95, 0.667, 0.235);
+      vec3 hi = vec3(1.0, 1.0, 1.0);
+      return low * B + mid * M + hi * T;
+    }
+    vec3 low = vec3(0.05, 0.23, 0.42);
+    vec3 mid = vec3(1.0, 0.42, 0.17);
+    vec3 hi = vec3(0.95, 0.72, 0.32);
+    return low * B + mid * M + hi * T;
+  }
+  if (uPaletteMode == 0) {
+    vec3 low = vec3(0.05, 0.23, 0.42);
+    vec3 mid = vec3(1.0, 0.42, 0.17);
+    vec3 hi = vec3(0.95, 0.72, 0.32);
+    return low * B + mid * M + hi * T;
+  }
+  vec3 low = vec3(0.35, 0.12, 0.045);
+  vec3 mid = vec3(1.0, 0.42, 0.17);
+  vec3 hi = vec3(1.0, 0.72, 0.22);
+  return low * B + mid * M + hi * T;
 }
 
 void main() {
@@ -356,13 +417,13 @@ void main() {
   float yDist = abs(gl_FragCoord.y - midY);
   float scale = midY * 0.95;
 
-  if (u_mode == 2) {
-    // Blue mono
-    float e = sqrt(max(bass, max(midf, treble)));
+  if (uViewMode == 1 || u_mode == 2) {
+    // Mode B: mono height only.
+    float e = sqrt(max(max(bass, max(midf, treble)), wf.a));
     float h = e * scale;
     float alpha = 1.0 - smoothstep(h - 1.2, h + 1.2, yDist);
     if (alpha < 0.005) { fragColor = BG; return; }
-    fragColor = vec4(vec3(0.05, 0.35, 1.0) * e * alpha, 1.0);
+    fragColor = vec4(monoColor(e) * alpha, 1.0);
     return;
   }
 
@@ -380,32 +441,22 @@ void main() {
     return;
   }
 
-  // ── Mode 0/1/3: 3-band waveform ──
+  // ── Mode A/C for virtual and HW PWV7 ──
   float B = bass, M = midf, T = treble;
-
-  // beat-link standard: Bass=Blue(#2053D9), Mid=Amber(#F2AA3C), Treble=White
-  vec3 bassCol = vec3(0.125, 0.325, 0.85);   // #2053D9
-  vec3 midCol  = vec3(0.95,  0.667, 0.235);  // #F2AA3C
-  vec3 trebCol = vec3(1.0,   1.0,   1.0);    // #FFFFFF
-
   float outerH, inside;
   vec3 col;
 
-  if (u_mode == 3) {
-    // HW PWV7 3-band — 자체 튜닝 셰이더 (GPU fragment 경로):
-    //   B=low, M=mid, T=high. hiRatio=T/(B+M+T) → 저음 파랑→고음 흰색 그라디언트
-    //   AA=1.0 smoothstep 으로 edge antialiasing, 저바이어스 0.45 로 중음 명시성 확보
+  if (uViewMode == 2 || u_mode == 3) {
+    // Mode C: multi-band RGB layout. HW PWV7 uses low/mid/hi as R/G/B.
     float h = wf.a;
     outerH = h * scale;
     float AA = 1.0;
     inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
     float ridge = 1.0 - smoothstep(1.0, 4.5, abs(yDist - outerH));
     if (inside < 0.005 && ridge < 0.005) { fragColor = BG; return; }
-    float total = B + M + T + 0.001;
-    float hiR = T / total;
-    col = vec3(hiR, 0.45 + hiR * 0.55, 1.0);
+    col = multiColor(B, M, T, u_mode == 3);
   } else {
-    // Virtual: rekordbox-style stacked 4-band waveform.
+    // Mode A: Virtual-only rekordbox-style stacked 4-band waveform.
     float bV = max(B, 0.0);
     float mV = max(M, 0.0);
     float pV = max(T, 0.0);
@@ -426,6 +477,12 @@ void main() {
     vec3 bodyCol = vec3(1.0, 0.42, 0.17);
     vec3 presCol = vec3(0.95, 0.72, 0.32);
     vec3 airCol  = vec3(1.0, 0.94, 0.82);
+    if (uPaletteMode == 0) {
+      lowCol = vec3(0.04, 0.21, 0.46);
+      bodyCol = vec3(0.95, 0.39, 0.18);
+      presCol = vec3(0.92, 0.68, 0.34);
+      airCol = vec3(0.96, 0.97, 0.92);
+    }
     col = lowCol * bMask;
     col = mix(col, bodyCol, mMask);
     col = mix(col, presCol, pMask * 0.55);
@@ -445,16 +502,47 @@ uniform sampler2D u_wf;
 uniform float u_pos;
 uniform vec2  u_res;
 uniform int   u_mode;
+uniform int   uViewMode;
+uniform int   uPaletteMode;
+uniform float uSharpness;
 out vec4 fragColor;
 const vec4 BG = vec4(0.067, 0.075, 0.094, 1.0);
 const vec4 BG_PLAYED = vec4(0.090, 0.098, 0.122, 1.0);
 
 vec4 sampleSmooth(float t) {
   float texel = 1.0 / float(textureSize(u_wf, 0).x);
-  vec4 a = texture(u_wf, vec2(clamp(t - texel, 0.0, 1.0), 0.5)) * 0.08;
-  a += texture(u_wf, vec2(clamp(t,             0.0, 1.0), 0.5)) * 0.84;
-  a += texture(u_wf, vec2(clamp(t + texel, 0.0, 1.0), 0.5)) * 0.08;
-  return a;
+  vec4 center = texture(u_wf, vec2(clamp(t, 0.0, 1.0), 0.5));
+  vec4 sm = texture(u_wf, vec2(clamp(t - texel, 0.0, 1.0), 0.5)) * 0.08;
+  sm += center * 0.84;
+  sm += texture(u_wf, vec2(clamp(t + texel, 0.0, 1.0), 0.5)) * 0.08;
+  return mix(center, sm, clamp(uSharpness, 0.0, 1.0));
+}
+
+vec3 monoColor(float e) {
+  e = clamp(e, 0.0, 1.0);
+  if (uPaletteMode == 0) {
+    vec3 navy = vec3(0.015, 0.045, 0.12);
+    vec3 cyan = vec3(0.02, 0.58, 1.0);
+    vec3 white = vec3(0.92, 0.98, 1.0);
+    return e < 0.72 ? mix(navy, cyan, e / 0.72) : mix(cyan, white, (e - 0.72) / 0.28);
+  }
+  vec3 brown = vec3(0.12, 0.045, 0.018);
+  vec3 orange = vec3(1.0, 0.42, 0.17);
+  vec3 warmWhite = vec3(1.0, 0.92, 0.78);
+  return e < 0.70 ? mix(brown, orange, e / 0.70) : mix(orange, warmWhite, (e - 0.70) / 0.30);
+}
+
+vec3 multiColor(float B, float M, float T, bool hwPwv7) {
+  if (hwPwv7) {
+    if (uPaletteMode == 0) {
+      return vec3(0.125, 0.325, 0.85) * B + vec3(0.95, 0.667, 0.235) * M + vec3(1.0) * T;
+    }
+    return vec3(0.05, 0.23, 0.42) * B + vec3(1.0, 0.42, 0.17) * M + vec3(0.95, 0.72, 0.32) * T;
+  }
+  if (uPaletteMode == 0) {
+    return vec3(0.05, 0.23, 0.42) * B + vec3(1.0, 0.42, 0.17) * M + vec3(0.95, 0.72, 0.32) * T;
+  }
+  return vec3(0.35, 0.12, 0.045) * B + vec3(1.0, 0.42, 0.17) * M + vec3(1.0, 0.72, 0.22) * T;
 }
 
 void main() {
@@ -473,8 +561,8 @@ void main() {
   float scale = midY * 0.95;
   bool played = t < u_pos;
 
-  if (u_mode == 2) {
-    float e = sqrt(max(bass, max(midf, treble)));
+  if (uViewMode == 1 || u_mode == 2) {
+    float e = sqrt(max(max(bass, max(midf, treble)), wf.a));
     float h = e * scale;
     float alpha = 1.0 - smoothstep(h - 0.6, h + 0.6, yDist);
     if (alpha < 0.005) {
@@ -482,7 +570,7 @@ void main() {
       return;
     }
     float dim = played ? 0.4 : 1.0;
-    fragColor = vec4(vec3(0.05,0.35,1.0) * e * alpha * dim, 1.0);
+    fragColor = vec4(monoColor(e) * alpha * dim, 1.0);
     return;
   }
 
@@ -502,28 +590,20 @@ void main() {
     return;
   }
 
-  // ── Mode 1/3: 3-band ──
+  // ── Mode A/C for virtual and HW PWV7 ──
   float B = bass, M = midf, T = treble;
-
-  // beat-link standard colors (used by mode 3 / HW)
-  vec3 bassCol = vec3(0.125, 0.325, 0.85);
-  vec3 midCol  = vec3(0.95,  0.667, 0.235);
-  vec3 trebCol = vec3(1.0,   1.0,   1.0);
-
   float outerH, inside;
   vec3 col;
 
-  if (u_mode == 3) {
-    // HW PWV7 3-band — 오버뷰 전용 축소 경로 (blue→white spectrum, AA=0.6)
+  if (uViewMode == 2 || u_mode == 3) {
+    // Mode C: multi-band RGB layout.
     float h = wf.a;
     outerH = h * scale;
     float AA2 = 0.6;
     inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
     float ridge = 1.0 - smoothstep(0.7, 3.5, abs(yDist - outerH));
     if (inside < 0.005 && ridge < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
-    float total = B + M + T + 0.001;
-    float hiR = T / total;
-    col = vec3(hiR, 0.45 + hiR * 0.55, 1.0);
+    col = multiColor(B, M, T, u_mode == 3);
   } else {
     // Virtual: rekordbox-style stacked 4-band waveform.
     float bV = max(B, 0.0);
@@ -546,6 +626,12 @@ void main() {
     vec3 bodyCol = vec3(1.0, 0.42, 0.17);
     vec3 presCol = vec3(0.95, 0.72, 0.32);
     vec3 airCol  = vec3(1.0, 0.94, 0.82);
+    if (uPaletteMode == 0) {
+      lowCol = vec3(0.04, 0.21, 0.46);
+      bodyCol = vec3(0.95, 0.39, 0.18);
+      presCol = vec3(0.92, 0.68, 0.34);
+      airCol = vec3(0.96, 0.97, 0.92);
+    }
     col = lowCol * bMask;
     col = mix(col, bodyCol, mMask);
     col = mix(col, presCol, pMask * 0.55);

@@ -770,9 +770,9 @@ body[data-layout="row"] .rw-head .dk-num{font:800 20px var(--lb);color:var(--tx)
 body[data-layout="row"] .rw-title-inline{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;padding:0 10px;overflow:hidden}
 body[data-layout="row"] .rw-title-inline > span[id^="dta"]{font:500 12px var(--sn);color:var(--tx3);flex-shrink:0;max-width:40%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body[data-layout="row"] .rw-title-inline > span[id^="dtn"]{font:600 13px var(--sn);color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-body[data-layout="row"] .rw-body{display:grid;grid-template-columns:180px minmax(0,1fr) 40px 36px max-content;grid-template-rows:180px;gap:10px;align-items:stretch}
+body[data-layout="row"] .rw-body{display:grid;grid-template-columns:180px minmax(0,1fr) var(--vu-w,40px) 36px max-content;grid-template-rows:180px;gap:10px;align-items:stretch}
 /* Virtual 덱 (EQ 없음): EQ 열 제거, tail 이 그 자리까지 확장 (tail 4열째로 이동) */
-body[data-layout="row"] .rw-body.no-eq{grid-template-columns:180px minmax(0,1fr) 40px max-content;gap:10px}
+body[data-layout="row"] .rw-body.no-eq{grid-template-columns:180px minmax(0,1fr) var(--vu-w,40px) max-content;gap:10px}
 body[data-layout="row"] .rw-body.no-eq .rw-tail{grid-column:4}
 body[data-layout="row"] .rw-art-wrap{grid-column:1;width:180px;height:180px}
 body[data-layout="row"] .rw-art-wrap .dkart{width:100%;height:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--bdr)}
@@ -786,6 +786,9 @@ body[data-layout="row"] .rw-body .dvu-strip .dvu-ch{flex-direction:column;gap:3p
 body[data-layout="row"] .rw-body .dvu-strip .dvu-hbar{width:10px;flex:1;height:auto;min-height:0;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-hfill{position:absolute;bottom:0;left:0;right:0;top:auto;width:auto;height:var(--vu-level,0)}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-lbl{font:700 7px var(--mn);color:var(--tx4);letter-spacing:.04em;line-height:1;flex-shrink:0}
+body[data-layout="row"] .rw-body .dvu-strip.dvu-multi .dvu-hbar{width:8px}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-fader{flex:0 0 12px}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-fader .dvu-hbar{width:10px}
 body[data-layout="row"] .rw-body .deq-strip{grid-column:4;width:40px;height:180px;flex-direction:column;padding:4px 0;gap:8px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:4px}
 body[data-layout="row"] .rw-tail{grid-column:5;display:flex;flex-direction:column;align-items:flex-end;gap:3px;height:180px;min-width:0}
 body[data-layout="row"] .rw-tail .dtc{font:300 34px var(--font-timecode);line-height:1;color:var(--color-timecode);text-shadow:0 0 12px var(--color-timecode-glow);-webkit-font-smoothing:antialiased;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:.002em;text-align:right;align-self:stretch}
@@ -839,6 +842,11 @@ body[data-layout="tower"] .tw-dk .dvu-strip .dvu-ch{flex-direction:row;gap:5px;a
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hbar{flex:1;height:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,107,44,.18);position:relative;overflow:hidden;width:auto;min-height:0}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:var(--vu-level,0);height:100%}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-lbl{width:10px;text-align:center;flex-shrink:0;font-size:7px}
+body[data-layout="tower"] .tw-dk .dvu-strip.dvu-multi{display:grid;grid-template-columns:repeat(var(--vu-count,2),minmax(0,1fr)) 26px;gap:3px;padding:5px 5px}
+body[data-layout="tower"] .tw-dk .dvu-strip.dvu-multi .dvu-ch{gap:2px}
+body[data-layout="tower"] .tw-dk .dvu-strip.dvu-multi .dvu-lbl{width:9px;font-size:6px;letter-spacing:-.04em}
+body[data-layout="tower"] .tw-dk .dvu-strip.dvu-multi .dvu-fader{grid-column:calc(var(--vu-count,2) + 1);min-width:24px}
+body[data-layout="tower"] .tw-dk .dvu-strip.dvu-multi .dvu-fader .dvu-lbl{width:8px}
 body[data-layout="tower"] .tw-dk .deq-strip{flex-direction:row;width:100%;height:auto;padding:6px 4px;gap:4px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:3px}
 body[data-layout="tower"] .tw-ctl-sec{display:flex;flex-direction:column;gap:2px}
 body[data-layout="tower"] .tw-ctl-lbl{font:700 7px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
@@ -888,6 +896,11 @@ body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-ch{flex:1 1 0;flex-directio
 body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hbar{flex:1 1 auto;height:8px;width:auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,107,44,.18);position:relative;overflow:hidden;min-height:0}
 body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:var(--vu-level,0);height:100%}
 body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-lbl{width:12px;text-align:center;font-size:7px;flex-shrink:0}
+body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi{display:grid;grid-template-columns:repeat(var(--vu-count,2),minmax(0,1fr)) 30px;gap:4px;padding:5px 6px}
+body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi .dvu-ch{gap:3px}
+body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi .dvu-lbl{width:10px;font-size:6px;letter-spacing:-.04em}
+body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi .dvu-fader{grid-column:calc(var(--vu-count,2) + 1);min-width:28px}
+body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi .dvu-fader .dvu-lbl{width:8px}
 body[data-layout="card"] .cd-mix-row .deq-strip{flex-direction:row;padding:6px 10px;gap:8px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:4px;width:auto;height:auto}
 body[data-layout="card"] .cd-ctl-sec{display:flex;flex-direction:column;gap:3px}
 body[data-layout="card"] .cd-ctl-lbl{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
@@ -1234,7 +1247,7 @@ let _djmMasterMixOn=0, _djmMasterMixSize=0, _djmMasterMixTime=0, _djmMasterMixTo
 const _BEAT_FX_NAMES=['DELAY','ECHO','PING PONG','SPIRAL','REVERB','TRANS','FILTER','FLANGER','PHASER','PITCH','SLIP ROLL','ROLL','VINYL BRAKE','HELIX'];
 const _COLOR_FX_NAMES={0:'SPACE',1:'DUB ECHO',2:'SWEEP',3:'NOISE',4:'CRUSH',5:'FILTER',255:'OFF'};
 const _BEAT_FX_ASSIGN_NAMES={0:'MIC',1:'CH1',2:'CH2',3:'CH3',7:'CH4',6:'XF-A',8:'XF-B',9:'MASTER'};
-let _djmLog=[], _djmLogMax=80, _djmLogOpen=false, _djmCapturing=false, _djmAutoCapStarted=false;
+let _djmLog=[], _djmLogMax=40, _djmLogOpen=false, _djmCapturing=false, _djmAutoCapStarted=false;
 async function _toggleDjmCapture(){
   const btn=document.getElementById('mxCaptureBtn');
   if(_djmCapturing){
@@ -1279,7 +1292,6 @@ const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIfac
   anPollReply:true,anUnicast:false,anUnicastIp:'',anDmxHz:40,anSync:false,
   // Ableton Link
   linkEnabled:false,linkSource:'mixer',linkDeckIdx:0,
-  tcnetUnicast:false,tcnetAllIfaces:false,
   // Layout 테마 (default/tower/card/row) — 첫 실행 기본값 tower
   layout:'tower'};
 // Load persisted settings
@@ -1289,6 +1301,47 @@ try{const _s=localStorage.getItem('bridge_cfg');if(_s){const _p=JSON.parse(_s);O
 if(!cfg.layout||cfg.layout==='default'){cfg.layout='tower';try{localStorage.setItem('bridge_cfg',JSON.stringify(cfg));}catch(_){}}
 // Apply layout theme to body (data-layout attribute drives all theme-scoped CSS)
 try{document.body.dataset.layout=cfg.layout;}catch(_){}
+function _wfReadLS(k,def){try{const v=localStorage.getItem(k);return v==null?def:v;}catch(_){return def;}}
+function _wfWriteLS(k,v){try{localStorage.setItem(k,String(v));}catch(_){}}
+let wfViewMode=(v=>/^[ABC]$/.test(v)?v:'A')(_wfReadLS('wf_view_mode','A'));
+let wfPalette=(v=>v==='classic'||v==='orange'?v:'orange')(_wfReadLS('wf_palette','orange'));
+let wfSharpness=Math.max(0,Math.min(1,Number(_wfReadLS('wf_sharpness','0'))||0));
+const _WF_VIEW_TO_UNIFORM={A:0,B:1,C:2};
+function _wfPaletteMode(){return wfPalette==='classic'?0:1;}
+function _wfHwCapability(){
+  if(glMode!=='hw')return null;
+  const hw=Object.values(DECKS).find(d=>d&&d.type==='hw'&&d.wfCapability);
+  return hw?.wfCapability||null;
+}
+function _wfEffectiveViewMode(d){
+  let m=wfViewMode||'A';
+  const cap=d?.type==='hw'?(d.wfCapability||(d._pwv7?'pwv7':'blue')):null;
+  if(cap==='pwv7'&&m==='A')m='C';
+  if(cap==='blue'&&(m==='A'||m==='C'))m='B';
+  return m;
+}
+function _wfDataMode(d){
+  if(d?.type==='hw')return (d.wfCapability==='pwv7'||d._pwv7)?3:4;
+  return 1;
+}
+function _wfInvalidateAndRedraw(){
+  Object.values(DECKS).forEach(d=>{
+    if(!d)return;
+    d._wfCache=null;d._ovCache=null;d._zmCache=null;
+    if(d.wgl){d.wgl._dirty=true;d.wgl._lastDrawKey='';}
+    if(d.ovgl){d.ovgl._dirty=true;d.ovgl._lastDrawKey='';}
+  });
+  getUsedSlots().forEach(s=>{
+    const d=DECKS[s];const prog=d&&d.dur>0&&d.pos>0?d.pos/d.dur:0;
+    try{drawOverview(s,prog);drawZoomWaveform(s,prog);}catch(_){}
+  });
+}
+function _wfPersistAndApply(){
+  _wfWriteLS('wf_view_mode',wfViewMode);
+  _wfWriteLS('wf_palette',wfPalette);
+  _wfWriteLS('wf_sharpness',wfSharpness);
+  _wfInvalidateAndRedraw();
+}
 // OUTPUT LAYERS collapse state — default: collapsed (open only if user explicitly opened)
 ;(function(){const open=localStorage.getItem('outLayersOpen')==='1';
   const el=document.getElementById('outLayers');const ch=document.getElementById('outLayersChevron');
@@ -1324,6 +1377,7 @@ function createDeck(slot,type='virtual'){
   return{slot,type,ld:false,pl:false,cu:false,au:null,tn:'',ar:'',bpm:0,dur:0,pos:0,cp:0,cuw:false,
     wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,
     _wfCache:null,_wfCacheH:0,_wfCacheKey:'',
+    wfCapability:null,
     key:'',vu:0,vuSrc:null,vuAn:null,vuBuf:null,artUrl:null,hwVu:0,beatInBar:1,
     zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,mtcMaster:false,
     audioChs:2,_tempPath:null,_vuMerge:null,_vuAllAns:null,_vuAllBufs:null,_applyNchFn:null};
@@ -1921,15 +1975,20 @@ function _hwPointToRGB(p, isPwv7){
 // Waveform color: 3 presets — 'blue', 'rgb', '3band'
 // Source: Rekordbox ANLZ PWV4/PWV5/PWV6 + Deep-Symmetry/dysentery #9/#33
 function _wfBlend(r,g,b2,dimF){
-  const mode=cfg.wfColor||'rgb';
+  const mode=wfViewMode==='B'?'blue':(wfViewMode==='C'?'rgb':(cfg.wfColor||'3band'));
   if(mode==='blue'){
-    // Rekordbox BLUE: #0055B0 (deep) → #AADDFF (bright), hue shifts blue→cyan-white with treble
     const e=Math.min(1,Math.sqrt(r*r+g*g+b2*b2));
-    const w=b2/(r+g+b2||1); // whiteness = treble share (0-1)
-    const br=Math.pow(e,0.55);
-    const R=Math.round((br*0  +w*170)*dimF);
-    const G=Math.round((br*85 +w*135)*dimF);
-    const B=Math.round((br*176+w*79 )*dimF);
+    const br=Math.pow(e,0.55), hi=b2/(r+g+b2||1);
+    let R,G,B;
+    if(wfPalette==='classic'){
+      R=Math.round((br*0  +hi*170)*dimF);
+      G=Math.round((br*85 +hi*135)*dimF);
+      B=Math.round((br*176+hi*79 )*dimF);
+    }else{
+      R=Math.round((br*255)*dimF);
+      G=Math.round((br*80+hi*155)*dimF);
+      B=Math.round((br*30 +hi*95 )*dimF);
+    }
     return[Math.min(255,R),Math.min(255,G),Math.min(255,B)];
   }
   if(mode==='3band'){
@@ -1963,7 +2022,7 @@ function buildWaveformCache(slot){
   const cv=document.getElementById('wzc'+slot);
   const H=cv?cv.height:100;
   const pts=wfData.length;
-  const cacheKey=pts+'_'+H+'_grad1';
+  const cacheKey=pts+'_'+H+'_grad1_'+wfViewMode+'_'+wfPalette;
   if(d._wfCache&&d._wfCacheKey===cacheKey)return;
   const oc=new OffscreenCanvas(pts,H);
   const ctx=oc.getContext('2d',{alpha:false});
@@ -1977,10 +2036,15 @@ function buildWaveformCache(slot){
     let R,G,B;
     if(d.type==='hw'){
       // HW 전용 경로 — PWV7 공식 또는 CDJ 팔레트 컬러 분기
-      const [fr,fg,fb]=_hwPointToRGB(p,!!d._pwv7);
-      R=Math.round(fr*255); G=Math.round(fg*255); B=Math.round(fb*255);
+      if(_wfEffectiveViewMode(d)==='B'){
+        [R,G,B]=_wfBlend(p.h||p.r||p.g||p.b||0,p.h||p.r||p.g||p.b||0,p.h||p.r||p.g||p.b||0,1);
+      }else{
+        const [fr,fg,fb]=_hwPointToRGB(p,!!d._pwv7);
+        R=Math.round(fr*255); G=Math.round(fg*255); B=Math.round(fb*255);
+      }
     } else {
-      [R,G,B]=_wfBlend(p.r,p.g,p.b,1);
+      const mh=wfViewMode==='B'?(p.h||p.a||p.r||p.g||p.b||0):0;
+      [R,G,B]=_wfBlend(mh||p.r,mh||p.g,mh||p.b,1);
     }
     // Vertical gradient: center=100% bright → edge=25% bright
     const invH=1/h;
@@ -2269,8 +2333,8 @@ function drawOverview(slot,prog){
     // Auto-upload texture if missing — mirrors drawZoomWaveform's self-healing pattern
     if(!d.ovgl._wfTex){const _wd=d.rgbWfDetail||d.rgbWf;if(_wd)d.ovgl.setData(_wd);}
     if(!d.ovgl._wfTex)return;
-    // HW PWV7 → mode 3 (3-band blue→white), HW palette → mode 4 (native RGB), blue → 2, default → 1
-    d.ovgl.draw(pos, d.type==='hw' ? (d._pwv7 ? 3 : 4) : (cfg.wfColor==='blue' ? 2 : 1));
+    const viewMode=_WF_VIEW_TO_UNIFORM[_wfEffectiveViewMode(d)]??0;
+    d.ovgl.draw(pos, _wfDataMode(d), viewMode, _wfPaletteMode(), wfSharpness);
     // Continue to draw overlay markers on separate canvas
   } else {
     if(!d.wovCtx)return;
@@ -2279,7 +2343,7 @@ function drawOverview(slot,prog){
     const cv=document.getElementById('wov'+slot);if(!cv||!cv.width)return;
     const W=cv.width,H=cv.height,ctx=d.wovCtx;
     // Cache: render overview once, reuse until data/size changes
-    if(!d._ovCache||d._ovCache.w!==W||d._ovCache.h!==H||d._ovCache.len!==wfOv.length||d._ovCache.wfc!==cfg.wfColor){
+    if(!d._ovCache||d._ovCache.w!==W||d._ovCache.h!==H||d._ovCache.len!==wfOv.length||d._ovCache.wfc!==cfg.wfColor||d._ovCache.wvm!==wfViewMode||d._ovCache.wfp!==wfPalette){
       const pts=wfOv.length,mid=H/2;
       const ovImg=ctx.createImageData(W,H);
       const ovBuf=ovImg.data;
@@ -2292,9 +2356,13 @@ function drawOverview(slot,prog){
         if(h<1)continue;
         let R,G,B;
         if(d.type==='hw'){
-          const [fr,fg,fb]=_hwPointToRGB({r,g,b},!!d._pwv7);
-          R=Math.round(fr*255);G=Math.round(fg*255);B=Math.round(fb*255);
-        } else {[R,G,B]=_wfBlend(r,g,b,1);}
+          if(_wfEffectiveViewMode(d)==='B'){
+            [R,G,B]=_wfBlend(pk,pk,pk,1);
+          }else{
+            const [fr,fg,fb]=_hwPointToRGB({r,g,b},!!d._pwv7);
+            R=Math.round(fr*255);G=Math.round(fg*255);B=Math.round(fb*255);
+          }
+        } else {const mh=wfViewMode==='B'?pk:0;[R,G,B]=_wfBlend(mh||r,mh||g,mh||b,1);}
         const invH=1/h;
         for(let dy=-h;dy<=h;dy++){
           const y=mid+dy;if(y<0||y>=H)continue;
@@ -2303,7 +2371,7 @@ function drawOverview(slot,prog){
           ovBuf[off]=R*br|0;ovBuf[off+1]=G*br|0;ovBuf[off+2]=B*br|0;ovBuf[off+3]=255;
         }
       }
-      d._ovCache={w:W,h:H,len:wfOv.length,wfc:cfg.wfColor,img:ovImg};
+      d._ovCache={w:W,h:H,len:wfOv.length,wfc:cfg.wfColor,wvm:wfViewMode,wfp:wfPalette,img:ovImg};
     }
     ctx.putImageData(d._ovCache.img,0,0);
   }
@@ -2444,11 +2512,10 @@ function drawZoomWaveform(slot,prog){
       d.wgl.setData(wfData, wfDurMs);
     }
     if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;} // no data yet
-    const modeMap={'rgb':0,'3band':1,'blue':2};
-    // HW PWV7 → mode 3 (3-band 블루→화이트), HW palette(PWV5) → mode 4 (native RGB), 그 외 → 설정 매핑
-    const mode=d.type==='hw' ? (d._pwv7 ? 3 : 4) : (modeMap[cfg.wfColor]??1);
+    const mode=_wfDataMode(d);
+    const viewMode=_WF_VIEW_TO_UNIFORM[_wfEffectiveViewMode(d)]??0;
     const cX=cfg.wfCenter==='left'?0.25:0.5;
-    d.wgl.draw(pos*d.dur, d.zoomMs||8000, cX, mode);
+    d.wgl.draw(pos*d.dur, d.zoomMs||8000, cX, mode, viewMode, _wfPaletteMode(), wfSharpness);
     drawZoomOverlay(slot,prog);
     return;
   }
@@ -2464,7 +2531,7 @@ function drawZoomWaveform(slot,prog){
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
   // Build offscreen cache: full waveform at zoom resolution (1px per msPerPx)
   const cacheW=Math.min(16384,Math.ceil(wfDur/msPerPx));
-  if(!d._zmCache||d._zmCache.len!==pts||d._zmCache.h!==H||d._zmCache.cw!==cacheW||d._zmCache.wfc!==cfg.wfColor){
+  if(!d._zmCache||d._zmCache.len!==pts||d._zmCache.h!==H||d._zmCache.cw!==cacheW||d._zmCache.wfc!==cfg.wfColor||d._zmCache.wvm!==wfViewMode||d._zmCache.wfp!==wfPalette){
     const oc=document.createElement('canvas');oc.width=cacheW;oc.height=H;
     const octx=oc.getContext('2d');
     const pxPerMs2=pts/wfDur,mid=H/2;
@@ -2485,9 +2552,14 @@ function drawZoomWaveform(slot,prog){
         const b=p0.b+((p1?.b||0)-p0.b)*f;
         let R,G,B;
         if(d.type==='hw'){
-          const [fr,fg,fb]=_hwPointToRGB({r,g,b},!!d._pwv7);
-          R=Math.round(fr*255);G=Math.round(fg*255);B=Math.round(fb*255);
-        } else {[R,G,B]=_wfBlend(r,g,b,1);}
+          if(_wfEffectiveViewMode(d)==='B'){
+            const mh=(p0.h||0)+(((p1?.h||0)-(p0.h||0))*f);
+            [R,G,B]=_wfBlend(mh,mh,mh,1);
+          }else{
+            const [fr,fg,fb]=_hwPointToRGB({r,g,b},!!d._pwv7);
+            R=Math.round(fr*255);G=Math.round(fg*255);B=Math.round(fb*255);
+          }
+        } else {const mh=wfViewMode==='B'?(p0.h||0)+(((p1?.h||0)-(p0.h||0))*f):0;[R,G,B]=_wfBlend(mh||r,mh||g,mh||b,1);}
         _gc2.push({t:px/(cacheW-1),c:`rgb(${R},${G},${B})`});
       }
     }
@@ -2497,7 +2569,7 @@ function drawZoomWaveform(slot,prog){
     octx.closePath();octx.save();octx.clip();
     if(_gc2.length>1){const grad=octx.createLinearGradient(0,0,cacheW,0);for(const s of _gc2)grad.addColorStop(s.t,s.c);octx.fillStyle=grad;}else{octx.fillStyle='#4ae183';}
     octx.fillRect(0,0,cacheW,H);octx.restore();
-    d._zmCache={len:pts,h:H,cw:cacheW,msPerPx:msPerPx,wfc:cfg.wfColor,canvas:oc};
+    d._zmCache={len:pts,h:H,cw:cacheW,msPerPx:msPerPx,wfc:cfg.wfColor,wvm:wfViewMode,wfp:wfPalette,canvas:oc};
   }
   // Blit cached viewport
   ctx.fillStyle='#111318';ctx.fillRect(0,0,W,H);
@@ -3087,6 +3159,43 @@ function patchDeck(slot){
   if(_expandedSlot===slot){newEl.classList.add('dk-wide');}
 }
 
+function _bindVirtualFader(slot,faderEl){
+  const d=DECKS[slot];
+  if(!faderEl||!d||d.type==='hw'||faderEl.dataset.bound==='1')return;
+  faderEl.dataset.bound='1';
+  if(faders[slot]==null) faders[slot]=255;
+  window.bridge.setFader?.(slot,faders[slot]);
+  const _paintFader=()=>{
+    const fill=document.getElementById('dvuF'+slot);
+    if(fill)fill.style.setProperty('--vu-level',Math.round((faders[slot]||0)/255*100)+'%');
+  };
+  _paintFader();
+  const _setFaderFromPointer=(e)=>{
+    const bar=faderEl.querySelector('.dvu-hbar');if(!bar)return;
+    const rc=bar.getBoundingClientRect();
+    const horizontal=rc.width>rc.height*1.5;
+    const raw=horizontal?(e.clientX-rc.left)/rc.width:1-(e.clientY-rc.top)/rc.height;
+    const pct=Math.max(0,Math.min(1,raw));
+    const val=Math.round(pct*255);
+    faders[slot]=val;
+    window.bridge.setFader?.(slot,val);
+    _paintFader();
+  };
+  faderEl.addEventListener('pointerdown',e=>{
+    e.preventDefault();_setFaderFromPointer(e);
+    faderEl.setPointerCapture(e.pointerId);
+    const _move=ev=>_setFaderFromPointer(ev);
+    const _up=()=>{
+      faderEl.removeEventListener('pointermove',_move);
+      faderEl.removeEventListener('pointerup',_up);
+      faderEl.removeEventListener('pointercancel',_up);
+    };
+    faderEl.addEventListener('pointermove',_move);
+    faderEl.addEventListener('pointerup',_up);
+    faderEl.addEventListener('pointercancel',_up);
+  });
+}
+
 function bindDeck(slot){
   const el=document.getElementById('dk'+slot);if(!el)return;
   const d=DECKS[slot];
@@ -3196,35 +3305,7 @@ function bindDeck(slot){
     });
   }
   // Virtual fader drag control — click/drag on F bar to set fader level
-  const faderEl=el.querySelector('.dvu-fader');
-  if(faderEl&&d.type!=='hw'){
-    if(faders[slot]==null) faders[slot]=255;
-    window.bridge.setFader?.(slot,faders[slot]);
-    const _paintFader=()=>{
-      const fill=document.getElementById('dvuF'+slot);
-      if(fill)fill.style.setProperty('--vu-level',Math.round((faders[slot]||0)/255*100)+'%');
-    };
-    _paintFader();
-    const _setFaderFromPointer=(e)=>{
-      const bar=faderEl.querySelector('.dvu-hbar');if(!bar)return;
-      const rc=bar.getBoundingClientRect();
-      const horizontal=rc.width>rc.height*1.5;
-      const raw=horizontal?(e.clientX-rc.left)/rc.width:1-(e.clientY-rc.top)/rc.height;
-      const pct=Math.max(0,Math.min(1,raw));
-      const val=Math.round(pct*255);
-      faders[slot]=val;
-      window.bridge.setFader?.(slot,val);
-      _paintFader();
-    };
-    faderEl.addEventListener('pointerdown',e=>{
-      e.preventDefault();_setFaderFromPointer(e);
-      faderEl.setPointerCapture(e.pointerId);
-      const _move=ev=>_setFaderFromPointer(ev);
-      const _up=()=>{faderEl.removeEventListener('pointermove',_move);faderEl.removeEventListener('pointerup',_up);};
-      faderEl.addEventListener('pointermove',_move);
-      faderEl.addEventListener('pointerup',_up);
-    });
-  }
+  _bindVirtualFader(slot,el.querySelector('.dvu-fader'));
   // CUE button — pointerdown/up for hold-to-cue behaviour
   const cb=el.querySelector('[data-a="cue"]');
   if(cb&&d.type!=='hw'){
@@ -3525,7 +3606,7 @@ function loadFile(slot,f){
   if(d.artUrl){URL.revokeObjectURL(d.artUrl);d.artUrl=null;}
   d.art=null;         // clear dbserver-fetched artwork (HW/virtual)
   d._artRawB64=null;  // clear stale artwork from previous track
-  d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;d._fileName=f.name;d._pwv7=false;d._ovCache=null;d._zmCache=null;
+  d.ld=true;d.pl=false;d.cu=false;d.pos=0;d.cp=0;d.cuw=false;d.wf=null;d._fileName=f.name;d._pwv7=false;d.wfCapability=null;d._ovCache=null;d._zmCache=null;
   // Immediately clear artwork UI
   const _dartReset=document.getElementById('dart'+slot);
   if(_dartReset)_dartReset.innerHTML='<img src="assets/default-art.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
@@ -3835,21 +3916,29 @@ function _chColor(ch,total){
   return '#fff';
 }
 
-// VU strip: 채널 수에 맞게 동적으로 채널 바 + 너비 조정
-const _VU_CH_W=9; // px per channel (bar + gap)
-const _VU_PAD=6;  // px total padding/border
+// VU strip: Row는 채널 수만큼 VU 컬럼을 넓히고, Card/Tower는 compact multi 표시.
+const _VU_CH_W=11; // row px per audio channel
+const _VU_PAD=18;  // row padding + fixed fader allowance
 function _buildVuStrip(slot,numCh){
   const strip=document.getElementById('dvustrip'+slot);if(!strip)return;
-  // 너비 동적 조정: 2ch=28px, 6ch=62px, 8ch=80px
-  const w=Math.max(28,numCh*_VU_CH_W+_VU_PAD+(numCh-1)*2);
-  strip.style.width=w+'px';
+  const nC=Math.min(Math.max(numCh||2,2),8);
+  const isMulti=nC>2;
+  const rowBody=strip.closest('.rw-body');
+  const rowW=Math.max(40,nC*_VU_CH_W+_VU_PAD);
+  if(rowBody)rowBody.style.setProperty('--vu-w',rowW+'px');
+  strip.style.removeProperty('width');
+  strip.classList.toggle('dvu-multi',isMulti);
+  strip.classList.toggle('dvu-nch',isMulti);
+  strip.style.setProperty('--vu-count',String(nC));
   strip.innerHTML='';
   const CH_IDS=['L','R','3','4','5','6','7','8'];
-  for(let i=0;i<numCh;i++){
+  for(let i=0;i<nC;i++){
     const id='dvu'+(CH_IDS[i]||String(i+1))+slot;
-    const col=_chColor(i,numCh);
-    strip.innerHTML+=`<div class="dvu-ch"><span class="dvu-lbl" style="color:${col}">${_chLabel(i,numCh)}</span><div class="dvu-hbar"><div class="dvu-hfill" id="${id}" style="background:${col}"></div></div></div>`;
+    const col=_chColor(i,nC);
+    strip.innerHTML+=`<div class="dvu-ch dvu-audio"><span class="dvu-lbl" style="color:${col}">${_chLabel(i,nC)}</span><div class="dvu-hbar"><div class="dvu-hfill" id="${id}" style="background:${col}"></div></div></div>`;
   }
+  strip.innerHTML+=`<div class="dvu-ch dvu-fader" data-slot="${slot}"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur);--vu-level:${Math.round((faders[slot]??255)/255*100)}%"></div></div></div>`;
+  _bindVirtualFader(slot,strip.querySelector('.dvu-fader'));
 }
 
 // ── Multi-channel audio auto-routing ─────────────────────────────────
@@ -5076,6 +5165,9 @@ function renderTcnet(){
 function renderSettings(){
   const el=document.getElementById('pgSettings');
   const devOpts=audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg.aoId===d.deviceId?'selected':''}>${d.label||'Output '+d.deviceId.slice(0,8)}</option>`).join('');
+  const wfCap=_wfHwCapability();
+  const disA=wfCap==='pwv7'||wfCap==='blue', disC=wfCap==='blue';
+  const wfTip=wfCap==='pwv7'?'HW PWV7은 3-band 데이터라 Mode A 4-band 분리가 불가합니다.':wfCap==='blue'?'HW blue waveform은 높이 데이터만 있어 Mode B mono만 사용할 수 있습니다.':'Virtual waveform은 A/B/C 모두 사용 가능합니다.';
   // network interface options
   const ifaceOpts=(ifaces,field)=>{
     const sel=cfg[field]||'';
@@ -5100,6 +5192,16 @@ function renderSettings(){
     </div>
     <div class="sl">웨이브폼 설정</div>
     <div class="sgr">
+      <div class="srw"><span class="srl">Mode</span><select class="ss" id="wfViewModeSel" title="${wfTip}">
+        <option value="A" ${wfViewMode==='A'?'selected':''} ${disA?'disabled':''}>A — 4-band</option>
+        <option value="B" ${wfViewMode==='B'?'selected':''}>B — Mono</option>
+        <option value="C" ${wfViewMode==='C'?'selected':''} ${disC?'disabled':''}>C — Multi</option>
+      </select></div>
+      <div class="srw"><span class="srl">Palette</span><select class="ss" id="wfPaletteSel">
+        <option value="classic" ${wfPalette==='classic'?'selected':''}>Classic</option>
+        <option value="orange" ${wfPalette==='orange'?'selected':''}>Orange</option>
+      </select></div>
+      <div class="srw"><span class="srl">Sharpness</span><div style="display:flex;align-items:center;gap:6px"><input type="range" id="wfSharpnessSl" min="0" max="1" step="0.05" value="${wfSharpness}" title="0=sharp 1=legacy 3-tap smoothing" style="width:120px"><span id="wfSharpnessLbl" style="font:400 10px var(--mn);color:var(--tx3);width:32px;text-align:right">${wfSharpness.toFixed(2)}</span></div></div>
       <div class="srw"><span class="srl">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
     </div>
     <div class="sl">TCNet 설정</div>
@@ -5108,8 +5210,6 @@ function renderSettings(){
       <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
       <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">유니캐스트 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcUnicast" ${cfg.tcnetUnicast?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">브로드캐스트 대신 발견된 노드에만 전송</span></label></div>
-      <div class="srw" id="rowTcAllIfaces" style="${cfg.tcnetUnicast?'':'display:none'}"><span class="srl">모든 인터페이스 전송</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkTcAllIfaces" ${cfg.tcnetAllIfaces?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">모든 NIC 서브넷으로 유니캐스트</span></label></div>
     </div>
     <div class="sl">Pro DJ Link 설정</div>
     <div class="sgr">
@@ -5219,6 +5319,12 @@ function renderSettings(){
   // Probe audio devices and fill channel selectors (async — updates after render)
   _probeAndFillChSels(el);
   // Waveform settings
+  const wfViewModeSel=el.querySelector('#wfViewModeSel');
+  if(wfViewModeSel){wfViewModeSel.value=_wfEffectiveViewMode({type:glMode==='hw'?'hw':'virtual',wfCapability:wfCap});wfViewMode=wfViewModeSel.value;wfViewModeSel.onchange=e=>{wfViewMode=e.target.value;_wfPersistAndApply();};}
+  const wfPaletteSel=el.querySelector('#wfPaletteSel');
+  if(wfPaletteSel){wfPaletteSel.value=wfPalette;wfPaletteSel.onchange=e=>{wfPalette=e.target.value==='classic'?'classic':'orange';_wfPersistAndApply();};}
+  const wfSharpnessSl=el.querySelector('#wfSharpnessSl');
+  if(wfSharpnessSl){wfSharpnessSl.value=String(wfSharpness);wfSharpnessSl.oninput=e=>{wfSharpness=Math.max(0,Math.min(1,Number(e.target.value)||0));const l=el.querySelector('#wfSharpnessLbl');if(l)l.textContent=wfSharpness.toFixed(2);_wfPersistAndApply();};}
   const wfCenterSel=el.querySelector('#wfCenterSel');
   if(wfCenterSel){wfCenterSel.value=cfg.wfCenter||'left';wfCenterSel.onchange=e=>{cfg.wfCenter=e.target.value;_saveCfg();};}
   // Layout 테마 — body data-layout 속성과 cfg.layout 동기화 + renderDecks 재호출
@@ -5248,19 +5354,6 @@ function renderSettings(){
   el.querySelector('[data-cfg="tcnetIface"]').value=cfg.tcnetIface||'';
   el.querySelector('[data-cfg="pdjlIface"]').value=cfg.pdjlIface||'';
   el.querySelector('[data-cfg="tcnetMode"]').value=cfg.tcnetMode||'auto';
-  // TCNet unicast checkbox handlers
-  const chkUni=el.querySelector('#chkTcUnicast');
-  const chkAll=el.querySelector('#chkTcAllIfaces');
-  const rowAll=el.querySelector('#rowTcAllIfaces');
-  if(chkUni){chkUni.onchange=e=>{
-    cfg.tcnetUnicast=e.target.checked;_saveCfg();
-    if(rowAll)rowAll.style.display=e.target.checked?'':'none';
-    if(E&&run)window.bridge.setTCNetUnicast(e.target.checked,cfg.tcnetAllIfaces);
-  };}
-  if(chkAll){chkAll.onchange=e=>{
-    cfg.tcnetAllIfaces=e.target.checked;_saveCfg();
-    if(E&&run)window.bridge.setTCNetUnicast(cfg.tcnetUnicast,e.target.checked);
-  };}
   const btnIfaceRefresh=el.querySelector('#btnIfaceRefresh');
   if(btnIfaceRefresh)btnIfaceRefresh.onclick=async()=>{
     if(!E)return;
@@ -5836,8 +5929,6 @@ async function doStart(){
       pdjlIface:cfg.pdjlIface||null,
       tcnetMode:cfg.tcnetMode||'auto',
       nodeName:cfg.nm||'BRIDGE29',
-      tcnetUnicast:!!cfg.tcnetUnicast,
-      tcnetAllIfaces:!!cfg.tcnetAllIfaces,
     });
     if(!r.ok){alert('시작 실패: '+r.err);return;}
     pdjlPort=r.pdjlPort||null;
@@ -5940,7 +6031,7 @@ if(E){
       dk._tidChangeTo=newTid;
       if(dk._tidChangeCount>=3 && dk._tidChangeTo===newTid){
         console.log(`[UI] P${status.playerNum} track change confirmed: ${oldTid} → ${newTid}`);
-        dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;
+        dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;
         dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
         dk._trackId=newTid;dk._tidChangeCount=0;
         const _artEl=document.getElementById('dart'+layerIndex);
@@ -5964,7 +6055,7 @@ if(E){
       if(dk._noTrackCount>=3 && dk.ld){
         console.log(`[UI] P${status.playerNum} track ejected`);
         dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.pl=false;dk.bpm=0;
-        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
+        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
         patchDeck(layerIndex);
       }
       return;
@@ -6048,7 +6139,19 @@ if(E){
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
     if(d.pts&&d.pts.length>0){
-      if(d.wfType==='color'){
+      if(d.pwv7||d.wfType==='pwv7'){
+        dk.rgbWf=d.pts.map(p=>{
+          const h=Math.max(p.low||0,p.mid||0,p.hi||0);
+          return{r:p.low||0,g:p.mid||0,b:p.hi||0,h,mn:-h,mx:h};
+        });
+        dk._pwv7=true;dk.wfCapability='pwv7';
+      } else if(d.wfType==='nxs2_3band'||d.wfType==='mono'){
+        dk.rgbWf=d.pts.map(p=>{
+          const h=Math.max(p.low||0,p.mid||0,p.hi||0,(p.height||0)/31);
+          return{r:0,g:0,b:0,h,mn:-h,mx:h};
+        });
+        dk._pwv7=false;dk.wfCapability='blue';
+      } else if(d.wfType==='color'){
         // CDJ-3000 color waveform: accumulate segments → 3-band pseudo-mapping
         if(!dk._hwWfSegs)dk._hwWfSegs={};
         dk._hwWfSegs[d.seg]=d.pts;
@@ -6060,6 +6163,7 @@ if(E){
           const h=p.height/255;
           return{r,g,b,h,mn:-h,mx:h};
         });
+        dk._pwv7=false;dk.wfCapability='blue';
       } else {
         // dbserver preview waveform: {height:0-31, color:0-7} → direct RGB
         dk.rgbWf=d.pts.map(p=>{
@@ -6067,6 +6171,7 @@ if(E){
           const h=p.height/31;
           return{r,g,b,h,mn:-h,mx:h};
         });
+        dk._pwv7=false;dk.wfCapability='blue';
       }
       // Don't override duration if we have a real value from metadata
       if(!dk.dur||dk.dur<=0) dk.dur=dk.rgbWf.length*30;
@@ -6124,13 +6229,19 @@ if(E){
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
     if(d.pts&&d.pts.length>0){
-      if(d.wfType==='nxs2_3band'){
+      if(d.pwv7||d.wfType==='pwv7'){
         // PWV7 3-band: raw bass/mid/treble (0-1 each)
         dk.rgbWfDetail=d.pts.map(p=>{
           const h=Math.max(p.low||0,p.mid||0,p.hi||0);
           return{r:p.low||0,g:p.mid||0,b:p.hi||0,h,mn:-h,mx:h};
         });
-        dk._pwv7=true;
+        dk._pwv7=true;dk.wfCapability='pwv7';
+      } else if(d.wfType==='nxs2_3band'||d.wfType==='mono'){
+        dk.rgbWfDetail=d.pts.map(p=>{
+          const h=Math.max(p.low||0,p.mid||0,p.hi||0,(p.height||0)/31);
+          return{r:0,g:0,b:0,h,mn:-h,mx:h};
+        });
+        dk._pwv7=false;dk.wfCapability='blue';
       } else {
         // Standard 1-byte encoding: 5-bit height + 3-bit color → direct RGB
         dk.rgbWfDetail=d.pts.map(p=>{
@@ -6138,6 +6249,7 @@ if(E){
           const h=p.height/31;
           return{r,g,b,h,mn:-h,mx:h};
         });
+        dk._pwv7=false;dk.wfCapability='blue';
       }
       // Duration from detail waveform: pts / 150 segments per second * 1000ms
       const detailDur=Math.round(d.pts.length/150*1000);
@@ -6248,7 +6360,7 @@ if(E){
       if(d.chExtra)extra.push(`Extra:${JSON.stringify(d.chExtra)}`);
       let logLine=`[${ts}] ${pktInfo} FADERS ${fStr}\n         EQ ${eqStr}\n         ${extra.join(' | ')}`;
       // Show raw hex dump for first 5 log entries to identify correct byte offsets
-      if(d.rawHex&&_djmLog.length<5)logLine+=`\n         RAW: ${d.rawHex}`;
+      if(_djmCapturing&&d.rawHex&&_djmLog.length<3)logLine+=`\n         RAW: ${d.rawHex}`;
       _djmLog.push(logLine);
       if(_djmLog.length>_djmLogMax)_djmLog.splice(0,_djmLog.length-_djmLogMax);
     }
