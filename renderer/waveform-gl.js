@@ -74,19 +74,28 @@ class WaveformGL {
       px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
       px[i*4+3] = Math.min(255, aCh * 255) | 0;
     }
-    // Cap texture width at GPU MAX_TEXTURE_SIZE — long tracks (>109s at 150pts/s) exceed 16384 limit
+    // Cap at GPU MAX_TEXTURE_SIZE — PEAK max-pool keeps entry variation alive
     const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
     let texN = n, texPx = px;
     if (n > maxTex) {
       texN = maxTex;
       texPx = new Uint8Array(texN * 4);
-      const ratio = (n - 1) / (texN - 1);
+      const stride = n / texN;
       for (let i = 0; i < texN; i++) {
-        const fi = i * ratio, i0 = Math.min(n-1, fi|0), i1 = Math.min(n-1, i0+1), t = fi-i0;
-        texPx[i*4]   = (px[i0*4]   * (1-t) + px[i1*4]   * t) | 0;
-        texPx[i*4+1] = (px[i0*4+1] * (1-t) + px[i1*4+1] * t) | 0;
-        texPx[i*4+2] = (px[i0*4+2] * (1-t) + px[i1*4+2] * t) | 0;
-        texPx[i*4+3] = (px[i0*4+3] * (1-t) + px[i1*4+3] * t) | 0;
+        const j0 = Math.floor(i * stride);
+        const j1 = Math.min(n, Math.max(j0 + 1, Math.floor((i + 1) * stride)));
+        let mr=0, mg=0, mb=0, ma=0;
+        for (let j = j0; j < j1; j++) {
+          const o = j * 4;
+          if (px[o]   > mr) mr = px[o];
+          if (px[o+1] > mg) mg = px[o+1];
+          if (px[o+2] > mb) mb = px[o+2];
+          if (px[o+3] > ma) ma = px[o+3];
+        }
+        texPx[i*4]   = mr;
+        texPx[i*4+1] = mg;
+        texPx[i*4+2] = mb;
+        texPx[i*4+3] = ma;
       }
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
@@ -97,6 +106,87 @@ class WaveformGL {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this._winKey = '';
+  }
+
+  /** Upload only a window of the detail waveform at native resolution (no downsample). */
+  setWindowData(wfData, startIdx, endIdx, sliceDurMs) {
+    const gl = this.gl;
+    const len = wfData.length;
+    if (len < 2) return;
+    startIdx = Math.max(0, Math.min(len - 2, startIdx | 0));
+    endIdx = Math.max(startIdx + 2, Math.min(len, endIdx | 0));
+    const n = endIdx - startIdx;
+    const winKey = startIdx + '_' + endIdx + '_' + n;
+    if (this._winKey === winKey && this._wfTex) {
+      if (sliceDurMs) this._wfDurMs = sliceDurMs;
+      return;
+    }
+    if (!this._prog || !gl.isProgram(this._prog)) {
+      try {
+        this._prog = this._compileProgram(_WGL_VS, _WGL_ZOOM_FS);
+        this._vao = null;
+        this._initGeometry();
+        this._locs = {
+          wf:   gl.getUniformLocation(this._prog, 'u_wf'),
+          posMs:gl.getUniformLocation(this._prog, 'u_posMs'),
+          zoomMs: gl.getUniformLocation(this._prog, 'u_zoomMs'),
+          durMs: gl.getUniformLocation(this._prog, 'u_durMs'),
+          res:  gl.getUniformLocation(this._prog, 'u_res'),
+          centerX: gl.getUniformLocation(this._prog, 'u_centerX'),
+          mode: gl.getUniformLocation(this._prog, 'u_mode'),
+          viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
+          paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+          sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
+        };
+      } catch(e) { console.warn('[WGL] wgl recover failed:', e.message); return; }
+    }
+    const px = new Uint8Array(n * 4);
+    for (let i = 0; i < n; i++) {
+      const p = wfData[startIdx + i];
+      const aCh = (p.a !== undefined ? p.a : (p.h || 0));
+      px[i*4]   = Math.min(255, (p.r || 0) * 255) | 0;
+      px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
+      px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
+      px[i*4+3] = Math.min(255, aCh * 255) | 0;
+    }
+    // PEAK-preserving max-pool downsample if slice still exceeds GPU cap (rare for window view)
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+    let texN = n, texPx = px;
+    if (n > maxTex) {
+      texN = maxTex;
+      texPx = new Uint8Array(texN * 4);
+      const stride = n / texN;
+      for (let i = 0; i < texN; i++) {
+        const j0 = Math.floor(i * stride);
+        const j1 = Math.min(n, Math.max(j0 + 1, Math.floor((i + 1) * stride)));
+        let mr=0, mg=0, mb=0, ma=0;
+        for (let j = j0; j < j1; j++) {
+          const o = j * 4;
+          if (px[o]   > mr) mr = px[o];
+          if (px[o+1] > mg) mg = px[o+1];
+          if (px[o+2] > mb) mb = px[o+2];
+          if (px[o+3] > ma) ma = px[o+3];
+        }
+        texPx[i*4]   = mr;
+        texPx[i*4+1] = mg;
+        texPx[i*4+2] = mb;
+        texPx[i*4+3] = ma;
+      }
+    }
+    if (this._wfTex) gl.deleteTexture(this._wfTex);
+    this._wfTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this._wfLen = n;
+    this._wfDurMs = sliceDurMs || 1;
+    this._winKey = winKey;
+    this._dirty = true;
+    this._lastDrawKey = '';
   }
 
   /** Render waveform. mode keeps data layout; viewMode: 0=A, 1=B, 2=C. */
@@ -235,19 +325,28 @@ class OverviewGL {
       px[i*4+3] = Math.min(255, aCh * 255) | 0;
     }
 
-    // Cap at GPU MAX_TEXTURE_SIZE
+    // Cap at GPU MAX_TEXTURE_SIZE — PEAK max-pool preserves entry-to-entry variation
     const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
     let texN = n, texPx = px;
     if (n > maxTex) {
       texN = maxTex;
       texPx = new Uint8Array(texN * 4);
-      const ratio = (n - 1) / (texN - 1);
+      const stride = n / texN;
       for (let i = 0; i < texN; i++) {
-        const fi = i * ratio, i0 = Math.min(n-1, fi|0), i1 = Math.min(n-1, i0+1), t = fi-i0;
-        texPx[i*4]   = (px[i0*4]   * (1-t) + px[i1*4]   * t) | 0;
-        texPx[i*4+1] = (px[i0*4+1] * (1-t) + px[i1*4+1] * t) | 0;
-        texPx[i*4+2] = (px[i0*4+2] * (1-t) + px[i1*4+2] * t) | 0;
-        texPx[i*4+3] = (px[i0*4+3] * (1-t) + px[i1*4+3] * t) | 0;
+        const j0 = Math.floor(i * stride);
+        const j1 = Math.min(n, Math.max(j0 + 1, Math.floor((i + 1) * stride)));
+        let mr=0, mg=0, mb=0, ma=0;
+        for (let j = j0; j < j1; j++) {
+          const o = j * 4;
+          if (px[o]   > mr) mr = px[o];
+          if (px[o+1] > mg) mg = px[o+1];
+          if (px[o+2] > mb) mb = px[o+2];
+          if (px[o+3] > ma) ma = px[o+3];
+        }
+        texPx[i*4]   = mr;
+        texPx[i*4+1] = mg;
+        texPx[i*4+2] = mb;
+        texPx[i*4+3] = ma;
       }
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);

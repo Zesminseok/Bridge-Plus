@@ -1,12 +1,12 @@
 # Graph Report - /Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone  (2026-04-21)
 
 ## Corpus Check
-- 9 files · ~153,273 words
+- 9 files · ~153,752 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 634 nodes · 944 edges · 39 communities detected
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 71 edges (avg confidence: 0.79)
+- 635 nodes · 947 edges · 39 communities detected
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 71 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)

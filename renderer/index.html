@@ -2505,17 +2505,29 @@ function drawZoomWaveform(slot,prog){
   }
 
   if(d.wgl){
-    // Always derive duration from waveform length (150pts/sec) — avoids d.dur=0 race
-    const wfDurMs=(wfData.length/150*1000)||1;
-    // Upload texture if missing OR if duration stored differs significantly (dur was 0 at init)
-    if(!d.wgl._wfTex||Math.abs(d.wgl._wfDurMs-wfDurMs)>500){
-      d.wgl.setData(wfData, wfDurMs);
-    }
-    if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;} // no data yet
+    // Window-based upload: only the visible zoom range at native 150pts/sec resolution.
+    // Avoids GPU MAX_TEXTURE_SIZE forcing a global downsample that smears entry jitter.
+    const totalDurMs=(wfData.length/150*1000)||1;
+    const posMs=pos*d.dur;
+    const zoomMs=d.zoomMs||8000;
+    // Pad window: 2× zoomMs either side so pan/seek within ±zoomMs doesn't trigger re-upload.
+    const winSpanMs=zoomMs*5;
+    const winCenterMs=Math.max(0,Math.min(totalDurMs,posMs));
+    let winStartMs=winCenterMs-winSpanMs/2;
+    let winEndMs=winCenterMs+winSpanMs/2;
+    if(winStartMs<0){winEndMs-=winStartMs;winStartMs=0;}
+    if(winEndMs>totalDurMs){winStartMs=Math.max(0,winStartMs-(winEndMs-totalDurMs));winEndMs=totalDurMs;}
+    const winStartIdx=Math.max(0,Math.floor(winStartMs*150/1000));
+    const winEndIdx=Math.min(wfData.length,Math.ceil(winEndMs*150/1000));
+    const winActualStartMs=winStartIdx*1000/150;
+    const winActualDurMs=(winEndIdx-winStartIdx)*1000/150;
+    d.wgl.setWindowData(wfData,winStartIdx,winEndIdx,winActualDurMs);
+    if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;}
     const mode=_wfDataMode(d);
     const viewMode=_WF_VIEW_TO_UNIFORM[_wfEffectiveViewMode(d)]??0;
     const cX=cfg.wfCenter==='left'?0.25:0.5;
-    d.wgl.draw(pos*d.dur, d.zoomMs||8000, cX, mode, viewMode, _wfPaletteMode(), wfSharpness);
+    // posMs in shader is now relative to window start (shader sees window as its full song)
+    d.wgl.draw(posMs-winActualStartMs, zoomMs, cX, mode, viewMode, _wfPaletteMode(), wfSharpness);
     drawZoomOverlay(slot,prog);
     return;
   }
