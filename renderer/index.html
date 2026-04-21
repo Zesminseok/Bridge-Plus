@@ -1307,6 +1307,7 @@ let wfViewMode=(v=>/^[ABC]$/.test(v)?v:'A')(_wfReadLS('wf_view_mode','A'));
 let wfPalette=(v=>v==='classic'||v==='orange'?v:'orange')(_wfReadLS('wf_palette','orange'));
 let wfSharpness=Math.max(0,Math.min(1,Number(_wfReadLS('wf_sharpness','0'))||0));
 const _WF_VIEW_TO_UNIFORM={A:0,B:1,C:2};
+const WF_RATE=2048;
 function _wfPaletteMode(){return wfPalette==='classic'?0:1;}
 function _wfHwCapability(){
   if(glMode!=='hw')return null;
@@ -1898,8 +1899,8 @@ async function buildRGBWaveform(blob, onChunk){
     const buf=await _ac.decodeAudioData(ab);
     _ac.close();
     const ch=buf.getChannelData(0),sr=buf.sampleRate;
-    // CDJ uses ~150 entries/sec; cap at 50000 for full resolution (5.5min @ 150/s)
-    const pts=Math.min(50000,Math.max(6000,Math.floor(buf.duration*150)));
+    // Renderer detail waveform target rate.
+    const pts=Math.min(2_000_000,Math.max(6000,Math.floor(buf.duration*WF_RATE)));
     const step=Math.max(1,Math.floor(ch.length/pts));
     // 4th-order Linkwitz-Riley split via cascaded Butterworth biquads (-24dB/oct)
     // Crossovers: 150Hz / 700Hz / 3500Hz (rekordbox-style 4-band waveform)
@@ -2340,10 +2341,10 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
 function drawOverview(slot,prog){
   const d=DECKS[slot];if(!d)return;
   // Overview playhead/overlay를 detail waveform과 동일한 시간축으로 맞춤
-  // detail은 wfDurMs(=wfData.length/150*1000) 기준으로 playhead 위치를 계산 →
+  // detail은 wfDurMs(=wfData.length/WF_RATE*1000) 기준으로 playhead 위치를 계산 →
   // overview도 같은 기준 사용해야 오버뷰 커서와 디테일 커서가 일치
   const _wfDataOv=d.rgbWfDetail||d.rgbWf;
-  const _wfDurOv=(_wfDataOv&&_wfDataOv.length>1)?(_wfDataOv.length/150*1000):0;
+  const _wfDurOv=(_wfDataOv&&_wfDataOv.length>1)?(_wfDataOv.length/WF_RATE*1000):0;
   const _ovDur=(_wfDurOv>0)?_wfDurOv:(d.dur||0);
   const _posMsOv=(d.dur>0)?Math.max(0,Math.min(1,prog||0))*d.dur:0;
   const pos=(_ovDur>0)?Math.max(0,Math.min(1,_posMsOv/_ovDur)):Math.max(0,Math.min(1,prog||0));
@@ -2527,9 +2528,9 @@ function drawZoomWaveform(slot,prog){
   }
 
   if(d.wgl){
-    // Window-based upload: only the visible zoom range at native 150pts/sec resolution.
+    // Window-based upload: only the visible zoom range at native waveform resolution.
     // Avoids GPU MAX_TEXTURE_SIZE forcing a global downsample that smears entry jitter.
-    const totalDurMs=(wfData.length/150*1000)||1;
+    const totalDurMs=(wfData.length/WF_RATE*1000)||1;
     const posMs=pos*d.dur;
     const zoomMs=d.zoomMs||8000;
     // Pad window: 2× zoomMs either side so pan/seek within ±zoomMs doesn't trigger re-upload.
@@ -2539,10 +2540,10 @@ function drawZoomWaveform(slot,prog){
     let winEndMs=winCenterMs+winSpanMs/2;
     if(winStartMs<0){winEndMs-=winStartMs;winStartMs=0;}
     if(winEndMs>totalDurMs){winStartMs=Math.max(0,winStartMs-(winEndMs-totalDurMs));winEndMs=totalDurMs;}
-    const winStartIdx=Math.max(0,Math.floor(winStartMs*150/1000));
-    const winEndIdx=Math.min(wfData.length,Math.ceil(winEndMs*150/1000));
-    const winActualStartMs=winStartIdx*1000/150;
-    const winActualDurMs=(winEndIdx-winStartIdx)*1000/150;
+    const winStartIdx=Math.max(0,Math.floor(winStartMs*WF_RATE/1000));
+    const winEndIdx=Math.min(wfData.length,Math.ceil(winEndMs*WF_RATE/1000));
+    const winActualStartMs=winStartIdx*1000/WF_RATE;
+    const winActualDurMs=(winEndIdx-winStartIdx)*1000/WF_RATE;
     d.wgl.setWindowData(wfData,winStartIdx,winEndIdx,winActualDurMs);
     if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;}
     const mode=_wfDataMode(d);
@@ -2560,7 +2561,7 @@ function drawZoomWaveform(slot,prog){
   const W=cv.width,H=cv.height,ctx=d.wzCtx;
   const dur=d.dur,posMs=pos*dur;
   const pts=wfData.length;
-  const wfDur=(pts/150*1000)||1;
+  const wfDur=(pts/WF_RATE*1000)||1;
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
   const viewMs=d.zoomMs||8000,msPerPx=viewMs/W;
   // Build offscreen cache: full waveform at zoom resolution (1px per msPerPx)
@@ -3397,7 +3398,7 @@ function bindDeck(slot){
         try{
           d.wgl=new WaveformGL(wzc); d.wzCtx=null;
           const _wfD=d.rgbWfDetail||d.rgbWf;
-          if(_wfD){d.wgl.setData(_wfD,(_wfD.length/150*1000)||1);drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
+          if(_wfD){d.wgl.setData(_wfD,(_wfD.length/WF_RATE*1000)||1);drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
           const wzov=document.getElementById('wzov'+slot);
           if(wzov){_sizeCvDpr(wzov,w,h);d.wovCtx2=_get2DCtxCss(wzov);}
         }catch(e){
@@ -3765,7 +3766,7 @@ function loadFile(slot,f){
               const wfD2=d.rgbWfDetail||d.rgbWf;
               if(wfD2){
                 if(!d.wgl){const _wzc=document.getElementById('wzc'+slot);if(_wzc){const _pp=_wzc.parentElement;const _w2=_pp?.offsetWidth||0,_h2=_pp?.offsetHeight||64;if(_w2>0){_sizeCvDpr(_wzc,_w2,_h2);try{d.wgl=new WaveformGL(_wzc);d.wzCtx=null;}catch(_e){d.wzCtx=_wzc.getContext('2d');}}}}
-                if(d.wgl)d.wgl.setData(wfD2,(wfD2.length/150*1000)||1);
+                if(d.wgl)d.wgl.setData(wfD2,(wfD2.length/WF_RATE*1000)||1);
                 const _wov=document.getElementById('wov'+slot);
                 if(_wov&&!d.ovgl){const _p=_wov.parentElement;const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;if(_w>0){_sizeCvDpr(_wov,_w,_h);try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}}
                 if(d.ovgl)d.ovgl.setData(wfD2);
@@ -3794,7 +3795,7 @@ function loadFile(slot,f){
               const wfD=d.rgbWfDetail||d.rgbWf;
               if(wfD){
                 if(!d.wgl){const _wzc=document.getElementById('wzc'+slot);if(_wzc){const _pp=_wzc.parentElement;const _w2=_pp?.offsetWidth||0,_h2=_pp?.offsetHeight||64;if(_w2>0){_sizeCvDpr(_wzc,_w2,_h2);try{d.wgl=new WaveformGL(_wzc);d.wzCtx=null;}catch(_e){d.wzCtx=_wzc.getContext('2d');}}}}
-                if(d.wgl)d.wgl.setData(wfD,(wfD.length/150*1000)||1);
+                if(d.wgl)d.wgl.setData(wfD,(wfD.length/WF_RATE*1000)||1);
                 const _wov=document.getElementById('wov'+slot);
                 if(_wov&&!d.ovgl){const _p=_wov.parentElement;const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;if(_w>0){_sizeCvDpr(_wov,_w,_h);try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}}
                 if(d.ovgl)d.ovgl.setData(wfD);
@@ -4173,7 +4174,7 @@ function _resizeDeckCanvases(s){
       try{d2.wgl=new WaveformGL(wzc);d2.wzCtx=null;}catch(e){d2.wzCtx=wzc.getContext('2d');}
       const wzov=document.getElementById('wzov'+s);
       if(wzov){_sizeCvDpr(wzov,w,h);d2.wovCtx2=_get2DCtxCss(wzov);}
-      if(d2.wgl){const wfD=d2.rgbWfDetail||d2.rgbWf;if(wfD){d2.wgl.setData(wfD,(wfD.length/150*1000)||1);drawZoomWaveform(s,d2.dur>0&&d2.pos>0?d2.pos/d2.dur:0);}}
+      if(d2.wgl){const wfD=d2.rgbWfDetail||d2.rgbWf;if(wfD){d2.wgl.setData(wfD,(wfD.length/WF_RATE*1000)||1);drawZoomWaveform(s,d2.dur>0&&d2.pos>0?d2.pos/d2.dur:0);}}
     }
   }
 }
@@ -4660,7 +4661,7 @@ function tick(){
         // Re-upload texture if WGL exists but texture is missing
         if(d.wgl&&!d.wgl._wfTex){
           const wfD=d.rgbWfDetail||d.rgbWf;
-          if(wfD){const wfDMs=(wfD.length/150*1000)||1;d.wgl.setData(wfD,wfDMs);}
+          if(wfD){const wfDMs=(wfD.length/WF_RATE*1000)||1;d.wgl.setData(wfD,wfDMs);}
         }
       }
       // Waveform + overlay draw — position-gated (saves GPU when paused)
@@ -6218,7 +6219,7 @@ if(E){
       dk._wfCache=null;dk._ovCache=null;dk._zmCache=null;dk._wfDirty=true; // invalidate cache
       buildWaveformCache(li);
       const _wfD=dk.rgbWfDetail||dk.rgbWf;
-      if(dk.wgl&&_wfD)dk.wgl.setData(_wfD,(_wfD.length/150*1000)||1);
+      if(dk.wgl&&_wfD)dk.wgl.setData(_wfD,(_wfD.length/WF_RATE*1000)||1);
       if(dk.ovgl&&_wfD)dk.ovgl.setData(_wfD);
       console.log(`[UI] P${d.playerNum} waveform: ${dk.rgbWf.length}pts (${d.wfType})`);
       const _prog=dk.dur>0&&dk.pos>0?dk.pos/dk.dur:0;
@@ -6264,7 +6265,7 @@ if(E){
     dk._songStructure={phrases:d.phrases||[], endMs:d.endMs||0, mood:d.mood||0};
     console.log(`[UI] P${d.playerNum} song struct: ${(d.phrases||[]).length} phrases, mood=${d.mood}`);
   });
-  // HW detail waveform from dbserver (150pts/sec — for zoom display)
+  // HW detail waveform from dbserver (renderer waveform rate — for zoom display)
   window.bridge.onWaveformDetail?.(d=>{
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
@@ -6291,13 +6292,13 @@ if(E){
         });
         dk._pwv7=false;dk.wfCapability='blue';
       }
-      // Duration from detail waveform: pts / 150 segments per second * 1000ms
-      const detailDur=Math.round(d.pts.length/150*1000);
+      // Duration from detail waveform: pts / WF_RATE segments per second * 1000ms
+      const detailDur=Math.round(d.pts.length/WF_RATE*1000);
       if(!dk.dur||dk.dur<=0||Math.abs(dk.dur-detailDur)>5000) dk.dur=detailDur;
       dk._wfCache=null;dk._ovCache=null;dk._zmCache=null;dk._wfDirty=true; // invalidate cache — detail waveform replaces preview
       buildWaveformCache(li);
       const _wfD2=dk.rgbWfDetail||dk.rgbWf;
-      if(dk.wgl&&_wfD2)dk.wgl.setData(_wfD2,(_wfD2.length/150*1000)||1);
+      if(dk.wgl&&_wfD2)dk.wgl.setData(_wfD2,(_wfD2.length/WF_RATE*1000)||1);
       if(dk.ovgl&&_wfD2)dk.ovgl.setData(_wfD2);
       console.log(`[UI] P${d.playerNum} detail waveform: ${d.pts.length}pts (${Math.round(detailDur/1000)}s)`);
       const _prog2=dk.dur>0&&dk.pos>0?dk.pos/dk.dur:0;

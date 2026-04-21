@@ -84,7 +84,7 @@ class WaveformGL {
       px[row1 + i*4+3] = 255;
     }
     // Cap at GPU MAX_TEXTURE_SIZE — PEAK max-pool (max for mx, MIN for mn to preserve neg peaks)
-    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+    const maxTex = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
     let texN = n, texPx = px;
     if (n > maxTex) {
       texN = maxTex;
@@ -176,7 +176,7 @@ class WaveformGL {
       px[row1 + i*4+3] = 255;
     }
     // PEAK-preserving downsample if slice still exceeds GPU cap (rare for window view)
-    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+    const maxTex = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
     let texN = n, texPx = px;
     if (n > maxTex) {
       texN = maxTex;
@@ -364,7 +364,7 @@ class OverviewGL {
       px[row1 + i*4+3] = 255;
     }
 
-    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+    const maxTex = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
     let texN = n, texPx = px;
     if (n > maxTex) {
       texN = maxTex;
@@ -563,6 +563,27 @@ vec3 multiColor(float B, float M, float T, bool hwPwv7) {
   return low * B + mid * M + hi * T;
 }
 
+vec3 gradientColor(vec4 amps, float yDist, float outerH, vec3 lowCol, vec3 bodyCol, vec3 presCol, vec3 airCol, float AA) {
+  float safeH = max(outerH, 1.0);
+  float yT = clamp(1.0 - yDist / safeH, 0.0, 1.0);
+  float ampSum = dot(amps, vec4(1.0)) + 0.0001;
+  vec4 ampN = amps / ampSum;
+  float loEnd = clamp(0.26 + 0.18 * ampN.x - 0.06 * ampN.w, 0.18, 0.44);
+  float midEnd = clamp(loEnd + 0.24 + 0.16 * ampN.y, loEnd + 0.16, 0.72);
+  float presEnd = clamp(midEnd + 0.16 + 0.14 * ampN.z, midEnd + 0.10, 0.90);
+  float soft = clamp((AA * 3.0) / safeH, 0.025, 0.22);
+  float loZone = 1.0 - smoothstep(loEnd - soft, loEnd + soft, yT);
+  float midRise = smoothstep(loEnd - soft, loEnd + soft, yT);
+  float midFall = 1.0 - smoothstep(midEnd - soft, midEnd + soft, yT);
+  float presRise = smoothstep(midEnd - soft, midEnd + soft, yT);
+  float presFall = 1.0 - smoothstep(presEnd - soft, presEnd + soft, yT);
+  float airZone = smoothstep(presEnd - soft, presEnd + soft, yT);
+  vec4 zones = vec4(loZone, midRise * midFall, presRise * presFall, airZone);
+  vec4 w = zones * (0.24 + 0.76 * amps);
+  float wSum = dot(w, vec4(1.0)) + 0.0001;
+  return (lowCol * w.x + bodyCol * w.y + presCol * w.z + airCol * w.w) / wSum;
+}
+
 void main() {
   float W = u_res.x, H = u_res.y, midY = H * 0.5;
   float cX = u_centerX * W;
@@ -602,10 +623,13 @@ void main() {
     float h = wf.a;
     float outerH = h * scale * sideF;
     float AA = 1.0;
-    float inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
+    float inside = 1.0 - smoothstep(outerH - AA * 2.5, outerH + AA * 2.5, yDist);
     if (inside < 0.005) { fragColor = BG; return; }
     float mx = max(bass, max(midf, treble));
     vec3 col = mx > 0.001 ? vec3(bass, midf, treble) / mx : vec3(0.3);
+    float yT = clamp(1.0 - yDist / max(outerH, 1.0), 0.0, 1.0);
+    col = mix(col * 0.68, mix(col, vec3(1.0), 0.22), smoothstep(0.08, 0.92, yT));
+    col *= mix(0.62, 1.15, smoothstep(0.08, 0.95, max(mx, h)));
     fragColor = vec4(col * inside, 1.0);
     return;
   }
@@ -620,10 +644,29 @@ void main() {
     float h = wf.a;
     outerH = h * scale * sideF;
     float AA = 1.0;
-    inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
+    inside = 1.0 - smoothstep(outerH - AA * 2.5, outerH + AA * 2.5, yDist);
     float ridge = 1.0 - smoothstep(1.0, 4.5, abs(yDist - outerH));
     if (inside < 0.005 && ridge < 0.005) { fragColor = BG; return; }
-    col = multiColor(B, M, T, u_mode == 3);
+    vec3 lowCol, bodyCol, presCol, airCol;
+    if (u_mode == 3 && uPaletteMode == 0) {
+      lowCol = vec3(0.125, 0.325, 0.85);
+      bodyCol = vec3(0.95, 0.667, 0.235);
+      presCol = vec3(1.0, 0.88, 0.48);
+      airCol = vec3(1.0);
+    } else if (uPaletteMode == 0) {
+      lowCol = vec3(0.05, 0.23, 0.42);
+      bodyCol = vec3(0.95, 0.39, 0.18);
+      presCol = vec3(0.92, 0.68, 0.34);
+      airCol = vec3(0.96, 0.97, 0.92);
+    } else {
+      lowCol = vec3(0.05, 0.23, 0.42);
+      bodyCol = vec3(1.0, 0.42, 0.17);
+      presCol = vec3(0.95, 0.72, 0.32);
+      airCol = vec3(1.0, 0.94, 0.82);
+    }
+    vec4 amps = vec4(max(B, 0.0), max(M, 0.0), max(T, 0.0), max(h, 0.0));
+    col = gradientColor(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA);
+    col *= mix(0.62, 1.15, smoothstep(0.08, 0.95, max(max(B, M), max(T, h))));
   } else {
     // Mode A: Virtual rekordbox-style stacked 4-band, asymmetric envelope per column.
     float bV = max(B, 0.0);
@@ -636,11 +679,12 @@ void main() {
     float tH = pow(tV, 0.87) * scale * 0.78 * sideF;
     outerH = max(max(bH, mH), max(pH, tH));
     float AA = 1.0;
-    float bMask = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
-    float mMask = 1.0 - smoothstep(mH - AA, mH + AA, yDist);
-    float pMask = 1.0 - smoothstep(pH - AA, pH + AA, yDist);
-    float tMask = 1.0 - smoothstep(tH - AA, tH + AA, yDist);
-    inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
+    float edgeAA = AA * 2.5;
+    float bMask = 1.0 - smoothstep(bH - edgeAA, bH + edgeAA, yDist);
+    float mMask = 1.0 - smoothstep(mH - edgeAA, mH + edgeAA, yDist);
+    float pMask = 1.0 - smoothstep(pH - edgeAA, pH + edgeAA, yDist);
+    float tMask = 1.0 - smoothstep(tH - edgeAA, tH + edgeAA, yDist);
+    inside = 1.0 - smoothstep(outerH - edgeAA, outerH + edgeAA, yDist);
     if (inside < 0.005) { fragColor = BG; return; }
     vec3 lowCol = vec3(0.05, 0.23, 0.42);
     vec3 bodyCol = vec3(1.0, 0.42, 0.17);
@@ -652,10 +696,9 @@ void main() {
       presCol = vec3(0.92, 0.68, 0.34);
       airCol = vec3(0.96, 0.97, 0.92);
     }
-    col = lowCol * bMask;
-    col = mix(col, bodyCol, mMask);
-    col = mix(col, presCol, pMask * 0.55);
-    col = mix(col, airCol, tMask * 0.65);
+    vec4 amps = vec4(bV, mV, pV, tV);
+    col = gradientColor(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA);
+    col *= mix(0.60, 1.15, smoothstep(0.08, 0.95, max(max(bV, mV), max(pV, tV))));
     inside = max(max(bMask, mMask), max(pMask, tMask));
   }
 
@@ -729,6 +772,24 @@ vec3 multiColor(float B, float M, float T, bool hwPwv7) {
   return vec3(0.35, 0.12, 0.045) * B + vec3(1.0, 0.42, 0.17) * M + vec3(1.0, 0.72, 0.22) * T;
 }
 
+vec3 overviewGradient(vec4 amps, float yDist, float outerH, vec3 lowCol, vec3 bodyCol, vec3 presCol, vec3 airCol, float AA) {
+  float safeH = max(outerH, 1.0);
+  float yT = clamp(1.0 - yDist / safeH, 0.0, 1.0);
+  float ampSum = dot(amps, vec4(1.0)) + 0.0001;
+  vec4 ampN = amps / ampSum;
+  float loEnd = clamp(0.30 + 0.16 * ampN.x, 0.20, 0.46);
+  float midEnd = clamp(loEnd + 0.24 + 0.12 * ampN.y, loEnd + 0.16, 0.74);
+  float presEnd = clamp(midEnd + 0.17 + 0.10 * ampN.z, midEnd + 0.10, 0.90);
+  float soft = clamp((AA * 3.0) / safeH, 0.04, 0.26);
+  float loZone = 1.0 - smoothstep(loEnd - soft, loEnd + soft, yT);
+  float midZone = smoothstep(loEnd - soft, loEnd + soft, yT) * (1.0 - smoothstep(midEnd - soft, midEnd + soft, yT));
+  float presZone = smoothstep(midEnd - soft, midEnd + soft, yT) * (1.0 - smoothstep(presEnd - soft, presEnd + soft, yT));
+  float airZone = smoothstep(presEnd - soft, presEnd + soft, yT);
+  vec4 w = vec4(loZone, midZone, presZone, airZone) * (0.32 + 0.68 * amps);
+  float wSum = dot(w, vec4(1.0)) + 0.0001;
+  return (lowCol * w.x + bodyCol * w.y + presCol * w.z + airCol * w.w) / wSum;
+}
+
 void main() {
   float W = u_res.x, H = u_res.y, midY = H * 0.5;
   float t = gl_FragCoord.x / W;
@@ -772,12 +833,15 @@ void main() {
     float h = wf.a;
     float outerH = h * scale * sideF;
     float AA2 = 0.6;
-    float inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
+    float inside = 1.0 - smoothstep(outerH - AA2 * 2.5, outerH + AA2 * 2.5, yDist);
     if (inside < 0.005) {
       fragColor = played ? BG_PLAYED : BG; return;
     }
     float mx = max(bass, max(midf, treble));
     vec3 col = mx > 0.001 ? vec3(bass, midf, treble) / mx : vec3(0.3);
+    float yT = clamp(1.0 - yDist / max(outerH, 1.0), 0.0, 1.0);
+    col = mix(col * 0.74, mix(col, vec3(1.0), 0.16), smoothstep(0.10, 0.90, yT));
+    col *= mix(0.68, 1.10, smoothstep(0.08, 0.95, max(mx, h)));
     float dim = played ? 0.38 : 1.0;
     fragColor = vec4(col * inside * dim, 1.0);
     return;
@@ -793,10 +857,29 @@ void main() {
     float h = wf.a;
     outerH = h * scale * sideF;
     float AA2 = 0.6;
-    inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
+    inside = 1.0 - smoothstep(outerH - AA2 * 2.5, outerH + AA2 * 2.5, yDist);
     float ridge = 1.0 - smoothstep(0.7, 3.5, abs(yDist - outerH));
     if (inside < 0.005 && ridge < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
-    col = multiColor(B, M, T, u_mode == 3);
+    vec3 lowCol, bodyCol, presCol, airCol;
+    if (u_mode == 3 && uPaletteMode == 0) {
+      lowCol = vec3(0.125, 0.325, 0.85);
+      bodyCol = vec3(0.95, 0.667, 0.235);
+      presCol = vec3(1.0, 0.88, 0.48);
+      airCol = vec3(1.0);
+    } else if (uPaletteMode == 0) {
+      lowCol = vec3(0.05, 0.23, 0.42);
+      bodyCol = vec3(0.95, 0.39, 0.18);
+      presCol = vec3(0.92, 0.68, 0.34);
+      airCol = vec3(0.96, 0.97, 0.92);
+    } else {
+      lowCol = vec3(0.05, 0.23, 0.42);
+      bodyCol = vec3(1.0, 0.42, 0.17);
+      presCol = vec3(0.95, 0.72, 0.32);
+      airCol = vec3(1.0, 0.94, 0.82);
+    }
+    vec4 amps = vec4(max(B, 0.0), max(M, 0.0), max(T, 0.0), max(h, 0.0));
+    col = overviewGradient(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA2);
+    col *= mix(0.68, 1.10, smoothstep(0.08, 0.95, max(max(B, M), max(T, h))));
   } else {
     // Virtual: rekordbox-style stacked 4-band, asymmetric envelope per column.
     float bV = max(B, 0.0);
@@ -809,11 +892,12 @@ void main() {
     float tH = pow(tV, 0.87) * scale * 0.78 * sideF;
     outerH = max(max(bH, mH), max(pH, tH));
     float AA2 = 0.6;
-    float bMask = 1.0 - smoothstep(bH - AA2, bH + AA2, yDist);
-    float mMask = 1.0 - smoothstep(mH - AA2, mH + AA2, yDist);
-    float pMask = 1.0 - smoothstep(pH - AA2, pH + AA2, yDist);
-    float tMask = 1.0 - smoothstep(tH - AA2, tH + AA2, yDist);
-    inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
+    float edgeAA = AA2 * 2.5;
+    float bMask = 1.0 - smoothstep(bH - edgeAA, bH + edgeAA, yDist);
+    float mMask = 1.0 - smoothstep(mH - edgeAA, mH + edgeAA, yDist);
+    float pMask = 1.0 - smoothstep(pH - edgeAA, pH + edgeAA, yDist);
+    float tMask = 1.0 - smoothstep(tH - edgeAA, tH + edgeAA, yDist);
+    inside = 1.0 - smoothstep(outerH - edgeAA, outerH + edgeAA, yDist);
     if (inside < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
     vec3 lowCol = vec3(0.05, 0.23, 0.42);
     vec3 bodyCol = vec3(1.0, 0.42, 0.17);
@@ -825,10 +909,9 @@ void main() {
       presCol = vec3(0.92, 0.68, 0.34);
       airCol = vec3(0.96, 0.97, 0.92);
     }
-    col = lowCol * bMask;
-    col = mix(col, bodyCol, mMask);
-    col = mix(col, presCol, pMask * 0.55);
-    col = mix(col, airCol, tMask * 0.65);
+    vec4 amps = vec4(bV, mV, pV, tV);
+    col = overviewGradient(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA2);
+    col *= mix(0.66, 1.10, smoothstep(0.08, 0.95, max(max(bV, mV), max(pV, tV))));
     inside = max(max(bMask, mMask), max(pMask, tMask));
   }
 
