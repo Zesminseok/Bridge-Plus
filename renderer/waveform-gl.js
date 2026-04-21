@@ -10,6 +10,7 @@ class WaveformGL {
   constructor(canvas) {
     const gl = canvas.getContext('webgl2');
     if (!gl) throw new Error('WebGL2 not available');
+    this.canvas = canvas;
     this.gl = gl;
     gl.clearColor(0.067, 0.075, 0.094, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     this._wfTex = null;
@@ -85,9 +86,11 @@ class WaveformGL {
     }
     // Cap at GPU MAX_TEXTURE_SIZE — PEAK max-pool (max for mx, MIN for mn to preserve neg peaks)
     const maxTex = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
+    const canvasPx = Math.max(1, this.canvas.width);
+    const target = Math.max(256, Math.min(maxTex, canvasPx * 4));
     let texN = n, texPx = px;
-    if (n > maxTex) {
-      texN = maxTex;
+    if (n > target) {
+      texN = target;
       texPx = new Uint8Array(texN * 4 * 2);
       const tRow1 = texN * 4;
       const stride = n / texN;
@@ -177,9 +180,11 @@ class WaveformGL {
     }
     // PEAK-preserving downsample if slice still exceeds GPU cap (rare for window view)
     const maxTex = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
+    const canvasPx = Math.max(1, this.canvas.width);
+    const target = Math.max(256, Math.min(maxTex, canvasPx * 4));
     let texN = n, texPx = px;
-    if (n > maxTex) {
-      texN = maxTex;
+    if (n > target) {
+      texN = target;
       texPx = new Uint8Array(texN * 4 * 2);
       const tRow1 = texN * 4;
       const stride = n / texN;
@@ -306,6 +311,7 @@ class OverviewGL {
   constructor(canvas) {
     const gl = canvas.getContext('webgl2');
     if (!gl) throw new Error('WebGL2 not available');
+    this.canvas = canvas;
     this.gl = gl;
     gl.clearColor(0.067, 0.075, 0.094, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     this._wfTex = null;
@@ -365,9 +371,11 @@ class OverviewGL {
     }
 
     const maxTex = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
+    const canvasPx = Math.max(1, this.canvas.width);
+    const target = Math.max(256, Math.min(maxTex, canvasPx * 4));
     let texN = n, texPx = px;
-    if (n > maxTex) {
-      texN = maxTex;
+    if (n > target) {
+      texN = target;
       texPx = new Uint8Array(texN * 4 * 2);
       const tRow1 = texN * 4;
       const stride = n / texN;
@@ -601,18 +609,19 @@ void main() {
   float yDist = abs(yRel);
 
   // Signed envelope per column (zigzag asymmetric shape). Falls back to ±h for HW.
-  vec2 shp = sampleShape(tU);
-  float posPk = max(shp.x, 0.0);             // upper envelope [0, 1]
-  float negPk = max(-shp.y, 0.0);            // lower envelope [0, 1]
-  float absPk = max(posPk, negPk);
+  vec2 sh = sampleShape(tU);
+  float posPk = max(sh.x, 0.0);             // upper envelope [0, 1]
+  float negPk = max(-sh.y, 0.0);            // lower envelope [0, 1]
+  float mxAbs = max(abs(sh.x), abs(sh.y));
+  float absPk = max(mxAbs, 0.0001);
   float sideE = (yRel >= 0.0) ? posPk : negPk;
   float sideF = (absPk > 0.001) ? (sideE / absPk) : 1.0;    // 0..1 side scale factor
 
   if (uViewMode == 1 || u_mode == 2) {
     // Mode B: mono height, asymmetric envelope.
     float e = sqrt(max(max(bass, max(midf, treble)), wf.a));
-    float h = e * scale * sideF;
-    float alpha = 1.0 - smoothstep(h - 1.2, h + 1.2, yDist);
+    float outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
+    float alpha = 1.0 - smoothstep(outerH - 1.2, outerH + 1.2, yDist);
     if (alpha < 0.005) { fragColor = BG; return; }
     fragColor = vec4(monoColor(e) * alpha, 1.0);
     return;
@@ -621,7 +630,7 @@ void main() {
   // ── Mode 4: HW Native RGB — CDJ colors displayed as-is ──
   if (u_mode == 4) {
     float h = wf.a;
-    float outerH = h * scale * sideF;
+    float outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
     float AA = 1.0;
     float inside = 1.0 - smoothstep(outerH - AA * 2.5, outerH + AA * 2.5, yDist);
     if (inside < 0.005) { fragColor = BG; return; }
@@ -642,7 +651,7 @@ void main() {
   if (uViewMode == 2 || u_mode == 3) {
     // Mode C: multi-band RGB layout. HW PWV7 uses low/mid/hi as R/G/B.
     float h = wf.a;
-    outerH = h * scale * sideF;
+    outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
     float AA = 1.0;
     inside = 1.0 - smoothstep(outerH - AA * 2.5, outerH + AA * 2.5, yDist);
     float ridge = 1.0 - smoothstep(1.0, 4.5, abs(yDist - outerH));
@@ -808,17 +817,18 @@ void main() {
   bool played = t < u_pos;
 
   // Signed envelope per column (asymmetric zigzag shape, ±h fallback for HW)
-  vec2 shp = sampleShape(t);
-  float posPk = max(shp.x, 0.0);
-  float negPk = max(-shp.y, 0.0);
-  float absPk = max(posPk, negPk);
+  vec2 sh = sampleShape(t);
+  float posPk = max(sh.x, 0.0);
+  float negPk = max(-sh.y, 0.0);
+  float mxAbs = max(abs(sh.x), abs(sh.y));
+  float absPk = max(mxAbs, 0.0001);
   float sideE = (yRel >= 0.0) ? posPk : negPk;
   float sideF = (absPk > 0.001) ? (sideE / absPk) : 1.0;
 
   if (uViewMode == 1 || u_mode == 2) {
     float e = sqrt(max(max(bass, max(midf, treble)), wf.a));
-    float h = e * scale * sideF;
-    float alpha = 1.0 - smoothstep(h - 0.6, h + 0.6, yDist);
+    float outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
+    float alpha = 1.0 - smoothstep(outerH - 0.6, outerH + 0.6, yDist);
     if (alpha < 0.005) {
       fragColor = played ? BG_PLAYED : BG;
       return;
@@ -831,7 +841,7 @@ void main() {
   // ── Mode 4: HW Native RGB — CDJ colors as-is ──
   if (u_mode == 4) {
     float h = wf.a;
-    float outerH = h * scale * sideF;
+    float outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
     float AA2 = 0.6;
     float inside = 1.0 - smoothstep(outerH - AA2 * 2.5, outerH + AA2 * 2.5, yDist);
     if (inside < 0.005) {
@@ -855,7 +865,7 @@ void main() {
   if (uViewMode == 2 || u_mode == 3) {
     // Mode C: multi-band RGB layout.
     float h = wf.a;
-    outerH = h * scale * sideF;
+    outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
     float AA2 = 0.6;
     inside = 1.0 - smoothstep(outerH - AA2 * 2.5, outerH + AA2 * 2.5, yDist);
     float ridge = 1.0 - smoothstep(0.7, 3.5, abs(yDist - outerH));
