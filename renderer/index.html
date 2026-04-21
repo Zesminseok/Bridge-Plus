@@ -2403,16 +2403,20 @@ function drawOverview(slot,prog){
     if(!d._wovOlCtx){
       const olEl=document.getElementById('wovol'+slot);
       if(!olEl)return;
-      olEl.width=olCv.width||olEl.parentElement.clientWidth;
-      olEl.height=olCv.height||olEl.parentElement.clientHeight;
-      d._wovOlCtx=olEl.getContext('2d');
+      const _olW=(olCv.width/_WF_DPR)||olEl.parentElement.clientWidth;
+      const _olH=(olCv.height/_WF_DPR)||olEl.parentElement.clientHeight;
+      _sizeCvDpr(olEl,_olW,_olH);
+      d._wovOlCtx=_get2DCtxCss(olEl);
     }
     olCtx=d._wovOlCtx;
   } else {
     olCtx=d.wovCtx;
   }
   if(!olCtx)return;
-  const W2=olCtx.canvas.width,H2=olCtx.canvas.height;
+  // d._wovOlCtx는 setTransform(dpr) 적용돼 CSS 좌표계 사용, d.wovCtx(2D fallback)는 내부 좌표
+  const _olIsCss=(olCtx===d._wovOlCtx);
+  const W2=_olIsCss?Math.round(olCtx.canvas.width/_WF_DPR):olCtx.canvas.width;
+  const H2=_olIsCss?Math.round(olCtx.canvas.height/_WF_DPR):olCtx.canvas.height;
   if(W2<2||H2<2)return;
   if(d.ovgl) olCtx.clearRect(0,0,W2,H2); // clear overlay for WebGL mode
 
@@ -2615,7 +2619,7 @@ function drawZoomWaveform(slot,prog){
 function drawZoomOverlay(slot, prog){
   const d=DECKS[slot];if(!d||!d.wovCtx2)return;
   const wzov=document.getElementById('wzov'+slot);if(!wzov||!wzov.width)return;
-  const W=wzov.width,H=wzov.height,ctx=d.wovCtx2;
+  const W=Math.round(wzov.width/_WF_DPR),H=Math.round(wzov.height/_WF_DPR),ctx=d.wovCtx2;
   const pos=Math.max(0,Math.min(1,prog||0));
   const dur=d.dur,posMs=pos*dur;
   const cX=Math.round(cfg.wfCenter==='left'?W*0.25:W/2);
@@ -3369,7 +3373,7 @@ function bindDeck(slot){
       // Init overview overlay canvas for cue/loop markers
       const wovol=document.getElementById('wovol'+slot);
       if(wovol&&(wovol.width!==_dprW(w)||wovol.height!==_dprW(h))){
-        _sizeCvDpr(wovol,w,h);d._wovOlCtx=wovol.getContext('2d');
+        _sizeCvDpr(wovol,w,h);d._wovOlCtx=_get2DCtxCss(wovol);
       }
     },0);
   }
@@ -3395,13 +3399,13 @@ function bindDeck(slot){
           const _wfD=d.rgbWfDetail||d.rgbWf;
           if(_wfD){d.wgl.setData(_wfD,(_wfD.length/150*1000)||1);drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
           const wzov=document.getElementById('wzov'+slot);
-          if(wzov){_sizeCvDpr(wzov,w,h);d.wovCtx2=wzov.getContext('2d');}
+          if(wzov){_sizeCvDpr(wzov,w,h);d.wovCtx2=_get2DCtxCss(wzov);}
         }catch(e){
           console.warn('[WGL] fallback 2D zoom:',e);
           const wzc2=document.getElementById('wzc'+slot);
-          if(wzc2)d.wzCtx=wzc2.getContext('2d');
+          if(wzc2)d.wzCtx=_get2DCtxCss(wzc2);
           const wzov=document.getElementById('wzov'+slot);
-          if(wzov){_sizeCvDpr(wzov,w,h);d.wovCtx2=wzov.getContext('2d');}
+          if(wzov){_sizeCvDpr(wzov,w,h);d.wovCtx2=_get2DCtxCss(wzov);}
         }
       }
     },0);
@@ -3711,7 +3715,7 @@ function loadFile(slot,f){
           }
           if(!d.ovgl){try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}}
           const wovol=document.getElementById('wovol'+slot);
-          if(wovol){_sizeCvDpr(wovol,w,h);d._wovOlCtx=wovol.getContext('2d');}
+          if(wovol){_sizeCvDpr(wovol,w,h);d._wovOlCtx=_get2DCtxCss(wovol);}
         }
         const wzc=document.getElementById('wzc'+slot);
         if(wzc){
@@ -3724,7 +3728,7 @@ function loadFile(slot,f){
           }
           if(!d.wgl){try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}catch(e){d.wzCtx=wzc.getContext('2d');}}
           const wzov=document.getElementById('wzov'+slot);
-          if(wzov&&!d.wovCtx2){_sizeCvDpr(wzov,w,h);d.wovCtx2=wzov.getContext('2d');}
+          if(wzov&&!d.wovCtx2){_sizeCvDpr(wzov,w,h);d.wovCtx2=_get2DCtxCss(wzov);}
         }
       }));
       if(E&&run){
@@ -4157,7 +4161,7 @@ function _resizeDeckCanvases(s){
       try{d2.ovgl=new OverviewGL(wov);d2.wovCtx=null;}catch(e){d2.wovCtx=wov.getContext('2d');}
       if(d2.ovgl){const wfD=d2.rgbWfDetail||d2.rgbWf;if(wfD)d2.ovgl.setData(wfD);drawOverview(s,d2.dur>0&&d2.pos>0?d2.pos/d2.dur:0);}
       const wovol=document.getElementById('wovol'+s);
-      if(wovol){_sizeCvDpr(wovol,w,h);d2._wovOlCtx=wovol.getContext('2d');}
+      if(wovol){_sizeCvDpr(wovol,w,h);d2._wovOlCtx=_get2DCtxCss(wovol);}
     }
   }
   const wzc=document.getElementById('wzc'+s);
@@ -4168,7 +4172,7 @@ function _resizeDeckCanvases(s){
       _sizeCvDpr(wzc,w,h);
       try{d2.wgl=new WaveformGL(wzc);d2.wzCtx=null;}catch(e){d2.wzCtx=wzc.getContext('2d');}
       const wzov=document.getElementById('wzov'+s);
-      if(wzov){_sizeCvDpr(wzov,w,h);d2.wovCtx2=wzov.getContext('2d');}
+      if(wzov){_sizeCvDpr(wzov,w,h);d2.wovCtx2=_get2DCtxCss(wzov);}
       if(d2.wgl){const wfD=d2.rgbWfDetail||d2.rgbWf;if(wfD){d2.wgl.setData(wfD,(wfD.length/150*1000)||1);drawZoomWaveform(s,d2.dur>0&&d2.pos>0?d2.pos/d2.dur:0);}}
     }
   }
@@ -4618,7 +4622,7 @@ function tick(){
           _sizeCvDpr(wov,opW,opH);
           try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}
           const wovol=document.getElementById('wovol'+slot);
-          if(wovol){_sizeCvDpr(wovol,opW,opH);d._wovOlCtx=wovol.getContext('2d');}
+          if(wovol){_sizeCvDpr(wovol,opW,opH);d._wovOlCtx=_get2DCtxCss(wovol);}
           const wfD=d.rgbWfDetail||d.rgbWf;
           if(wfD&&d.ovgl)d.ovgl.setData(wfD);
         }
@@ -4649,7 +4653,7 @@ function tick(){
             try{
               d.wgl=new WaveformGL(wzc); d.wzCtx=null;
               const wzov=document.getElementById('wzov'+slot);
-              if(wzov){_sizeCvDpr(wzov,targetW,targetH);d.wovCtx2=wzov.getContext('2d');}
+              if(wzov){_sizeCvDpr(wzov,targetW,targetH);d.wovCtx2=_get2DCtxCss(wzov);}
             }catch(e){d.wzCtx=wzc.getContext('2d');}
           }
         }
