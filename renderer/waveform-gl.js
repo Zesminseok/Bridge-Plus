@@ -356,12 +356,18 @@ out vec4 fragColor;
 const vec4 BG = vec4(0.067, 0.075, 0.094, 1.0);
 
 vec4 sampleSmooth(float t) {
-  float texel = 1.0 / float(textureSize(u_wf, 0).x);
-  vec4 center = texture(u_wf, vec2(clamp(t, 0.0, 1.0), 0.5));
-  vec4 sm = texture(u_wf, vec2(clamp(t - texel, 0.0, 1.0), 0.5)) * 0.08;
-  sm += center * 0.84;
-  sm += texture(u_wf, vec2(clamp(t + texel, 0.0, 1.0), 0.5)) * 0.08;
-  return mix(center, sm, clamp(uSharpness, 0.0, 1.0));
+  int sx = textureSize(u_wf, 0).x;
+  int ix = int(floor(clamp(t, 0.0, 0.999999) * float(sx)));
+  ix = clamp(ix, 0, sx - 1);
+  vec4 c1 = texelFetch(u_wf, ivec2(ix, 0), 0);
+  if (uSharpness <= 0.001) return c1;
+  int ix0 = max(ix - 1, 0);
+  int ix2 = min(ix + 1, sx - 1);
+  vec4 c0 = texelFetch(u_wf, ivec2(ix0, 0), 0);
+  vec4 c2 = texelFetch(u_wf, ivec2(ix2, 0), 0);
+  float we = 0.08 * uSharpness;
+  float wc = 1.0 - 2.0 * we;
+  return we * c0 + wc * c1 + we * c2;
 }
 
 vec3 monoColor(float e) {
@@ -510,12 +516,18 @@ const vec4 BG = vec4(0.067, 0.075, 0.094, 1.0);
 const vec4 BG_PLAYED = vec4(0.090, 0.098, 0.122, 1.0);
 
 vec4 sampleSmooth(float t) {
-  float texel = 1.0 / float(textureSize(u_wf, 0).x);
-  vec4 center = texture(u_wf, vec2(clamp(t, 0.0, 1.0), 0.5));
-  vec4 sm = texture(u_wf, vec2(clamp(t - texel, 0.0, 1.0), 0.5)) * 0.08;
-  sm += center * 0.84;
-  sm += texture(u_wf, vec2(clamp(t + texel, 0.0, 1.0), 0.5)) * 0.08;
-  return mix(center, sm, clamp(uSharpness, 0.0, 1.0));
+  int sx = textureSize(u_wf, 0).x;
+  int ix = int(floor(clamp(t, 0.0, 0.999999) * float(sx)));
+  ix = clamp(ix, 0, sx - 1);
+  vec4 c1 = texelFetch(u_wf, ivec2(ix, 0), 0);
+  if (uSharpness <= 0.001) return c1;
+  int ix0 = max(ix - 1, 0);
+  int ix2 = min(ix + 1, sx - 1);
+  vec4 c0 = texelFetch(u_wf, ivec2(ix0, 0), 0);
+  vec4 c2 = texelFetch(u_wf, ivec2(ix2, 0), 0);
+  float we = 0.08 * uSharpness;
+  float wc = 1.0 - 2.0 * we;
+  return we * c0 + wc * c1 + we * c2;
 }
 
 vec3 monoColor(float e) {
