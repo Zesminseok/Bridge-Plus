@@ -63,47 +63,64 @@ class WaveformGL {
     this._dirty = true;
     this._lastDrawKey = '';
 
-    const px = new Uint8Array(n * 4);
+    // 2-row texture: row 0 = (R,G,B,A) band peaks, row 1 = (mx_enc, mn_enc, 0, 255) signed envelope
+    const px = new Uint8Array(n * 4 * 2);
+    const row1 = n * 4;
     for (let i = 0; i < n; i++) {
       const p = wfData[i];
-      // Alpha channel is overloaded: Virtual=air-band peak (p.a), HW=precomputed height (p.h).
-      // Fallback order preserves HW mode 3/4 rendering.
       const aCh = (p.a !== undefined ? p.a : (p.h || 0));
       px[i*4]   = Math.min(255, (p.r || 0) * 255) | 0;
       px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
       px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
       px[i*4+3] = Math.min(255, aCh * 255) | 0;
+      // Signed envelope: mx (peak +) and mn (peak -) in [-1, 1] → encode to [0, 255] (128 = zero)
+      const mxS = (p.mx !== undefined) ? p.mx : (p.h || 0);
+      const mnS = (p.mn !== undefined) ? p.mn : -(p.h || 0);
+      const mxC = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mxS)) + 1) * 127.5)));
+      const mnC = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mnS)) + 1) * 127.5)));
+      px[row1 + i*4]   = mxC;
+      px[row1 + i*4+1] = mnC;
+      px[row1 + i*4+2] = 0;
+      px[row1 + i*4+3] = 255;
     }
-    // Cap at GPU MAX_TEXTURE_SIZE — PEAK max-pool keeps entry variation alive
+    // Cap at GPU MAX_TEXTURE_SIZE — PEAK max-pool (max for mx, MIN for mn to preserve neg peaks)
     const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
     let texN = n, texPx = px;
     if (n > maxTex) {
       texN = maxTex;
-      texPx = new Uint8Array(texN * 4);
+      texPx = new Uint8Array(texN * 4 * 2);
+      const tRow1 = texN * 4;
       const stride = n / texN;
       for (let i = 0; i < texN; i++) {
         const j0 = Math.floor(i * stride);
         const j1 = Math.min(n, Math.max(j0 + 1, Math.floor((i + 1) * stride)));
-        let mr=0, mg=0, mb=0, ma=0;
+        let mr=0, mg=0, mb=0, ma=0, mxMx=0, mnMn=255;
         for (let j = j0; j < j1; j++) {
           const o = j * 4;
           if (px[o]   > mr) mr = px[o];
           if (px[o+1] > mg) mg = px[o+1];
           if (px[o+2] > mb) mb = px[o+2];
           if (px[o+3] > ma) ma = px[o+3];
+          const o2 = row1 + j * 4;
+          if (px[o2]   > mxMx) mxMx = px[o2];     // keep the largest +peak
+          if (px[o2+1] < mnMn) mnMn = px[o2+1];   // keep the smallest encoded (=most negative)
         }
         texPx[i*4]   = mr;
         texPx[i*4+1] = mg;
         texPx[i*4+2] = mb;
         texPx[i*4+3] = ma;
+        texPx[tRow1 + i*4]   = mxMx;
+        texPx[tRow1 + i*4+1] = mnMn;
+        texPx[tRow1 + i*4+2] = 0;
+        texPx[tRow1 + i*4+3] = 255;
       }
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     this._wfTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this._winKey = '';
@@ -141,7 +158,9 @@ class WaveformGL {
         };
       } catch(e) { console.warn('[WGL] wgl recover failed:', e.message); return; }
     }
-    const px = new Uint8Array(n * 4);
+    // 2-row texture: row 0 = band RGBA, row 1 = signed envelope (mx_enc, mn_enc)
+    const px = new Uint8Array(n * 4 * 2);
+    const row1 = n * 4;
     for (let i = 0; i < n; i++) {
       const p = wfData[startIdx + i];
       const aCh = (p.a !== undefined ? p.a : (p.h || 0));
@@ -149,37 +168,51 @@ class WaveformGL {
       px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
       px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
       px[i*4+3] = Math.min(255, aCh * 255) | 0;
+      const mxS = (p.mx !== undefined) ? p.mx : (p.h || 0);
+      const mnS = (p.mn !== undefined) ? p.mn : -(p.h || 0);
+      px[row1 + i*4]   = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mxS)) + 1) * 127.5)));
+      px[row1 + i*4+1] = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mnS)) + 1) * 127.5)));
+      px[row1 + i*4+2] = 0;
+      px[row1 + i*4+3] = 255;
     }
-    // PEAK-preserving max-pool downsample if slice still exceeds GPU cap (rare for window view)
+    // PEAK-preserving downsample if slice still exceeds GPU cap (rare for window view)
     const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
     let texN = n, texPx = px;
     if (n > maxTex) {
       texN = maxTex;
-      texPx = new Uint8Array(texN * 4);
+      texPx = new Uint8Array(texN * 4 * 2);
+      const tRow1 = texN * 4;
       const stride = n / texN;
       for (let i = 0; i < texN; i++) {
         const j0 = Math.floor(i * stride);
         const j1 = Math.min(n, Math.max(j0 + 1, Math.floor((i + 1) * stride)));
-        let mr=0, mg=0, mb=0, ma=0;
+        let mr=0, mg=0, mb=0, ma=0, mxMx=0, mnMn=255;
         for (let j = j0; j < j1; j++) {
           const o = j * 4;
           if (px[o]   > mr) mr = px[o];
           if (px[o+1] > mg) mg = px[o+1];
           if (px[o+2] > mb) mb = px[o+2];
           if (px[o+3] > ma) ma = px[o+3];
+          const o2 = row1 + j * 4;
+          if (px[o2]   > mxMx) mxMx = px[o2];
+          if (px[o2+1] < mnMn) mnMn = px[o2+1];
         }
         texPx[i*4]   = mr;
         texPx[i*4+1] = mg;
         texPx[i*4+2] = mb;
         texPx[i*4+3] = ma;
+        texPx[tRow1 + i*4]   = mxMx;
+        texPx[tRow1 + i*4+1] = mnMn;
+        texPx[tRow1 + i*4+2] = 0;
+        texPx[tRow1 + i*4+3] = 255;
       }
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     this._wfTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this._wfLen = n;
@@ -312,49 +345,62 @@ class OverviewGL {
         };
       } catch(e) { console.warn('[WGL] ovgl recover failed:', e.message); return; }
     }
-    const px = new Uint8Array(n * 4);
+    const px = new Uint8Array(n * 4 * 2);
+    const row1 = n * 4;
     this._dirty = true;
     this._lastDrawKey = '';
     for (let i = 0; i < n; i++) {
       const p = wfData[i];
-      // Alpha: Virtual=air band peak (p.a), HW=precomputed height (p.h) — fallback keeps HW rendering.
       const aCh = (p.a !== undefined ? p.a : (p.h || 0));
       px[i*4]   = Math.min(255, (p.r || 0) * 255) | 0;
       px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
       px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
       px[i*4+3] = Math.min(255, aCh * 255) | 0;
+      const mxS = (p.mx !== undefined) ? p.mx : (p.h || 0);
+      const mnS = (p.mn !== undefined) ? p.mn : -(p.h || 0);
+      px[row1 + i*4]   = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mxS)) + 1) * 127.5)));
+      px[row1 + i*4+1] = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mnS)) + 1) * 127.5)));
+      px[row1 + i*4+2] = 0;
+      px[row1 + i*4+3] = 255;
     }
 
-    // Cap at GPU MAX_TEXTURE_SIZE — PEAK max-pool preserves entry-to-entry variation
     const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
     let texN = n, texPx = px;
     if (n > maxTex) {
       texN = maxTex;
-      texPx = new Uint8Array(texN * 4);
+      texPx = new Uint8Array(texN * 4 * 2);
+      const tRow1 = texN * 4;
       const stride = n / texN;
       for (let i = 0; i < texN; i++) {
         const j0 = Math.floor(i * stride);
         const j1 = Math.min(n, Math.max(j0 + 1, Math.floor((i + 1) * stride)));
-        let mr=0, mg=0, mb=0, ma=0;
+        let mr=0, mg=0, mb=0, ma=0, mxMx=0, mnMn=255;
         for (let j = j0; j < j1; j++) {
           const o = j * 4;
           if (px[o]   > mr) mr = px[o];
           if (px[o+1] > mg) mg = px[o+1];
           if (px[o+2] > mb) mb = px[o+2];
           if (px[o+3] > ma) ma = px[o+3];
+          const o2 = row1 + j * 4;
+          if (px[o2]   > mxMx) mxMx = px[o2];
+          if (px[o2+1] < mnMn) mnMn = px[o2+1];
         }
         texPx[i*4]   = mr;
         texPx[i*4+1] = mg;
         texPx[i*4+2] = mb;
         texPx[i*4+3] = ma;
+        texPx[tRow1 + i*4]   = mxMx;
+        texPx[tRow1 + i*4+1] = mnMn;
+        texPx[tRow1 + i*4+2] = 0;
+        texPx[tRow1 + i*4+3] = 255;
       }
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
     this._wfTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._wfTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texN, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, texPx);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
@@ -469,6 +515,15 @@ vec4 sampleSmooth(float t) {
   return we * c0 + wc * c1 + we * c2;
 }
 
+// Signed envelope per column: x = peak +, y = peak - (both in [-1, 1])
+vec2 sampleShape(float t) {
+  int sx = textureSize(u_wf, 0).x;
+  int ix = int(floor(clamp(t, 0.0, 0.999999) * float(sx)));
+  ix = clamp(ix, 0, sx - 1);
+  vec4 s = texelFetch(u_wf, ivec2(ix, 1), 0);
+  return vec2(s.r * 2.0 - 1.0, s.g * 2.0 - 1.0);
+}
+
 vec3 monoColor(float e) {
   e = clamp(e, 0.0, 1.0);
   if (uPaletteMode == 0) {
@@ -516,16 +571,26 @@ void main() {
   if (pxMs < 0.0 || pxMs > u_durMs) {
     fragColor = BG; return;
   }
-  vec4 wf = sampleSmooth(clamp(pxMs / u_durMs, 0.0, 1.0));
+  float tU = clamp(pxMs / u_durMs, 0.0, 1.0);
+  vec4 wf = sampleSmooth(tU);
   float bass = wf.r, midf = wf.g, treble = wf.b;
 
-  float yDist = abs(gl_FragCoord.y - midY);
   float scale = midY * 0.95;
+  float yRel = gl_FragCoord.y - midY;        // signed, + = above midline
+  float yDist = abs(yRel);
+
+  // Signed envelope per column (zigzag asymmetric shape). Falls back to ±h for HW.
+  vec2 shp = sampleShape(tU);
+  float posPk = max(shp.x, 0.0);             // upper envelope [0, 1]
+  float negPk = max(-shp.y, 0.0);            // lower envelope [0, 1]
+  float absPk = max(posPk, negPk);
+  float sideE = (yRel >= 0.0) ? posPk : negPk;
+  float sideF = (absPk > 0.001) ? (sideE / absPk) : 1.0;    // 0..1 side scale factor
 
   if (uViewMode == 1 || u_mode == 2) {
-    // Mode B: mono height only.
+    // Mode B: mono height, asymmetric envelope.
     float e = sqrt(max(max(bass, max(midf, treble)), wf.a));
-    float h = e * scale;
+    float h = e * scale * sideF;
     float alpha = 1.0 - smoothstep(h - 1.2, h + 1.2, yDist);
     if (alpha < 0.005) { fragColor = BG; return; }
     fragColor = vec4(monoColor(e) * alpha, 1.0);
@@ -534,12 +599,11 @@ void main() {
 
   // ── Mode 4: HW Native RGB — CDJ colors displayed as-is ──
   if (u_mode == 4) {
-    float h = wf.a;  // alpha channel = pre-computed height
-    float outerH = h * scale;
+    float h = wf.a;
+    float outerH = h * scale * sideF;
     float AA = 1.0;
     float inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
     if (inside < 0.005) { fragColor = BG; return; }
-    // Normalize brightness: max channel → full brightness
     float mx = max(bass, max(midf, treble));
     vec3 col = mx > 0.001 ? vec3(bass, midf, treble) / mx : vec3(0.3);
     fragColor = vec4(col * inside, 1.0);
@@ -554,22 +618,22 @@ void main() {
   if (uViewMode == 2 || u_mode == 3) {
     // Mode C: multi-band RGB layout. HW PWV7 uses low/mid/hi as R/G/B.
     float h = wf.a;
-    outerH = h * scale;
+    outerH = h * scale * sideF;
     float AA = 1.0;
     inside = 1.0 - smoothstep(outerH - AA, outerH + AA, yDist);
     float ridge = 1.0 - smoothstep(1.0, 4.5, abs(yDist - outerH));
     if (inside < 0.005 && ridge < 0.005) { fragColor = BG; return; }
     col = multiColor(B, M, T, u_mode == 3);
   } else {
-    // Mode A: Virtual-only rekordbox-style stacked 4-band waveform.
+    // Mode A: Virtual rekordbox-style stacked 4-band, asymmetric envelope per column.
     float bV = max(B, 0.0);
     float mV = max(M, 0.0);
     float pV = max(T, 0.0);
     float tV = max(wf.a, 0.0);
-    float bH = pow(bV, 0.87) * scale;
-    float mH = pow(mV, 0.87) * scale;
-    float pH = pow(pV, 0.87) * scale;
-    float tH = pow(tV, 0.87) * scale * 0.78;
+    float bH = pow(bV, 0.87) * scale * sideF;
+    float mH = pow(mV, 0.87) * scale * sideF;
+    float pH = pow(pV, 0.87) * scale * sideF;
+    float tH = pow(tV, 0.87) * scale * 0.78 * sideF;
     outerH = max(max(bH, mH), max(pH, tH));
     float AA = 1.0;
     float bMask = 1.0 - smoothstep(bH - AA, bH + AA, yDist);
@@ -629,6 +693,15 @@ vec4 sampleSmooth(float t) {
   return we * c0 + wc * c1 + we * c2;
 }
 
+// Signed envelope per column: x = peak +, y = peak - (both in [-1, 1])
+vec2 sampleShape(float t) {
+  int sx = textureSize(u_wf, 0).x;
+  int ix = int(floor(clamp(t, 0.0, 0.999999) * float(sx)));
+  ix = clamp(ix, 0, sx - 1);
+  vec4 s = texelFetch(u_wf, ivec2(ix, 1), 0);
+  return vec2(s.r * 2.0 - 1.0, s.g * 2.0 - 1.0);
+}
+
 vec3 monoColor(float e) {
   e = clamp(e, 0.0, 1.0);
   if (uPaletteMode == 0) {
@@ -668,13 +741,22 @@ void main() {
     fragColor = vec4(1.0, 1.0, 1.0, 1.0); return;
   }
 
-  float yDist = abs(gl_FragCoord.y - midY);
+  float yRel = gl_FragCoord.y - midY;
+  float yDist = abs(yRel);
   float scale = midY * 0.95;
   bool played = t < u_pos;
 
+  // Signed envelope per column (asymmetric zigzag shape, ±h fallback for HW)
+  vec2 shp = sampleShape(t);
+  float posPk = max(shp.x, 0.0);
+  float negPk = max(-shp.y, 0.0);
+  float absPk = max(posPk, negPk);
+  float sideE = (yRel >= 0.0) ? posPk : negPk;
+  float sideF = (absPk > 0.001) ? (sideE / absPk) : 1.0;
+
   if (uViewMode == 1 || u_mode == 2) {
     float e = sqrt(max(max(bass, max(midf, treble)), wf.a));
-    float h = e * scale;
+    float h = e * scale * sideF;
     float alpha = 1.0 - smoothstep(h - 0.6, h + 0.6, yDist);
     if (alpha < 0.005) {
       fragColor = played ? BG_PLAYED : BG;
@@ -688,7 +770,7 @@ void main() {
   // ── Mode 4: HW Native RGB — CDJ colors as-is ──
   if (u_mode == 4) {
     float h = wf.a;
-    float outerH = h * scale;
+    float outerH = h * scale * sideF;
     float AA2 = 0.6;
     float inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
     if (inside < 0.005) {
@@ -709,22 +791,22 @@ void main() {
   if (uViewMode == 2 || u_mode == 3) {
     // Mode C: multi-band RGB layout.
     float h = wf.a;
-    outerH = h * scale;
+    outerH = h * scale * sideF;
     float AA2 = 0.6;
     inside = 1.0 - smoothstep(outerH - AA2, outerH + AA2, yDist);
     float ridge = 1.0 - smoothstep(0.7, 3.5, abs(yDist - outerH));
     if (inside < 0.005 && ridge < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
     col = multiColor(B, M, T, u_mode == 3);
   } else {
-    // Virtual: rekordbox-style stacked 4-band waveform.
+    // Virtual: rekordbox-style stacked 4-band, asymmetric envelope per column.
     float bV = max(B, 0.0);
     float mV = max(M, 0.0);
     float pV = max(T, 0.0);
     float tV = max(wf.a, 0.0);
-    float bH = pow(bV, 0.87) * scale;
-    float mH = pow(mV, 0.87) * scale;
-    float pH = pow(pV, 0.87) * scale;
-    float tH = pow(tV, 0.87) * scale * 0.78;
+    float bH = pow(bV, 0.87) * scale * sideF;
+    float mH = pow(mV, 0.87) * scale * sideF;
+    float pH = pow(pV, 0.87) * scale * sideF;
+    float tH = pow(tV, 0.87) * scale * 0.78 * sideF;
     outerH = max(max(bH, mH), max(pH, tH));
     float AA2 = 0.6;
     float bMask = 1.0 - smoothstep(bH - AA2, bH + AA2, yDist);
