@@ -1,0 +1,5235 @@
+{
+  "nodes": [
+    {
+      "id": "preload_js",
+      "label": "preload.js",
+      "file_type": "code",
+      "source_file": "preload.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "bridge_core_js",
+      "label": "bridge-core.js",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "bridge_core_totcnetstate",
+      "label": "toTCNetState()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L46"
+    },
+    {
+      "id": "bridge_core_u32",
+      "label": "u32()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L91"
+    },
+    {
+      "id": "bridge_core_clamp8",
+      "label": "clamp8()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L92"
+    },
+    {
+      "id": "bridge_core_writeutf32le",
+      "label": "_writeUtf32LE()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L95"
+    },
+    {
+      "id": "bridge_core_buildhdr",
+      "label": "buildHdr()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L107"
+    },
+    {
+      "id": "bridge_core_gethwportmap",
+      "label": "_getHWPortMap()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L120"
+    },
+    {
+      "id": "bridge_core_getallinterfaces",
+      "label": "getAllInterfaces()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L140"
+    },
+    {
+      "id": "bridge_core_detectbroadcastfor",
+      "label": "detectBroadcastFor()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L155"
+    },
+    {
+      "id": "bridge_core_haspdjlmagic",
+      "label": "hasPDJLMagic()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L167"
+    },
+    {
+      "id": "bridge_core_readpdjlnamefield",
+      "label": "readPDJLNameField()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L173"
+    },
+    {
+      "id": "bridge_core_mkoptin",
+      "label": "mkOptIn()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L187"
+    },
+    {
+      "id": "bridge_core_mkstatus",
+      "label": "mkStatus()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L214"
+    },
+    {
+      "id": "bridge_core_mktime",
+      "label": "mkTime()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L277"
+    },
+    {
+      "id": "bridge_core_mkappresp",
+      "label": "mkAppResp()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L353"
+    },
+    {
+      "id": "bridge_core_mkmetadataresp",
+      "label": "mkMetadataResp()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L366"
+    },
+    {
+      "id": "bridge_core_mkdatametrics",
+      "label": "mkDataMetrics()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L389"
+    },
+    {
+      "id": "bridge_core_mkmixerdata",
+      "label": "mkMixerData()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L433"
+    },
+    {
+      "id": "bridge_core_mkdatameta",
+      "label": "mkDataMeta()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L472"
+    },
+    {
+      "id": "bridge_core_mknotification",
+      "label": "mkNotification()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L498"
+    },
+    {
+      "id": "bridge_core_mklowresartwork",
+      "label": "mkLowResArtwork()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L513"
+    },
+    {
+      "id": "bridge_core_parsepdjl",
+      "label": "parsePDJL()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L539"
+    },
+    {
+      "id": "bridge_core_bridgecore",
+      "label": "BridgeCore",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L971"
+    },
+    {
+      "id": "bridge_core_bridgecore_constructor",
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L972"
+    },
+    {
+      "id": "bridge_core_bridgecore_resolvebroadcast",
+      "label": "._resolveBroadcast()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1027"
+    },
+    {
+      "id": "bridge_core_bridgecore_start",
+      "label": ".start()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1049"
+    },
+    {
+      "id": "bridge_core_bridgecore_settcnetunicast",
+      "label": ".setTCNetUnicast()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1174"
+    },
+    {
+      "id": "bridge_core_bridgecore_stop",
+      "label": ".stop()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1180"
+    },
+    {
+      "id": "bridge_core_bridgecore_startdjmcapture",
+      "label": ".startDJMCapture()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1266"
+    },
+    {
+      "id": "bridge_core_bridgecore_stopdjmcapture",
+      "label": ".stopDJMCapture()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1275"
+    },
+    {
+      "id": "bridge_core_bridgecore_rebindtcnet",
+      "label": ".rebindTCNet()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1282"
+    },
+    {
+      "id": "bridge_core_bridgecore_findlocalifaceforremote",
+      "label": "._findLocalIfaceForRemote()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1326"
+    },
+    {
+      "id": "bridge_core_bridgecore_autoselectpdjlforremote",
+      "label": "._autoSelectPdjlForRemote()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1347"
+    },
+    {
+      "id": "bridge_core_bridgecore_rebindpdjl",
+      "label": ".rebindPDJL()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1368"
+    },
+    {
+      "id": "bridge_core_bridgecore_settcnetmode",
+      "label": ".setTCNetMode()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1395"
+    },
+    {
+      "id": "bridge_core_bridgecore_send",
+      "label": "._send()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1408"
+    },
+    {
+      "id": "bridge_core_bridgecore_uc",
+      "label": "._uc()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1459"
+    },
+    {
+      "id": "bridge_core_bridgecore_sendtoarenas",
+      "label": "._sendToArenas()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1468"
+    },
+    {
+      "id": "bridge_core_bridgecore_sendtoarenaslport",
+      "label": "._sendToArenasLPort()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1477"
+    },
+    {
+      "id": "bridge_core_bridgecore_senddatatoarenas",
+      "label": "._sendDataToArenas()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1488"
+    },
+    {
+      "id": "bridge_core_bridgecore_sendartwork",
+      "label": "._sendArtwork()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1502"
+    },
+    {
+      "id": "bridge_core_bridgecore_resendallartwork",
+      "label": "._resendAllArtwork()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1520"
+    },
+    {
+      "id": "bridge_core_bridgecore_senddatacycle",
+      "label": "._sendDataCycle()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1539"
+    },
+    {
+      "id": "bridge_core_bridgecore_sendoptin",
+      "label": "._sendOptIn()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1579"
+    },
+    {
+      "id": "bridge_core_bridgecore_sendstatus",
+      "label": "._sendStatus()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1587"
+    },
+    {
+      "id": "bridge_core_bridgecore_handletcnetmsg",
+      "label": "._handleTCNetMsg()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1604"
+    },
+    {
+      "id": "bridge_core_bridgecore_starttcnetrx",
+      "label": "._startTCNetRx()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1703"
+    },
+    {
+      "id": "bridge_core_bridgecore_startlistenerportrx",
+      "label": "._startListenerPortRx()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1755"
+    },
+    {
+      "id": "bridge_core_bridgecore_startpdjlrx",
+      "label": "._startPDJLRx()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1859"
+    },
+    {
+      "id": "bridge_core_bridgecore_startpdjlannounce",
+      "label": "._startPDJLAnnounce()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L1889"
+    },
+    {
+      "id": "bridge_core_bridgecore_onpdjl",
+      "label": "._onPDJL()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2169"
+    },
+    {
+      "id": "bridge_core_bridgecore_updatelayer",
+      "label": ".updateLayer()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2668"
+    },
+    {
+      "id": "bridge_core_bridgecore_removelayer",
+      "label": ".removeLayer()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2701"
+    },
+    {
+      "id": "bridge_core_bridgecore_sethwmode",
+      "label": ".setHWMode()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2702"
+    },
+    {
+      "id": "bridge_core_bridgecore_registervirtualdeck",
+      "label": ".registerVirtualDeck()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2705"
+    },
+    {
+      "id": "bridge_core_bridgecore_unregistervirtualdeck",
+      "label": ".unregisterVirtualDeck()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2718"
+    },
+    {
+      "id": "bridge_core_bridgecore_syncvirtualdevices",
+      "label": "._syncVirtualDevices()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2726"
+    },
+    {
+      "id": "bridge_core_bridgecore_getactivenodes",
+      "label": ".getActiveNodes()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2731"
+    },
+    {
+      "id": "bridge_core_bridgecore_getactivedevices",
+      "label": ".getActiveDevices()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2732"
+    },
+    {
+      "id": "bridge_core_bridgecore_getpdjlport",
+      "label": ".getPDJLPort()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2733"
+    },
+    {
+      "id": "bridge_core_bridgecore_nodename",
+      "label": ".nodeName()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2734"
+    },
+    {
+      "id": "bridge_core_bridgecore_setvirtualart",
+      "label": ".setVirtualArt()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2743"
+    },
+    {
+      "id": "bridge_core_bridgecore_sendvirtualcdjstatus",
+      "label": "._sendVirtualCDJStatus()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2761"
+    },
+    {
+      "id": "bridge_core_bridgecore_pusharttoresolume",
+      "label": "._pushArtToResolume()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2830"
+    },
+    {
+      "id": "bridge_core_bridgecore_startvirtualdbserver",
+      "label": "._startVirtualDbServer()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2855"
+    },
+    {
+      "id": "bridge_core_bridgecore_parsedbrequest",
+      "label": "._parseDbRequest()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2960"
+    },
+    {
+      "id": "bridge_core_bridgecore_handlevdbrequest",
+      "label": "._handleVDbRequest()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L2991"
+    },
+    {
+      "id": "bridge_core_bridgecore_findartbytrackid",
+      "label": "._findArtByTrackId()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3061"
+    },
+    {
+      "id": "bridge_core_bridgecore_findvirtualart",
+      "label": "._findVirtualArt()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3073"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbbuildmenuitem",
+      "label": "._dbBuildMenuItem()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3083"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbbuildartresponse",
+      "label": "._dbBuildArtResponse()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3112"
+    },
+    {
+      "id": "bridge_core_bridgecore_requestmetadata",
+      "label": ".requestMetadata()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3128"
+    },
+    {
+      "id": "bridge_core_bridgecore_refreshallmetadata",
+      "label": ".refreshAllMetadata()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3140"
+    },
+    {
+      "id": "bridge_core_bridgecore_requestartwork",
+      "label": ".requestArtwork()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3152"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbnum1",
+      "label": "._dbNum1()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3165"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbnum2",
+      "label": "._dbNum2()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3166"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbnum4",
+      "label": "._dbNum4()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3167"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbbuildmsg",
+      "label": "._dbBuildMsg()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3169"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbbinary",
+      "label": "._dbBinary()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3185"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbarg4",
+      "label": "._dbArg4()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3186"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbstr",
+      "label": "._dbStr()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3188"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbrmst",
+      "label": "._dbRMST()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3190"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbconnect",
+      "label": "._dbConnect()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3196"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbreadresponse",
+      "label": "._dbReadResponse()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3252"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbreadfullresponse",
+      "label": "._dbReadFullResponse()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3270"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbreadfield",
+      "label": "._dbReadField()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3290"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbparseitems",
+      "label": "._dbParseItems()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3321"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbservermetadata",
+      "label": "._dbserverMetadata()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3354"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbserverwaveform",
+      "label": "._dbserverWaveform()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3462"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "label": "._dbserverWaveformDetail()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3498"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "label": "._dbserverWaveformNxs2()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3544"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbservercuepoints",
+      "label": "._dbserverCuePoints()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3607"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "label": "._dbserverCuePointsNxs2()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3626"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "label": "._dbserverCuePointsMenu()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3765"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbserverbeatgrid",
+      "label": "._dbserverBeatGrid()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3804"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbserversongstructure",
+      "label": "._dbserverSongStructure()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3871"
+    },
+    {
+      "id": "bridge_core_bridgecore_phrasekindmeta",
+      "label": "._phraseKindMeta()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L3997"
+    },
+    {
+      "id": "bridge_core_bridgecore_dbserverartwork",
+      "label": "._dbserverArtwork()",
+      "file_type": "code",
+      "source_file": "bridge-core.js",
+      "source_location": "L4028"
+    },
+    {
+      "id": "main_js",
+      "label": "main.js",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "main_findffmpeg",
+      "label": "_findFFmpeg()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L18"
+    },
+    {
+      "id": "main_registerbridgeaudioprotocol",
+      "label": "_registerBridgeAudioProtocol()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L41"
+    },
+    {
+      "id": "main_artnetengine",
+      "label": "ArtnetEngine",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L76"
+    },
+    {
+      "id": "main_artnetengine_constructor",
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L77"
+    },
+    {
+      "id": "main_artnetengine_now",
+      "label": "._now()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L91"
+    },
+    {
+      "id": "main_artnetengine_destfor",
+      "label": "._destFor()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L92"
+    },
+    {
+      "id": "main_artnetengine_getstatus",
+      "label": ".getStatus()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L93"
+    },
+    {
+      "id": "main_artnetengine_isrunning",
+      "label": ".isRunning()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L94"
+    },
+    {
+      "id": "main_artnetengine_setfps",
+      "label": ".setFps()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L95"
+    },
+    {
+      "id": "main_artnetengine_settimecode",
+      "label": ".setTimecode()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L100"
+    },
+    {
+      "id": "main_artnetengine_setpaused",
+      "label": ".setPaused()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L101"
+    },
+    {
+      "id": "main_artnetengine_setdmx",
+      "label": ".setDmx()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L105"
+    },
+    {
+      "id": "main_artnetengine_cleardmx",
+      "label": ".clearDmx()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L110"
+    },
+    {
+      "id": "main_artnetengine_setdmxhz",
+      "label": ".setDmxHz()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L111"
+    },
+    {
+      "id": "main_artnetengine_setunicast",
+      "label": ".setUnicast()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L115"
+    },
+    {
+      "id": "main_artnetengine_setpollreply",
+      "label": ".setPollReply()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L119"
+    },
+    {
+      "id": "main_artnetengine_setsync",
+      "label": ".setSync()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L120"
+    },
+    {
+      "id": "main_artnetengine_forceresync",
+      "label": ".forceResync()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L121"
+    },
+    {
+      "id": "main_artnetengine_start",
+      "label": ".start()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L127"
+    },
+    {
+      "id": "main_artnetengine_stop",
+      "label": ".stop()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L157"
+    },
+    {
+      "id": "main_artnetengine_tick",
+      "label": "._tick()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L163"
+    },
+    {
+      "id": "main_artnetengine_incframe",
+      "label": "._incFrame()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L182"
+    },
+    {
+      "id": "main_artnetengine_tototal",
+      "label": "._toTotal()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L191"
+    },
+    {
+      "id": "main_artnetengine_sendtc",
+      "label": "._sendTc()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L192"
+    },
+    {
+      "id": "main_artnetengine_senddmx",
+      "label": "._sendDmx()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L217"
+    },
+    {
+      "id": "main_artnetengine_sendsync",
+      "label": "._sendSync()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L236"
+    },
+    {
+      "id": "main_artnetengine_sendpollreply",
+      "label": "._sendPollReply()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L246"
+    },
+    {
+      "id": "main_artnetengine_startpolllistener",
+      "label": "._startPollListener()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L283"
+    },
+    {
+      "id": "main_getlocalip",
+      "label": "getLocalIp()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L307"
+    },
+    {
+      "id": "main_linkbridge",
+      "label": "LinkBridge",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L328"
+    },
+    {
+      "id": "main_linkbridge_constructor",
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L329"
+    },
+    {
+      "id": "main_linkbridge_isavailable",
+      "label": ".isAvailable()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L343"
+    },
+    {
+      "id": "main_linkbridge_readbeat",
+      "label": "._readBeat()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L346"
+    },
+    {
+      "id": "main_linkbridge_readphase",
+      "label": "._readPhase()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L354"
+    },
+    {
+      "id": "main_linkbridge_readpeers",
+      "label": "._readPeers()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L367"
+    },
+    {
+      "id": "main_linkbridge_getstatus",
+      "label": ".getStatus()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L376"
+    },
+    {
+      "id": "main_linkbridge_setenabled",
+      "label": ".setEnabled()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L384"
+    },
+    {
+      "id": "main_linkbridge_alignbeat",
+      "label": ".alignBeat()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L409"
+    },
+    {
+      "id": "main_linkbridge_settempo",
+      "label": ".setTempo()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L421"
+    },
+    {
+      "id": "main_sendarttimecode",
+      "label": "sendArtTimeCode()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L442"
+    },
+    {
+      "id": "main_loadbounds",
+      "label": "loadBounds()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L458"
+    },
+    {
+      "id": "main_savebounds",
+      "label": "saveBounds()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L459"
+    },
+    {
+      "id": "main_showsplash",
+      "label": "showSplash()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L469"
+    },
+    {
+      "id": "main_createwindow",
+      "label": "createWindow()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L482"
+    },
+    {
+      "id": "main_push",
+      "label": "push()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L507"
+    },
+    {
+      "id": "main_send",
+      "label": "_send()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L530"
+    },
+    {
+      "id": "main_buildanlzindex",
+      "label": "_buildANLZIndex()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L704"
+    },
+    {
+      "id": "main_readpwv7",
+      "label": "_readPWV7()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L741"
+    },
+    {
+      "id": "main_doquit",
+      "label": "doQuit()",
+      "file_type": "code",
+      "source_file": "main.js",
+      "source_location": "L794"
+    },
+    {
+      "id": "renderer_waveform_gl_js",
+      "label": "waveform-gl.js",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "waveform_gl_waveformgl",
+      "label": "WaveformGL",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L9"
+    },
+    {
+      "id": "waveform_gl_waveformgl_constructor",
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L10"
+    },
+    {
+      "id": "waveform_gl_waveformgl_setdata",
+      "label": ".setData()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L34"
+    },
+    {
+      "id": "waveform_gl_waveformgl_draw",
+      "label": ".draw()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L95"
+    },
+    {
+      "id": "waveform_gl_waveformgl_resize",
+      "label": ".resize()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L121"
+    },
+    {
+      "id": "waveform_gl_waveformgl_destroy",
+      "label": ".destroy()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L123"
+    },
+    {
+      "id": "waveform_gl_waveformgl_initgeometry",
+      "label": "._initGeometry()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L132"
+    },
+    {
+      "id": "waveform_gl_waveformgl_compileprogram",
+      "label": "._compileProgram()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L147"
+    },
+    {
+      "id": "waveform_gl_overviewgl",
+      "label": "OverviewGL",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L171"
+    },
+    {
+      "id": "waveform_gl_overviewgl_constructor",
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L172"
+    },
+    {
+      "id": "waveform_gl_overviewgl_setdata",
+      "label": ".setData()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L190"
+    },
+    {
+      "id": "waveform_gl_overviewgl_draw",
+      "label": ".draw()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L245"
+    },
+    {
+      "id": "waveform_gl_overviewgl_resize",
+      "label": ".resize()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L266"
+    },
+    {
+      "id": "waveform_gl_overviewgl_destroy",
+      "label": ".destroy()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L268"
+    },
+    {
+      "id": "waveform_gl_overviewgl_initgeometry",
+      "label": "._initGeometry()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L277"
+    },
+    {
+      "id": "waveform_gl_overviewgl_compileprogram",
+      "label": "._compileProgram()",
+      "file_type": "code",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L292"
+    },
+    {
+      "id": "renderer_ltc_processor_js",
+      "label": "ltc-processor.js",
+      "file_type": "code",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "ltc_processor_ltcprocessor",
+      "label": "LTCProcessor",
+      "file_type": "code",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L6"
+    },
+    {
+      "id": "ltc_processor_ltcprocessor_constructor",
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L7"
+    },
+    {
+      "id": "ltc_processor_ltcprocessor_mkch",
+      "label": "._mkCh()",
+      "file_type": "code",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L22"
+    },
+    {
+      "id": "ltc_processor_ltcprocessor_encode",
+      "label": "._encode()",
+      "file_type": "code",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L33"
+    },
+    {
+      "id": "ltc_processor_ltcprocessor_tick",
+      "label": "._tick()",
+      "file_type": "code",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L61"
+    },
+    {
+      "id": "ltc_processor_ltcprocessor_process",
+      "label": ".process()",
+      "file_type": "code",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L86"
+    },
+    {
+      "id": "tools_pcap_replay_js",
+      "label": "pcap-replay.js",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "pcap_replay_parsepcapng",
+      "label": "parsePcapng()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L47"
+    },
+    {
+      "id": "pcap_replay_parseethernet",
+      "label": "parseEthernet()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L80"
+    },
+    {
+      "id": "pcap_replay_classify",
+      "label": "classify()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L105"
+    },
+    {
+      "id": "pcap_replay_rewritepacket",
+      "label": "rewritePacket()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L119"
+    },
+    {
+      "id": "pcap_replay_extracttrackinfo",
+      "label": "extractTrackInfo()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L133"
+    },
+    {
+      "id": "pcap_replay_startdbserver",
+      "label": "startDbServer()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L152"
+    },
+    {
+      "id": "pcap_replay_parsetrackidfromargs",
+      "label": "parseTrackIdFromArgs()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L277"
+    },
+    {
+      "id": "pcap_replay_builddbmsg",
+      "label": "buildDbMsg()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L296"
+    },
+    {
+      "id": "pcap_replay_buildmenuitem",
+      "label": "buildMenuItem()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L317"
+    },
+    {
+      "id": "pcap_replay_builduint32field",
+      "label": "buildUInt32Field()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L366"
+    },
+    {
+      "id": "pcap_replay_builduint16field",
+      "label": "buildUInt16Field()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L373"
+    },
+    {
+      "id": "pcap_replay_buildstringfield",
+      "label": "buildStringField()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L380"
+    },
+    {
+      "id": "pcap_replay_startarenasim",
+      "label": "startArenaSim()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L395"
+    },
+    {
+      "id": "pcap_replay_readutf32le",
+      "label": "readUtf32LE()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L472"
+    },
+    {
+      "id": "pcap_replay_replay",
+      "label": "replay()",
+      "file_type": "code",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L483"
+    }
+  ],
+  "edges": [
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_totcnetstate",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_u32",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_clamp8",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L92",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_writeutf32le",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_buildhdr",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L107",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_gethwportmap",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L120",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_getallinterfaces",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L140",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_detectbroadcastfor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L155",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_haspdjlmagic",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L167",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_readpdjlnamefield",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L173",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mkoptin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L187",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mkstatus",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L214",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mktime",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L277",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mkappresp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L353",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mkmetadataresp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L366",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mkdatametrics",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L389",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mkmixerdata",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L433",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mkdatameta",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L472",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mknotification",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L498",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_mklowresartwork",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L513",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_parsepdjl",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L539",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_js",
+      "target": "bridge_core_bridgecore",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L971",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_constructor",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L972",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_resolvebroadcast",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1027",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_start",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1049",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_settcnetunicast",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1174",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_stop",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1180",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_startdjmcapture",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1266",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_stopdjmcapture",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1275",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_rebindtcnet",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1282",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_findlocalifaceforremote",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1326",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_autoselectpdjlforremote",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1347",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_rebindpdjl",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1368",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_settcnetmode",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1395",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_send",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1408",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_uc",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1459",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_sendtoarenas",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1468",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_sendtoarenaslport",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1477",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_senddatatoarenas",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1488",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_sendartwork",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1502",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_resendallartwork",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1520",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_senddatacycle",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1539",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_sendoptin",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1579",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_sendstatus",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1587",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_handletcnetmsg",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1604",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_starttcnetrx",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1703",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_startlistenerportrx",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1755",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_startpdjlrx",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1859",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_startpdjlannounce",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1889",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_onpdjl",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2169",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_updatelayer",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2668",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_removelayer",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2701",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_sethwmode",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2702",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_registervirtualdeck",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2705",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_unregistervirtualdeck",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2718",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_syncvirtualdevices",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2726",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_getactivenodes",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2731",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_getactivedevices",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2732",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_getpdjlport",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2733",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_nodename",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2734",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_setvirtualart",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2743",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_sendvirtualcdjstatus",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2761",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_pusharttoresolume",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2830",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_startvirtualdbserver",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2855",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_parsedbrequest",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2960",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_handlevdbrequest",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2991",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_findartbytrackid",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3061",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_findvirtualart",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3073",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbbuildmenuitem",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3083",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbbuildartresponse",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3112",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_requestmetadata",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3128",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_refreshallmetadata",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3140",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_requestartwork",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3152",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbnum1",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3165",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbnum2",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3166",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbnum4",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3167",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3169",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbbinary",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3185",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3186",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbstr",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3188",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3190",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3196",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbreadresponse",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3252",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3270",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbreadfield",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3290",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbparseitems",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3321",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbservermetadata",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3354",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbserverwaveform",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3462",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3498",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3544",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbservercuepoints",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3607",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3626",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3765",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbserverbeatgrid",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3804",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbserversongstructure",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3871",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_phrasekindmeta",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3997",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore",
+      "target": "bridge_core_bridgecore_dbserverartwork",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L4028",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_buildhdr",
+      "target": "bridge_core_u32",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L114",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_getallinterfaces",
+      "target": "bridge_core_gethwportmap",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L142",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_detectbroadcastfor",
+      "target": "bridge_core_getallinterfaces",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L157",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkoptin",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L189",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkstatus",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L216",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkstatus",
+      "target": "bridge_core_totcnetstate",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L238",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mktime",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L279",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mktime",
+      "target": "bridge_core_u32",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L295",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mktime",
+      "target": "bridge_core_totcnetstate",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L314",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkappresp",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L355",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkmetadataresp",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L372",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkdatametrics",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L391",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkdatametrics",
+      "target": "bridge_core_totcnetstate",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L399",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkdatametrics",
+      "target": "bridge_core_u32",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L406",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkmixerdata",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L435",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkdatameta",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L474",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mkdatameta",
+      "target": "bridge_core_writeutf32le",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L483",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mknotification",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L500",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mklowresartwork",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L523",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_parsepdjl",
+      "target": "bridge_core_haspdjlmagic",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L541",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_parsepdjl",
+      "target": "bridge_core_readpdjlnamefield",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L543",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_resolvebroadcast",
+      "target": "bridge_core_getallinterfaces",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1032",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_resolvebroadcast",
+      "target": "bridge_core_detectbroadcastfor",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1044",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_resolvebroadcast",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1050",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_startlistenerportrx",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1127",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_sendoptin",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1131",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_sendstatus",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1132",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_mknotification",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1134",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_send",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1135",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_sendtoarenaslport",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1136",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_starttcnetrx",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1159",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_startpdjlrx",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1162",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_startpdjlannounce",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1163",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_start",
+      "target": "bridge_core_bridgecore_startvirtualdbserver",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1164",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_stop",
+      "target": "bridge_core_buildhdr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1186",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_stop",
+      "target": "bridge_core_bridgecore_send",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1190",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_stop",
+      "target": "bridge_core_getallinterfaces",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1192",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_stop",
+      "target": "bridge_core_bridgecore_stopdjmcapture",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1257",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_rebindtcnet",
+      "target": "bridge_core_bridgecore_resolvebroadcast",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1287",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_rebindtcnet",
+      "target": "bridge_core_bridgecore_startlistenerportrx",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1312",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_rebindtcnet",
+      "target": "bridge_core_bridgecore_starttcnetrx",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1319",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_findlocalifaceforremote",
+      "target": "bridge_core_getallinterfaces",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1330",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_autoselectpdjlforremote",
+      "target": "bridge_core_bridgecore_findlocalifaceforremote",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1351",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_rebindpdjl",
+      "target": "bridge_core_bridgecore_startpdjlrx",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1389",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_rebindpdjl",
+      "target": "bridge_core_bridgecore_startpdjlannounce",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1390",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_send",
+      "target": "bridge_core_getallinterfaces",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1420",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendartwork",
+      "target": "bridge_core_mklowresartwork",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1504",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendartwork",
+      "target": "bridge_core_bridgecore_senddatatoarenas",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1514",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_senddatacycle",
+      "target": "bridge_core_mkdatametrics",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1550",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_senddatacycle",
+      "target": "bridge_core_mkdatameta",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1560",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_senddatacycle",
+      "target": "bridge_core_bridgecore_senddatatoarenas",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1573",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendoptin",
+      "target": "bridge_core_mkoptin",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1581",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendoptin",
+      "target": "bridge_core_bridgecore_send",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1582",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendoptin",
+      "target": "bridge_core_bridgecore_sendtoarenas",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1583",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendoptin",
+      "target": "bridge_core_bridgecore_sendtoarenaslport",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1584",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendstatus",
+      "target": "bridge_core_mkstatus",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1588",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendstatus",
+      "target": "bridge_core_bridgecore_send",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1598",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendstatus",
+      "target": "bridge_core_bridgecore_sendtoarenas",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1599",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendstatus",
+      "target": "bridge_core_bridgecore_sendtoarenaslport",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1600",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handletcnetmsg",
+      "target": "bridge_core_mkappresp",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1646",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handletcnetmsg",
+      "target": "bridge_core_mkdatameta",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1657",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handletcnetmsg",
+      "target": "bridge_core_bridgecore_uc",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1658",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handletcnetmsg",
+      "target": "bridge_core_mkdatametrics",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1660",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_startpdjlannounce",
+      "target": "bridge_core_getallinterfaces",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L1898",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_onpdjl",
+      "target": "bridge_core_haspdjlmagic",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2170",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_onpdjl",
+      "target": "bridge_core_readpdjlnamefield",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2172",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_onpdjl",
+      "target": "bridge_core_parsepdjl",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2195",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_onpdjl",
+      "target": "bridge_core_bridgecore_autoselectpdjlforremote",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2228",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_onpdjl",
+      "target": "bridge_core_bridgecore_sendartwork",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2254",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_onpdjl",
+      "target": "bridge_core_bridgecore_requestmetadata",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2271",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_onpdjl",
+      "target": "bridge_core_bridgecore_updatelayer",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2414",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_updatelayer",
+      "target": "bridge_core_bridgecore_sendvirtualcdjstatus",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2697",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_removelayer",
+      "target": "bridge_core_bridgecore_syncvirtualdevices",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2701",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_registervirtualdeck",
+      "target": "bridge_core_bridgecore_syncvirtualdevices",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2715",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_unregistervirtualdeck",
+      "target": "bridge_core_bridgecore_syncvirtualdevices",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2723",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_setvirtualart",
+      "target": "bridge_core_bridgecore_sendartwork",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2750",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendvirtualcdjstatus",
+      "target": "bridge_core_getallinterfaces",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2813",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handlevdbrequest",
+      "target": "bridge_core_bridgecore_parsedbrequest",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L2993",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handlevdbrequest",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3006",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handlevdbrequest",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3006",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handlevdbrequest",
+      "target": "bridge_core_bridgecore_findvirtualart",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3018",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handlevdbrequest",
+      "target": "bridge_core_bridgecore_dbbuildmenuitem",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3020",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handlevdbrequest",
+      "target": "bridge_core_bridgecore_findartbytrackid",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3030",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handlevdbrequest",
+      "target": "bridge_core_bridgecore_dbbuildartresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3036",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmenuitem",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3088",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmenuitem",
+      "target": "bridge_core_bridgecore_dbstr",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3091",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmenuitem",
+      "target": "bridge_core_bridgecore_dbnum4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3102",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmenuitem",
+      "target": "bridge_core_bridgecore_dbnum2",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3104",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmenuitem",
+      "target": "bridge_core_bridgecore_dbnum1",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3105",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmenuitem",
+      "target": "bridge_core_bridgecore_dbbinary",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3106",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildartresponse",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3114",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildartresponse",
+      "target": "bridge_core_bridgecore_dbbinary",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3115",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildartresponse",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3116",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_requestmetadata",
+      "target": "bridge_core_bridgecore_dbservermetadata",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3134",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_refreshallmetadata",
+      "target": "bridge_core_bridgecore_requestmetadata",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3147",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_requestartwork",
+      "target": "bridge_core_bridgecore_dbserverartwork",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3159",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmsg",
+      "target": "bridge_core_bridgecore_dbnum4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3175",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmsg",
+      "target": "bridge_core_bridgecore_dbnum2",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3177",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmsg",
+      "target": "bridge_core_bridgecore_dbnum1",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3178",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmsg",
+      "target": "bridge_core_bridgecore_dbbinary",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3179",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbarg4",
+      "target": "bridge_core_bridgecore_dbnum4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3186",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbrmst",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3192",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbconnect",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3243",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbconnect",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3243",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbconnect",
+      "target": "bridge_core_bridgecore_dbreadresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3246",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbparseitems",
+      "target": "bridge_core_bridgecore_dbreadfield",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3329",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3359",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3365",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3366",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3366",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbreadresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3369",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3378",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbparseitems",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3381",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbserverartwork",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3435",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbserverwaveform",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3438",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3440",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3443",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbservercuepoints",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3445",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "bridge_core_bridgecore_dbserverbeatgrid",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3447",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveform",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3466",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveform",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3467",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveform",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3468",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveform",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3469",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveform",
+      "target": "bridge_core_bridgecore_dbbinary",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3470",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveform",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3473",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3502",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3504",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3505",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3506",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3509",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3548",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3550",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3551",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3552",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3556",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepoints",
+      "target": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3609",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepoints",
+      "target": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3611",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3630",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3632",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3633",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3634",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3638",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3769",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3770",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3771",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3772",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "target": "bridge_core_bridgecore_dbreadresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3775",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3781",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "target": "bridge_core_bridgecore_dbparseitems",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3782",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverbeatgrid",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3808",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverbeatgrid",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3810",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverbeatgrid",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3811",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverbeatgrid",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3812",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverbeatgrid",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3815",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserversongstructure",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3875",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserversongstructure",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3876",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserversongstructure",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3878",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserversongstructure",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3879",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserversongstructure",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3882",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserversongstructure",
+      "target": "bridge_core_bridgecore_phrasekindmeta",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L3972",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverartwork",
+      "target": "bridge_core_bridgecore_dbconnect",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L4032",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverartwork",
+      "target": "bridge_core_bridgecore_dbrmst",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L4033",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverartwork",
+      "target": "bridge_core_bridgecore_dbbuildmsg",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L4034",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverartwork",
+      "target": "bridge_core_bridgecore_dbarg4",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L4034",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverartwork",
+      "target": "bridge_core_bridgecore_dbreadfullresponse",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L4036",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverartwork",
+      "target": "bridge_core_bridgecore_setvirtualart",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "bridge-core.js",
+      "source_location": "L4053",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_findffmpeg",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_registerbridgeaudioprotocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_artnetengine",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_constructor",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L77",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_now",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_destfor",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L92",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_getstatus",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L93",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_isrunning",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L94",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_setfps",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_settimecode",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L100",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_setpaused",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_setdmx",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L105",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_cleardmx",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L110",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_setdmxhz",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L111",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_setunicast",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L115",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_setpollreply",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_setsync",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L120",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_forceresync",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L121",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_start",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L127",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_stop",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L157",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_tick",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L163",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_incframe",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L182",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_tototal",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L191",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_sendtc",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L192",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_senddmx",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L217",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_sendsync",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L236",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_sendpollreply",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L246",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine",
+      "target": "main_artnetengine_startpolllistener",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L283",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_getlocalip",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L307",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_linkbridge",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L328",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge",
+      "target": "main_linkbridge_constructor",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L329",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge",
+      "target": "main_linkbridge_isavailable",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L343",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge",
+      "target": "main_linkbridge_readbeat",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L346",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge",
+      "target": "main_linkbridge_readphase",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L354",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge",
+      "target": "main_linkbridge_readpeers",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L367",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge",
+      "target": "main_linkbridge_getstatus",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L376",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge",
+      "target": "main_linkbridge_setenabled",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L384",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge",
+      "target": "main_linkbridge_alignbeat",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L409",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge",
+      "target": "main_linkbridge_settempo",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L421",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_sendarttimecode",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L442",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_loadbounds",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L458",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_savebounds",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L459",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_showsplash",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L469",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_createwindow",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L482",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_push",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L507",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_send",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L530",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_buildanlzindex",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L704",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_readpwv7",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L741",
+      "weight": 1.0
+    },
+    {
+      "source": "main_js",
+      "target": "main_doquit",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L794",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_getstatus",
+      "target": "main_artnetengine_destfor",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L93",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_setpaused",
+      "target": "main_artnetengine_now",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L103",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_forceresync",
+      "target": "main_artnetengine_sendtc",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L124",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_forceresync",
+      "target": "main_artnetengine_now",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L125",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_tick",
+      "target": "main_artnetengine_now",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L165",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_tick",
+      "target": "main_artnetengine_sendtc",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L170",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_tick",
+      "target": "main_artnetengine_senddmx",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L177",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_tick",
+      "target": "main_artnetengine_sendsync",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L178",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_sendtc",
+      "target": "main_artnetengine_incframe",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L197",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_sendtc",
+      "target": "main_artnetengine_tototal",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L199",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_sendtc",
+      "target": "main_artnetengine_destfor",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L214",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_senddmx",
+      "target": "main_artnetengine_destfor",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L232",
+      "weight": 1.0
+    },
+    {
+      "source": "main_artnetengine_sendpollreply",
+      "target": "main_getlocalip",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L252",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge_readphase",
+      "target": "main_linkbridge_readbeat",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L361",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge_getstatus",
+      "target": "main_linkbridge_readbeat",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L378",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge_getstatus",
+      "target": "main_linkbridge_readphase",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L379",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge_getstatus",
+      "target": "main_linkbridge_readpeers",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L380",
+      "weight": 1.0
+    },
+    {
+      "source": "main_sendarttimecode",
+      "target": "main_artnetengine_isrunning",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L443",
+      "weight": 1.0
+    },
+    {
+      "source": "main_sendarttimecode",
+      "target": "main_artnetengine_settimecode",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L443",
+      "weight": 1.0
+    },
+    {
+      "source": "main_createwindow",
+      "target": "main_loadbounds",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L483",
+      "weight": 1.0
+    },
+    {
+      "source": "main_createwindow",
+      "target": "main_showsplash",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L492",
+      "weight": 1.0
+    },
+    {
+      "source": "main_doquit",
+      "target": "main_savebounds",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L798",
+      "weight": 1.0
+    },
+    {
+      "source": "main_doquit",
+      "target": "main_showsplash",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "main.js",
+      "source_location": "L803",
+      "weight": 1.0
+    },
+    {
+      "source": "renderer_waveform_gl_js",
+      "target": "waveform_gl_waveformgl",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl",
+      "target": "waveform_gl_waveformgl_constructor",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl",
+      "target": "waveform_gl_waveformgl_setdata",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl",
+      "target": "waveform_gl_waveformgl_draw",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl",
+      "target": "waveform_gl_waveformgl_resize",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L121",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl",
+      "target": "waveform_gl_waveformgl_destroy",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L123",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl",
+      "target": "waveform_gl_waveformgl_initgeometry",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L132",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl",
+      "target": "waveform_gl_waveformgl_compileprogram",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L147",
+      "weight": 1.0
+    },
+    {
+      "source": "renderer_waveform_gl_js",
+      "target": "waveform_gl_overviewgl",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L171",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl",
+      "target": "waveform_gl_overviewgl_constructor",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L172",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl",
+      "target": "waveform_gl_overviewgl_setdata",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L190",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl",
+      "target": "waveform_gl_overviewgl_draw",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L245",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl",
+      "target": "waveform_gl_overviewgl_resize",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L266",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L268",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl",
+      "target": "waveform_gl_overviewgl_initgeometry",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L277",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl",
+      "target": "waveform_gl_overviewgl_compileprogram",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L292",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl_constructor",
+      "target": "waveform_gl_overviewgl_compileprogram",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl_constructor",
+      "target": "waveform_gl_overviewgl_initgeometry",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl_setdata",
+      "target": "waveform_gl_overviewgl_compileprogram",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_waveformgl_setdata",
+      "target": "waveform_gl_overviewgl_initgeometry",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl_constructor",
+      "target": "waveform_gl_overviewgl_compileprogram",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L180",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl_constructor",
+      "target": "waveform_gl_overviewgl_initgeometry",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L181",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl_setdata",
+      "target": "waveform_gl_overviewgl_compileprogram",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L197",
+      "weight": 1.0
+    },
+    {
+      "source": "waveform_gl_overviewgl_setdata",
+      "target": "waveform_gl_overviewgl_initgeometry",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/waveform-gl.js",
+      "source_location": "L199",
+      "weight": 1.0
+    },
+    {
+      "source": "renderer_ltc_processor_js",
+      "target": "ltc_processor_ltcprocessor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "ltc_processor_ltcprocessor",
+      "target": "ltc_processor_ltcprocessor_constructor",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "ltc_processor_ltcprocessor",
+      "target": "ltc_processor_ltcprocessor_mkch",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "ltc_processor_ltcprocessor",
+      "target": "ltc_processor_ltcprocessor_encode",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "ltc_processor_ltcprocessor",
+      "target": "ltc_processor_ltcprocessor_tick",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "ltc_processor_ltcprocessor",
+      "target": "ltc_processor_ltcprocessor_process",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
+      "source": "ltc_processor_ltcprocessor_constructor",
+      "target": "ltc_processor_ltcprocessor_mkch",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "ltc_processor_ltcprocessor_mkch",
+      "target": "ltc_processor_ltcprocessor_encode",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "ltc_processor_ltcprocessor_tick",
+      "target": "ltc_processor_ltcprocessor_encode",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L79",
+      "weight": 1.0
+    },
+    {
+      "source": "ltc_processor_ltcprocessor_process",
+      "target": "ltc_processor_ltcprocessor_tick",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "renderer/ltc-processor.js",
+      "source_location": "L92",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_parsepcapng",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_parseethernet",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L80",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_classify",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L105",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_rewritepacket",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_extracttrackinfo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L133",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_startdbserver",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L152",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_parsetrackidfromargs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L277",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_builddbmsg",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L296",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_buildmenuitem",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L317",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_builduint32field",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L366",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_builduint16field",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L373",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_buildstringfield",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L380",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_startarenasim",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L395",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_readutf32le",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L472",
+      "weight": 1.0
+    },
+    {
+      "source": "tools_pcap_replay_js",
+      "target": "pcap_replay_replay",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L483",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_parsepcapng",
+      "target": "pcap_replay_parseethernet",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_extracttrackinfo",
+      "target": "pcap_replay_classify",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L136",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_builddbmsg",
+      "target": "pcap_replay_builduint32field",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L300",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_builddbmsg",
+      "target": "pcap_replay_builduint16field",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L304",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_buildmenuitem",
+      "target": "pcap_replay_builduint32field",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L321",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_buildmenuitem",
+      "target": "pcap_replay_builduint16field",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L325",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_buildmenuitem",
+      "target": "pcap_replay_buildstringfield",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L345",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_replay",
+      "target": "pcap_replay_parsepcapng",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L486",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_replay",
+      "target": "pcap_replay_classify",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L501",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_replay",
+      "target": "pcap_replay_extracttrackinfo",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L514",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_replay",
+      "target": "pcap_replay_startdbserver",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L531",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_replay",
+      "target": "pcap_replay_startarenasim",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L542",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_getallinterfaces",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L143",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_mklowresartwork",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L531",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_parsepdjl",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L822",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_stop",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L1253",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_sendartwork",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L1508",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_handletcnetmsg",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L1679",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_startpdjlrx",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L1878",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_startpdjlannounce",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L2052",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_parsedbrequest",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L2975",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmenuitem",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3108",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbbuildmsg",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3181",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbstr",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3188",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbparseitems",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3344",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservermetadata",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3458",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveform",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3488",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveform",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3495",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3526",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformdetail",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3539",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3587",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverwaveformnxs2",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3604",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3710",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsnxs2",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3761",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3792",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbservercuepointsmenu",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3801",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverbeatgrid",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3843",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverbeatgrid",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3866",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserversongstructure",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3973",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserversongstructure",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L3992",
+      "weight": 1.0
+    },
+    {
+      "source": "bridge_core_bridgecore_dbserverartwork",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "bridge-core.js",
+      "source_location": "L4057",
+      "weight": 1.0
+    },
+    {
+      "source": "main_linkbridge_setenabled",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "main.js",
+      "source_location": "L401",
+      "weight": 1.0
+    },
+    {
+      "source": "main_showsplash",
+      "target": "waveform_gl_overviewgl_destroy",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "main.js",
+      "source_location": "L470",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_parsepcapng",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_builddbmsg",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L300",
+      "weight": 1.0
+    },
+    {
+      "source": "pcap_replay_buildmenuitem",
+      "target": "main_push",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tools/pcap-replay.js",
+      "source_location": "L321",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

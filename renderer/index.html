@@ -87,6 +87,7 @@
   --vu-bar-width:10px;
   --eq-knob-size:22px;
   --btn-height-sm:22px;--btn-height-md:28px;--btn-height-lg:32px;
+  --waveform-bg:#111318;--waveform-bg-played:#17191f;--waveform-border:rgba(135,135,255,.22);
 
   /* ═══ LEGACY alias — 기존 코드 호환 유지 ═══ */
   --bg:#111318;--bg2:#1a1b21;--bg3:#1e2024;--bg4:#282a2f;
@@ -168,12 +169,15 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dtc{font:300 31px var(--font-timecode,var(--seg));color:var(--tx4);letter-spacing:.02em;transition:color .2s;white-space:nowrap;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 .dk[data-st="play"] .dtc,.dk[data-st="scratch"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
-.dwov{height:14px;margin:0 0 3px;background:var(--bg-lowest);border-radius:3px;overflow:hidden;cursor:pointer;position:relative}
+.dwov{height:14px;margin:0 0 3px;background:var(--waveform-bg,var(--bg-lowest));border:1px solid var(--waveform-border,rgba(135,135,255,.18));box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);border-radius:3px;overflow:hidden;cursor:crosshair;position:relative}
 .dwov canvas{width:100%;height:100%;display:block}
 /* waveform analysis progress bar (shown while buildRGBWaveform runs) */
 .dwov-prog{position:absolute;bottom:0;left:0;height:2px;width:0;background:rgba(96,165,250,.7);border-radius:1px;pointer-events:none;transition:width .1s linear}
 /* Zoom: scrolling RGB waveform + beat grid */
-.dwz{height:64px;margin:0 0 4px;background:var(--bg-lowest);border-radius:6px;overflow:hidden;cursor:pointer;position:relative;border:1px solid var(--bdr)}
+.dwz{height:64px;margin:0 0 4px;background:var(--waveform-bg,var(--bg-lowest));border-radius:6px;overflow:hidden;cursor:grab;position:relative;border:1px solid var(--waveform-border,var(--bdr));box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
+.dwz:active{cursor:grabbing}
+.dwov canvas,.dwz canvas{background:var(--waveform-bg,var(--bg-lowest))!important}
+.dwov canvas.dwov-overlay,.dwz canvas[id^="wzov"]{background:transparent!important}
 .dwz canvas{flex:1;height:100%;display:block;min-width:0}
 .wf-key{position:absolute;top:4px;right:8px;font:700 14px var(--mn);color:var(--key);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 8px;border-radius:4px}
 .wf-bpm{position:absolute;bottom:4px;right:8px;font:600 12px var(--mn);color:var(--tx2);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 8px;border-radius:4px}
@@ -200,7 +204,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dk-wf-area .dkart{border-radius:0;border:none;border-right:1px solid rgba(135,135,255,.06);width:96px;min-height:96px;aspect-ratio:1;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-lowest)}
 .dk-wf-col{display:flex;flex-direction:column;flex:1;min-width:0}
 .dk-wf-col .dwov{height:16px;margin:0;border-radius:0;border-bottom:1px solid rgba(135,135,255,.1);background:rgba(5,8,12,.8);position:relative}
-.dk-wf-col .dwov canvas{display:block;width:100%;height:100%;background:#000}
+.dk-wf-col .dwov canvas{display:block;width:100%;height:100%;background:var(--waveform-bg,var(--bg-lowest))}
 .dk-wf-col .dwov canvas.dwov-overlay{background:transparent!important}
 .dk-wf-col .dwz-row{flex:1;margin:0;height:auto}
 .dk-wf-col .dwz-row .dwz{border-radius:0;border:none;height:100%;margin:0}
@@ -266,6 +270,10 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 /* 기본 (세로 bar): JS 가 --vu-level 설정 → height 로 채움 */
 .dvu-hfill{position:absolute;bottom:0;left:0;right:0;height:var(--vu-level,0);border-radius:2px;transition:height .05s,width .05s}
 .dvu-fader{cursor:ns-resize}.dvu-fader .dvu-hbar{cursor:ns-resize}
+body[data-layout="tower"] .dvu-fader,
+body[data-layout="tower"] .dvu-fader .dvu-hbar,
+body[data-layout="card"] .dvu-fader,
+body[data-layout="card"] .dvu-fader .dvu-hbar{cursor:ew-resize}
 /* EQ knob strip: HW mode only, right of VU strip */
 .deq-strip{display:flex;flex-direction:column;justify-content:space-around;align-items:center;width:30px;flex-shrink:0;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-left:none;border-radius:0 6px 6px 0;padding:2px 1px;overflow:hidden}
 .deq-knob{display:flex;flex-direction:column;align-items:center;gap:1px;cursor:default}
@@ -281,9 +289,9 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dphs-seg:nth-child(1).on .dphs-fill{background:#fff}
 /* Beat phasor: right-aligned flex-shrink block */
 .dktn-phs{display:flex;flex-direction:row;align-items:center;gap:3px;flex-shrink:0}
-/* Zoom overlay buttons on waveform — left side, vertically centered */
-.dzoom-btns{position:absolute;top:50%;left:4px;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;z-index:2;pointer-events:none}
-.dzb{pointer-events:auto;padding:0;width:18px;height:14px;border-radius:2px;font:600 10px var(--mn);cursor:pointer;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.55);color:rgba(255,255,255,.65);transition:all .1s;display:flex;align-items:center;justify-content:center;line-height:1}
+/* Zoom overlay buttons — bottom-right horizontal to avoid bar-counter overlap */
+.dzoom-btns{position:absolute;right:5px;bottom:5px;display:flex;flex-direction:row;gap:2px;z-index:2;pointer-events:none}
+.dzb{pointer-events:auto;padding:0;width:18px;height:15px;border-radius:2px;font:600 10px var(--mn);cursor:pointer;border:1px solid rgba(255,107,44,.28);background:rgba(8,8,8,.62);color:rgba(255,255,255,.72);transition:all .1s;display:flex;align-items:center;justify-content:center;line-height:1}
 .dzb:hover{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)}
 /* Eject button — separate, full-width */
 .dje{padding:5px 13px;border-top:1px solid var(--bg3)}
@@ -642,6 +650,9 @@ body[data-layout="card"]{
   --key:var(--color-accent);
   --key2:var(--color-accent-dim);
   --key-dim:var(--c-orange-700);
+  --waveform-bg:#181818;
+  --waveform-bg-played:#202020;
+  --waveform-border:rgba(255,107,44,.52);
   --grn:var(--c-orange-400);
   --grn2:#d97030;
   --blu:#7ec7ff;--blu2:#5090c0;
@@ -734,6 +745,9 @@ body[data-layout="card"] .dk-key-box{color:var(--tx2);border:1px solid var(--bdr
 body[data-layout="row"] .dphs-fill,
 body[data-layout="tower"] .dphs-fill,
 body[data-layout="card"] .dphs-fill{background:var(--key)}
+body[data-layout="row"] .dphs-seg:nth-child(1).on .dphs-fill,
+body[data-layout="tower"] .dphs-seg:nth-child(1).on .dphs-fill,
+body[data-layout="card"] .dphs-seg:nth-child(1).on .dphs-fill{background:#fff}
 
 /* SVG 아이콘 (gi, gi-play 등) — currentColor 기반이라 버튼 색 따라감 (자동) */
 
@@ -756,9 +770,9 @@ body[data-layout="row"] .rw-head .dk-num{font:800 20px var(--lb);color:var(--tx)
 body[data-layout="row"] .rw-title-inline{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;padding:0 10px;overflow:hidden}
 body[data-layout="row"] .rw-title-inline > span[id^="dta"]{font:500 12px var(--sn);color:var(--tx3);flex-shrink:0;max-width:40%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body[data-layout="row"] .rw-title-inline > span[id^="dtn"]{font:600 13px var(--sn);color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-body[data-layout="row"] .rw-body{display:grid;grid-template-columns:180px minmax(0,1fr) 48px 40px 320px;grid-template-rows:180px;gap:12px;align-items:stretch}
+body[data-layout="row"] .rw-body{display:grid;grid-template-columns:180px minmax(0,1fr) 40px 36px max-content;grid-template-rows:180px;gap:10px;align-items:stretch}
 /* Virtual 덱 (EQ 없음): EQ 열 제거, tail 이 그 자리까지 확장 (tail 4열째로 이동) */
-body[data-layout="row"] .rw-body.no-eq{grid-template-columns:180px minmax(0,1fr) 48px 372px}
+body[data-layout="row"] .rw-body.no-eq{grid-template-columns:180px minmax(0,1fr) 40px max-content;gap:10px}
 body[data-layout="row"] .rw-body.no-eq .rw-tail{grid-column:4}
 body[data-layout="row"] .rw-art-wrap{grid-column:1;width:180px;height:180px}
 body[data-layout="row"] .rw-art-wrap .dkart{width:100%;height:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--bdr)}
@@ -767,106 +781,117 @@ body[data-layout="row"] .rw-wf-wrap{grid-column:2;display:flex;flex-direction:co
 body[data-layout="row"] .rw-wf-wrap .dwov{height:28px;border-radius:4px;margin:0}
 body[data-layout="row"] .rw-wf-wrap .dwz-row{flex:1;min-height:0}
 body[data-layout="row"] .rw-wf-wrap .dwz{height:100%;border-radius:4px;margin:0}
-body[data-layout="row"] .rw-body .dvu-strip{grid-column:3;width:48px;height:180px;flex-direction:row;border-radius:4px;padding:4px;gap:3px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1)}
+body[data-layout="row"] .rw-body .dvu-strip{grid-column:3;width:100%;height:180px;flex-direction:row;border-radius:4px;padding:3px 2px;gap:2px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1)}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-ch{flex-direction:column;gap:3px;align-items:center;flex:1;min-width:0}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-hbar{width:10px;flex:1;height:auto;min-height:0;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-hfill{position:absolute;bottom:0;left:0;right:0;top:auto;width:auto;height:var(--vu-level,0)}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-lbl{font:700 7px var(--mn);color:var(--tx4);letter-spacing:.04em;line-height:1;flex-shrink:0}
 body[data-layout="row"] .rw-body .deq-strip{grid-column:4;width:40px;height:180px;flex-direction:column;padding:4px 0;gap:8px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:4px}
-body[data-layout="row"] .rw-tail{grid-column:5;display:flex;flex-direction:column;gap:4px;height:180px;min-width:0}
-body[data-layout="row"] .rw-tail .dtc{font:300 38px var(--font-timecode);line-height:1;color:var(--color-timecode);text-shadow:0 0 12px var(--color-timecode-glow);-webkit-font-smoothing:antialiased;white-space:nowrap;overflow:hidden;text-overflow:clip;font-variant-numeric:tabular-nums;letter-spacing:.02em}
-body[data-layout="row"] .rw-tail .rw-bpm-row{display:flex;align-items:center;gap:8px;min-height:26px}
+body[data-layout="row"] .rw-tail{grid-column:5;display:flex;flex-direction:column;align-items:flex-end;gap:3px;height:180px;min-width:0}
+body[data-layout="row"] .rw-tail .dtc{font:300 34px var(--font-timecode);line-height:1;color:var(--color-timecode);text-shadow:0 0 12px var(--color-timecode-glow);-webkit-font-smoothing:antialiased;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:.002em;text-align:right;align-self:stretch}
+body[data-layout="row"] .rw-tail .rw-bpm-row{display:flex;align-items:center;justify-content:flex-end;gap:5px;min-height:25px;width:100%}
 body[data-layout="row"] .rw-tail .rw-bpm-row .dk-bpm-cur{font-size:17px;height:28px;padding:3px 10px}
-body[data-layout="row"] .rw-tail .rw-phasor-row{height:12px;margin-top:2px}
+body[data-layout="row"] .rw-tail .rw-phasor-row{height:12px;margin-top:2px;width:100%;display:flex;justify-content:flex-end}
 body[data-layout="row"] .rw-tail .rw-phasor-row .dphs{display:flex;gap:3px;width:100%;height:100%}
 body[data-layout="row"] .rw-tail .rw-phasor-row .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
 body[data-layout="row"] .rw-tail .rw-phasor-row .dphs-fill{position:absolute;inset:0;background:var(--key);opacity:0;transition:opacity .06s}
-body[data-layout="row"] .rw-ctl-sec{display:flex;flex-direction:column;gap:2px}
+body[data-layout="row"] .rw-ctl-sec{display:flex;flex-direction:column;align-items:flex-end;gap:1px;width:100%}
 body[data-layout="row"] .rw-ctl-lbl{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
-body[data-layout="row"] .rw-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:24px}
+body[data-layout="row"] .rw-ctl-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));justify-content:stretch;gap:4px;height:24px;width:100%}
 body[data-layout="row"] .rw-ctl-row .dkbtn,body[data-layout="row"] .rw-ctl-row .dksm-btn{height:100%;border-radius:4px;font-size:10px;min-height:0}
 body[data-layout="row"] .rw-ddz{padding:40px;text-align:center}
 
 /* ═════════ TOWER 레이아웃 — 200px 세로 컬럼, 가로 스크롤 ═════════ */
 body[data-layout="tower"] .deck-row{flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding-bottom:8px;align-items:flex-start;max-width:100%}
-body[data-layout="tower"] .dk.tw-dk{width:240px;min-width:240px;flex-shrink:0;padding:10px;display:flex;flex-direction:column;gap:8px;border-radius:6px}
-body[data-layout="tower"] .tw-head{display:flex;flex-direction:column;gap:5px;padding-bottom:6px;border-bottom:1px solid var(--bdr)}
-body[data-layout="tower"] .tw-head-top{display:flex;align-items:center;gap:5px;height:22px}
-body[data-layout="tower"] .tw-head-top .dk-player-lbl{font:500 7px var(--sn);color:var(--tx3);letter-spacing:.22em;text-transform:uppercase}
-body[data-layout="tower"] .tw-head-top .dk-num{font:700 18px var(--mn);color:var(--tx);line-height:1}
-body[data-layout="tower"] .tw-head-btm{display:flex;align-items:center;gap:4px;height:18px}
-body[data-layout="tower"] .tw-art-wrap .dkart{width:220px;height:220px;aspect-ratio:1;border-radius:4px;overflow:hidden;border:1px solid var(--bdr);margin:0 auto}
+body[data-layout="tower"] .dk.tw-dk{width:270px;min-width:270px;flex-shrink:0;padding:10px 10px 9px;display:flex;flex-direction:column;gap:7px;border-radius:6px}
+body[data-layout="tower"] .tw-head{display:flex;align-items:center;gap:8px;padding:2px 0 6px;border-bottom:1px solid var(--bdr);min-height:26px}
+body[data-layout="tower"] .tw-head-top{display:flex;align-items:center;gap:6px;height:22px;flex:0 0 auto}
+body[data-layout="tower"] .tw-head-top .dk-player-lbl{font:600 8px var(--sn);color:var(--tx3);letter-spacing:.22em;text-transform:uppercase}
+body[data-layout="tower"] .tw-head-top .dk-num{font:800 22px var(--mn);color:var(--key);line-height:1}
+body[data-layout="tower"] .tw-head-btm{display:flex;align-items:center;gap:5px;height:20px;flex:1;min-width:0;justify-content:flex-end}
+body[data-layout="tower"] .tw-head-btm .dhwl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body[data-layout="tower"] .tw-head-btm .dksm{display:none!important}
+body[data-layout="tower"] .tw-art-wrap .dkart{width:100%;height:auto;aspect-ratio:1;border-radius:4px;overflow:hidden;border:1px solid var(--bdr);margin:0 auto}
 body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block}
-body[data-layout="tower"] .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;min-height:32px;justify-content:center}
-body[data-layout="tower"] .tw-title span[id^="dta"]{font:500 10px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
-body[data-layout="tower"] .tw-title span[id^="dtn"]{font:600 12px var(--sn);color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+body[data-layout="tower"] .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;min-height:40px;justify-content:center;padding:3px 2px 4px}
+body[data-layout="tower"] .tw-title::before{content:'';width:36px;height:1px;background:var(--bdr2);align-self:center;margin:0 auto 4px;opacity:.6}
+body[data-layout="tower"] .tw-title span[id^="dta"]{font:600 10.5px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;letter-spacing:.02em}
+body[data-layout="tower"] .tw-title span[id^="dtn"]{font:700 13px var(--sn);color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
 body[data-layout="tower"] .tw-wf{display:flex;flex-direction:column;gap:3px}
-body[data-layout="tower"] .tw-wf .dwov{height:14px;border-radius:3px;margin:0}
-body[data-layout="tower"] .tw-wf .dwz-row{height:44px}
+body[data-layout="tower"] .tw-wf .dwov{height:18px;border-radius:3px;margin:0}
+body[data-layout="tower"] .tw-wf .dwz-row{height:56px}
 body[data-layout="tower"] .tw-wf .dwz{height:100%;border-radius:3px;margin:0}
 body[data-layout="tower"] .tw-tc{text-align:center}
-body[data-layout="tower"] .tw-tc .dtc{font:300 22px var(--font-timecode);color:var(--color-timecode);-webkit-font-smoothing:antialiased;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.02em}
-body[data-layout="tower"] .tw-bpm{display:flex;flex-direction:column;gap:4px;align-items:center}
+body[data-layout="tower"] .tw-tc .dtc{font:300 32px var(--font-timecode);color:var(--color-timecode);-webkit-font-smoothing:antialiased;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.001em}
+body[data-layout="tower"] .tw-bpm{display:flex;flex-direction:column;gap:5px;align-items:center}
 body[data-layout="tower"] .tw-bpm-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:5px;align-items:center;justify-content:center;width:100%}
 body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]{flex-wrap:nowrap!important;gap:4px!important}
+body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]>span:first-child{font-size:12px!important}
+body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]>span:nth-child(2){font-size:9px!important}
 body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling{text-align:left}
 body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
-body[data-layout="tower"] .tw-bpm .dk-bpm-cur{font-size:13px;height:22px;padding:2px 7px}
-body[data-layout="tower"] .tw-bpm .dphs{display:flex;gap:3px;width:80%;height:10px}
+body[data-layout="tower"] .tw-bpm .dk-bpm-cur{font-size:15px;height:25px;padding:2px 9px}
+body[data-layout="tower"] .tw-bpm .dphs{display:flex;gap:3px;width:100%;max-width:100%;height:12px}
 body[data-layout="tower"] .tw-bpm .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
 body[data-layout="tower"] .tw-bpm .dphs-fill{position:absolute;inset:0;background:var(--key);opacity:0;transition:opacity .06s}
-body[data-layout="tower"] .tw-dk .dvu-strip{flex-direction:row;width:100%;height:auto;padding:4px 5px;gap:3px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1);border-radius:3px}
+body[data-layout="tower"] .tw-dk .dvu-strip{flex-direction:row;width:100%;height:auto;padding:5px 6px;gap:5px;background:rgba(255,107,44,.045);border:1px solid rgba(255,107,44,.2);border-radius:3px}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-ch{flex-direction:row;gap:5px;align-items:center;flex:1;min-width:0}
-body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hbar{flex:1;height:8px;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden;width:auto;min-height:0}
+body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hbar{flex:1;height:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,107,44,.18);position:relative;overflow:hidden;width:auto;min-height:0}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:var(--vu-level,0);height:100%}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-lbl{width:10px;text-align:center;flex-shrink:0;font-size:7px}
 body[data-layout="tower"] .tw-dk .deq-strip{flex-direction:row;width:100%;height:auto;padding:6px 4px;gap:4px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:3px}
 body[data-layout="tower"] .tw-ctl-sec{display:flex;flex-direction:column;gap:2px}
 body[data-layout="tower"] .tw-ctl-lbl{font:700 7px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
-body[data-layout="tower"] .tw-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;height:26px}
+body[data-layout="tower"] .tw-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:30px;width:100%}
 body[data-layout="tower"] .tw-ctl-row .dkbtn,body[data-layout="tower"] .tw-ctl-row .dksm-btn{height:100%;border-radius:3px;font-size:9px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:0}
 
 /* ═════════ CARD 레이아웃 — 앨범 히어로, 최대 2열, 세로 스크롤 ═════════ */
 /* auto-fill + minmax(280, 440): 덱 폭 280~440 고정 범위 → 1개 덱이어도 440 이하 */
-body[data-layout="card"] .deck-row{display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 440px));gap:12px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px;justify-content:start}
+body[data-layout="card"] .deck-row{display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, min(440px, 100%)));gap:12px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px;justify-content:start}
 body[data-layout="card"] .dk.cd-dk{display:flex;flex-direction:column;gap:0;padding:0;border-radius:10px;overflow:hidden;min-width:0}
-body[data-layout="card"] .cd-hero{position:relative;height:240px;overflow:hidden;background:var(--bg-lowest)}
+body[data-layout="card"] .cd-hero{position:relative;height:185px;overflow:hidden;background:var(--bg-lowest)}
 body[data-layout="card"] .cd-hero .dkart{position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:0;aspect-ratio:auto}
 body[data-layout="card"] .cd-hero .dkart img{width:100%;height:100%;object-fit:cover;display:block}
 body[data-layout="card"] .cd-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,transparent 30%,transparent 60%,rgba(12,14,18,.96) 100%);pointer-events:none;z-index:2}
-body[data-layout="card"] .cd-top{position:absolute;top:0;left:0;right:0;padding:10px 14px;display:flex;align-items:center;gap:8px;z-index:3;height:44px}
+body[data-layout="card"] .cd-top{position:absolute;top:0;left:0;right:0;padding:8px 12px;display:flex;align-items:center;gap:8px;z-index:3;height:40px}
 body[data-layout="card"] .cd-top .dk-player-lbl{font:500 8px var(--sn);color:rgba(255,255,255,.65);letter-spacing:.22em;text-transform:uppercase}
 body[data-layout="card"] .cd-top .dk-num{font:700 22px var(--mn);color:#fff;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,.5)}
 body[data-layout="card"] .cd-top .dbadge{background:rgba(0,0,0,.38);border-color:rgba(255,255,255,.22);color:#fff}
 body[data-layout="card"] .cd-top .dhwl{color:#fff!important}
-body[data-layout="card"] .cd-info{position:absolute;bottom:12px;left:14px;right:14px;z-index:3;color:#fff}
+body[data-layout="card"] .cd-info{position:absolute;bottom:10px;left:12px;right:12px;z-index:3;color:#fff}
 body[data-layout="card"] .cd-info .cd-artist{font:500 11px var(--sn);color:rgba(255,255,255,.7);margin-bottom:2px;text-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body[data-layout="card"] .cd-info .cd-track{font:600 16px var(--sn);line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;position:relative}
 body[data-layout="card"] .cd-info .cd-track.scrolling{text-overflow:clip}
 body[data-layout="card"] .cd-info .cd-track.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
 body[data-layout="card"] .cd-bpm-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:6px;align-items:center;justify-content:flex-end}
 body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]{flex-wrap:nowrap!important}
-body[data-layout="card"] .cd-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:rgba(26,27,33,.95)}
+body[data-layout="card"] .cd-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:rgba(26,27,33,.95)}
 body[data-layout="card"] .cd-wf{display:flex;flex-direction:column;gap:4px}
 body[data-layout="card"] .cd-wf .dwov{height:20px;border-radius:3px;margin:0}
 body[data-layout="card"] .cd-wf .dwz-row{height:54px}
 body[data-layout="card"] .cd-wf .dwz{height:100%;border-radius:4px;margin:0}
-body[data-layout="card"] .cd-tc-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
-body[data-layout="card"] .cd-tc-row .dtc{font:300 28px var(--font-timecode);color:var(--color-timecode);-webkit-font-smoothing:antialiased;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.02em}
-body[data-layout="card"] .cd-bpm-col{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
-body[data-layout="card"] .cd-bpm-col .dphs{display:flex;gap:3px;width:100%;height:10px;min-width:80px}
+body[data-layout="card"] .cd-tc-row{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:14px;min-width:0}
+body[data-layout="card"] .cd-tc-row .dtc{font:300 clamp(28px,6vw,33px) var(--font-timecode);color:var(--color-timecode);-webkit-font-smoothing:antialiased;line-height:.98;font-variant-numeric:tabular-nums;letter-spacing:.001em;min-width:0;flex:0 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:clip}
+body[data-layout="card"] .cd-tc-row .cd-bpm-col{flex:0 0 178px}
+body[data-layout="card"] .cd-bpm-col{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px;min-width:0;height:42px}
+body[data-layout="card"] .cd-bpm-row{justify-content:flex-end;min-width:0;max-width:100%;overflow:visible;gap:4px!important}
+body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]>span:first-child{font-size:12px!important}
+body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]>span:nth-child(2){font-size:8px!important}
+body[data-layout="card"] .cd-bpm-row .dk-bpm-cur{font-size:14px;height:23px;padding:2px 8px}
+body[data-layout="card"] .cd-bpm-row .dk-key-box{font-size:13px;height:23px;padding:2px 6px}
+body[data-layout="card"] .cd-bpm-col .dphs{display:flex;gap:3px;width:100%;height:10px;min-width:0;align-self:stretch}
 body[data-layout="card"] .cd-bpm-col .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
 body[data-layout="card"] .cd-bpm-col .dphs-fill{position:absolute;inset:0;background:var(--key);opacity:0;transition:opacity .06s}
-body[data-layout="card"] .cd-mix-row{display:flex;gap:10px;align-items:stretch;min-height:56px}
-body[data-layout="card"] .cd-mix-row .dvu-strip{flex:1;flex-direction:row;padding:5px 7px;gap:4px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1);border-radius:4px;width:auto;height:auto}
-body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-ch{flex-direction:row;gap:5px;align-items:center;flex:1;min-width:0}
-body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hbar{flex:1;height:8px;width:auto;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden;min-height:0}
+body[data-layout="card"] .cd-mix-row{display:flex;gap:8px;align-items:center;min-height:38px}
+body[data-layout="card"] .cd-mix-row .dvu-strip{flex:1 1 auto;flex-direction:row;padding:5px 8px;gap:8px;background:rgba(255,107,44,.045);border:1px solid rgba(255,107,44,.2);border-radius:4px;width:100%;max-width:100%;height:auto;margin:0}
+body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-ch{flex:1 1 0;flex-direction:row;gap:5px;align-items:center;min-width:0}
+body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hbar{flex:1 1 auto;height:8px;width:auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,107,44,.18);position:relative;overflow:hidden;min-height:0}
 body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:var(--vu-level,0);height:100%}
 body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-lbl{width:12px;text-align:center;font-size:7px;flex-shrink:0}
 body[data-layout="card"] .cd-mix-row .deq-strip{flex-direction:row;padding:6px 10px;gap:8px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.1);border-radius:4px;width:auto;height:auto}
 body[data-layout="card"] .cd-ctl-sec{display:flex;flex-direction:column;gap:3px}
 body[data-layout="card"] .cd-ctl-lbl{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
-body[data-layout="card"] .cd-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:28px}
+body[data-layout="card"] .cd-ctl-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));justify-content:stretch;gap:4px;height:28px;width:100%}
 body[data-layout="card"] .cd-ctl-row .dkbtn,body[data-layout="card"] .cd-ctl-row .dksm-btn{height:100%;border-radius:4px;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:0}
 body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
 
@@ -1804,8 +1829,8 @@ async function buildRGBWaveform(blob, onChunk){
     // CDJ uses ~150 entries/sec; cap at 50000 for full resolution (5.5min @ 150/s)
     const pts=Math.min(50000,Math.max(6000,Math.floor(buf.duration*150)));
     const step=Math.max(1,Math.floor(ch.length/pts));
-    // 4th-order Butterworth biquad lowpass filters (-24dB/oct)
-    // Crossover: 600Hz / 4000Hz (Mixxx standard for 3-band waveform)
+    // 4th-order Linkwitz-Riley split via cascaded Butterworth biquads (-24dB/oct)
+    // Crossovers: 150Hz / 700Hz / 3500Hz (rekordbox-style 4-band waveform)
     // PEAK values per band (not RMS) — matches Mixxx's AnalyzerWaveform approach
     function _mkBQ(fc,sr2,Q){
       const w=2*Math.PI*fc/sr2,sn=Math.sin(w),cs=Math.cos(w),al=sn/(2*Q),a0=1+al;
@@ -1813,26 +1838,28 @@ async function buildRGBWaveform(blob, onChunk){
     }
     function _bq(f,x){const y=f.b0*x+f.w1;f.w1=f.b1*x-f.a1*y+f.w2;f.w2=f.b2*x-f.a2*y;return y;}
     const _Q1=0.5412,_Q2=1.3066;
-    const _lpB1=_mkBQ(600,sr,_Q1),_lpB2=_mkBQ(600,sr,_Q2);
-    const _lpM1=_mkBQ(4000,sr,_Q1),_lpM2=_mkBQ(4000,sr,_Q2);
+    const _lp150a=_mkBQ(150,sr,_Q1),_lp150b=_mkBQ(150,sr,_Q2);
+    const _lp700a=_mkBQ(700,sr,_Q1),_lp700b=_mkBQ(700,sr,_Q2);
+    const _lp3500a=_mkBQ(3500,sr,_Q1),_lp3500b=_mkBQ(3500,sr,_Q2);
     const wf=new Array(pts);
     const CHUNK=Math.max(200,Math.floor(pts/30));
     for(let i=0;i<pts;i++){
-      const s0=i*step;let pl=0,pm=0,ph=0,pk=0,mn=0,mx=0,sumSq=0;
+      const s0=i*step;let pl=0,pm=0,pp=0,ph=0,pk=0,mn=0,mx=0,sumSq=0;
       for(let j=0;j<step;j++){
         const s=ch[s0+j]||0;
         sumSq+=s*s; // RMS accumulator
-        const bassLP=_bq(_lpB2,_bq(_lpB1,s));
-        const midLP=_bq(_lpM2,_bq(_lpM1,s));
-        const bass=bassLP, mid2=midLP-bassLP, tre=s-midLP;
+        const lp150=_bq(_lp150b,_bq(_lp150a,s));
+        const lp700=_bq(_lp700b,_bq(_lp700a,s));
+        const lp3500=_bq(_lp3500b,_bq(_lp3500a,s));
+        const bass=lp150, body=lp700-lp150, presence=lp3500-lp700, air=s-lp3500;
         // PEAK per band (for color), RMS for height
-        const ab=Math.abs(bass),am=Math.abs(mid2),at=Math.abs(tre);
-        if(ab>pl)pl=ab; if(am>pm)pm=am; if(at>ph)ph=at;
-        const a=Math.abs(s);if(a>pk)pk=a;
+        const ab=Math.abs(bass),am=Math.abs(body),ap=Math.abs(presence),at=Math.abs(air);
+        if(ab>pl)pl=ab; if(am>pm)pm=am; if(ap>pp)pp=ap; if(at>ph)ph=at;
+        const amp=Math.abs(s);if(amp>pk)pk=amp;
         if(s<mn)mn=s;if(s>mx)mx=s;
       }
       const rms=Math.sqrt(sumSq/step);
-      wf[i]={h:pk,mn,mx,r:pl,g:pm,b:ph,rms};
+      wf[i]={h:pk,mn,mx,r:pl,g:pm,b:pp,a:ph,rms};
       if(onChunk&&(i+1)%CHUNK===0){
         onChunk(i+1,wf);
         await new Promise(r=>setTimeout(r,0)); // yield to UI
@@ -2473,7 +2500,7 @@ function drawZoomWaveform(slot,prog){
     d._zmCache={len:pts,h:H,cw:cacheW,msPerPx:msPerPx,wfc:cfg.wfColor,canvas:oc};
   }
   // Blit cached viewport
-  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#111318';ctx.fillRect(0,0,W,H);
   const srcX=Math.round(posMs/msPerPx)-cX;
   const cache=d._zmCache;
   const sx=Math.max(0,srcX),dx=sx-srcX;
@@ -2651,7 +2678,7 @@ function deckHTMLDefault(slot){
   // VU strip — Virtual: L/R 스테레오, HW: VU(DJM 미터) + Fader 별도
   const vuStrip=isHW
     ?`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">VU</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur)"></div></div></div></div>`
-    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}" style="background:#5af"></div></div></div><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}" style="background:#5af"></div></div></div><div class="dvu-ch dvu-fader" data-slot="${slot}"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur);height:100%"></div></div></div></div>`;
+    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}" style="background:#5af"></div></div></div><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}" style="background:#5af"></div></div></div><div class="dvu-ch dvu-fader" data-slot="${slot}"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur);--vu-level:100%"></div></div></div></div>`;
   // EQ knob strip — HW mode only, from DJM mixer status packet
   // Shows 3 bands (Hi/Mid/Lo) or 4+ bands (Trim/Hi/Mid/Lo) based on mixer profile
   // When 4+ knobs, hide labels to save space
@@ -2781,7 +2808,7 @@ function _deckCommonParts(slot){
   const phas=`<div class="dphs" id="dphs${slot}">${[1,2,3,4].map(n=>`<div class="dphs-seg" id="dphs${slot}_${n}"><div class="dphs-fill" id="dphsf${slot}_${n}"></div></div>`).join('')}</div>`;
   const vuStrip=isHW
     ?`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl">VU</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}"></div></div></div><div class="dvu-ch"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur)"></div></div></div></div>`
-    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}" style="background:#5af"></div></div></div><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}" style="background:#5af"></div></div></div><div class="dvu-ch dvu-fader" data-slot="${slot}"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur);height:100%"></div></div></div></div>`;
+    :`<div class="dvu-strip" id="dvustrip${slot}"><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">L</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuL${slot}" style="background:#5af"></div></div></div><div class="dvu-ch"><span class="dvu-lbl" style="color:#5af">R</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuR${slot}" style="background:#5af"></div></div></div><div class="dvu-ch dvu-fader" data-slot="${slot}"><span class="dvu-lbl">F</span><div class="dvu-hbar"><div class="dvu-hfill" id="dvuF${slot}" style="background:var(--pur);--vu-level:100%"></div></div></div></div>`;
   const _nEqBands=(_djmProfile?.ids?.length||3);
   const _showEqLbl=_nEqBands<=3;
   const _mkKnob=(id,lbl)=>`<div class="deq-knob"><svg id="${id}" viewBox="-12 -12 24 24" width="22" height="22">
@@ -2851,7 +2878,7 @@ function deckHTMLRow(slot){
       <span class="dhwl" id="dhwl${slot}" style="font:500 9px var(--mn);color:var(--tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+d.model:''):''}</span>
       ${isHW?'':`<button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>`}
     </div>
-    <div class="rw-body">
+    <div class="rw-body${isHW?'':' no-eq'}">
       <div class="rw-art-wrap">${artEl}</div>
       <div class="rw-wf-wrap">
         ${wfOverview}
@@ -2899,6 +2926,7 @@ function deckHTMLTower(slot){
           <span class="dk-player-lbl" style="font-size:7px">PLAYER</span>
           <span class="dk-num" id="did${slot}" style="font-size:18px;opacity:.5">${slot+1}</span>
           <span class="dbadge bm" style="margin-left:auto">EMPTY</span>
+          <button class="dhtb cdl" data-a="remove" data-i="${slot}" style="padding:2px 5px"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
         </div>
       </div>
       <div class="ddz tw-ddz" data-a="open" data-i="${slot}" style="padding:40px 10px;text-align:center">
@@ -3170,22 +3198,28 @@ function bindDeck(slot){
   // Virtual fader drag control — click/drag on F bar to set fader level
   const faderEl=el.querySelector('.dvu-fader');
   if(faderEl&&d.type!=='hw'){
-    faders[slot]=255; // default fader up
-    window.bridge.setFader?.(slot,255);
-    const _setFaderFromY=(e)=>{
+    if(faders[slot]==null) faders[slot]=255;
+    window.bridge.setFader?.(slot,faders[slot]);
+    const _paintFader=()=>{
+      const fill=document.getElementById('dvuF'+slot);
+      if(fill)fill.style.setProperty('--vu-level',Math.round((faders[slot]||0)/255*100)+'%');
+    };
+    _paintFader();
+    const _setFaderFromPointer=(e)=>{
       const bar=faderEl.querySelector('.dvu-hbar');if(!bar)return;
       const rc=bar.getBoundingClientRect();
-      const pct=1-Math.max(0,Math.min(1,(e.clientY-rc.top)/rc.height));
+      const horizontal=rc.width>rc.height*1.5;
+      const raw=horizontal?(e.clientX-rc.left)/rc.width:1-(e.clientY-rc.top)/rc.height;
+      const pct=Math.max(0,Math.min(1,raw));
       const val=Math.round(pct*255);
       faders[slot]=val;
       window.bridge.setFader?.(slot,val);
-      const fill=document.getElementById('dvuF'+slot);
-      if(fill)fill.style.setProperty('--vu-level',Math.round(pct*100)+'%');
+      _paintFader();
     };
     faderEl.addEventListener('pointerdown',e=>{
-      e.preventDefault();_setFaderFromY(e);
+      e.preventDefault();_setFaderFromPointer(e);
       faderEl.setPointerCapture(e.pointerId);
-      const _move=ev=>_setFaderFromY(ev);
+      const _move=ev=>_setFaderFromPointer(ev);
       const _up=()=>{faderEl.removeEventListener('pointermove',_move);faderEl.removeEventListener('pointerup',_up);};
       faderEl.addEventListener('pointermove',_move);
       faderEl.addEventListener('pointerup',_up);
@@ -4280,9 +4314,12 @@ function tick(){
     if(dtnEl){
       const txt=d.tn||'—';
       const curTxt=dtnEl.querySelector('.mq-inner')?.textContent||dtnEl.textContent;
-      if(curTxt!==txt){
+      // firstTime: post-render/layout-change — the span already has initial text so curTxt===txt
+      // would skip marquee setup; measure once anyway.
+      const firstTime=!dtnEl.dataset.mqChecked;
+      if(curTxt!==txt||firstTime){
         dtnEl.classList.remove('scrolling');
-        dtnEl.textContent=txt;
+        if(curTxt!==txt) dtnEl.textContent=txt;
         // Measure overflow after layout settles
         requestAnimationFrame(()=>{
           if(!dtnEl.parentElement) return;
@@ -4298,6 +4335,7 @@ function tick(){
             dtnEl.style.setProperty('--scroll-dur',Math.max(5,overflow/25)+'s');
             dtnEl.classList.add('scrolling');
           }
+          dtnEl.dataset.mqChecked='1';
         });
       }
     }
@@ -5076,6 +5114,7 @@ function renderSettings(){
     <div class="sl">Pro DJ Link 설정</div>
     <div class="sgr">
       <div class="srw"><span class="srl">Pro DJ Link 인터페이스</span><select class="ss" data-cfg="pdjlIface">${ifaceOpts(allIfaces,'pdjlIface')}</select></div>
+      <div class="srw"><span class="srl">인터페이스 목록</span><button class="mode-btn" id="btnIfaceRefresh" style="height:24px;padding:0 10px">새로고침</button></div>
     </div>
     <div class="sl">오디오 출력</div>
     <div class="sgr">
@@ -5188,6 +5227,8 @@ function renderSettings(){
     cfg.layout=e.target.value;_saveCfg();
     document.body.dataset.layout=cfg.layout;
     try{renderDecks();}catch(_){}
+    // Force marquee re-measure on next tick — layout change can make titles newly overflow/underflow
+    document.querySelectorAll('[id^="dtn"]').forEach(el=>{delete el.dataset.mqChecked;el.classList.remove('scrolling');});
   };}
   // MIDI output device list
   const midiSel=el.querySelector('#midiOutSel');
@@ -5220,6 +5261,18 @@ function renderSettings(){
     cfg.tcnetAllIfaces=e.target.checked;_saveCfg();
     if(E&&run)window.bridge.setTCNetUnicast(cfg.tcnetUnicast,e.target.checked);
   };}
+  const btnIfaceRefresh=el.querySelector('#btnIfaceRefresh');
+  if(btnIfaceRefresh)btnIfaceRefresh.onclick=async()=>{
+    if(!E)return;
+    const r=await window.bridge.refreshInterfaces?.();
+    allIfaces=r?.interfaces||await window.bridge.getInterfaces()||[];
+    const ips=new Set(allIfaces.map(i=>i.address));ips.add('127.0.0.1');
+    let changed=false;
+    if(cfg.tcnetIface&&!ips.has(cfg.tcnetIface)){cfg.tcnetIface='';changed=true;}
+    if(cfg.pdjlIface&&!ips.has(cfg.pdjlIface)){cfg.pdjlIface='';changed=true;}
+    if(changed)_saveCfg();
+    renderSettings();
+  };
   // Art-Net controls
   const chkAn=el.querySelector('#chkAnEnabled');
   if(chkAn)chkAn.onchange=async e=>{
@@ -5745,6 +5798,21 @@ document.getElementById('sidebar').onclick=e=>{
 
 async function loadInterfaces(){
   if(E){allIfaces=await window.bridge.getInterfaces();}
+}
+
+function applyInterfacesUpdate(ifaces){
+  allIfaces=ifaces||[];
+  const ips=new Set(allIfaces.map(i=>i.address));ips.add('127.0.0.1');
+  let changed=false;
+  if(cfg.tcnetIface&&!ips.has(cfg.tcnetIface)){cfg.tcnetIface='';changed=true;}
+  if(cfg.pdjlIface&&!ips.has(cfg.pdjlIface)){cfg.pdjlIface='';changed=true;}
+  if(changed)_saveCfg();
+  if(curTab==='settings')renderSettings();
+  if(curTab==='artnet')renderArtnet();
+  if(curTab==='pdjl')renderPDJL();
+}
+if(E&&window.bridge?.onInterfaces){
+  window.bridge.onInterfaces(d=>applyInterfacesUpdate(d?.interfaces||[]));
 }
 
 // ════ START / STOP ═══════════════════════════════════

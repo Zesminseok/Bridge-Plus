@@ -1,0 +1,390 @@
+{
+  "nodes": [
+    {
+      "id": "review_row_root",
+      "label": "BRIDGE+ PRO DJ LINK row-layout review screenshot",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "full screenshot",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.99
+    },
+    {
+      "id": "review_row_brand_bar",
+      "label": "Top brand bar with BRIDGE+ logo, READY indicator, START button, and master volume slider",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "top bar",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.96
+    },
+    {
+      "id": "review_row_start_banner",
+      "label": "Instruction banner telling the user to press START to begin TCNet",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "upper content banner",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.95
+    },
+    {
+      "id": "review_row_mode_switch",
+      "label": "Deck mode toggle with VIRTUAL selected and HARDWARE available",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "controls area",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.95
+    },
+    {
+      "id": "review_row_sidebar_rail",
+      "label": "Left sidebar icon rail for app sections such as decks, mixer, history, PDJL, TCNet, artnet, and link",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "left navigation rail",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.82
+    },
+    {
+      "id": "review_row_layout_pattern",
+      "label": "Stacked full-width deck rows in a vertical list, each row split into artwork, waveform lane, meters, and transport/status block",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "main content area",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.96
+    },
+    {
+      "id": "review_row_row_template",
+      "label": "Repeated virtual-deck row template",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "deck rows",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.97
+    },
+    {
+      "id": "review_row_artwork_placeholder",
+      "label": "AMBIGUOUS: artwork thumbnail area shows a broken-image or unloaded placeholder square",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "left thumbnail box",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.68
+    },
+    {
+      "id": "review_row_playback_cluster",
+      "label": "Playback info cluster with large timecode, BPM readout, musical key, progress bar, and transport buttons",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "right-side controls",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.98
+    },
+    {
+      "id": "review_row_deck_1",
+      "label": "Player 1 row - Clean Bandit feat. Jess Glynne - Rather Be (Merk & Kremont Remix) - extended marquee test title - PLAY",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "row 1",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.98
+    },
+    {
+      "id": "review_row_deck_2",
+      "label": "Player 2 row - Daft Punk - Around The World (Daft Punk Classic Extended Mix) - CUE",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "row 2",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.98
+    },
+    {
+      "id": "review_row_deck_3",
+      "label": "Player 3 row - Daft Punk - Technologic - STOP",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "row 3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.98
+    },
+    {
+      "id": "review_row_deck_4",
+      "label": "Player 4 row - Daft Punk - Something About Us - Romantic Flight Reprise - STOP",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "row 4",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.98
+    },
+    {
+      "id": "review_row_deck_5_empty",
+      "label": "Empty Player 5 row with disconnected or placeholder state",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "row 5",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.94
+    },
+    {
+      "id": "review_row_visual_style_dark",
+      "label": "Dark charcoal interface with thin orange accents and muted gray dividers",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "global styling",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.96
+    },
+    {
+      "id": "review_row_visual_style_typography",
+      "label": "Large monospaced timecode and compact sans-serif labels for DJ telemetry",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "global styling",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.94
+    },
+    {
+      "id": "review_row_footer_status",
+      "label": "Bottom status strip showing TCNET OFF, ARTNET OFF, ARENA 0, DECKS 4, CPU, MEM, and deck indicators",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "bottom status bar",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.97
+    },
+    {
+      "id": "review_row_purpose",
+      "label": "Purpose: a DJ bridge control dashboard for monitoring virtual decks and starting TCNet",
+      "file_type": "image",
+      "source_file": "review-row.png",
+      "source_location": "whole screen",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "confidence_score": 0.9
+    }
+  ],
+  "edges": [
+    {
+      "source": "review_row_root",
+      "target": "review_row_brand_bar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.99,
+      "source_file": "review-row.png",
+      "source_location": "top bar",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_root",
+      "target": "review_row_start_banner",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.99,
+      "source_file": "review-row.png",
+      "source_location": "upper content banner",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_root",
+      "target": "review_row_mode_switch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.99,
+      "source_file": "review-row.png",
+      "source_location": "controls area",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_root",
+      "target": "review_row_sidebar_rail",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.98,
+      "source_file": "review-row.png",
+      "source_location": "left navigation rail",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_root",
+      "target": "review_row_layout_pattern",
+      "relation": "uses_layout",
+      "confidence": "INFERRED",
+      "confidence_score": 0.96,
+      "source_file": "review-row.png",
+      "source_location": "main content area",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_root",
+      "target": "review_row_footer_status",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.99,
+      "source_file": "review-row.png",
+      "source_location": "bottom status bar",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_root",
+      "target": "review_row_visual_style_dark",
+      "relation": "uses_style",
+      "confidence": "INFERRED",
+      "confidence_score": 0.96,
+      "source_file": "review-row.png",
+      "source_location": "global styling",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_root",
+      "target": "review_row_visual_style_typography",
+      "relation": "uses_style",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "review-row.png",
+      "source_location": "global styling",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_root",
+      "target": "review_row_purpose",
+      "relation": "indicates",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "review-row.png",
+      "source_location": "whole screen",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_layout_pattern",
+      "target": "review_row_row_template",
+      "relation": "instantiates",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.98,
+      "source_file": "review-row.png",
+      "source_location": "deck rows",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_row_template",
+      "target": "review_row_artwork_placeholder",
+      "relation": "includes",
+      "confidence": "AMBIGUOUS",
+      "confidence_score": 0.68,
+      "source_file": "review-row.png",
+      "source_location": "left thumbnail box",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_row_template",
+      "target": "review_row_playback_cluster",
+      "relation": "includes",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.98,
+      "source_file": "review-row.png",
+      "source_location": "right-side controls",
+      "weight": 1.0
+    },
+    {
+      "source": "review_row_deck_5_empty",
+      "target": "review_row_row_template",
+      "relation": "shares_partial_template",
+      "confidence": "INFERRED",
+      "confidence_score": 0.82,
+      "source_file": "review-row.png",
+      "source_location": "row 5",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "review_row_active_rows_group",
+      "label": "Active deck rows 1-4 share the same virtual-deck row template",
+      "members": [
+        "review_row_deck_1",
+        "review_row_deck_2",
+        "review_row_deck_3",
+        "review_row_deck_4",
+        "review_row_row_template",
+        "review_row_playback_cluster",
+        "review_row_artwork_placeholder"
+      ],
+      "relation": "reuses_template",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.97,
+      "source_file": "review-row.png",
+      "weight": 1.0
+    },
+    {
+      "id": "review_row_chrome_group",
+      "label": "Dashboard chrome framing the deck list",
+      "members": [
+        "review_row_brand_bar",
+        "review_row_start_banner",
+        "review_row_mode_switch",
+        "review_row_sidebar_rail",
+        "review_row_footer_status"
+      ],
+      "relation": "frames_content",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.96,
+      "source_file": "review-row.png",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

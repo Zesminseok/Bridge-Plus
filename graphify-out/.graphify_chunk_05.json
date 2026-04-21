@@ -1,0 +1,457 @@
+{
+  "nodes": [
+    {
+      "id": "review_card_root",
+      "label": "BRIDGE+ PRO DJ LINK dashboard screenshot",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "confidence_score": 0.99,
+      "norm_label": "bridge+ pro dj link dashboard screenshot"
+    },
+    {
+      "id": "review_card_shell",
+      "label": "Application shell with left rail, top bar, central deck canvas, and footer strip",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "confidence_score": 0.96,
+      "norm_label": "application shell with left rail top bar central deck canvas and footer strip"
+    },
+    {
+      "id": "review_card_topbar",
+      "label": "Top status/action bar with READY indicator, START button, and master volume slider",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "confidence_score": 0.98,
+      "norm_label": "top status action bar with ready indicator start button and master volume slider"
+    },
+    {
+      "id": "review_card_left_rail",
+      "label": "Vertical icon navigation rail for DECKS, MIXER, HIST, PDJL, TCNET, ARTNET, LINK, and SET",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "confidence_score": 0.97,
+      "norm_label": "vertical icon navigation rail for decks mixer hist pdjl tcnet artnet link and set"
+    },
+    {
+      "id": "review_card_prompt_banner",
+      "label": "Korean startup prompt banner asking the user to press START to begin TCNet",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "confidence_score": 0.96,
+      "norm_label": "korean startup prompt banner asking the user to press start to begin tcnet"
+    },
+    {
+      "id": "review_card_mode_toggle",
+      "label": "Deck mode segmented toggle with VIRTUAL selected and HARDWARE available",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "confidence_score": 0.97,
+      "norm_label": "deck mode segmented toggle with virtual selected and hardware available"
+    },
+    {
+      "id": "review_card_deck_grid",
+      "label": "Three-column virtual deck grid with a second partial row below",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "confidence_score": 0.95,
+      "norm_label": "three column virtual deck grid with a second partial row below"
+    },
+    {
+      "id": "review_card_deck_1",
+      "label": "Deck 1 card - Clean Bandit feat. Jess Glynne / Rather Be (Merk & Kremont Remix) - Extended Lo...",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "confidence_score": 0.98,
+      "norm_label": "deck 1 card clean bandit feat jess glynne rather be merk kremont remix extended lo"
+    },
+    {
+      "id": "review_card_deck_2",
+      "label": "Deck 2 card - Daft Punk / Around The World (Daft Punk Classic Extended Mix)",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "confidence_score": 0.98,
+      "norm_label": "deck 2 card daft punk around the world daft punk classic extended mix"
+    },
+    {
+      "id": "review_card_deck_3",
+      "label": "Deck 3 card - Daft Punk / Technologic",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "confidence_score": 0.98,
+      "norm_label": "deck 3 card daft punk technologic"
+    },
+    {
+      "id": "review_card_deck_4_partial",
+      "label": "Deck 4 card (AMBIGUOUS) - partially visible lower-row virtual deck",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "confidence_score": 0.6,
+      "norm_label": "deck 4 card ambiguous partially visible lower row virtual deck"
+    },
+    {
+      "id": "review_card_deck_5_empty",
+      "label": "Deck 5 empty slot (AMBIGUOUS) - lower-row placeholder panel",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "confidence_score": 0.55,
+      "norm_label": "deck 5 empty slot ambiguous lower row placeholder panel"
+    },
+    {
+      "id": "review_card_card_anatomy",
+      "label": "Deck card anatomy with header, title block, waveform area, timecode, BPM/key strip, transport row, and sync row",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 1,
+      "confidence_score": 0.97,
+      "norm_label": "deck card anatomy with header title block waveform area timecode bpm key strip transport row and sync row"
+    },
+    {
+      "id": "review_card_theme",
+      "label": "Dark charcoal UI theme with orange accent state styling",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "confidence_score": 0.98,
+      "norm_label": "dark charcoal ui theme with orange accent state styling"
+    },
+    {
+      "id": "review_card_timecode_typography",
+      "label": "Large monospaced timecode styling used as a dominant visual cue",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "confidence_score": 0.95,
+      "norm_label": "large monospaced timecode styling used as a dominant visual cue"
+    },
+    {
+      "id": "review_card_footer_status",
+      "label": "Bottom status strip with TCNET and ARTNET off indicators, session counts, and CPU/MEM readouts",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "confidence_score": 0.9,
+      "norm_label": "bottom status strip with tcnet and artnet off indicators session counts and cpu mem readouts"
+    },
+    {
+      "id": "review_card_load_hint",
+      "label": "Right-side hint telling the user to add a deck with + and load a file",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "confidence_score": 0.84,
+      "norm_label": "right side hint telling the user to add a deck with plus and load a file"
+    },
+    {
+      "id": "review_card_purpose",
+      "label": "Pre-start review and control screen for inspecting virtual decks before TCNet is running",
+      "file_type": "image",
+      "source_file": "review-card.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "confidence_score": 0.96,
+      "norm_label": "pre start review and control screen for inspecting virtual decks before tcnet is running"
+    }
+  ],
+  "edges": [
+    {
+      "source": "review_card_root",
+      "target": "review_card_shell",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_root",
+      "target": "review_card_purpose",
+      "relation": "is_for",
+      "confidence_score": 0.96
+    },
+    {
+      "source": "review_card_shell",
+      "target": "review_card_topbar",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_shell",
+      "target": "review_card_left_rail",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_shell",
+      "target": "review_card_prompt_banner",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_shell",
+      "target": "review_card_mode_toggle",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_shell",
+      "target": "review_card_deck_grid",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_shell",
+      "target": "review_card_footer_status",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_shell",
+      "target": "review_card_load_hint",
+      "relation": "contains",
+      "confidence_score": 0.84
+    },
+    {
+      "source": "review_card_shell",
+      "target": "review_card_theme",
+      "relation": "uses_theme",
+      "confidence_score": 0.98
+    },
+    {
+      "source": "review_card_shell",
+      "target": "review_card_timecode_typography",
+      "relation": "uses_typography",
+      "confidence_score": 0.95
+    },
+    {
+      "source": "review_card_deck_grid",
+      "target": "review_card_deck_1",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_deck_grid",
+      "target": "review_card_deck_2",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_deck_grid",
+      "target": "review_card_deck_3",
+      "relation": "contains",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "review_card_deck_grid",
+      "target": "review_card_deck_4_partial",
+      "relation": "contains",
+      "confidence_score": 0.6
+    },
+    {
+      "source": "review_card_deck_grid",
+      "target": "review_card_deck_5_empty",
+      "relation": "contains",
+      "confidence_score": 0.55
+    },
+    {
+      "source": "review_card_deck_1",
+      "target": "review_card_card_anatomy",
+      "relation": "instantiates",
+      "confidence_score": 0.97
+    },
+    {
+      "source": "review_card_deck_2",
+      "target": "review_card_card_anatomy",
+      "relation": "instantiates",
+      "confidence_score": 0.97
+    },
+    {
+      "source": "review_card_deck_3",
+      "target": "review_card_card_anatomy",
+      "relation": "instantiates",
+      "confidence_score": 0.97
+    },
+    {
+      "source": "review_card_deck_4_partial",
+      "target": "review_card_card_anatomy",
+      "relation": "partially_shows",
+      "confidence_score": 0.6
+    },
+    {
+      "source": "review_card_deck_5_empty",
+      "target": "review_card_card_anatomy",
+      "relation": "placeholder_for",
+      "confidence_score": 0.55
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "review_card_he_shell",
+      "label": "Dashboard shell composition",
+      "nodes": [
+        "review_card_topbar",
+        "review_card_left_rail",
+        "review_card_prompt_banner",
+        "review_card_mode_toggle",
+        "review_card_deck_grid",
+        "review_card_footer_status",
+        "review_card_load_hint"
+      ],
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.98,
+      "source_file": "review-card.png"
+    },
+    {
+      "id": "review_card_he_decks",
+      "label": "Visible deck cards",
+      "nodes": [
+        "review_card_deck_1",
+        "review_card_deck_2",
+        "review_card_deck_3",
+        "review_card_deck_4_partial",
+        "review_card_deck_5_empty"
+      ],
+      "relation": "grouped_as",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "review-card.png"
+    },
+    {
+      "id": "review_card_he_card_anatomy",
+      "label": "Repeated deck card anatomy",
+      "nodes": [
+        "review_card_card_anatomy",
+        "review_card_timecode_typography"
+      ],
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.96,
+      "source_file": "review-card.png"
+    },
+    {
+      "id": "review_card_he_visual_language",
+      "label": "Dark studio-style visual language",
+      "nodes": [
+        "review_card_theme",
+        "review_card_timecode_typography"
+      ],
+      "relation": "pairs_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.97,
+      "source_file": "review-card.png"
+    },
+    {
+      "id": "review_card_he_prestart_state",
+      "label": "Pre-start control state",
+      "nodes": [
+        "review_card_prompt_banner",
+        "review_card_mode_toggle",
+        "review_card_purpose"
+      ],
+      "relation": "indicates",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "review-card.png"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
