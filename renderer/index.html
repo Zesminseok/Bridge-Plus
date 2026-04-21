@@ -1372,6 +1372,24 @@ function toggleOutLayers(){
 const MAX_DECKS=6;
 const DECKS={};
 let glMode='hw'; // 'virtual' | 'hw'
+// HiDPI: waveform canvas는 device pixel density로 내부 해상도 설정 → Retina에서 선명
+const _WF_DPR=Math.max(1,Math.min(3,window.devicePixelRatio||1));
+const _dprW=(n)=>Math.max(1,Math.round(n*_WF_DPR));
+function _sizeCvDpr(cv,cssW,cssH){
+  if(!cv)return false;
+  const iw=_dprW(cssW), ih=_dprW(cssH);
+  if(cv.width===iw&&cv.height===ih)return false;
+  cv.style.width=cssW+'px'; cv.style.height=cssH+'px';
+  cv.width=iw; cv.height=ih;
+  return true;
+}
+// 2D 오버레이 컨텍스트: 내부 dpr 픽셀에 렌더하되 CSS 좌표로 그릴 수 있도록 transform
+function _get2DCtxCss(cv){
+  if(!cv)return null;
+  const ctx=cv.getContext('2d');
+  if(ctx)ctx.setTransform(_WF_DPR,0,0,_WF_DPR,0,0);
+  return ctx;
+}
 
 function createDeck(slot,type='virtual'){
   return{slot,type,ld:false,pl:false,cu:false,au:null,tn:'',ar:'',bpm:0,dur:0,pos:0,cp:0,cuw:false,
@@ -3337,9 +3355,9 @@ function bindDeck(slot){
       const ovCanvasChanged=d.ovgl&&d.ovgl.gl.canvas!==wov;
       if(ovCanvasChanged){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
       // Only set canvas size if actually different — setting canvas.width ALWAYS resets WebGL!
-      if(wov.width!==w||wov.height!==h){
+      if(wov.width!==_dprW(w)||wov.height!==_dprW(h)){
         if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
-        wov.width=w; wov.height=h;
+        _sizeCvDpr(wov,w,h);
       }
       if(!d.ovgl){
         try{
@@ -3350,8 +3368,8 @@ function bindDeck(slot){
       }
       // Init overview overlay canvas for cue/loop markers
       const wovol=document.getElementById('wovol'+slot);
-      if(wovol&&(wovol.width!==w||wovol.height!==h)){
-        wovol.width=w;wovol.height=h;d._wovOlCtx=wovol.getContext('2d');
+      if(wovol&&(wovol.width!==_dprW(w)||wovol.height!==_dprW(h))){
+        _sizeCvDpr(wovol,w,h);d._wovOlCtx=wovol.getContext('2d');
       }
     },0);
   }
@@ -3367,9 +3385,9 @@ function bindDeck(slot){
       const wglCanvasChanged=d.wgl&&d.wgl.gl.canvas!==wzc;
       if(wglCanvasChanged){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
       // Only set canvas size if actually different — setting canvas.width ALWAYS resets WebGL!
-      if(wzc.width!==w||wzc.height!==h){
+      if(wzc.width!==_dprW(w)||wzc.height!==_dprW(h)){
         if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
-        wzc.width=w; wzc.height=h;
+        _sizeCvDpr(wzc,w,h);
       }
       if(!d.wgl){
         try{
@@ -3377,13 +3395,13 @@ function bindDeck(slot){
           const _wfD=d.rgbWfDetail||d.rgbWf;
           if(_wfD){d.wgl.setData(_wfD,(_wfD.length/150*1000)||1);drawZoomWaveform(slot,d.dur>0&&d.pos>0?d.pos/d.dur:0);}
           const wzov=document.getElementById('wzov'+slot);
-          if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
+          if(wzov){_sizeCvDpr(wzov,w,h);d.wovCtx2=wzov.getContext('2d');}
         }catch(e){
           console.warn('[WGL] fallback 2D zoom:',e);
           const wzc2=document.getElementById('wzc'+slot);
           if(wzc2)d.wzCtx=wzc2.getContext('2d');
           const wzov=document.getElementById('wzov'+slot);
-          if(wzov){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
+          if(wzov){_sizeCvDpr(wzov,w,h);d.wovCtx2=wzov.getContext('2d');}
         }
       }
     },0);
@@ -3687,26 +3705,26 @@ function loadFile(slot,f){
           const p=wov.parentElement;
           const w=p?.offsetWidth||280, h=p?.offsetHeight||14;
           d._ovTargetW=w;d._ovTargetH=h;
-          if(wov.width!==w||wov.height!==h){
+          if(wov.width!==_dprW(w)||wov.height!==_dprW(h)){
             if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
-            wov.width=w; wov.height=h;
+            _sizeCvDpr(wov,w,h);
           }
           if(!d.ovgl){try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}}
           const wovol=document.getElementById('wovol'+slot);
-          if(wovol){wovol.width=w;wovol.height=h;d._wovOlCtx=wovol.getContext('2d');}
+          if(wovol){_sizeCvDpr(wovol,w,h);d._wovOlCtx=wovol.getContext('2d');}
         }
         const wzc=document.getElementById('wzc'+slot);
         if(wzc){
           const p=wzc.parentElement;
           const w=p?.offsetWidth||280, h=p?.offsetHeight||64;
           d._wzTargetW=w;d._wzTargetH=h;
-          if(wzc.width!==w||wzc.height!==h){
+          if(wzc.width!==_dprW(w)||wzc.height!==_dprW(h)){
             if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
-            wzc.width=w; wzc.height=h;
+            _sizeCvDpr(wzc,w,h);
           }
           if(!d.wgl){try{d.wgl=new WaveformGL(wzc);d.wzCtx=null;}catch(e){d.wzCtx=wzc.getContext('2d');}}
           const wzov=document.getElementById('wzov'+slot);
-          if(wzov&&!d.wovCtx2){wzov.width=w;wzov.height=h;d.wovCtx2=wzov.getContext('2d');}
+          if(wzov&&!d.wovCtx2){_sizeCvDpr(wzov,w,h);d.wovCtx2=wzov.getContext('2d');}
         }
       }));
       if(E&&run){
@@ -3742,10 +3760,10 @@ function loadFile(slot,f){
               // Upload data + ensure GL contexts exist, then draw immediately
               const wfD2=d.rgbWfDetail||d.rgbWf;
               if(wfD2){
-                if(!d.wgl){const _wzc=document.getElementById('wzc'+slot);if(_wzc){const _pp=_wzc.parentElement;const _w2=_pp?.offsetWidth||0,_h2=_pp?.offsetHeight||64;if(_w2>0){_wzc.width=_w2;_wzc.height=_h2;try{d.wgl=new WaveformGL(_wzc);d.wzCtx=null;}catch(_e){d.wzCtx=_wzc.getContext('2d');}}}}
+                if(!d.wgl){const _wzc=document.getElementById('wzc'+slot);if(_wzc){const _pp=_wzc.parentElement;const _w2=_pp?.offsetWidth||0,_h2=_pp?.offsetHeight||64;if(_w2>0){_sizeCvDpr(_wzc,_w2,_h2);try{d.wgl=new WaveformGL(_wzc);d.wzCtx=null;}catch(_e){d.wzCtx=_wzc.getContext('2d');}}}}
                 if(d.wgl)d.wgl.setData(wfD2,(wfD2.length/150*1000)||1);
                 const _wov=document.getElementById('wov'+slot);
-                if(_wov&&!d.ovgl){const _p=_wov.parentElement;const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;if(_w>0){_wov.width=_w;_wov.height=_h;try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}}
+                if(_wov&&!d.ovgl){const _p=_wov.parentElement;const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;if(_w>0){_sizeCvDpr(_wov,_w,_h);try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}}
                 if(d.ovgl)d.ovgl.setData(wfD2);
                 drawOverview(slot,0);drawZoomWaveform(slot,0);
               }
@@ -3771,10 +3789,10 @@ function loadFile(slot,f){
               // Upload data + ensure GL contexts exist, then draw immediately
               const wfD=d.rgbWfDetail||d.rgbWf;
               if(wfD){
-                if(!d.wgl){const _wzc=document.getElementById('wzc'+slot);if(_wzc){const _pp=_wzc.parentElement;const _w2=_pp?.offsetWidth||0,_h2=_pp?.offsetHeight||64;if(_w2>0){_wzc.width=_w2;_wzc.height=_h2;try{d.wgl=new WaveformGL(_wzc);d.wzCtx=null;}catch(_e){d.wzCtx=_wzc.getContext('2d');}}}}
+                if(!d.wgl){const _wzc=document.getElementById('wzc'+slot);if(_wzc){const _pp=_wzc.parentElement;const _w2=_pp?.offsetWidth||0,_h2=_pp?.offsetHeight||64;if(_w2>0){_sizeCvDpr(_wzc,_w2,_h2);try{d.wgl=new WaveformGL(_wzc);d.wzCtx=null;}catch(_e){d.wzCtx=_wzc.getContext('2d');}}}}
                 if(d.wgl)d.wgl.setData(wfD,(wfD.length/150*1000)||1);
                 const _wov=document.getElementById('wov'+slot);
-                if(_wov&&!d.ovgl){const _p=_wov.parentElement;const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;if(_w>0){_wov.width=_w;_wov.height=_h;try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}}
+                if(_wov&&!d.ovgl){const _p=_wov.parentElement;const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;if(_w>0){_sizeCvDpr(_wov,_w,_h);try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}}
                 if(d.ovgl)d.ovgl.setData(wfD);
                 drawOverview(slot,0);drawZoomWaveform(slot,0);
               }
@@ -4135,11 +4153,11 @@ function _resizeDeckCanvases(s){
     if(w>0){
       d2._ovTargetW=w;d2._ovTargetH=h;
       if(d2.ovgl){try{d2.ovgl.destroy();}catch(_){}d2.ovgl=null;}
-      wov.width=w; wov.height=h;
+      _sizeCvDpr(wov,w,h);
       try{d2.ovgl=new OverviewGL(wov);d2.wovCtx=null;}catch(e){d2.wovCtx=wov.getContext('2d');}
       if(d2.ovgl){const wfD=d2.rgbWfDetail||d2.rgbWf;if(wfD)d2.ovgl.setData(wfD);drawOverview(s,d2.dur>0&&d2.pos>0?d2.pos/d2.dur:0);}
       const wovol=document.getElementById('wovol'+s);
-      if(wovol){wovol.width=w;wovol.height=h;d2._wovOlCtx=wovol.getContext('2d');}
+      if(wovol){_sizeCvDpr(wovol,w,h);d2._wovOlCtx=wovol.getContext('2d');}
     }
   }
   const wzc=document.getElementById('wzc'+s);
@@ -4147,10 +4165,10 @@ function _resizeDeckCanvases(s){
     if(w>0){
       d2._wzTargetW=w;d2._wzTargetH=h;
       if(d2.wgl){try{d2.wgl.destroy();}catch(_){}d2.wgl=null;}
-      wzc.width=w; wzc.height=h;
+      _sizeCvDpr(wzc,w,h);
       try{d2.wgl=new WaveformGL(wzc);d2.wzCtx=null;}catch(e){d2.wzCtx=wzc.getContext('2d');}
       const wzov=document.getElementById('wzov'+s);
-      if(wzov){wzov.width=w;wzov.height=h;d2.wovCtx2=wzov.getContext('2d');}
+      if(wzov){_sizeCvDpr(wzov,w,h);d2.wovCtx2=wzov.getContext('2d');}
       if(d2.wgl){const wfD=d2.rgbWfDetail||d2.rgbWf;if(wfD){d2.wgl.setData(wfD,(wfD.length/150*1000)||1);drawZoomWaveform(s,d2.dur>0&&d2.pos>0?d2.pos/d2.dur:0);}}
     }
   }
@@ -4191,7 +4209,13 @@ function doEject(slot){
   if(d._tempPath){window.bridge.cleanupTemp(d._tempPath);d._tempPath=null;}
   d.audioChs=2;
   // VU strip 너비 초기화
-  const _strip=document.getElementById('dvustrip'+slot);if(_strip)_strip.style.width='';
+  const _strip=document.getElementById('dvustrip'+slot);
+  if(_strip){
+    _strip.style.width='';
+    _strip.style.removeProperty('--vu-count');
+    _strip.classList.remove('dvu-multi','dvu-nch');
+    _strip.closest('.rw-body')?.style.removeProperty('--vu-w');
+  }
   if(d._vuMerge){try{d._vuMerge.disconnect();}catch(_){}d._vuMerge=null;}
   if(d._vuAllAns){d._vuAllAns.forEach(a=>{try{a.disconnect();}catch(_){}});d._vuAllAns=null;d._vuAllBufs=null;}
   d._applyNchFn=null;
@@ -4586,15 +4610,15 @@ function tick(){
       const ovStale=d.ovgl&&d.ovgl.gl.canvas!==wov;
       const ovCtxLost=d.ovgl&&(!d.ovgl._prog||(d.ovgl.gl.isContextLost&&d.ovgl.gl.isContextLost()));
       const ovMissing=!d.ovgl&&!d.wovCtx;
-      const dimBad=opW>0&&(wov.width<2||wov.width!==opW||wov.height!==opH);
+      const dimBad=opW>0&&(wov.width<2||wov.width!==_dprW(opW)||wov.height!==_dprW(opH));
       if(ovStale||ovCtxLost||ovMissing||dimBad){
         if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
         if(opW>0){
           d._ovTargetW=opW;d._ovTargetH=opH;
-          wov.width=opW; wov.height=opH;
+          _sizeCvDpr(wov,opW,opH);
           try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}
           const wovol=document.getElementById('wovol'+slot);
-          if(wovol){wovol.width=opW;wovol.height=opH;d._wovOlCtx=wovol.getContext('2d');}
+          if(wovol){_sizeCvDpr(wovol,opW,opH);d._wovOlCtx=wovol.getContext('2d');}
           const wfD=d.rgbWfDetail||d.rgbWf;
           if(wfD&&d.ovgl)d.ovgl.setData(wfD);
         }
@@ -4621,11 +4645,11 @@ function tick(){
           const targetH=d._wzTargetH||wzc.height||64;
           if(targetW>0){
             d._wzTargetW=targetW;d._wzTargetH=targetH;
-            wzc.width=targetW; wzc.height=targetH;
+            _sizeCvDpr(wzc,targetW,targetH);
             try{
               d.wgl=new WaveformGL(wzc); d.wzCtx=null;
               const wzov=document.getElementById('wzov'+slot);
-              if(wzov){wzov.width=wzc.width;wzov.height=wzc.height;d.wovCtx2=wzov.getContext('2d');}
+              if(wzov){_sizeCvDpr(wzov,targetW,targetH);d.wovCtx2=wzov.getContext('2d');}
             }catch(e){d.wzCtx=wzc.getContext('2d');}
           }
         }
