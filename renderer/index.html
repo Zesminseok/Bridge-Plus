@@ -1898,10 +1898,11 @@ async function buildRGBWaveform(blob, onChunk){
     const ab=await blob.arrayBuffer();
     const buf=await _ac.decodeAudioData(ab);
     _ac.close();
-    const ch=buf.getChannelData(0),sr=buf.sampleRate;
+    const chans=Array.from({length:Math.max(1,buf.numberOfChannels)},(_,i)=>buf.getChannelData(i));
+    const sr=buf.sampleRate;
     // Renderer detail waveform target rate.
     const pts=Math.min(2_000_000,Math.max(6000,Math.floor(buf.duration*WF_RATE)));
-    const step=Math.max(1,Math.floor(ch.length/pts));
+    const step=Math.max(1,Math.floor(buf.length/pts));
     // 4th-order Linkwitz-Riley split via cascaded Butterworth biquads (-24dB/oct)
     // Crossovers: 150Hz / 700Hz / 3500Hz (rekordbox-style 4-band waveform)
     // PEAK values per band (not RMS) — matches Mixxx's AnalyzerWaveform approach
@@ -1916,10 +1917,13 @@ async function buildRGBWaveform(blob, onChunk){
     const _lp3500a=_mkBQ(3500,sr,_Q1),_lp3500b=_mkBQ(3500,sr,_Q2);
     const wf=new Array(pts);
     const CHUNK=Math.max(200,Math.floor(pts/30));
+    const chCount=chans.length;
     for(let i=0;i<pts;i++){
       const s0=i*step;let pl=0,pm=0,pp=0,ph=0,pk=0,mn=0,mx=0,sumSq=0;
       for(let j=0;j<step;j++){
-        const s=ch[s0+j]||0;
+        let s=0;
+        for(let c=0;c<chCount;c++)s+=chans[c][s0+j]||0;
+        s/=chCount;
         sumSq+=s*s; // RMS accumulator
         const lp150=_bq(_lp150b,_bq(_lp150a,s));
         const lp700=_bq(_lp700b,_bq(_lp700a,s));
@@ -2570,7 +2574,9 @@ function drawZoomWaveform(slot,prog){
     const oc=document.createElement('canvas');oc.width=cacheW;oc.height=H;
     const octx=oc.getContext('2d');
     const pxPerMs2=pts/wfDur,mid=H/2;
-    const hs2=new Float32Array(cacheW);
+    const tops2=new Float32Array(cacheW);
+    const bots2=new Float32Array(cacheW);
+    const _shapePeak=v=>Math.pow(Math.max(0,Math.min(1,v)),1.18)*0.76;
     const _gc2=[];const step2=Math.max(1,cacheW>>10);
     for(let px=0;px<cacheW;px++){
       const ms=px*msPerPx;
@@ -2579,8 +2585,14 @@ function drawZoomWaveform(slot,prog){
       const i1=Math.min(pts-1,i0+1);
       const f=di-i0;
       const p0=wfData[i0],p1=wfData[i1];
-      if(!p0){hs2[px]=0;continue;}
-      hs2[px]=((p0.h||0)+(((p1?.h||0)-(p0.h||0))*f))*mid*0.95;
+      if(!p0){tops2[px]=mid;bots2[px]=mid;continue;}
+      const h0=p0.h||0,h1=p1?.h||0;
+      const mx0=p0.mx!==undefined?p0.mx:h0,mx1=p1?.mx!==undefined?p1.mx:h1;
+      const mn0=p0.mn!==undefined?p0.mn:-h0,mn1=p1?.mn!==undefined?p1.mn:-h1;
+      const mx=mx0+(mx1-mx0)*f;
+      const mn=mn0+(mn1-mn0)*f;
+      tops2[px]=mid-_shapePeak(mx)*mid*0.95;
+      bots2[px]=mid+_shapePeak(-mn)*mid*0.95;
       if(px%step2===0||px===cacheW-1){
         const r=p0.r+((p1?.r||0)-p0.r)*f;
         const g=p0.g+((p1?.g||0)-p0.g)*f;
@@ -2598,9 +2610,9 @@ function drawZoomWaveform(slot,prog){
         _gc2.push({t:px/(cacheW-1),c:`rgb(${R},${G},${B})`});
       }
     }
-    octx.beginPath();octx.moveTo(0,mid-hs2[0]);
-    for(let px=1;px<cacheW;px++)octx.lineTo(px,mid-hs2[px]);
-    for(let px=cacheW-1;px>=0;px--)octx.lineTo(px,mid+hs2[px]);
+    octx.beginPath();octx.moveTo(0,tops2[0]);
+    for(let px=1;px<cacheW;px++)octx.lineTo(px,tops2[px]);
+    for(let px=cacheW-1;px>=0;px--)octx.lineTo(px,bots2[px]);
     octx.closePath();octx.save();octx.clip();
     if(_gc2.length>1){const grad=octx.createLinearGradient(0,0,cacheW,0);for(const s of _gc2)grad.addColorStop(s.t,s.c);octx.fillStyle=grad;}else{octx.fillStyle='#4ae183';}
     octx.fillRect(0,0,cacheW,H);octx.restore();
@@ -3746,40 +3758,8 @@ function loadFile(slot,f){
       }
       // Defer analysis so audio is playable immediately
       setTimeout(async()=>{
-        // Try Rekordbox ANLZ PWV7 data first (pixel-perfect 3-band)
-        let usedPWV7=false;
-        if(window.bridge?.findRekordboxWaveform){
-          try{
-            const pwv7=await window.bridge.findRekordboxWaveform(d._fileName||f.name);
-            if(pwv7&&pwv7.length>100){
-              // Convert PWV7 raw bytes to our format
-              // PWV7: {low,mid,hi} each 0-255
-              // Store as normalized values for buildWaveformCache
-              d.rgbWf=pwv7.map(p=>({
-                h:Math.max(p.low,p.mid,p.hi)/255,mn:0,mx:0,
-                r:p.low/255, g:p.mid/255, b:p.hi/255
-              }));
-              d._pwv7=true; // flag: using PWV7 data (different weight scheme)
-              d._wfCache=null;
-              buildWaveformCache(slot);
-              // Upload data + ensure GL contexts exist, then draw immediately
-              const wfD2=d.rgbWfDetail||d.rgbWf;
-              if(wfD2){
-                if(!d.wgl){const _wzc=document.getElementById('wzc'+slot);if(_wzc){const _pp=_wzc.parentElement;const _w2=_pp?.offsetWidth||0,_h2=_pp?.offsetHeight||64;if(_w2>0){_sizeCvDpr(_wzc,_w2,_h2);try{d.wgl=new WaveformGL(_wzc);d.wzCtx=null;}catch(_e){d.wzCtx=_wzc.getContext('2d');}}}}
-                if(d.wgl)d.wgl.setData(wfD2,(wfD2.length/WF_RATE*1000)||1);
-                const _wov=document.getElementById('wov'+slot);
-                if(_wov&&!d.ovgl){const _p=_wov.parentElement;const _w=_p?.offsetWidth||0,_h=_p?.offsetHeight||14;if(_w>0){_sizeCvDpr(_wov,_w,_h);try{d.ovgl=new OverviewGL(_wov);d.wovCtx=null;}catch(_e){d.wovCtx=_wov.getContext('2d');}}}
-                if(d.ovgl)d.ovgl.setData(wfD2);
-                drawOverview(slot,0);drawZoomWaveform(slot,0);
-              }
-              usedPWV7=true;
-              console.log(`[WF] slot${slot} using Rekordbox PWV7: ${pwv7.length} entries`);
-            }
-          }catch(e){console.warn('[PWV7]',e);}
-        }
-        if(!usedPWV7){
-          d._pwv7=false;
-          buildRGBWaveform(audioBlob,(done,partial)=>{
+        d._pwv7=false;
+        buildRGBWaveform(audioBlob,(done,partial)=>{
             d.rgbWf=partial.slice(0,done);
             d.rgbWfPts=d.rgbWfPts||done*30;
             const prog2=document.getElementById('dwov-prog'+slot);
@@ -3802,8 +3782,7 @@ function loadFile(slot,f){
                 drawOverview(slot,0);drawZoomWaveform(slot,0);
               }
             }
-          });
-        }
+        });
         analyzeBPM(audioBlob).then(result=>{
           const analyzedBpm=result.bpm||0, startMs=result.startMs||0;
           // ID3 TBPM tag takes priority over analysis

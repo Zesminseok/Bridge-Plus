@@ -11,7 +11,7 @@ app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.foc
 const path=require('path'),os=require('os'),fs=require('fs'),crypto=require('crypto');
 const{spawn}=require('child_process');
 const dgram=require('dgram');
-const{BridgeCore,getAllInterfaces}=require('./bridge-core');
+const{BridgeCore,getAllInterfaces,interfaceSignature}=require('./bridge-core');
 
 // ═══ FFmpeg multi-channel audio decode ═══════════════════════════════
 let _ffmpegPath=null;
@@ -451,7 +451,7 @@ function sendArtTimeCode(ip,port,hh,mm,ss,ff,type){
   pkt.writeUInt8(type&0x03,18);
   try{_artSocket.send(pkt,0,pkt.length,port||6454,ip||'255.255.255.255');}catch(e){console.warn('[ART]',e.message);}
 }
-let win,bridge,iv;
+let win,bridge,iv,_ifaceWatcher=null,_ifaceSig='';
 
 // Window bounds persistence
 const cfgPath=path.join(app.getPath('userData'),'window-state.json');
@@ -502,6 +502,29 @@ function createWindow(){
   win.on('close',()=>saveBounds());
   const p=path.join(__dirname,'renderer','index.html');
   win.loadFile(fs.existsSync(p)?p:path.join(__dirname,'index.html'));
+  win.webContents.once('did-finish-load',()=>sendInterfaces('startup'));
+  startInterfaceWatcher();
+}
+
+function sendInterfaces(reason='manual'){
+  const ifaces=getAllInterfaces();
+  _ifaceSig=interfaceSignature(ifaces);
+  try{if(win&&!win.isDestroyed())win.webContents.send('net:interfaces',{interfaces:ifaces,reason,signature:_ifaceSig});}catch(_){}
+  return ifaces;
+}
+
+function startInterfaceWatcher(){
+  if(_ifaceWatcher)return;
+  _ifaceSig=interfaceSignature(getAllInterfaces());
+  _ifaceWatcher=setInterval(async()=>{
+    let ifaces,sig;
+    try{ifaces=getAllInterfaces();sig=interfaceSignature(ifaces);}catch(_){return;}
+    if(sig===_ifaceSig)return;
+    _ifaceSig=sig;
+    console.log(`[NET] interface list changed (${ifaces.length})`);
+    try{if(win&&!win.isDestroyed())win.webContents.send('net:interfaces',{interfaces:ifaces,reason:'hotplug',signature:sig});}catch(_){}
+    try{await bridge?.handleInterfacesChanged(ifaces);}catch(e){console.warn('[NET] bridge interface refresh failed:',e.message);}
+  },2000);
 }
 
 function push(){
@@ -527,6 +550,7 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
       await new Promise(r=>setTimeout(r,300));
     }
     bridge=new BridgeCore(opts||{});
+    _ifaceSig=interfaceSignature(getAllInterfaces());
     const _send=(ch,d)=>{try{if(win&&!win.isDestroyed())win.webContents.send(ch,d);}catch(_){}};
     bridge.onNodeDiscovered=n=>_send('tcnet:node',n);
     bridge.onCDJStatus=(li,s)=>_send('bridge:cdj',{layerIndex:li,status:s});
@@ -610,7 +634,12 @@ ipcMain.handle('bridge:registerVirtualDeck',(_,{slot,model})=>{bridge?.registerV
 ipcMain.handle('bridge:unregisterVirtualDeck',(_,{slot})=>{bridge?.unregisterVirtualDeck(slot);return{ok:true};});
 ipcMain.handle('bridge:setHWMode',(_,{i,en})=>{bridge?.setHWMode(i,en);return{ok:true};});
 ipcMain.handle('bridge:refreshMeta',()=>{bridge?.refreshAllMetadata();return{ok:true};});
-ipcMain.handle('bridge:getInterfaces',()=>getAllInterfaces());
+ipcMain.handle('bridge:getInterfaces',()=>sendInterfaces('manual'));
+ipcMain.handle('bridge:refreshInterfaces',async()=>{
+  const ifaces=sendInterfaces('manual-refresh');
+  try{await bridge?.handleInterfacesChanged(ifaces);}catch(e){return{ok:false,err:e.message,interfaces:ifaces};}
+  return{ok:true,interfaces:ifaces};
+});
 ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTimeCode(ip,port,hh,mm,ss,ff,type);return{ok:true};});
 // ─── Art-Net Engine IPC ───────────────────────────────────────────
 ipcMain.handle('artnet:start',async(_,opts={})=>{
@@ -649,9 +678,6 @@ ipcMain.handle('bridge:rebindPDJL',async(_,{addr})=>{
 });
 ipcMain.handle('bridge:setTCNetMode',(_,{mode})=>{
   bridge?.setTCNetMode(mode);return{ok:true};
-});
-ipcMain.handle('bridge:setTCNetUnicast',(_,{unicast,allIfaces})=>{
-  bridge?.setTCNetUnicast(unicast,allIfaces);return{ok:true};
 });
 
 // ═══ Multi-channel audio decode (FFmpeg) ═════════════════════════════
@@ -696,99 +722,6 @@ ipcMain.handle('bridge:cleanupTemp',(_,{tempPath})=>{
   return{ok:true};
 });
 
-// ═══ Rekordbox ANLZ PWV7 reader ═══
-// Reads 3-band waveform data from .2EX files for pixel-perfect Rekordbox rendering
-const _anlzDir=path.join(os.homedir(),'Library','Pioneer','rekordbox','share','PIONEER','USBANLZ');
-let _anlzIndex=null; // {filename → anlzPath} cache
-
-function _buildANLZIndex(){
-  if(_anlzIndex)return _anlzIndex;
-  _anlzIndex={};
-  try{
-    const walk=(dir)=>{
-      for(const ent of fs.readdirSync(dir,{withFileTypes:true})){
-        if(ent.isDirectory()){walk(path.join(dir,ent.name));continue;}
-        if(ent.name==='ANLZ0000.EXT'||ent.name==='ANLZ0000.2EX'){
-          // Read PPTH tag to get original file path
-          const fp=path.join(dir,ent.name);
-          try{
-            const buf=fs.readFileSync(fp);
-            const hLen=buf.readUInt32BE(4);
-            let pos=hLen;
-            while(pos<buf.length-12){
-              const tag=buf.toString('ascii',pos,pos+4);
-              const tHL=buf.readUInt32BE(pos+4);
-              const tTL=buf.readUInt32BE(pos+8);
-              if(tag==='PPTH'){
-                const pathLen=buf.readUInt16BE(pos+tHL-2);
-                const trackPath=buf.toString('utf16be',pos+tHL,pos+tHL+pathLen).replace(/\0+$/,'');
-                const baseName=path.basename(trackPath).toLowerCase();
-                _anlzIndex[baseName]=dir;
-                break;
-              }
-              pos+=tTL;if(tTL===0)break;
-            }
-          }catch(_){}
-        }
-      }
-    };
-    if(fs.existsSync(_anlzDir))walk(_anlzDir);
-    console.log(`[ANLZ] indexed ${Object.keys(_anlzIndex).length} tracks`);
-  }catch(e){console.warn('[ANLZ] index error:',e.message);}
-  return _anlzIndex;
-}
-
-function _readPWV7(anlzDir){
-  const fp=path.join(anlzDir,'ANLZ0000.2EX');
-  if(!fs.existsSync(fp))return null;
-  const buf=fs.readFileSync(fp);
-  const hLen=buf.readUInt32BE(4);
-  let pos=hLen;
-  while(pos<buf.length-12){
-    const tag=buf.toString('ascii',pos,pos+4);
-    const tHL=buf.readUInt32BE(pos+4);
-    const tTL=buf.readUInt32BE(pos+8);
-    if(tag==='PWV7'){
-      const dataStart=pos+tHL;
-      const dataLen=tTL-tHL;
-      const entries=Math.floor(dataLen/3);
-      // Convert to array of {r,g,b} using beat-link scaling
-      // byte[0]=mid, byte[1]=hi, byte[2]=low — raw 0-255 values
-      const wf=new Array(entries);
-      for(let i=0;i<entries;i++){
-        const off=dataStart+i*3;
-        wf[i]={
-          low:buf[off+2],   // raw byte 0-255
-          mid:buf[off],     // raw byte 0-255
-          hi:buf[off+1],    // raw byte 0-255
-        };
-      }
-      return wf;
-    }
-    pos+=tTL;if(tTL===0)break;
-  }
-  return null;
-}
-
-ipcMain.handle('bridge:findRekordboxWaveform',(_,{filename})=>{
-  try{
-    const idx=_buildANLZIndex();
-    const key=filename.toLowerCase();
-    // Try exact match first, then partial
-    let anlzDir=idx[key];
-    if(!anlzDir){
-      for(const[k,v]of Object.entries(idx)){
-        if(k.includes(key)||key.includes(k)){anlzDir=v;break;}
-      }
-    }
-    if(!anlzDir)return null;
-    const pwv7=_readPWV7(anlzDir);
-    if(!pwv7)return null;
-    console.log(`[ANLZ] PWV7 found for "${filename}": ${pwv7.length} entries`);
-    return pwv7;
-  }catch(e){console.warn('[ANLZ]',e.message);return null;}
-});
-
 app.whenReady().then(()=>{_registerBridgeAudioProtocol();createWindow();});
 let _cleaned=false,_quitting=false;
 function doQuit(){
@@ -797,6 +730,7 @@ function doQuit(){
   // 1. Save window bounds while window is still valid
   saveBounds();
   clearInterval(iv);
+  clearInterval(_ifaceWatcher);_ifaceWatcher=null;
   // 2. Signal renderer to clean up WebGL contexts (prevents V8 BackingStore crash)
   try{if(win&&!win.isDestroyed())win.webContents.send('app:quitting');}catch(_){}
   // 3. Show shutdown splash BEFORE hiding main window (so position is correct)
