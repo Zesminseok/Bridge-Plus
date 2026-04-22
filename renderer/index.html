@@ -1940,7 +1940,7 @@ async function buildRGBWaveform(blob, onChunk){
     const CHUNK=Math.max(200,Math.floor(pts/30));
     const chCount=chans.length;
     for(let i=0;i<pts;i++){
-      const s0=i*step;let bandLow=0,bandMid=0,bandHi=0,mn=0,mx=0,sumSq=0;
+      const s0=i*step;let bandLow=0,bandMid=0,bandHi=0,mn=0,mx=0,sumSq=0,bassAccum=0;
       for(let j=0;j<step;j++){
         let s=0;
         for(let c=0;c<chCount;c++)s+=chans[c][s0+j]||0;
@@ -1949,6 +1949,7 @@ async function buildRGBWaveform(blob, onChunk){
         const lp250=_bq(_lp250b,_bq(_lp250a,s));
         const lp2000=_bq(_lp2000b,_bq(_lp2000a,s));
         const bass=lp250, body=lp2000-lp250, presence=s-lp2000;
+        bassAccum+=bass;
         // PEAK per band (for color), RMS for height
         const ab=Math.abs(bass),am=Math.abs(body),ap=Math.abs(presence);
         if(ab>bandLow)bandLow=ab; if(am>bandMid)bandMid=am; if(ap>bandHi)bandHi=ap;
@@ -1960,11 +1961,13 @@ async function buildRGBWaveform(blob, onChunk){
       const m=Math.sqrt(Math.min(1,bandMid/refLevel));
       const hi=Math.sqrt(Math.min(1,bandHi/refLevel));
       const amp=Math.max(l,m,hi);
+      const bassMid=bassAccum/step;
       const o=i*8;
       wf[o]=Math.max(0,Math.min(255,Math.round(l*255)));
       wf[o+1]=Math.max(0,Math.min(255,Math.round(m*255)));
       wf[o+2]=Math.max(0,Math.min(255,Math.round(hi*255)));
-      wf[o+3]=0;
+      // byte 3: bassSigned_u8 (128=silence, lp250 avg per bin)
+      wf[o+3]=Math.max(0,Math.min(255,Math.round((Math.max(-1,Math.min(1,bassMid))+1)*127.5)));
       wf[o+4]=Math.max(0,Math.min(255,Math.round((Math.max(-1,Math.min(1,mx))+1)*127.5)));
       wf[o+5]=Math.max(0,Math.min(255,Math.round((Math.max(-1,Math.min(1,mn))+1)*127.5)));
       wf[o+6]=Math.max(0,Math.min(255,Math.round(amp*255)));
@@ -2393,6 +2396,7 @@ function drawOverview(slot,prog){
     if(!d.ovgl._wfTex){const _wd=d.rgbWfDetail||d.rgbWf;if(_wd)d.ovgl.setData(_wd);}
     if(!d.ovgl._wfTex)return;
     const viewMode=_WF_VIEW_TO_UNIFORM[_wfEffectiveViewMode(d)]??0;
+    d.ovgl.setOscilloscope((d.type==='hw')?0:wfOscilloscope);
     d.ovgl.draw(pos, _wfDataMode(d), viewMode, _wfPaletteMode(), wfSharpness);
     // Continue to draw overlay markers on separate canvas
   } else {
@@ -2592,6 +2596,7 @@ function drawZoomWaveform(slot,prog){
     const mode=_wfDataMode(d);
     const viewMode=_WF_VIEW_TO_UNIFORM[_wfEffectiveViewMode(d)]??0;
     const cX=cfg.wfCenter==='left'?0.25:0.5;
+    d.wgl.setOscilloscope((d.type==='hw')?0:wfOscilloscope);
     // posMs in shader is now relative to window start (shader sees window as its full song)
     d.wgl.draw(posMs-winActualStartMs, zoomMs, cX, mode, viewMode, _wfPaletteMode(), wfSharpness, (d.type==='hw')?0:wfOscilloscope);
     drawZoomOverlay(slot,prog);
@@ -6203,8 +6208,8 @@ if(E){
     if(d.pts&&d.pts.length>0){
       if(d.pwv7||d.wfType==='pwv7'){
         dk.rgbWf=d.pts.map(p=>{
-          const h=Math.max(p.low||0,p.mid||0,p.hi||0);
-          return{r:p.low||0,g:p.mid||0,b:p.hi||0,h,mn:-h,mx:h};
+          const h=Math.max(p.low||0,p.mid||0,p.hi||0)/255;
+          return{h,mn:-h,mx:h,r:(p.low||0)/255,g:(p.mid||0)/255,b:(p.hi||0)/255};
         });
         dk._pwv7=true;dk.wfCapability='pwv7';
       } else if(d.wfType==='nxs2_3band'||d.wfType==='mono'){
@@ -6292,10 +6297,10 @@ if(E){
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
     if(d.pts&&d.pts.length>0){
       if(d.pwv7||d.wfType==='pwv7'){
-        // PWV7 3-band: raw bass/mid/treble (0-1 each)
+        // PWV7 3-band: raw bass/mid/treble bytes (0-255 each)
         dk.rgbWfDetail=d.pts.map(p=>{
-          const h=Math.max(p.low||0,p.mid||0,p.hi||0);
-          return{r:p.low||0,g:p.mid||0,b:p.hi||0,h,mn:-h,mx:h};
+          const h=Math.max(p.low||0,p.mid||0,p.hi||0)/255;
+          return{h,mn:-h,mx:h,r:(p.low||0)/255,g:(p.mid||0)/255,b:(p.hi||0)/255};
         });
         dk._pwv7=true;dk.wfCapability='pwv7';
       } else if(d.wfType==='nxs2_3band'||d.wfType==='mono'){

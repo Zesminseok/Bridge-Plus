@@ -17,7 +17,7 @@ function _wglWritePoint(px, row1, dstIdx, wfData, srcIdx) {
     px[dst] = wfData[src];
     px[dst + 1] = wfData[src + 1];
     px[dst + 2] = wfData[src + 2];
-    px[dst + 3] = wfData[src + 3];
+    px[dst + 3] = wfData[src + 3]; // bassSigned_u8 (was 0)
     px[dstShape] = wfData[src + 4];
     px[dstShape + 1] = wfData[src + 5];
     px[dstShape + 2] = 0;
@@ -25,11 +25,10 @@ function _wglWritePoint(px, row1, dstIdx, wfData, srcIdx) {
     return;
   }
   const p = wfData[srcIdx] || {};
-  const aCh = (p.a !== undefined ? p.a : (p.h || 0));
   px[dst] = Math.min(255, (p.r || 0) * 255) | 0;
   px[dst + 1] = Math.min(255, (p.g || 0) * 255) | 0;
   px[dst + 2] = Math.min(255, (p.b || 0) * 255) | 0;
-  px[dst + 3] = Math.min(255, aCh * 255) | 0;
+  px[dst + 3] = 128; // bassSigned default: silence
   const mxS = (p.mx !== undefined) ? p.mx : (p.h || 0);
   const mnS = (p.mn !== undefined) ? p.mn : -(p.h || 0);
   px[dstShape] = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mxS)) + 1) * 127.5)));
@@ -55,6 +54,7 @@ class WaveformGL {
     this._wfDurMs = 1;
     this._dirty = true;
     this._lastDrawKey = '';
+    this._oscilloscope = 0;
     this._prog = this._compileProgram(_WGL_VS, _WGL_ZOOM_FS);
     this._initGeometry();
     this._locs = {
@@ -94,6 +94,7 @@ class WaveformGL {
           viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
           paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
           sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
+          oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
         };
       } catch(e) { console.warn('[WGL] recover failed:', e.message); return; }
     }
@@ -149,6 +150,15 @@ class WaveformGL {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this._winKey = '';
+  }
+
+  setOscilloscope(value) {
+    const osc = Math.max(0, Math.min(1, value || 0));
+    if (this._oscilloscope !== osc) {
+      this._oscilloscope = osc;
+      this._dirty = true;
+      this._lastDrawKey = '';
+    }
   }
 
   /** Upload only a window of the detail waveform at native resolution (no downsample). */
@@ -245,7 +255,8 @@ class WaveformGL {
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
-    const osc = Math.max(0, Math.min(1, oscilloscope || 0));
+    if (arguments.length >= 8) this.setOscilloscope(oscilloscope);
+    const osc = this._oscilloscope || 0;
     const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${mode}|${viewMode}|${paletteMode}|${sharpness}|${osc}`;
     if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
@@ -329,6 +340,7 @@ class OverviewGL {
     this._wfTex = null;
     this._dirty = true;
     this._lastDrawKey = '';
+    this._oscilloscope = 0;
     this._prog = this._compileProgram(_WGL_VS, _WGL_OV_FS);
     this._initGeometry();
     this._locs = {
@@ -339,6 +351,7 @@ class OverviewGL {
       viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
       paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
       sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
+      oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
     };
   }
 
@@ -360,6 +373,7 @@ class OverviewGL {
           viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
           paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
           sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
+          oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
         };
       } catch(e) { console.warn('[WGL] ovgl recover failed:', e.message); return; }
     }
@@ -412,12 +426,22 @@ class OverviewGL {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
+  setOscilloscope(value) {
+    const osc = Math.max(0, Math.min(1, value || 0));
+    if (this._oscilloscope !== osc) {
+      this._oscilloscope = osc;
+      this._dirty = true;
+      this._lastDrawKey = '';
+    }
+  }
+
   draw(pos, mode, viewMode = 0, paletteMode = 1, sharpness = 0) {
     if (!this._wfTex) return;
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
-    const drawKey = `${cv.width}x${cv.height}|${pos}|${mode}|${viewMode}|${paletteMode}|${sharpness}`;
+    const osc = this._oscilloscope || 0;
+    const drawKey = `${cv.width}x${cv.height}|${pos}|${mode}|${viewMode}|${paletteMode}|${sharpness}|${osc}`;
     if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
@@ -431,6 +455,7 @@ class OverviewGL {
     gl.uniform1i(this._locs.viewMode, viewMode | 0);
     gl.uniform1i(this._locs.paletteMode, paletteMode | 0);
     gl.uniform1f(this._locs.sharpness, Math.max(0, Math.min(1, sharpness || 0)));
+    gl.uniform1f(this._locs.oscilloscope, osc);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this._dirty = false;
     this._lastDrawKey = drawKey;
@@ -692,10 +717,10 @@ void main() {
     float botH = -displayPeak(max(-sh.y, 0.0)) * scale;
     float spanH = max(topH - botH, 1.0);
     outerH = spanH * 0.5;
+    float bassSigned = (wf.a - 0.5019608) * 2.0;  // 128/255 -> 0.0
+    float bassH = clamp(bassSigned, -1.0, 1.0) * scale;
     float lineThickness = 1.5;
-    float topLine = 1.0 - smoothstep(lineThickness - 0.5, lineThickness + 0.5, abs(yRel - topH));
-    float botLine = 1.0 - smoothstep(lineThickness - 0.5, lineThickness + 0.5, abs(yRel - botH));
-    float lineMask = max(topLine, botLine);
+    float lineMask = 1.0 - smoothstep(lineThickness - 0.5, lineThickness + 0.5, abs(yRel - bassH));
     float lower = smoothstep(botH - edgeAA, botH + edgeAA, yRel);
     float upper = 1.0 - smoothstep(topH - edgeAA, topH + edgeAA, yRel);
     inside = lower * upper;
@@ -733,6 +758,7 @@ uniform int   u_mode;
 uniform int   uViewMode;
 uniform int   uPaletteMode;
 uniform float uSharpness;
+uniform float uOscilloscope;
 out vec4 fragColor;
 const vec4 BG = vec4(0.067, 0.075, 0.094, 1.0);
 const vec4 BG_PLAYED = vec4(0.090, 0.098, 0.122, 1.0);
@@ -913,11 +939,16 @@ void main() {
     float botH = -displayPeak(max(-sh.y, 0.0)) * scale;
     float spanH = max(topH - botH, 1.0);
     outerH = spanH * 0.5;
+    float bassSigned = (wf.a - 0.5019608) * 2.0;  // 128/255 -> 0.0
+    float bassH = clamp(bassSigned, -1.0, 1.0) * scale;
+    float lineThickness = 1.5;
+    float lineMask = 1.0 - smoothstep(lineThickness - 0.5, lineThickness + 0.5, abs(yRel - bassH));
     float lower = smoothstep(botH - edgeAA, botH + edgeAA, yRel);
     float upper = 1.0 - smoothstep(topH - edgeAA, topH + edgeAA, yRel);
     inside = lower * upper;
     float ridge = 1.0 - smoothstep(0.7, 3.5, min(abs(yRel - topH), abs(yRel - botH)));
-    inside = max(inside, ridge * 0.70);
+    float fillMask = max(inside, ridge * 0.70);
+    inside = mix(fillMask, lineMask, uOscilloscope);
     if (inside < 0.005 && ridge < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
     vec3 lowCol = vec3(0.05, 0.23, 0.42);
     vec3 bodyCol = vec3(1.0, 0.42, 0.17);
