@@ -1,6 +1,43 @@
 // renderer/waveform-gl.js
 'use strict';
 
+function _wglIsPackedWaveform(wfData) {
+  return wfData instanceof Uint8Array && wfData._packed;
+}
+
+function _wglWaveformLength(wfData) {
+  return _wglIsPackedWaveform(wfData) ? Math.floor(wfData.length / 8) : (wfData?.length || 0);
+}
+
+function _wglWritePoint(px, row1, dstIdx, wfData, srcIdx) {
+  const dst = dstIdx * 4;
+  const dstShape = row1 + dst;
+  if (_wglIsPackedWaveform(wfData)) {
+    const src = srcIdx * 8;
+    px[dst] = wfData[src];
+    px[dst + 1] = wfData[src + 1];
+    px[dst + 2] = wfData[src + 2];
+    px[dst + 3] = wfData[src + 3];
+    px[dstShape] = wfData[src + 4];
+    px[dstShape + 1] = wfData[src + 5];
+    px[dstShape + 2] = 0;
+    px[dstShape + 3] = 255;
+    return;
+  }
+  const p = wfData[srcIdx] || {};
+  const aCh = (p.a !== undefined ? p.a : (p.h || 0));
+  px[dst] = Math.min(255, (p.r || 0) * 255) | 0;
+  px[dst + 1] = Math.min(255, (p.g || 0) * 255) | 0;
+  px[dst + 2] = Math.min(255, (p.b || 0) * 255) | 0;
+  px[dst + 3] = Math.min(255, aCh * 255) | 0;
+  const mxS = (p.mx !== undefined) ? p.mx : (p.h || 0);
+  const mnS = (p.mn !== undefined) ? p.mn : -(p.h || 0);
+  px[dstShape] = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mxS)) + 1) * 127.5)));
+  px[dstShape + 1] = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mnS)) + 1) * 127.5)));
+  px[dstShape + 2] = 0;
+  px[dstShape + 3] = 255;
+}
+
 /**
  * WaveformGL — GPU-accelerated zoom waveform renderer.
  * Uses a WebGL2 RGBA texture: R=bass, G=body, B=presence, A=air/height (all 0-1).
@@ -31,13 +68,14 @@ class WaveformGL {
       viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
       paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
       sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
+      oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
     };
   }
 
   /** Upload wfData array of {r,g,b,a,h} (0-1) to GPU texture. */
   setData(wfData, wfDurMs) {
     const gl = this.gl;
-    const n = wfData.length;
+    const n = _wglWaveformLength(wfData);
     if (n < 2) return;
     // Recover from WebGL context reset (canvas.width assignment clears GPU state)
     if (!this._prog || !gl.isProgram(this._prog)) {
@@ -67,23 +105,7 @@ class WaveformGL {
     // 2-row texture: row 0 = (R,G,B,A) band peaks, row 1 = (mx_enc, mn_enc, 0, 255) signed envelope
     const px = new Uint8Array(n * 4 * 2);
     const row1 = n * 4;
-    for (let i = 0; i < n; i++) {
-      const p = wfData[i];
-      const aCh = (p.a !== undefined ? p.a : (p.h || 0));
-      px[i*4]   = Math.min(255, (p.r || 0) * 255) | 0;
-      px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
-      px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
-      px[i*4+3] = Math.min(255, aCh * 255) | 0;
-      // Signed envelope: mx (peak +) and mn (peak -) in [-1, 1] → encode to [0, 255] (128 = zero)
-      const mxS = (p.mx !== undefined) ? p.mx : (p.h || 0);
-      const mnS = (p.mn !== undefined) ? p.mn : -(p.h || 0);
-      const mxC = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mxS)) + 1) * 127.5)));
-      const mnC = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mnS)) + 1) * 127.5)));
-      px[row1 + i*4]   = mxC;
-      px[row1 + i*4+1] = mnC;
-      px[row1 + i*4+2] = 0;
-      px[row1 + i*4+3] = 255;
-    }
+    for (let i = 0; i < n; i++) _wglWritePoint(px, row1, i, wfData, i);
     // Cap at GPU MAX_TEXTURE_SIZE — PEAK max-pool (max for mx, MIN for mn to preserve neg peaks)
     const maxTex = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
     const canvasPx = Math.max(1, this.canvas.width);
@@ -132,7 +154,7 @@ class WaveformGL {
   /** Upload only a window of the detail waveform at native resolution (no downsample). */
   setWindowData(wfData, startIdx, endIdx, sliceDurMs) {
     const gl = this.gl;
-    const len = wfData.length;
+    const len = _wglWaveformLength(wfData);
     if (len < 2) return;
     startIdx = Math.max(0, Math.min(len - 2, startIdx | 0));
     endIdx = Math.max(startIdx + 2, Math.min(len, endIdx | 0));
@@ -158,26 +180,14 @@ class WaveformGL {
           viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
           paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
           sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
+          oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
         };
       } catch(e) { console.warn('[WGL] wgl recover failed:', e.message); return; }
     }
     // 2-row texture: row 0 = band RGBA, row 1 = signed envelope (mx_enc, mn_enc)
     const px = new Uint8Array(n * 4 * 2);
     const row1 = n * 4;
-    for (let i = 0; i < n; i++) {
-      const p = wfData[startIdx + i];
-      const aCh = (p.a !== undefined ? p.a : (p.h || 0));
-      px[i*4]   = Math.min(255, (p.r || 0) * 255) | 0;
-      px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
-      px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
-      px[i*4+3] = Math.min(255, aCh * 255) | 0;
-      const mxS = (p.mx !== undefined) ? p.mx : (p.h || 0);
-      const mnS = (p.mn !== undefined) ? p.mn : -(p.h || 0);
-      px[row1 + i*4]   = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mxS)) + 1) * 127.5)));
-      px[row1 + i*4+1] = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mnS)) + 1) * 127.5)));
-      px[row1 + i*4+2] = 0;
-      px[row1 + i*4+3] = 255;
-    }
+    for (let i = 0; i < n; i++) _wglWritePoint(px, row1, i, wfData, startIdx + i);
     // PEAK-preserving downsample if slice still exceeds GPU cap (rare for window view)
     const maxTex = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
     const canvasPx = Math.max(1, this.canvas.width);
@@ -228,14 +238,15 @@ class WaveformGL {
   }
 
   /** Render waveform. mode keeps data layout; viewMode: 0=A, 1=B, 2=C. */
-  draw(posMs, zoomMs, centerX, mode, viewMode = 0, paletteMode = 1, sharpness = 0) {
+  draw(posMs, zoomMs, centerX, mode, viewMode = 0, paletteMode = 1, sharpness = 0, oscilloscope = 0) {
     if (!this._wfTex) return;
     // Detect WebGL context reset: canvas.width assignment clears all GPU objects
     // gl.isProgram() returns false for handles invalidated by context reset
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
-    const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${mode}|${viewMode}|${paletteMode}|${sharpness}`;
+    const osc = Math.max(0, Math.min(1, oscilloscope || 0));
+    const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${mode}|${viewMode}|${paletteMode}|${sharpness}|${osc}`;
     if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
@@ -252,6 +263,7 @@ class WaveformGL {
     gl.uniform1i(this._locs.viewMode, viewMode | 0);
     gl.uniform1i(this._locs.paletteMode, paletteMode | 0);
     gl.uniform1f(this._locs.sharpness, Math.max(0, Math.min(1, sharpness || 0)));
+    gl.uniform1f(this._locs.oscilloscope, osc);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this._dirty = false;
     this._lastDrawKey = drawKey;
@@ -332,7 +344,7 @@ class OverviewGL {
 
   setData(wfData) {
     const gl = this.gl;
-    const n = wfData.length;
+    const n = _wglWaveformLength(wfData);
     if (n < 2) return;
     // Recover from WebGL context reset
     if (!this._prog || !gl.isProgram(this._prog)) {
@@ -355,20 +367,7 @@ class OverviewGL {
     const row1 = n * 4;
     this._dirty = true;
     this._lastDrawKey = '';
-    for (let i = 0; i < n; i++) {
-      const p = wfData[i];
-      const aCh = (p.a !== undefined ? p.a : (p.h || 0));
-      px[i*4]   = Math.min(255, (p.r || 0) * 255) | 0;
-      px[i*4+1] = Math.min(255, (p.g || 0) * 255) | 0;
-      px[i*4+2] = Math.min(255, (p.b || 0) * 255) | 0;
-      px[i*4+3] = Math.min(255, aCh * 255) | 0;
-      const mxS = (p.mx !== undefined) ? p.mx : (p.h || 0);
-      const mnS = (p.mn !== undefined) ? p.mn : -(p.h || 0);
-      px[row1 + i*4]   = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mxS)) + 1) * 127.5)));
-      px[row1 + i*4+1] = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mnS)) + 1) * 127.5)));
-      px[row1 + i*4+2] = 0;
-      px[row1 + i*4+3] = 255;
-    }
+    for (let i = 0; i < n; i++) _wglWritePoint(px, row1, i, wfData, i);
 
     const maxTex = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
     const canvasPx = Math.max(1, this.canvas.width);
@@ -505,6 +504,7 @@ uniform int   u_mode;
 uniform int   uViewMode;
 uniform int   uPaletteMode;
 uniform float uSharpness;
+uniform float uOscilloscope;
 out vec4 fragColor;
 const vec4 BG = vec4(0.067, 0.075, 0.094, 1.0);
 
@@ -692,10 +692,16 @@ void main() {
     float botH = -displayPeak(max(-sh.y, 0.0)) * scale;
     float spanH = max(topH - botH, 1.0);
     outerH = spanH * 0.5;
+    float lineThickness = 1.5;
+    float topLine = 1.0 - smoothstep(lineThickness - 0.5, lineThickness + 0.5, abs(yRel - topH));
+    float botLine = 1.0 - smoothstep(lineThickness - 0.5, lineThickness + 0.5, abs(yRel - botH));
+    float lineMask = max(topLine, botLine);
     float lower = smoothstep(botH - edgeAA, botH + edgeAA, yRel);
     float upper = 1.0 - smoothstep(topH - edgeAA, topH + edgeAA, yRel);
     inside = lower * upper;
     float ridge = 1.0 - smoothstep(0.7, 3.8, min(abs(yRel - topH), abs(yRel - botH)));
+    float fillMask = max(inside, ridge * 0.70);
+    inside = mix(fillMask, lineMask, uOscilloscope);
     if (inside < 0.005 && ridge < 0.005) { fragColor = BG; return; }
     vec3 lowCol = vec3(0.05, 0.23, 0.42);
     vec3 bodyCol = vec3(1.0, 0.42, 0.17);
@@ -710,7 +716,6 @@ void main() {
     vec4 amps = vec4(bV, mV, pV, tV);
     col = gradientColor(amps, yDist, max(max(abs(topH), abs(botH)), 1.0), lowCol, bodyCol, presCol, airCol, AA);
     col *= mix(0.60, 1.15, smoothstep(0.08, 0.95, max(max(bV, mV), max(pV, tV))));
-    inside = max(inside, ridge * 0.70);
   }
 
   fragColor = vec4(clamp(col, 0.0, 1.0) * inside, 1.0);
@@ -912,6 +917,7 @@ void main() {
     float upper = 1.0 - smoothstep(topH - edgeAA, topH + edgeAA, yRel);
     inside = lower * upper;
     float ridge = 1.0 - smoothstep(0.7, 3.5, min(abs(yRel - topH), abs(yRel - botH)));
+    inside = max(inside, ridge * 0.70);
     if (inside < 0.005 && ridge < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
     vec3 lowCol = vec3(0.05, 0.23, 0.42);
     vec3 bodyCol = vec3(1.0, 0.42, 0.17);
@@ -926,7 +932,6 @@ void main() {
     vec4 amps = vec4(bV, mV, pV, tV);
     col = overviewGradient(amps, yDist, max(max(abs(topH), abs(botH)), 1.0), lowCol, bodyCol, presCol, airCol, AA2);
     col *= mix(0.66, 1.10, smoothstep(0.08, 0.95, max(max(bV, mV), max(pV, tV))));
-    inside = max(inside, ridge * 0.70);
   }
 
   float dim = played ? 0.38 : 1.0;
