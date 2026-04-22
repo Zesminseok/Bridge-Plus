@@ -1904,7 +1904,7 @@ async function buildRGBWaveform(blob, onChunk){
     const pts=Math.min(2_000_000,Math.max(6000,Math.floor(buf.duration*WF_RATE)));
     const step=Math.max(1,Math.floor(buf.length/pts));
     // 4th-order Linkwitz-Riley split via cascaded Butterworth biquads (-24dB/oct)
-    // Crossovers: 150Hz / 700Hz / 3500Hz (rekordbox-style 4-band waveform)
+    // Crossovers: 250Hz / 2000Hz (3-band waveform)
     // PEAK values per band (not RMS) — matches Mixxx's AnalyzerWaveform approach
     function _mkBQ(fc,sr2,Q){
       const w=2*Math.PI*fc/sr2,sn=Math.sin(w),cs=Math.cos(w),al=sn/(2*Q),a0=1+al;
@@ -1912,31 +1912,33 @@ async function buildRGBWaveform(blob, onChunk){
     }
     function _bq(f,x){const y=f.b0*x+f.w1;f.w1=f.b1*x-f.a1*y+f.w2;f.w2=f.b2*x-f.a2*y;return y;}
     const _Q1=0.5412,_Q2=1.3066;
-    const _lp150a=_mkBQ(150,sr,_Q1),_lp150b=_mkBQ(150,sr,_Q2);
-    const _lp700a=_mkBQ(700,sr,_Q1),_lp700b=_mkBQ(700,sr,_Q2);
-    const _lp3500a=_mkBQ(3500,sr,_Q1),_lp3500b=_mkBQ(3500,sr,_Q2);
+    const _lp250a=_mkBQ(250,sr,_Q1),_lp250b=_mkBQ(250,sr,_Q2);
+    const _lp2000a=_mkBQ(2000,sr,_Q1),_lp2000b=_mkBQ(2000,sr,_Q2);
     const wf=new Array(pts);
     const CHUNK=Math.max(200,Math.floor(pts/30));
     const chCount=chans.length;
     for(let i=0;i<pts;i++){
-      const s0=i*step;let pl=0,pm=0,pp=0,ph=0,pk=0,mn=0,mx=0,sumSq=0;
+      const s0=i*step;let bandLow=0,bandMid=0,bandHi=0,mn=0,mx=0,sumSq=0;
       for(let j=0;j<step;j++){
         let s=0;
         for(let c=0;c<chCount;c++)s+=chans[c][s0+j]||0;
         s/=chCount;
         sumSq+=s*s; // RMS accumulator
-        const lp150=_bq(_lp150b,_bq(_lp150a,s));
-        const lp700=_bq(_lp700b,_bq(_lp700a,s));
-        const lp3500=_bq(_lp3500b,_bq(_lp3500a,s));
-        const bass=lp150, body=lp700-lp150, presence=lp3500-lp700, air=s-lp3500;
+        const lp250=_bq(_lp250b,_bq(_lp250a,s));
+        const lp2000=_bq(_lp2000b,_bq(_lp2000a,s));
+        const bass=lp250, body=lp2000-lp250, presence=s-lp2000;
         // PEAK per band (for color), RMS for height
-        const ab=Math.abs(bass),am=Math.abs(body),ap=Math.abs(presence),at=Math.abs(air);
-        if(ab>pl)pl=ab; if(am>pm)pm=am; if(ap>pp)pp=ap; if(at>ph)ph=at;
-        const amp=Math.abs(s);if(amp>pk)pk=amp;
+        const ab=Math.abs(bass),am=Math.abs(body),ap=Math.abs(presence);
+        if(ab>bandLow)bandLow=ab; if(am>bandMid)bandMid=am; if(ap>bandHi)bandHi=ap;
         if(s<mn)mn=s;if(s>mx)mx=s;
       }
       const rms=Math.sqrt(sumSq/step);
-      wf[i]={h:pk,mn,mx,r:pl,g:pm,b:pp,a:ph,rms};
+      const refLevel=0.5;
+      const l=Math.sqrt(Math.min(1,bandLow/refLevel));
+      const m=Math.sqrt(Math.min(1,bandMid/refLevel));
+      const hi=Math.sqrt(Math.min(1,bandHi/refLevel));
+      const amp=Math.max(l,m,hi);
+      wf[i]={h:amp,mn,mx,r:l,g:m,b:hi,a:0,rms};
       if(onChunk&&(i+1)%CHUNK===0){
         onChunk(i+1,wf);
         await new Promise(r=>setTimeout(r,0)); // yield to UI

@@ -592,6 +592,10 @@ vec3 gradientColor(vec4 amps, float yDist, float outerH, vec3 lowCol, vec3 bodyC
   return (lowCol * w.x + bodyCol * w.y + presCol * w.z + airCol * w.w) / wSum;
 }
 
+float displayPeak(float p) {
+  return pow(clamp(p, 0.0, 1.0), 1.18) * 0.76;
+}
+
 void main() {
   float W = u_res.x, H = u_res.y, midY = H * 0.5;
   float cX = u_centerX * W;
@@ -668,33 +672,31 @@ void main() {
       presCol = vec3(0.92, 0.68, 0.34);
       airCol = vec3(0.96, 0.97, 0.92);
     } else {
-      lowCol = vec3(0.05, 0.23, 0.42);
-      bodyCol = vec3(1.0, 0.42, 0.17);
-      presCol = vec3(0.95, 0.72, 0.32);
-      airCol = vec3(1.0, 0.94, 0.82);
+      lowCol = vec3(0.125, 0.325, 0.85);
+      bodyCol = vec3(0.95, 0.667, 0.235);
+      presCol = vec3(1.0, 1.0, 1.0);
+      airCol = vec3(1.0, 1.0, 1.0);
     }
     vec4 amps = vec4(max(B, 0.0), max(M, 0.0), max(T, 0.0), max(h, 0.0));
     col = gradientColor(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA);
     col *= mix(0.62, 1.15, smoothstep(0.08, 0.95, max(max(B, M), max(T, h))));
   } else {
-    // Mode A: Virtual rekordbox-style stacked 4-band, asymmetric envelope per column.
+    // Mode A: Virtual waveform uses signed min/max peaks for the actual silhouette.
     float bV = max(B, 0.0);
     float mV = max(M, 0.0);
     float pV = max(T, 0.0);
     float tV = max(wf.a, 0.0);
-    float bH = pow(bV, 0.87) * scale * sideF;
-    float mH = pow(mV, 0.87) * scale * sideF;
-    float pH = pow(pV, 0.87) * scale * sideF;
-    float tH = pow(tV, 0.87) * scale * 0.78 * sideF;
-    outerH = max(max(bH, mH), max(pH, tH));
     float AA = 1.0;
     float edgeAA = AA * 2.5;
-    float bMask = 1.0 - smoothstep(bH - edgeAA, bH + edgeAA, yDist);
-    float mMask = 1.0 - smoothstep(mH - edgeAA, mH + edgeAA, yDist);
-    float pMask = 1.0 - smoothstep(pH - edgeAA, pH + edgeAA, yDist);
-    float tMask = 1.0 - smoothstep(tH - edgeAA, tH + edgeAA, yDist);
-    inside = 1.0 - smoothstep(outerH - edgeAA, outerH + edgeAA, yDist);
-    if (inside < 0.005) { fragColor = BG; return; }
+    float topH = displayPeak(max(sh.x, 0.0)) * scale;
+    float botH = -displayPeak(max(-sh.y, 0.0)) * scale;
+    float spanH = max(topH - botH, 1.0);
+    outerH = spanH * 0.5;
+    float lower = smoothstep(botH - edgeAA, botH + edgeAA, yRel);
+    float upper = 1.0 - smoothstep(topH - edgeAA, topH + edgeAA, yRel);
+    inside = lower * upper;
+    float ridge = 1.0 - smoothstep(0.7, 3.8, min(abs(yRel - topH), abs(yRel - botH)));
+    if (inside < 0.005 && ridge < 0.005) { fragColor = BG; return; }
     vec3 lowCol = vec3(0.05, 0.23, 0.42);
     vec3 bodyCol = vec3(1.0, 0.42, 0.17);
     vec3 presCol = vec3(0.95, 0.72, 0.32);
@@ -706,9 +708,9 @@ void main() {
       airCol = vec3(0.96, 0.97, 0.92);
     }
     vec4 amps = vec4(bV, mV, pV, tV);
-    col = gradientColor(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA);
+    col = gradientColor(amps, yDist, max(max(abs(topH), abs(botH)), 1.0), lowCol, bodyCol, presCol, airCol, AA);
     col *= mix(0.60, 1.15, smoothstep(0.08, 0.95, max(max(bV, mV), max(pV, tV))));
-    inside = max(max(bMask, mMask), max(pMask, tMask));
+    inside = max(inside, ridge * 0.70);
   }
 
   fragColor = vec4(clamp(col, 0.0, 1.0) * inside, 1.0);
@@ -799,6 +801,10 @@ vec3 overviewGradient(vec4 amps, float yDist, float outerH, vec3 lowCol, vec3 bo
   return (lowCol * w.x + bodyCol * w.y + presCol * w.z + airCol * w.w) / wSum;
 }
 
+float displayPeak(float p) {
+  return pow(clamp(p, 0.0, 1.0), 1.18) * 0.76;
+}
+
 void main() {
   float W = u_res.x, H = u_res.y, midY = H * 0.5;
   float t = gl_FragCoord.x / W;
@@ -882,33 +888,31 @@ void main() {
       presCol = vec3(0.92, 0.68, 0.34);
       airCol = vec3(0.96, 0.97, 0.92);
     } else {
-      lowCol = vec3(0.05, 0.23, 0.42);
-      bodyCol = vec3(1.0, 0.42, 0.17);
-      presCol = vec3(0.95, 0.72, 0.32);
-      airCol = vec3(1.0, 0.94, 0.82);
+      lowCol = vec3(0.125, 0.325, 0.85);
+      bodyCol = vec3(0.95, 0.667, 0.235);
+      presCol = vec3(1.0, 1.0, 1.0);
+      airCol = vec3(1.0, 1.0, 1.0);
     }
     vec4 amps = vec4(max(B, 0.0), max(M, 0.0), max(T, 0.0), max(h, 0.0));
     col = overviewGradient(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA2);
     col *= mix(0.68, 1.10, smoothstep(0.08, 0.95, max(max(B, M), max(T, h))));
   } else {
-    // Virtual: rekordbox-style stacked 4-band, asymmetric envelope per column.
+    // Virtual: signed min/max peaks define the silhouette; bands only color it.
     float bV = max(B, 0.0);
     float mV = max(M, 0.0);
     float pV = max(T, 0.0);
     float tV = max(wf.a, 0.0);
-    float bH = pow(bV, 0.87) * scale * sideF;
-    float mH = pow(mV, 0.87) * scale * sideF;
-    float pH = pow(pV, 0.87) * scale * sideF;
-    float tH = pow(tV, 0.87) * scale * 0.78 * sideF;
-    outerH = max(max(bH, mH), max(pH, tH));
     float AA2 = 0.6;
     float edgeAA = AA2 * 2.5;
-    float bMask = 1.0 - smoothstep(bH - edgeAA, bH + edgeAA, yDist);
-    float mMask = 1.0 - smoothstep(mH - edgeAA, mH + edgeAA, yDist);
-    float pMask = 1.0 - smoothstep(pH - edgeAA, pH + edgeAA, yDist);
-    float tMask = 1.0 - smoothstep(tH - edgeAA, tH + edgeAA, yDist);
-    inside = 1.0 - smoothstep(outerH - edgeAA, outerH + edgeAA, yDist);
-    if (inside < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
+    float topH = displayPeak(max(sh.x, 0.0)) * scale;
+    float botH = -displayPeak(max(-sh.y, 0.0)) * scale;
+    float spanH = max(topH - botH, 1.0);
+    outerH = spanH * 0.5;
+    float lower = smoothstep(botH - edgeAA, botH + edgeAA, yRel);
+    float upper = 1.0 - smoothstep(topH - edgeAA, topH + edgeAA, yRel);
+    inside = lower * upper;
+    float ridge = 1.0 - smoothstep(0.7, 3.5, min(abs(yRel - topH), abs(yRel - botH)));
+    if (inside < 0.005 && ridge < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
     vec3 lowCol = vec3(0.05, 0.23, 0.42);
     vec3 bodyCol = vec3(1.0, 0.42, 0.17);
     vec3 presCol = vec3(0.95, 0.72, 0.32);
@@ -920,9 +924,9 @@ void main() {
       airCol = vec3(0.96, 0.97, 0.92);
     }
     vec4 amps = vec4(bV, mV, pV, tV);
-    col = overviewGradient(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA2);
+    col = overviewGradient(amps, yDist, max(max(abs(topH), abs(botH)), 1.0), lowCol, bodyCol, presCol, airCol, AA2);
     col *= mix(0.66, 1.10, smoothstep(0.08, 0.95, max(max(bV, mV), max(pV, tV))));
-    inside = max(max(bMask, mMask), max(pMask, tMask));
+    inside = max(inside, ridge * 0.70);
   }
 
   float dim = played ? 0.38 : 1.0;
