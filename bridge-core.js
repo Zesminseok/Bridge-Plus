@@ -2171,9 +2171,9 @@ class BridgeCore {
               this._joinInProgress=false;
               this._joinCompleted=true;
               console.log('[PDJL] bridge join sequence complete');
-              // join 완료 직후 keepalive/subscribe 한 번 즉시 전송
+              // join 완료 직후 54B keepalive 즉시 시작 (DJM identity 등록용)
+              // 0x57 subscribe는 54B 후 3초 대기 필요 — setTimeout(sendDjmSub, 9700) 에서 처리
               try{ sendAnn(); }catch(_){}
-              setTimeout(()=>{ try{ sendDjmSub(); }catch(_){} }, 200);
             }, 500);
           }
         }, helloEnd + (n-1)*CLAIM_GAP);
@@ -2206,7 +2206,7 @@ class BridgeCore {
       const pkt=Buffer.alloc(95);
       PDJL.MAGIC.copy(pkt,0);
       pkt[0x0A]=0x06;
-      Buffer.from('BRIDGE+\0\0\0\0\0\0\0\0','ascii').copy(pkt,0x0C,0,15);
+      Buffer.from('TCS-SHOWKONTROL','ascii').copy(pkt,0x0C,0,15);
       pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x23]=0x36;
       pkt[0x24]=spoofPlayer; // player=5
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
@@ -2621,18 +2621,9 @@ class BridgeCore {
       }
     }
     if(p.kind==='djm_probe20'){
-      // DJM sends rapid 0x20 bursts after receiving our 0x57 — handshake probe
-      // Respond immediately with our subscribe packet to complete the handshake
-      const now=Date.now();
-      if(!this._djm20LastResp || now-this._djm20LastResp > 400){
-        this._djm20LastResp=now;
-        if(!parsePDJL._probe20Logged){
-          parsePDJL._probe20Logged=true;
-          console.log(`[DJM] 0x20 probe from ${rinfo.address} seq=${p.seq} — responding with 0x57`);
-        }
-        const subPkt=buildDjmSubscribePacket(process.platform);
-        const sock=this._djmSubSockReady?this._djmSubSock:this._pdjlAnnSock;
-        if(sock){try{sock.send(subPkt,0,subPkt.length,50001,rinfo.address);}catch(_){}}
+      if(!parsePDJL._probe20Logged){
+        parsePDJL._probe20Logged=true;
+        console.log(`[DJM] 0x20 probe from ${rinfo.address} seq=${p.seq} (presence only)`);
       }
     }
     if(p.kind==='djm'){
