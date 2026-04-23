@@ -2978,9 +2978,8 @@ class BridgeCore {
       PDJL.MAGIC.copy(pkt, 0);
       pkt[0x0A] = PDJL.CDJ;   // 0x0A = CDJ status type
       pkt[0x0B] = 0x00;
-      // ROLLBACK: was 'BRIDGE-CLONE' — must match keepalive name for device identity
-      const nm = 'BRIDGE+';
-      Buffer.from(nm+'\0','ascii').copy(pkt, 0x0C, 0, Math.min(nm.length+1,20));
+      const nm = 'TCS-SHOWKONTROL';
+      Buffer.from(nm,'ascii').copy(pkt, 0x0C, 0, 15);
       // Header fields — Deep Symmetry spec: 0x20=subtype(0x03=CDJ), 0x21=deviceNum
       // ROLLBACK: was pkt[0x20]=0x01, pkt[0x21]=0x04
       pkt[0x20] = 0x03; pkt[0x21] = playerNum & 0xFF;
@@ -3019,19 +3018,21 @@ class BridgeCore {
       // prolink-connect: 0xB6 MUST be 1 (firmware version check bypass)
       pkt[0xB6] = 0x01;
 
-      const allBCs = [...new Set(
-        getAllInterfaces()
-          .filter(i=>!i.internal && i.broadcast && i.broadcast!=='127.255.255.255')
-          .map(i=>i.broadcast)
-          .concat(['255.255.255.255'])
-      )];
-      // Send to BOTH 50001 and 50002 — CDJ-3000 uses 50002, some older firmware uses 50001
-      for(const bc of allBCs){
-        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50002,bc);}catch(_){}
-        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,bc);}catch(_){}
-      }
-      // Also send to localhost for Arena running on the same machine
+      // Unicast only to Arena + localhost — broadcasting reaches DJM and causes
+      // identity conflict (same playerNum from two IPs) that makes DJM-900NXS2
+      // refuse 0x57 subscribe and never send 0x39 fader data.
       try{this._pdjlAnnSock.send(pkt,0,pkt.length,50002,'127.0.0.1');}catch(_){}
+      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,'127.0.0.1');}catch(_){}
+      const arenaIPs = new Set();
+      for(const n of Object.values(this.nodes||{})){
+        if(n?.ip && n.ip!=='127.0.0.1' && (n.name?.includes('Arena') || n.vendor?.includes('Resolume'))){
+          arenaIPs.add(n.ip);
+        }
+      }
+      for(const ip of arenaIPs){
+        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50002,ip);}catch(_){}
+        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,ip);}catch(_){}
+      }
       console.log(`[PDJL-VIRT] CDJ status P${playerNum} trackId=${trackId} bpm=${bpm||128} size=${pktSize}`);
     }catch(e){console.warn('[PDJL-VIRT] status send error:',e.message);}
   }
