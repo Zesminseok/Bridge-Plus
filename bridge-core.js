@@ -149,7 +149,7 @@ function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=proc
   return p;
 }
 
-function buildDjmSubscribePacket(platform=process.platform, deviceId=5, pdjlIP=null){
+function buildDjmSubscribePacket(platform=process.platform){
   const p=Buffer.alloc(40);
   PDJL.MAGIC.copy(p,0);
   p[0x0A]=0x57;
@@ -157,16 +157,12 @@ function buildDjmSubscribePacket(platform=process.platform, deviceId=5, pdjlIP=n
   p[0x1F]=0x00;
   p[0x20]=0x01;
   p[0x21]=0x00;
-  p[0x22]=deviceId&0xFF;
+  p[0x22]=0x01;
   p[0x23]=0x00;
   p[0x24]=platform==='darwin' ? 0xFE : 0x87;
   p[0x25]=0x00;
   p[0x26]=0x04;
   p[0x27]=0x01;
-  if(pdjlIP){
-    const ip=pdjlIP.split('.').map(Number);
-    for(let i=0;i<4;i++) p[0x28+i]=ip[i]||0;
-  }
   return p;
 }
 
@@ -546,7 +542,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
     if(!mkDataMetrics._dbg) mkDataMetrics._dbg={};
     if(!mkDataMetrics._dbg[layerIdx]){
       mkDataMetrics._dbg[layerIdx]=true;
-      console.log(`[METRICS] L${layerIdx} state=${d[3]} speed=${speedVal} bpm=${bpm} pos=${Math.round(curMs)}ms dur=${layerData.totalLength}ms track="${layerData.trackName||''}" artist="${layerData.artistName||''}"`);
+      // [METRICS] muted
     }
   }
 
@@ -1677,7 +1673,7 @@ class BridgeCore {
     }
     const isJpeg = jpegBuf[0]===0xFF && jpegBuf[1]===0xD8;
     const endOk = jpegBuf[jpegBuf.length-2]===0xFF && jpegBuf[jpegBuf.length-1]===0xD9;
-    console.log(`[TCNET-ART] L${layerIdx} sending ${packets.length} artwork packets (${jpegBuf.length}B) JPEG=${isJpeg} endFFD9=${endOk} hdr=[${jpegBuf[0].toString(16)},${jpegBuf[1].toString(16)}] → [${targets.join(', ')}] local=${this.isLocalMode}`);
+    // [TCNET-ART] muted
     for(const pkt of packets){
       this._sendDataToArenas(pkt);
     }
@@ -1760,7 +1756,7 @@ class BridgeCore {
       if(!this._stDbgLast || Date.now()-this._stDbgLast>1000){
         this._stDbgLast=Date.now();this._stDbg++;
         const ls=this.layers.map((l,i)=>l?`L${i+1}:st=${l.state},bpm=${l.bpm},tc=${l.timecodeMs}`:'null');
-        try{console.log(`[ST] layers: ${ls.join(' | ')} hwMode=[${this.hwMode.slice(0,4)}]`);}catch(_){}
+        // [ST] layers muted
       }
     }
     this._send(pkt, TC.P_BC);
@@ -2161,7 +2157,7 @@ class BridgeCore {
           if(!liveSession()||!this._pdjlAnnSock) return;
           const p=buildPdjlBridgeHelloPacket(spoofPlayer);
           for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
-          console.log(`[PDJL] bridge hello #${h+1}/2 bcs=[${allBCs.join(',')}]`);
+          // [PDJL] bridge hello muted
         }, h*HELLO_GAP);
       }
       for(let n=1;n<=CLAIM_N;n++){
@@ -2171,7 +2167,7 @@ class BridgeCore {
           for(const bc of allBCs){
             try{this._pdjlAnnSock.send(cp,0,cp.length,50000,bc);}catch(_){}
           }
-          console.log(`[PDJL] bridge claim #${n}/${CLAIM_N} broadcast`);
+          // [PDJL] bridge claim muted
           if(n===CLAIM_N){
             setTimeout(()=>{
               if(!liveSession()) return;
@@ -2250,7 +2246,7 @@ class BridgeCore {
     // DJM subscribe (0x57) — 반드시 전송해야 DJM이 0x39 fader data를 보냄
     // 전송 대상: DJM IP, 포트 50001 / 주기: 2초 / 첫 전송: keepalive 후 3초 딜레이
     const buildSubPkts=()=>{
-      return [buildDjmSubscribePacket(process.platform, spoofPlayer, pdjlIP)];
+      return [buildDjmSubscribePacket(process.platform)];
     };
     const sendBridgeNotifyToAll=()=>{
       if(!liveSession()) return;
@@ -2421,7 +2417,7 @@ class BridgeCore {
 
         if(trackChanged){
           this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false, initPos:0 };
-          try{console.log(`[TC] P${p.playerNum} track change: trackId=${p.trackId} hasTrack=${p.hasTrack} slot=${p.slot} trackType=${p.trackType} trackDeviceId=${p.trackDeviceId} ip=${rinfo?.address}`);}catch(_){}
+          // [TC] track change muted
           // 새 트랙에 이전 캐시 적용 금지: beat grid / 길이 / 정밀 위치 모두 무효화
           // (dbserver 응답이 오기 전까지 stale 값으로 timecodeMs 계산하면 UI가 점프로 인식)
           if(this._beatGrids) delete this._beatGrids[p.playerNum];
@@ -2443,7 +2439,7 @@ class BridgeCore {
             const srcDev = this.devices['cdj'+p.trackDeviceId];
             const _ip = srcDev?.ip || rinfo?.address;
             const _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum, _tt=p.trackType||1;
-            try{console.log(`[TC] P${p.playerNum} meta request → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
+            // [TC] meta request muted
             setTimeout(()=>this.requestMetadata(_ip, _slot, _tid, _pn, true, _tt), this._dbReady?100:3000);
             this._dbReady = true;
           }
@@ -2451,7 +2447,7 @@ class BridgeCore {
           acc.metaRequested = true;
           const srcDev = this.devices['cdj'+p.trackDeviceId];
           const _ip = srcDev?.ip || rinfo?.address;
-          try{console.log(`[TC] P${p.playerNum} metadata retry → device ${p.trackDeviceId} ip=${_ip}`);}catch(_){}
+          // [TC] metadata retry muted
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
         // ── Track length (권위 순위) ──
@@ -2637,7 +2633,7 @@ class BridgeCore {
           parsePDJL._probe20Logged=true;
           console.log(`[DJM] 0x20 probe from ${rinfo.address} seq=${p.seq} — responding with 0x57`);
         }
-        const subPkt=buildDjmSubscribePacket(process.platform, 5, this._currentPdjlIP||null);
+        const subPkt=buildDjmSubscribePacket(process.platform);
         const sock=this._djmSubSockReady?this._djmSubSock:this._pdjlAnnSock;
         if(sock){try{sock.send(subPkt,0,subPkt.length,50001,rinfo.address);}catch(_){}}
       }
@@ -2790,7 +2786,7 @@ class BridgeCore {
         if(!this._ppDbg)this._ppDbg={};
         if(!this._ppDbg[p.playerNum]){
           this._ppDbg[p.playerNum]=true;
-          console.log(`[PDJL] P${p.playerNum} Precise Position: ${p.playbackMs}ms, dur=${p.trackLengthSec}s, bpm=${p.bpmEffective}`);
+          // [PDJL] Precise Position muted
         }
         // precise_pos는 CDJ-3000 전용 — 길이 우선순위:
         //  1) 웨이브폼 디테일 길이 (rekordbox 분석 원본, 150 pts/sec)
@@ -2871,7 +2867,7 @@ class BridgeCore {
         const key = `cdj${pn}`;
         if(!this.devices[key]){
           this.devices[key]={type:'CDJ',playerNum:pn,name:p.name,ip:rinfo.address,lastSeen:Date.now()};
-          console.log(`[PDJL] CDJ keepalive P${pn}(${p.name})@${rinfo.address}`);
+          // [PDJL] CDJ keepalive muted
           this.onDeviceList?.(this.devices);
           // 자동 모드일 때 CDJ 서브넷 매칭으로 인터페이스 자동 선택
           this._autoSelectPdjlForRemote(rinfo.address);
@@ -3372,7 +3368,7 @@ class BridgeCore {
         const s=dev.state;
         const srcDev = this.devices['cdj'+s.trackDeviceId];
         const ip = srcDev?.ip || dev.ip;
-        console.log(`[DBSRV] refresh P${s.playerNum} trackId=${s.trackId} trackType=${s.trackType} → device ${s.trackDeviceId} ip=${ip}`);
+        // [DBSRV] refresh muted
         this.requestMetadata(ip, s.slot||3, s.trackId, s.playerNum, true, s.trackType||1);
       }
     }
@@ -3444,7 +3440,7 @@ class BridgeCore {
         else rej(new Error(`bad port response len=${d.length} hex=${d.toString('hex')}`));
       });
     });
-    console.log(`[DBSRV] ${ip} dbserver port=${realPort}`);
+    // [DBSRV] dbserver port muted
 
     // Step 2: connect to actual port + greeting
     const sock = new net2.Socket();
@@ -3461,7 +3457,7 @@ class BridgeCore {
     // Wait for greeting echo
     await new Promise((res,rej)=>{
       sock.once('data', d=>{
-        console.log(`[DBSRV] ${ip} greeting response: len=${d.length} hex=${d.toString('hex')}`);
+        // [DBSRV] greeting response muted
         if(d.length>=5 && d[0]===0x11) res();
         else rej(new Error(`bad greeting: ${d.toString('hex')}`));
       });
@@ -3470,10 +3466,10 @@ class BridgeCore {
 
     // Step 3: SETUP_REQ (type 0x0000, txId 0xfffffffe)
     const setupMsg = this._dbBuildMsg(0xfffffffe, 0x0000, [this._dbArg4(spoofPlayer)]);
-    console.log(`[DBSRV] ${ip} sending SETUP player=${spoofPlayer} msg=${setupMsg.toString('hex')}`);
+    // [DBSRV] SETUP muted
     sock.write(setupMsg);
     const setupResp = await this._dbReadResponse(sock);
-    console.log(`[DBSRV] ${ip} SETUP response: len=${setupResp.length} hex=${setupResp.slice(0,40).toString('hex')}`);
+    // [DBSRV] SETUP response muted
 
     return sock;
   }
@@ -3593,10 +3589,8 @@ class BridgeCore {
       const txId = 1;
       const rmst = this._dbRMST(spoofPlayer, 0x01, slot, tt);
       const metaReq = this._dbBuildMsg(txId, 0x2002, [rmst, this._dbArg4(trackId)]);
-      console.log(`[DBSRV] P${playerNum} META_REQ: slot=${slot} trackId=${trackId} trackType=${tt} rmst=0x${((spoofPlayer<<24)|(0x01<<16)|(slot<<8)|tt).toString(16)}`);
       sock.write(metaReq);
       const menuAvail = await this._dbReadResponse(sock);
-      console.log(`[DBSRV] P${playerNum} META_RESP: ${menuAvail.length}B hex=${menuAvail.slice(0,40).toString('hex')}`);
       // Send RENDER_MENU_REQ (type 0x3000) to get all items
       // CRITICAL: must use txId+1 (different from metadata req) — CDJ requires sequential txIds
       const renderReq = this._dbBuildMsg(txId+1, 0x3000, [
@@ -3608,8 +3602,8 @@ class BridgeCore {
 
       // Parse menu items
       const items = this._dbParseItems(fullResp);
-      console.log(`[DBSRV] P${playerNum} render resp: ${fullResp.length}B, items=${items.length}`);
-      if(items.length===0) console.log(`[DBSRV] P${playerNum} render 0 items, hex(80): ${fullResp.slice(0,80).toString('hex')}`);
+      // [DBSRV] render resp muted
+      // [DBSRV] render 0 items muted
       const meta = {};
       for(const item of items){
         if(item.msgType===0x4101){
@@ -3618,11 +3612,7 @@ class BridgeCore {
           const label1 = item.args[3]?.val || '';
           const label2 = item.args[5]?.val || '';
           // Debug: dump first occurrence of each item type
-          if(!this._dbgItemTypes) this._dbgItemTypes={};
-          if(!this._dbgItemTypes[itemType]){
-            this._dbgItemTypes[itemType]=true;
-            console.log(`[DBSRV] itemType=0x${itemType.toString(16)} label1="${label1}" label2="${label2}" args[1]=${item.args[1]?.val}`);
-          }
+          // itemType debug muted
           switch(itemType){
             case 0x0004: meta.title=label1; meta.artworkId=item.args[8]?.val||0; break;
             case 0x0007: meta.artist=label1||label2; break;  // try label2 as fallback
@@ -3634,7 +3624,7 @@ class BridgeCore {
           }
         }
       }
-      console.log(`[DBSRV] P${playerNum} metadata:`, JSON.stringify(meta));
+      // [DBSRV] metadata muted
 
       // Store metadata into layer so TCNet DATA packets include it
       const li = playerNum - 1;
@@ -3643,7 +3633,7 @@ class BridgeCore {
         if(meta.artist) this.layers[li].artistName = meta.artist;
         // Invalidate MetaData packet cache so it gets rebuilt with new names
         if(this._metaCache && this._metaCache[li]) this._metaCache[li] = null;
-        console.log(`[DBSRV] P${playerNum} stored metadata → layer ${li}: "${meta.title}" / "${meta.artist}"`);
+        // [DBSRV] stored metadata muted
       }
 
       // Emit metadata — include durationMs (precise ms) so renderer can skip integer*1000 conversion
@@ -3717,9 +3707,9 @@ class BridgeCore {
           pts.push({height:wfData[i]&0x1F, color:(wfData[i]>>5)&0x07});
         }
         this.onWaveformPreview?.(playerNum, {seg:0, pts, wfType:'preview'});
-        console.log(`[DBSRV] P${playerNum} waveform preview: ${pts.length} points`);
+        // [DBSRV] waveform preview muted
       } else {
-        console.log(`[DBSRV] P${playerNum} waveform: no data in ${wfResp.length}B resp`);
+        // [DBSRV] waveform no data muted
       }
     }finally{try{sock?.destroy();}catch(_){}}
   }
@@ -3759,9 +3749,9 @@ class BridgeCore {
         this._wfTrackLen = this._wfTrackLen || {};
         this._wfTrackLen[playerNum] = Math.round(pts.length * 1000 / 150);
         this.onWaveformDetail?.(playerNum, {pts, wfType:'detail', trackLenMs:this._wfTrackLen[playerNum]});
-        console.log(`[DBSRV] P${playerNum} waveform detail: ${pts.length} pts (${(pts.length/150).toFixed(3)}s, ${this._wfTrackLen[playerNum]}ms)`);
+        // [DBSRV] waveform detail muted
       } else {
-        console.log(`[DBSRV] P${playerNum} waveform detail: no data in ${wfResp?.length||0}B`);
+        // [DBSRV] waveform detail no data muted
       }
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message);
@@ -3795,7 +3785,7 @@ class BridgeCore {
         }
       }
       if(!anlzData||anlzData.length<20){
-        console.log(`[DBSRV] P${playerNum} nxs2 waveform: no ANLZ data`);
+        // [DBSRV] nxs2 waveform no ANLZ muted
         return;
       }
       // Parse ANLZ tag structure — find PWV7 tag
@@ -3820,14 +3810,14 @@ class BridgeCore {
               });
             }
             this.onWaveformDetail?.(playerNum, {pts, wfType:'nxs2_3band'});
-            console.log(`[DBSRV] P${playerNum} NXS2 PWV7 waveform: ${entries} entries (${Math.round(entries/150)}s)`);
+            // [DBSRV] NXS2 PWV7 waveform muted
             return;
           }
         }
         if(tTL===0)break;
         pos+=tTL;
       }
-      console.log(`[DBSRV] P${playerNum} nxs2 waveform: PWV7 tag not found in ${anlzData.length}B`);
+      // [DBSRV] nxs2 waveform PWV7 not found muted
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} nxs2 waveform failed:`,e.message);
     }finally{try{sock?.destroy();}catch(_){}}
@@ -3844,9 +3834,9 @@ class BridgeCore {
       const hot=cues.filter(c=>c.type==='hot').length;
       const mem=cues.filter(c=>c.type==='memory').length;
       const lp=cues.filter(c=>c.type==='loop').length;
-      console.log(`[DBSRV] P${playerNum} cue points: ${cues.length} (${hot} hot, ${mem} memory, ${lp} loop)`);
+      // [DBSRV] cue points muted
     } else {
-      console.log(`[DBSRV] P${playerNum} cue points: none found`);
+      // [DBSRV] cue points none muted
     }
   }
 
@@ -3877,7 +3867,7 @@ class BridgeCore {
         }
       }
       if(!anlzData||anlzData.length<20){
-        console.log(`[DBSRV] P${playerNum} PCO2: no ANLZ data in ${resp.length}B`);
+        // [DBSRV] PCO2 no ANLZ muted
         return null;
       }
       // Parse ANLZ tag structure — find PCO2 tag
@@ -3939,7 +3929,7 @@ class BridgeCore {
             cues.push(cue);
             ePos+=eTL;
           }
-          console.log(`[DBSRV] P${playerNum} PCO2: ${cues.length} cue entries parsed`);
+          // [DBSRV] PCO2 cue entries muted
           return cues;
         }
         if(tTL===0)break;
@@ -3976,13 +3966,13 @@ class BridgeCore {
             });
             ePos+=eTL;
           }
-          console.log(`[DBSRV] P${playerNum} PCOB fallback: ${cues.length} cues`);
+          // [DBSRV] PCOB fallback muted
           return cues;
         }
         if(tTL===0)break;
         pos+=tTL;
       }
-      console.log(`[DBSRV] P${playerNum} PCO2/PCOB tag not found`);
+      // [DBSRV] PCO2/PCOB tag not found muted
       return null;
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} PCO2 cue points failed:`,e.message);
@@ -4083,12 +4073,12 @@ class BridgeCore {
             this._bgTrackLen[playerNum] = Math.round(lastB.timeMs + 60000/estBpm);
           }
           this.onBeatGrid?.(playerNum, {beats, baseBpm});
-          console.log(`[DBSRV] P${playerNum} beat grid: ${beats.length} beats, baseBpm=${baseBpm}, estLen=${this._bgTrackLen?.[playerNum]||0}ms`);
+          // [DBSRV] beat grid muted
         } else {
-          console.log(`[DBSRV] P${playerNum} beat grid: no entries in ${bgData.length}B`);
+          // [DBSRV] beat grid no entries muted
         }
       } else {
-        console.log(`[DBSRV] P${playerNum} beat grid: no data in ${resp?.length||0}B resp`);
+        // [DBSRV] beat grid no data muted
       }
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} beat grid failed:`,e.message);
@@ -4121,7 +4111,7 @@ class BridgeCore {
         }
       }
       if(!anlzData || anlzData.length<40){
-        console.log(`[DBSRV] P${playerNum} song structure: no ANLZ data (${resp?.length||0}B resp)`);
+        // [DBSRV] song structure no ANLZ muted
         return;
       }
       // ANLZ 태그 리스트 순회 → PSSI 섹션 위치 찾기
@@ -4136,7 +4126,7 @@ class BridgeCore {
         pos+=tTL;
       }
       if(pssiStart<0){
-        console.log(`[DBSRV] P${playerNum} song structure: PSSI tag absent (track not analyzed by rekordbox?)`);
+        // [DBSRV] song structure PSSI absent muted
         return;
       }
       const body = anlzData.slice(pssiStart, pssiEnd);
@@ -4153,7 +4143,7 @@ class BridgeCore {
       // 26:  u2 padding
       // 28:  entries[ ] 24B each
       if(body.length<32){
-        console.log(`[DBSRV] P${playerNum} song structure: body too short (${body.length}B)`);
+        // [DBSRV] song structure body too short muted
         return;
       }
       const hiMood = body.readUInt16BE(16);
@@ -4162,11 +4152,11 @@ class BridgeCore {
       const endBeat = body.readUInt16BE(22);
       const entriesStart = 28;
       if(entryCount<=0 || entryCount>300){
-        console.log(`[DBSRV] P${playerNum} song structure: invalid count=${entryCount}`);
+        // [DBSRV] song structure invalid count muted
         return;
       }
       if(entriesStart + entryCount*24 > body.length){
-        console.log(`[DBSRV] P${playerNum} song structure: body cut (${body.length}B vs need ${entriesStart+entryCount*24})`);
+        // [DBSRV] song structure body cut muted
         return;
       }
       // XOR 난독화 (raw_mood > 20 일 때)
@@ -4214,7 +4204,7 @@ class BridgeCore {
         this._songStructures = this._songStructures || {};
         this._songStructures[playerNum] = { phrases:valid, endMs, mood:hiMood };
         this.onSongStructure?.(playerNum, { phrases:valid, endMs, mood:hiMood });
-        console.log(`[DBSRV] P${playerNum} song structure: ${valid.length} phrases, mood=${hiMood}, endBeat=${endBeat}, endMs=${endMs}`);
+        // [DBSRV] song structure phrases muted
       }
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} song structure failed:`,e.message);
@@ -4263,7 +4253,7 @@ class BridgeCore {
       const artReq = this._dbBuildMsg(1, 0x2003, [artRmst, this._dbArg4(artworkId)]);
       sock.write(artReq);
       const artResp = await this._dbReadFullResponse(sock);
-      console.log(`[DBSRV] P${playerNum} artwork resp: ${artResp.length}B`);
+      // [DBSRV] artwork resp muted
       // Find JPEG or PNG
       let imgStart = artResp.indexOf(Buffer.from([0xFF,0xD8]));
       let imgEnd = imgStart>=0 ? artResp.lastIndexOf(Buffer.from([0xFF,0xD9])) : -1;
@@ -4277,11 +4267,11 @@ class BridgeCore {
         const b64 = `data:${mime};base64,` + img.toString('base64');
         this._artCache[cacheKey] = b64;
         this.onAlbumArt?.(playerNum, b64);
-        console.log(`[DBSRV] P${playerNum} artwork: ${img.length}B ${mime}`);
+        // [DBSRV] artwork muted
         // Store in virtual dbserver — Arena fetches via ProDJ Link dbserver protocol
         this.setVirtualArt(playerNum-1, img);
       } else {
-        console.log(`[DBSRV] P${playerNum} artwork: no image in ${artResp.length}B`);
+        // [DBSRV] artwork no image muted
       }
     }finally{try{sock?.destroy();}catch(_){}}
   }
