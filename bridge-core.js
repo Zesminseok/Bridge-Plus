@@ -152,17 +152,14 @@ function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=proc
 function buildDjmSubscribePacket(platform=process.platform){
   const p=Buffer.alloc(40);
   PDJL.MAGIC.copy(p,0);
-  p[0x0A]=0x57;
-  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0B,0,15);
-  p[0x1F]=0x00;
-  p[0x20]=0x01;
-  p[0x21]=0x00;
-  p[0x22]=0x01;
-  p[0x23]=0x00;
-  p[0x24]=platform==='darwin' ? 0xFE : 0x87;
-  p[0x25]=0x00;
-  p[0x26]=0x04;
-  p[0x27]=0x01;
+  p[10]=0x57;
+  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,11,0,15);
+  p[31]=0x01;
+  p[32]=0x00;
+  p[33]=platform==='darwin' ? 0xFE : 0x87;
+  p[34]=0x00;
+  p[35]=0x04;
+  p[36]=0x01;
   return p;
 }
 
