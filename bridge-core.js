@@ -17,7 +17,7 @@ const fs    = require('fs');
 // ─────────────────────────────────────────────
 const TC = {
   MAGIC : Buffer.from('TCN'),
-  VER   : Buffer.from([0x03, 0x06]),  // TCNet V3.5.1B spec: protocol wire version 3.6
+  VER   : Buffer.from([0x03, 0x05]),  // TCNet V3.5 wire version used by Arena
   OPTIN : 0x02, OPTOUT: 0x03, STATUS: 0x05,
   DATA  : 0xC8, TIME  : 0xFE,  APP   : 0x1E,
   ARTWORK: 0xCC, // MessageType 204 = LowResArtwork (JPEG)
@@ -83,6 +83,109 @@ const PDJL = {
   DJM_ONAIR:0x03,  // DJM Channels On-Air (port 50001, 45B)
   DJM_METER:0x58,  // DJM VU Metering (port 50001, 524B)
 };
+
+function pdjlBridgeAnnounceId(platform=process.platform){
+  return platform==='darwin' ? 0xF9 : 0xC1;
+}
+
+function pdjlIdentityByteFromMac(mac, platform=process.platform){
+  return pdjlBridgeAnnounceId(platform);
+}
+
+function buildPdjlBridgeHelloPacket(deviceId=5){
+  const p=Buffer.alloc(37);
+  PDJL.MAGIC.copy(p,0);
+  p[0x0A]=0x0A;
+  p[0x0B]=0x00;
+  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
+  p[0x20]=0x01;
+  p[0x21]=0x01;
+  p[0x22]=0x00;
+  p[0x23]=0x25;
+  p[0x24]=deviceId&0xFF;
+  return p;
+}
+
+function buildPdjlBridgeClaimPacket(annIP, annMAC, seqN=1, deviceId=5, platform=process.platform){
+  const cIP=String(annIP||'0.0.0.0').split('.').map(Number);
+  const cMAC=String(annMAC||'00:00:00:00:00:00').split(':').map(h=>parseInt(h,16));
+  const p=Buffer.alloc(50);
+  PDJL.MAGIC.copy(p,0);
+  p[0x0A]=0x02;
+  p[0x0B]=0x00;
+  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
+  p[0x20]=0x01;
+  p[0x21]=0x01;
+  p[0x22]=0x00;
+  p[0x23]=0x32;
+  for(let i=0;i<4;i++) p[0x24+i]=cIP[i]||0;
+  for(let i=0;i<6;i++) p[0x28+i]=cMAC[i]||0;
+  p[0x2E]=((cMAC[5]||0) ^ ((seqN*3+0xFB)&0xFF)) & 0xFF;
+  p[0x2F]=seqN&0xFF;
+  p[0x30]=platform==='darwin' ? (deviceId&0xFF) : 0xC0;
+  p[0x31]=0x00;
+  return p;
+}
+
+function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=process.platform){
+  const aIP=String(annIP||'0.0.0.0').split('.').map(Number);
+  const aMAC=String(annMAC||'00:00:00:00:00:00').split(':').map(h=>parseInt(h,16));
+  const p=Buffer.alloc(54);
+  PDJL.MAGIC.copy(p,0);
+  p[0x0A]=0x06;
+  p[0x0B]=0x00;
+  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
+  p[0x20]=0x01;
+  p[0x21]=0x01;
+  p[0x22]=0x00;
+  p[0x23]=0x36;
+  p[0x24]=pdjlIdentityByteFromMac(annMAC, platform);
+  p[0x25]=0x00;
+  for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
+  for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
+  p[0x30]=0x03;
+  p[0x34]=deviceId&0xFF;
+  p[0x35]=0x20;
+  return p;
+}
+
+function buildDjmSubscribePacket(platform=process.platform, deviceId=5, pdjlIP=null){
+  const p=Buffer.alloc(40);
+  PDJL.MAGIC.copy(p,0);
+  p[0x0A]=0x57;
+  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0B,0,15);
+  p[0x1F]=0x00;
+  p[0x20]=0x01;
+  p[0x21]=0x00;
+  p[0x22]=deviceId&0xFF;
+  p[0x23]=0x00;
+  p[0x24]=platform==='darwin' ? 0xFE : 0x87;
+  p[0x25]=0x00;
+  p[0x26]=0x04;
+  p[0x27]=0x01;
+  if(pdjlIP){
+    const ip=pdjlIP.split('.').map(Number);
+    for(let i=0;i<4;i++) p[0x28+i]=ip[i]||0;
+  }
+  return p;
+}
+
+function buildBridgeNotifyPacket(deviceId=5){
+  const p=Buffer.alloc(44);
+  PDJL.MAGIC.copy(p,0);
+  p[0x0A]=0x55;
+  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0B,0,15);
+  p[31]=0x01;
+  p[32]=0x00;
+  p[33]=0x8B;
+  p[34]=0x08;
+  p[39]=0x01;
+  p[40]=deviceId&0xFF;
+  p[41]=0x01;
+  p[42]=0x03;
+  p[43]=0x01;
+  return p;
+}
 
 // ─────────────────────────────────────────────
 // Utilities
@@ -152,6 +255,19 @@ function getAllInterfaces(){
   return result;
 }
 
+function interfaceSignature(ifaces){
+  return (ifaces||[])
+    .map(i=>`${i.name}|${i.address}|${i.netmask}`)
+    .sort()
+    .join(';');
+}
+
+function sanitizeInterfaceSelection(selected, ifaces){
+  if(!selected || selected==='auto' || selected==='0.0.0.0') return null;
+  if(selected==='127.0.0.1') return '127.0.0.1';
+  return (ifaces||[]).some(i=>i.address===selected) ? selected : null;
+}
+
 function detectBroadcastFor(bindAddr){
   if(!bindAddr||bindAddr==='auto'||bindAddr==='0.0.0.0'){
     for(const iface of getAllInterfaces())
@@ -162,6 +278,17 @@ function detectBroadcastFor(bindAddr){
   for(const iface of getAllInterfaces())
     if(iface.address===bindAddr) return iface.broadcast;
   return '255.255.255.255';
+}
+
+function pdjlBroadcastTargets(bindAddr){
+  const iface = getAllInterfaces().find(i=>!i.internal && i.address===bindAddr && i.broadcast && i.broadcast!=='127.255.255.255');
+  if(iface) return [iface.broadcast, '255.255.255.255'];
+  return [...new Set(
+    getAllInterfaces()
+      .filter(i=>!i.internal && i.broadcast && i.broadcast!=='127.255.255.255')
+      .map(i=>i.broadcast)
+      .concat(['255.255.255.255'])
+  )];
 }
 
 function hasPDJLMagic(msg){
@@ -225,11 +352,11 @@ function mkStatus(port, devices, layers, faders, hwMode){
   d.writeUInt16LE(nc||1, 0);
   d.writeUInt16LE(port||0, 2);     // nodeListenerPort
 
-  // layerSource[0-7] at body[8-15] — matches official Bridge offset
+  // layerSource[0-7] at body[10-17] — TCNet absolute byte 34..41
   for(let n=0;n<8;n++){
     const hasLayer = layers && layers[n];
     const isHW = hwMode && hwMode[n];
-    d[8+n] = (hasLayer || isHW) ? (n+1) : 0;
+    d[10+n] = (hasLayer || isHW) ? (n+1) : 0;
   }
 
   // layerStatus[0-7] at body[18-25] — raw TCNetLayerStatus (0=IDLE,3=PLAYING,5=PAUSED,6=STOPPED)
@@ -453,14 +580,15 @@ function mkMixerData(faders, mixerName, mixer){
     d[off]   = ch + 1;                                  // Source Select (1-4)
     d[off+1] = faders?.[ch] != null ? faders[ch] : 0;  // Audio Level (fader 0-255)
     d[off+2] = faders?.[ch] != null ? faders[ch] : 0;  // Fader Level
-    // Trim from EQ index 0 (128=0dB), fallback to 200
-    d[off+3] = mixer?.eq?.[ch]?.[0] != null ? mixer.eq[ch][0] : 200;
-    // EQ Hi/Mid/Lo from DJM 0x39 (128=center)
-    d[off+4] = mixer?.eq?.[ch]?.[1] != null ? mixer.eq[ch][1] : 128;  // HI
-    d[off+5] = mixer?.eq?.[ch]?.[2] != null ? mixer.eq[ch][2] : 128;  // MID
-    d[off+6] = mixer?.eq?.[ch]?.[3] != null ? mixer.eq[ch][3] : 128;  // LOW
-    // XF Assign (0=THRU, 1=A, 2=B)
-    d[off+7] = mixer?.xfAssign?.[ch] != null ? mixer.xfAssign[ch] : 0;
+    // TCNet V3.5 channel block: source, audio, fader, trim, comp, hi, mid,
+    // lo-mid, low, color/send/cue placeholders, xf assign.
+    d[off+3]  = mixer?.eq?.[ch]?.[0] != null ? mixer.eq[ch][0] : 200;  // TRIM
+    d[off+4]  = 0;                                                       // COMP / reserved
+    d[off+5]  = mixer?.eq?.[ch]?.[1] != null ? mixer.eq[ch][1] : 128;   // HI
+    d[off+6]  = mixer?.eq?.[ch]?.[2] != null ? mixer.eq[ch][2] : 128;   // MID
+    d[off+7]  = 0;                                                       // LO-MID / reserved
+    d[off+8]  = mixer?.eq?.[ch]?.[3] != null ? mixer.eq[ch][3] : 128;   // LOW
+    d[off+13] = mixer?.xfAssign?.[ch] != null ? mixer.xfAssign[ch] : 0; // XF Assign
   }
   return b;
 }
@@ -581,9 +709,9 @@ function parsePDJL(msg){
     // Playback position fraction 0x48-0x4B (prolink-connect confirmed): uint32BE / 1000 = 0.0~1.0
     // Available on CDJ-2000NXS2 and CDJ-3000 — gives absolute position for any track including BPM-less
     const posFracRaw = msg.length>0x4B ? msg.readUInt32BE(0x48) : 0;
-    // CDJ-3000/NXS2 모두 pcap에서 0x48=0 확인됨 → beatNum/trackBeats 비율로 폴백
-    const positionFraction = (posFracRaw>0 && posFracRaw<=1000) ? posFracRaw/1000
-      : (trackBeats>0 && beatNum>0 && beatNum<=trackBeats) ? beatNum/trackBeats : 0;
+    // Do not synthesize a fraction from beatNum/trackBeats on NXS2: 0xB4 is not a
+    // reliable total-duration field across captures, and creates timeline drift/jumps.
+    const positionFraction = (posFracRaw>0 && posFracRaw<=1000) ? posFracRaw/1000 : 0;
     // Flags byte F at 0x89 (Deep Symmetry spec):
     //   bit 6 = playing, bit 5 = master, bit 4 = sync, bit 3 = on-air
     const flags = msg.length>0x89 ? msg[0x89] : 0;
@@ -806,14 +934,12 @@ function parsePDJL(msg){
       //   각 페어 내 두 바이트는 X-Fader A/B assign 또는 단독 on-air 비트 (DJM 내부 상태)
       //   페어 OR로 "채널 활성" 판정 → 단일 바이트만 읽으면 CH4 깜빡임 발생(이전 버그)
 
-      // ── FADER HUNT: log ALL bytes in packet, track any variation ──
-      // We're looking for analog fader values (0-255 range) beyond the binary on-air flags
-      if(!parsePDJL._djm03First){
+      // Optional packet-diff diagnostics for DJM 0x03 on-air packets.
+      if(process.env.BRIDGE_DJM03_DEBUG && !parsePDJL._djm03First){
         parsePDJL._djm03First=true;
         const hex=Array.from(msg).map((b,i)=>`[0x${i.toString(16).padStart(2,'0')}]=0x${b.toString(16).padStart(2,'0')}`).join(' ');
         console.log(`[DJM-0x03] FULL DUMP len=${msg.length}: ${hex}`);
       }
-      // Track any byte that changes value — indicates potential fader/level data
       if(!parsePDJL._djm03Baseline) parsePDJL._djm03Baseline=Buffer.from(msg);
       else {
         const changed=[];
@@ -822,9 +948,11 @@ function parsePDJL(msg){
             changed.push(`0x${i.toString(16)}:${parsePDJL._djm03Baseline[i]}→${msg[i]}`);
           }
         }
-        if(changed.length){
+        if(process.env.BRIDGE_DJM03_DEBUG && changed.length){
           parsePDJL._djm03Baseline=Buffer.from(msg);
           console.log(`[DJM-0x03] BYTE CHANGE: ${changed.join(' ')}`);
+        }else if(changed.length){
+          parsePDJL._djm03Baseline=Buffer.from(msg);
         }
       }
 
@@ -942,6 +1070,11 @@ function parsePDJL(msg){
   if(msg.length>=0x1B){
     const devName=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
     if(devName.includes('DJM')){
+      if(type===0x20){
+        // DJM-900NXS2 sends 0x20 in response to 0x57 subscribe — handshake probe
+        const seqCounter = msg.length>0x28 ? msg[0x28] : 0;
+        return{kind:'djm_probe20',name:devName,type,seq:seqCounter,rawLen:msg.length};
+      }
       if(!parsePDJL._unkDjm)parsePDJL._unkDjm={};
       const uk=type+'_'+msg.length;
       if(!parsePDJL._unkDjm[uk]){
@@ -965,6 +1098,23 @@ const BLANK_JPEG = (() => {
     return Buffer.from('/9j/4AAQSkZJRgABAgAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6ery8/T19vf4+fr/xAAfAQADAQEBAQEBAQEBAAAAAAAAAQIDBAUGBwgJCgv/xAC1EQACAQIEBAMEBwUEBAABAncAAQIDEQQFITEGEkFRB2FxEyIygQgUQpGhscEJIzNS8BVictEKFiQ04SXxFxgZGiYnKCkqNTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2dri4+Tl5ufo6ery8/T19vf4+fr/2gAMAwEAAhEDEQA/AP0poA//2Q==', 'base64');
   }
 })();
+
+function nxs2BeatCountToMs(beatCount, bpm){
+  const bn = Number(beatCount) || 0;
+  const b = Number(bpm) || 0;
+  if(!(bn > 0) || !(b > 0)) return 0;
+  return Math.round(bn * 60000 / b);
+}
+
+function shouldKeepPredictedBeatAnchor(predictedMs, beatMs, bpm, isReverse=false){
+  const predicted = Number(predictedMs) || 0;
+  const anchored = Number(beatMs) || 0;
+  const trackBpm = Number(bpm) || 0;
+  if(!(predicted > 0) || !(anchored > 0) || isReverse) return false;
+  const delta = Math.abs(anchored - predicted);
+  const halfBeatMs = trackBpm > 0 ? Math.max(120, 30000 / trackBpm) : 250;
+  return delta < halfBeatMs;
+}
 
 // BridgeCore
 // ─────────────────────────────────────────────
@@ -1344,6 +1494,14 @@ class BridgeCore {
 
   // 원격 장비(CDJ/DJM) 최초 발견 시 해당 서브넷과 매칭되는 로컬 인터페이스로 자동 전환.
   // 사용자가 수동으로 인터페이스를 선택한 경우 무시. 한 번 매칭되면 _autoPdjlLocked 로 중복 전환 방지.
+  async handleInterfacesChanged(ifaces){
+    if(!this.running) return;
+    console.log(`[NET] interfaces changed (${(ifaces||[]).length} ifaces) — refreshing PDJL`);
+    if(!this.pdjlBindAddr || this.pdjlBindAddr==='auto' || this.pdjlBindAddr==='0.0.0.0'){
+      this._startPDJLAnnounce();
+    }
+  }
+
   _autoSelectPdjlForRemote(remoteIp){
     if(!this.running || this.isLocalMode) return;
     if(this.pdjlBindAddr && this.pdjlBindAddr!=='auto' && this.pdjlBindAddr!=='0.0.0.0') return;
@@ -1374,6 +1532,16 @@ class BridgeCore {
       this._autoPdjlLocked = false;
     }
     console.log(`[PDJL] rebind ${prev||'auto'} → ${newAddr||'auto'}`);
+    // Invalidate delayed join/subscribe callbacks from the previous PDJL session.
+    this._pdjlAnnounceSession = (this._pdjlAnnounceSession||0) + 1;
+    this._joinCompleted = false;
+    for(const key of ['_djmRetryTimer','_djmSubTimer','_djmWatchTimer','_bridgeNotifyTimer']){
+      if(this[key]){ try{clearInterval(this[key]);}catch(_){} this[key]=null; }
+    }
+    this._joinInProgress=false;
+    this._djmJoinPending=false;
+    if(this._djmSubSock){ try{this._djmSubSock.close();}catch(_){} this._djmSubSock=null; }
+    this._djmSubSockReady=false;
 
     // Close existing PDJL sockets
     if(this._pdjlAnnSock && !this._pdjlSockets?.includes(this._pdjlAnnSock)){
@@ -1646,19 +1814,23 @@ class BridgeCore {
       try{ this.txSocket?.send(mkAppResp(this.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
     }
     // 0x14 MetadataRequest — Arena asks for track metadata on a layer
-    // body: [layer(1-based), reqType(1-8)]; reply with MetaData + MetricsData
+    // body: [dataType, layer(1-based)]; reply with requested Data payload.
     if(type===0x14){
       const body = msg.slice(TC.H);
-      const layerReq = body.length>=1 ? body[0] : 0;  // 1-based
-      const reqType = body.length>=2 ? body[1] : 0;
+      const reqType = body.length>=1 ? body[0] : 0;
+      const layerReq = body.length>=2 ? body[1] : 0;  // 1-based
       const li = layerReq - 1;  // convert to 0-indexed
       const layerData = (li >= 0 && li < this.layers.length) ? this.layers[li] : null;
       // MetaReq logs suppressed (too frequent)
-      const metaPkt = mkDataMeta(layerReq, layerData);
-      this._uc(metaPkt, rinfo.port, rinfo.address);
       const faderVal = this.faders ? (this.faders[li] || 0) : 0;
-      const metricsPkt = mkDataMetrics(layerReq, layerData, faderVal);
-      this._uc(metricsPkt, rinfo.port, rinfo.address);
+      if(reqType===TC.DT_META){
+        this._uc(mkDataMeta(layerReq, layerData), rinfo.port, rinfo.address);
+      }else if(reqType===TC.DT_METRICS){
+        this._uc(mkDataMetrics(layerReq, layerData, faderVal), rinfo.port, rinfo.address);
+      }else{
+        this._uc(mkDataMeta(layerReq, layerData), rinfo.port, rinfo.address);
+        this._uc(mkDataMetrics(layerReq, layerData, faderVal), rinfo.port, rinfo.address);
+      }
       // MetaResp log suppressed (too frequent, causes FPS drop)
     }
     // 0xC8 Data Packet — parse incoming MixerData (DataType 150) for VU meters
@@ -1887,6 +2059,8 @@ class BridgeCore {
   // Pro DJ Link keep-alive announcement on 50000
   // CDJs only send status to devices they see on the network
   _startPDJLAnnounce(){
+    const annSession = (this._pdjlAnnounceSession = (this._pdjlAnnounceSession||0) + 1);
+    const liveSession = () => this.running && this._pdjlAnnounceSession===annSession;
     // Determine the "primary" IP to embed in the PDJL keepalive packet.
     // CDJs use this IP to identify us on the network.
     // Priority: 1) pdjlBindAddr (user selected), 2) localAddr, 3) any available (including link-local)
@@ -1919,12 +2093,7 @@ class BridgeCore {
     this._currentPdjlIP = pdjlIP;
 
     // Collect ALL non-internal broadcast addresses so every subnet (including Arena's) receives the keepalive
-    const allBCs = [...new Set(
-      getAllInterfaces()
-        .filter(i=>!i.internal && i.broadcast && i.broadcast!=='127.255.255.255')
-        .map(i=>i.broadcast)
-        .concat(['255.255.255.255'])
-    )];
+    const allBCs = pdjlBroadcastTargets(pdjlIP);
     console.log(`[PDJL] announcing IP=${pdjlIP} MAC=${pdjlMAC} → ${allBCs.join(',')}:50000`);
 
     const macBytes=pdjlMAC.split(':').map(h=>parseInt(h,16));
@@ -1943,59 +2112,41 @@ class BridgeCore {
       s.bind(0,()=>{ try{s.setBroadcast(true);}catch(_){} });
       this._pdjlAnnSock=s;
     }
-
-    // helper: build 54B keepalive — IP/MAC per-interface로 커스터마이즈 가능
-    const buildAnnPkt=(annIP, annMAC)=>{
-      const aIP=(annIP||pdjlIP).split('.').map(Number);
-      const aMAC=(annMAC||pdjlMAC).split(':').map(h=>parseInt(h,16));
-      const p=Buffer.alloc(54);
-      PDJL.MAGIC.copy(p,0);
-      p[0x0A]=0x06; p[0x0B]=0x00;
-      Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
-      p[0x20]=0x01; p[0x21]=0x01; p[0x22]=0x00; p[0x23]=0x36;
-      p[0x24] = process.platform==='darwin' ? 0xF9 : 0xC1;
-      p[0x25]=0x00;
-      for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
-      for(let i=0;i<4;i++) p[0x2C+i]=aIP[i];
-      p[0x30]=0x03; p[0x34]=0x05; p[0x35]=0x20;  // device-role=0x03 (bridge), subtype=0x0520
-      return p;
-    };
+    // DJM subscribe socket. Hardware capture shows type 0x57 from UDP source
+    // port 50006 to DJM:50001; DJM answers with 0x39 to subscriberIP:50002.
+    if(this._djmSubSock){ try{this._djmSubSock.close();}catch(_){} }
+    this._djmSubSockReady=false;
+    this._djmSubSock=dgram.createSocket({type:'udp4',reuseAddr:true});
+    this._djmSubSock.on('error',e=>console.warn('[PDJL] DJM sub socket error:',e.message));
+    this._djmSubSock.on('message',(msg,rinfo)=>{
+      if(!liveSession()) return;
+      this._onPDJL(msg, rinfo);
+    });
+    try{
+      this._djmSubSock.bind(50006, pdjlIP, ()=>{
+        this._djmSubSockReady=true;
+        console.log(`[PDJL] DJM subscribe socket active ${pdjlIP}:50006`);
+      });
+    }catch(e){
+      console.warn('[PDJL] DJM sub socket bind failed:',e.message);
+    }
 
     const sendAnn=()=>{
-      if(!this._pdjlAnnSock) return;
-      // 각 인터페이스 broadcast에 해당 인터페이스 IP/MAC으로 keepalive 전송
-      for(const iface of getAllInterfaces()){
-        if(!iface.internal&&iface.broadcast&&iface.broadcast!=='127.255.255.255'){
-          const pkt=buildAnnPkt(iface.address,iface.mac||pdjlMAC);
-          try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,iface.broadcast);}catch(_){}
-        }
+      if(!liveSession()||!this._pdjlAnnSock) return;
+      const pkt=buildPdjlBridgeKeepalivePacket(pdjlIP, pdjlMAC, spoofPlayer);
+      for(const bc of allBCs){
+        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
       }
     };
-
     // Build a claim(0x02) packet embedding the given interface's IP
-    const _buildClaim=(iface, seqN)=>{
-      const cIP = iface.address.split('.').map(Number);
-      const cMAC = (iface.mac||pdjlMAC).split(':').map(h=>parseInt(h,16));
-      const p=Buffer.alloc(50);
-      PDJL.MAGIC.copy(p,0);
-      p[0x0A]=0x02; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x32;
-      Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
-      for(let i=0;i<4;i++) p[0x24+i]=cIP[i];
-      for(let i=0;i<6;i++) p[0x28+i]=cMAC[i]||0;
-      p[0x2E]=(cMAC[5]||0)^(seqN*3+0xFB); p[0x2F]=seqN;
-      p[0x30]=process.platform==='darwin'?spoofPlayer:0xC0;
-      return p;
+    const _buildClaim=(seqN)=>{
+      return buildPdjlBridgeClaimPacket(pdjlIP, pdjlMAC, seqN, spoofPlayer);
     };
 
     const _bridgeJoin=()=>{
-      if(!this._pdjlAnnSock) return;
+      if(!liveSession()||!this._pdjlAnnSock) return;
+      if(this._joinCompleted) return;
       if(this._joinInProgress){
-        const _pendingDjm = this.devices?.['djm']?.ip;
-        if(_pendingDjm && !this._djmJoinPending){
-          this._djmJoinPending = true;
-          setTimeout(()=>{ this._djmJoinPending=false; _bridgeJoin(); }, 7000);
-          console.log(`[PDJL] DJM found during join — retry after current → ${_pendingDjm}`);
-        }
         return;
       }
       this._joinInProgress = true;
@@ -2007,31 +2158,29 @@ class BridgeCore {
       const helloEnd = HELLO_GAP*2; // 600ms
       for(let h=0;h<2;h++){
         setTimeout(()=>{
-          if(!this._pdjlAnnSock) return;
-          const p=Buffer.alloc(37);
-          PDJL.MAGIC.copy(p,0);
-          p[0x0A]=0x0A; p[0x20]=0x01; p[0x21]=0x01; p[0x23]=0x25; p[0x24]=spoofPlayer;
-          Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
+          if(!liveSession()||!this._pdjlAnnSock) return;
+          const p=buildPdjlBridgeHelloPacket(spoofPlayer);
           for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
           console.log(`[PDJL] bridge hello #${h+1}/2 bcs=[${allBCs.join(',')}]`);
         }, h*HELLO_GAP);
       }
       for(let n=1;n<=CLAIM_N;n++){
         setTimeout(()=>{
-          if(!this._pdjlAnnSock) return;
-          const ifaces = getAllInterfaces().filter(i=>!i.internal&&i.broadcast&&i.broadcast!=='127.255.255.255');
-          for(const iface of ifaces){
-            const cp = _buildClaim(iface, n);
-            try{this._pdjlAnnSock.send(cp,0,cp.length,50000,iface.broadcast);}catch(_){}
+          if(!liveSession()||!this._pdjlAnnSock) return;
+          const cp = _buildClaim(n);
+          for(const bc of allBCs){
+            try{this._pdjlAnnSock.send(cp,0,cp.length,50000,bc);}catch(_){}
           }
           console.log(`[PDJL] bridge claim #${n}/${CLAIM_N} broadcast`);
           if(n===CLAIM_N){
             setTimeout(()=>{
+              if(!liveSession()) return;
               this._joinInProgress=false;
               this._joinCompleted=true;
               console.log('[PDJL] bridge join sequence complete');
-              // join 완료 직후 subscribe/keepalive 한 번 즉시 전송
+              // join 완료 직후 keepalive/subscribe 한 번 즉시 전송
               try{ sendAnn(); }catch(_){}
+              setTimeout(()=>{ try{ sendDjmSub(); }catch(_){} }, 200);
             }, 500);
           }
         }, helloEnd + (n-1)*CLAIM_GAP);
@@ -2039,16 +2188,17 @@ class BridgeCore {
     };
 
     _bridgeJoin();
-    setTimeout(()=>{ if(Object.keys(this.devices||{}).length>0) _bridgeJoin(); }, 30000);
-    this._bridgeJoinFn = _bridgeJoin;
     // Periodic DJM reconnect: if DJM is known but hasn't sent 0x39 mixer data yet
     const _djmRetryT = setInterval(()=>{
-      if(!this.running) return;
+      if(!liveSession()) return;
       if(this.devices['djm'] && !this._hasRealFaders && !this._joinInProgress){
-        console.log('[PDJL] DJM known but no mixer data yet — retrying join');
-        _bridgeJoin();
+        const hasAnyDjmStream = !!this._lastDjmOnair03 || !!this._lastDjmMeter58;
+        if(hasAnyDjmStream){
+          console.log('[PDJL] DJM stream active but no 0x39 yet — keeping subscribe active');
+        }
       }
     }, 20000);
+    this._djmRetryTimer=_djmRetryT;
     this._timers.push(_djmRetryT);
     console.log(`[PDJL] annSock ready (shared=${!!this._pdjlSockets?.[0]}) ip=${pdjlIP} allBCs=[${allBCs.join(',')}]`);
 
@@ -2086,53 +2236,86 @@ class BridgeCore {
     // join 총 소요: hello(600ms) + claim(5500ms) + 500ms buffer ≈ 6.6초
     if(this._pdjlAnnTimer) clearInterval(this._pdjlAnnTimer);
     setTimeout(()=>{
-      if(!this.running) return;
+      if(!liveSession()) return;
       sendAnn();
       sendDbKeepalive();
-      this._pdjlAnnTimer=setInterval(()=>{sendAnn();sendDbKeepalive();},1500);
+      this._pdjlAnnTimer=setInterval(()=>{
+        if(!liveSession()) return;
+        sendAnn();sendDbKeepalive();
+      },1500);
       this._timers.push(this._pdjlAnnTimer);
       console.log('[PDJL] keepalive loop started (post-join)');
     }, 6700);
 
     // DJM subscribe (0x57) — 반드시 전송해야 DJM이 0x39 fader data를 보냄
     // 전송 대상: DJM IP, 포트 50001 / 주기: 2초 / 첫 전송: keepalive 후 3초 딜레이
-    const buildSubPkt=()=>{
-      const p=Buffer.alloc(40);
-      PDJL.MAGIC.copy(p,0);
-      p[0x0A]=0x57;
-      Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0B,0,15);
-      p[0x1F]=0x00; p[0x20]=0x01; p[0x21]=0x00; p[0x22]=0x01; p[0x23]=0x00;
-      p[0x24]=process.platform==='darwin'?0xFE:0x87;
-      p[0x25]=0x00; p[0x26]=0x04; p[0x27]=0x01;
-      return p;
+    const buildSubPkts=()=>{
+      return [buildDjmSubscribePacket(process.platform, spoofPlayer, pdjlIP)];
+    };
+    const sendBridgeNotifyToAll=()=>{
+      if(!liveSession()) return;
+      const pkt = buildBridgeNotifyPacket(spoofPlayer);
+      const notifySock = this._djmSubSockReady
+        ? this._djmSubSock
+        : (this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock);
+      if(!notifySock) return;
+      for(const [, dev] of Object.entries(this.devices||{})){
+        if(dev?.type!=='CDJ' || !dev.ip) continue;
+        try{
+          notifySock.send(pkt,0,pkt.length,50002,dev.ip);
+        }catch(_){}
+      }
     };
     const sendDjmSub=()=>{
+      if(!liveSession()) return;
       const djmIp=this.devices?.['djm']?.ip;
       if(!djmIp){ return; }
-      const pkt=buildSubPkt();
+      const pkts=buildSubPkts();
       // port 50001 소켓 우선 사용 (DJM이 선호하는 소스 포트)
-      // [2026-04-19] 인덱스 하드코딩 비활성화 — 50000 바인드 실패 시 [1]이 50002로 미끄러짐
-      // const subSock = this._pdjlSockets?.[1] || this._pdjlSockets?.[0] || this._pdjlAnnSock;
-      const subSock = this._pdjlSocketByPort?.[50001]
-                    || this._pdjlSocketByPort?.[50002]
-                    || this._pdjlSockets?.[0]
-                    || this._pdjlAnnSock;
-      if(!subSock){ console.warn('[PDJL] 0x57: no socket available'); return; }
-      try{subSock.send(pkt,0,pkt.length,50001,djmIp);}catch(e){ console.warn('[PDJL] 0x57 send error:',e.message); }
-      this._djmSubCount = (this._djmSubCount||0)+1;
-      if(this._djmSubCount===1||this._djmSubCount%10===0){
-        console.log(`[PDJL] 0x57 subscribe #${this._djmSubCount} → ${djmIp}:50001 hasRealFaders=${this._hasRealFaders}`);
+      const subSocks = this._djmSubSockReady
+        ? [this._djmSubSock]
+        : [
+            this._pdjlSocketByPort?.[50001],
+            this._pdjlSocketByPort?.[50000],
+            this._pdjlSocketByPort?.[50002],
+            this._pdjlSockets?.[0],
+            this._pdjlAnnSock,
+          ].filter(Boolean).filter((s,i,a)=>a.indexOf(s)===i).slice(0,1);
+      if(!subSocks.length){ console.warn('[PDJL] 0x57: no socket available'); return; }
+      const srcs=[];
+      const idsSent=[];
+      for(const subSock of subSocks){
+        for(const pkt of pkts){
+          try{
+            subSock.send(pkt,0,pkt.length,50001,djmIp);
+            const local=(()=>{try{return subSock.address();}catch(_){return null;}})();
+            const src=local?`${local.address}:${local.port}`:'unknown';
+            if(!srcs.includes(src)) srcs.push(src);
+            const id=`0x${pkt[0x24].toString(16)}`;
+            if(!idsSent.includes(id)) idsSent.push(id);
+          }catch(e){ console.warn('[PDJL] 0x57 send error:',e.message); }
+        }
+      }
+      if(srcs.length){
+        this._djmSubCount = (this._djmSubCount||0)+1;
+        if(this._djmSubCount===1||this._djmSubCount%10===0){
+          console.log(`[PDJL] 0x57 subscribe #${this._djmSubCount} ${srcs.join(',')} → ${djmIp}:50001 ids=${idsSent.join('/')} hasRealFaders=${this._hasRealFaders}`);
+        }
       }
     };
     // 타이밍 설계: join 완료(≈6.6s) → keepalive 시작 → 추가 3s 뒤 첫 subscribe (경합 방지)
     setTimeout(sendDjmSub, 9700);
-    const _subTimer=setInterval(()=>{ if(!this.running)return; sendDjmSub(); },2000);
+    const _subTimer=setInterval(()=>{ if(!liveSession())return; sendDjmSub(); },2000);
+    this._djmSubTimer=_subTimer;
     this._timers.push(_subTimer);
+    const _notifyTimer=setInterval(()=>{ if(!liveSession()) return; sendBridgeNotifyToAll(); },2000);
+    this._bridgeNotifyTimer=_notifyTimer;
+    this._timers.push(_notifyTimer);
 
     // DJM freshness watchdog — lastSeen >10s 이면 연결 해제로 간주하고 모든 믹서 상태 초기화
     // (UI는 onDeviceList 빈 DJM + hasRealFaders:false 를 받으면 defaults 로 복귀)
     const _djmWatch=setInterval(()=>{
-      if(!this.running) return;
+      if(!liveSession()) return;
       const djm=this.devices['djm'];
       if(!djm) return;
       const now=Date.now();
@@ -2151,6 +2334,7 @@ class BridgeCore {
         this.onDeviceList?.(this.devices);
       }
     },2000);
+    this._djmWatchTimer=_djmWatch;
     this._timers.push(_djmWatch);
 
     // Virtual CDJ status broadcast every 500ms — keeps Arena updated on virtual decks
@@ -2283,9 +2467,7 @@ class BridgeCore {
         const ppLenMs = ppLen ? Math.round(ppLen * 1000) : 0;
         const wfLen = this._wfTrackLen?.[p.playerNum] || 0;
         const bgEstLen = this._bgTrackLen?.[p.playerNum] || 0;
-        const beatBasedLen = (p.trackBeats > 0 && p.bpmTrack > 0)
-          ? Math.round(p.trackBeats * 60000 / p.bpmTrack)
-          : 0;
+        const beatBasedLen = nxs2BeatCountToMs(p.trackBeats, p.bpmTrack);
         // wfLen 이 ppLenMs 와 ±3초 이내면 신뢰 (rekordbox 분석 완료 상태)
         const wfSane = wfLen > 0 && (ppLenMs === 0 || Math.abs(wfLen - ppLenMs) < 3000);
         const _msPrecise = wfSane ? wfLen
@@ -2299,7 +2481,8 @@ class BridgeCore {
           : (_msPrecise || wfLen || bgEstLen || beatBasedLen || ppLenMs || prevLayerLen);
 
         // ── CDJ-2000NXS2 timecode path ──
-        // No type 0x0b precise_pos — uses positionFraction (beatNum/trackBeats) + beat-link interpolation
+        // No compatible type 0x0b precise_pos — prefer real 0x48 fraction when present,
+        // otherwise anchor on beat-grid/beatNum and interpolate by effective pitch.
         const pp = this._precisePos?.[p.playerNum];
         const hasPrecise = pp && (Date.now()-pp.time)<500;
 
@@ -2347,10 +2530,19 @@ class BridgeCore {
             const beatNum = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
             const beatIdx = beatNum - 1;
             if(beatNum > 0 && acc.prevBn !== beatNum){
-              timecodeMs = (bg && beatIdx >= 0 && beatIdx < bg.length)
+              const beatMs = (bg && beatIdx >= 0 && beatIdx < bg.length)
                 ? bg[beatIdx].timeMs
                 : (p.bpmTrack > 0 ? Math.round((beatNum-1) * 60000 / p.bpmTrack) : 0);
-              acc._anchorMs = timecodeMs; acc._anchorTime = Date.now(); acc.prevBn = beatNum;
+              const predicted = acc._anchorMs != null && acc._anchorTime != null
+                ? Math.round(acc._anchorMs + (Date.now()-acc._anchorTime) * p.pitchMultiplier)
+                : 0;
+              if(shouldKeepPredictedBeatAnchor(predicted, beatMs, p.bpmTrack, p.isReverse)){
+                timecodeMs = predicted;
+                acc.prevBn = beatNum;
+              } else {
+                timecodeMs = beatMs;
+                acc._anchorMs = timecodeMs; acc._anchorTime = Date.now(); acc.prevBn = beatNum;
+              }
             } else if(acc._anchorMs != null){
               const elapsed = Date.now() - acc._anchorTime;
               timecodeMs = Math.round(acc._anchorMs + elapsed * p.pitchMultiplier);
@@ -2435,6 +2627,21 @@ class BridgeCore {
         this.onCDJStatus?.(li, p);
       }
     }
+    if(p.kind==='djm_probe20'){
+      // DJM sends rapid 0x20 bursts after receiving our 0x57 — handshake probe
+      // Respond immediately with our subscribe packet to complete the handshake
+      const now=Date.now();
+      if(!this._djm20LastResp || now-this._djm20LastResp > 400){
+        this._djm20LastResp=now;
+        if(!parsePDJL._probe20Logged){
+          parsePDJL._probe20Logged=true;
+          console.log(`[DJM] 0x20 probe from ${rinfo.address} seq=${p.seq} — responding with 0x57`);
+        }
+        const subPkt=buildDjmSubscribePacket(process.platform, 5, this._currentPdjlIP||null);
+        const sock=this._djmSubSockReady?this._djmSubSock:this._pdjlAnnSock;
+        if(sock){try{sock.send(subPkt,0,subPkt.length,50001,rinfo.address);}catch(_){}}
+      }
+    }
     if(p.kind==='djm'){
       // 2차 방어: name 에 "DJM" 이 없으면 (rekordbox/가상 믹서) state 덮어쓰기 금지
       if(!(p.name && p.name.includes('DJM'))){
@@ -2448,6 +2655,7 @@ class BridgeCore {
         console.log(`[DJM] 첫 0x39 수신! name=${p.name} from=${rinfo.address}:${rinfo.port} faders=[${p.channel}]`);
       }
       this._hasRealFaders=true;
+      this._lastDjmStatus39=Date.now();
       this.faders=p.channel;
       this._djmMixer={
         eq:p.eq,
@@ -2468,7 +2676,6 @@ class BridgeCore {
           this.onDeviceList?.(this.devices);
           // 자동 모드일 때 DJM 서브넷과 매칭되는 인터페이스로 전환 (bridgeJoin 전에 실행 → 올바른 IP로 join)
           this._autoSelectPdjlForRemote(rinfo.address);
-          if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
         } else { this.devices['djm'].lastSeen=Date.now(); }
       }
       // Forward raw hex dump for first 128 bytes for protocol debugging in UI log panel
@@ -2487,6 +2694,22 @@ class BridgeCore {
       });
     }
     if(p.kind==='djm_meter'){
+      this._lastDjmMeter58=Date.now();
+      this._djmMeterCount=(this._djmMeterCount||0)+1;
+      if(!this.devices['djm']){
+        this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
+        console.log(`[DJM] 0x58 meter에서 DJM 최초 감지: name=${p.name} ip=${rinfo.address} len=${msg.length}`);
+        this.onDeviceList?.(this.devices);
+        this._autoSelectPdjlForRemote(rinfo.address);
+      } else {
+        this.devices['djm'].lastSeen=Date.now();
+        this.devices['djm'].ip=rinfo.address;
+        if(p.name) this.devices['djm'].name=p.name;
+      }
+      if(!this._hasRealFaders && (this._djmMeterCount===1 || this._djmMeterCount%50===0)){
+        const has50002=!!this._pdjlSocketByPort?.[50002];
+        console.warn(`[DJM] 0x58 meter 수신 중이나 0x39 fader 미수신: meterCount=${this._djmMeterCount} from=${rinfo.address}:${rinfo.port} udp50002=${has50002?'active':'missing'}`);
+      }
       this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum});
     }
     // DJM Channels-On-Air (type 0x03 on port 50001)
@@ -2503,6 +2726,7 @@ class BridgeCore {
         this.onAir = held;
         this.onDJMStatus?.({channel:this.faders, onAir:held, eq:[], xfader:null, masterLvl:null, hpCueCh:null, hasRealFaders:this._hasRealFaders});
       }
+      this._lastDjmOnair03=Date.now();
       if(!this.devices['djm']){
         if(!this._hasRealFaders) this.faders=[255,255,255,255];
         this.devices['djm']={type:'DJM',name:p.name||'DJM',ip:rinfo.address,lastSeen:Date.now()};
@@ -2510,16 +2734,19 @@ class BridgeCore {
         this.onDeviceList?.(this.devices);
         // 자동 모드일 때 DJM 서브넷과 매칭되는 인터페이스로 전환
         this._autoSelectPdjlForRemote(rinfo.address);
-        if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
         // 15초 후 0x39 미수신이면 진단 로그
         setTimeout(()=>{
           if(this.running && !this._hasRealFaders && this.devices['djm']){
             const djmIp = this.devices['djm'].ip;
-            console.warn(`[DJM] ⚠ 15초 경과했으나 0x39 미수신! DJM=${djmIp} 0x57전송횟수=${this._djmSubCount||0}`);
-            console.warn('[DJM] 체크: 1) DJM이 같은 서브넷? 2) 방화벽 50001 차단? 3) 0x57 소켓 바인딩 실패?');
+        console.warn(`[DJM] ⚠ 15초 경과했으나 0x39 미수신! DJM=${djmIp} 0x57전송횟수=${this._djmSubCount||0}`);
+            console.warn(`[DJM] 체크: 1) DJM이 같은 서브넷? 2) UDP 50002 수신 가능? 3) 0x58 meter만 오는 상태? meterCount=${this._djmMeterCount||0}`);
           }
         }, 15000);
-      } else this.devices['djm'].lastSeen=Date.now();
+      } else {
+        this.devices['djm'].lastSeen=Date.now();
+        this.devices['djm'].ip=rinfo.address;
+        if(p.name) this.devices['djm'].name=p.name;
+      }
     }
     // Beat packet (0x28, port 50001) — beat timing from CDJ
     if(p.kind==='beat'){
@@ -2633,7 +2860,6 @@ class BridgeCore {
           this.onDeviceList?.(this.devices);
           // 자동 모드일 때 DJM 서브넷 매칭으로 인터페이스 자동 선택
           this._autoSelectPdjlForRemote(rinfo.address);
-          if(this._bridgeJoinFn){ try{this._bridgeJoinFn();}catch(_){} }
         } else {
           this.devices['djm'].lastSeen=Date.now();
           this.devices['djm'].ip=rinfo.address;
@@ -3128,9 +3354,12 @@ class BridgeCore {
   requestMetadata(ip, slot, trackId, playerNum, force=false, trackType=1){
     if(!ip || !trackId) return;
     const cacheKey = `${ip}_${slot}_${trackId}`;
-    if(!force && this._metaReqCache?.[cacheKey]) return; // already requested
     if(!this._metaReqCache) this._metaReqCache = {};
-    this._metaReqCache[cacheKey] = true;
+    const now = Date.now();
+    const prev = this._metaReqCache[cacheKey];
+    const ttlMs = force ? 8000 : 30000;
+    if(prev && (now - prev.time) < ttlMs) return;
+    this._metaReqCache[cacheKey] = { time: now, force: !!force };
     this._dbserverMetadata(ip, slot, trackId, playerNum, trackType).catch(e=>{
       console.warn(`[DBSRV] metadata request failed: ${e.message}`);
       delete this._metaReqCache[cacheKey];
@@ -3806,10 +4035,10 @@ class BridgeCore {
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
-      // 0x2204 = BEAT_GRID_REQ — returns full beat grid with ms positions
-      const rmst = this._dbRMST(spoofPlayer, 0x01, slot, trackType||1);
+      // 0x2204 = BEAT_GRID_REQ
+      const rmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
       const req = this._dbBuildMsg(1, 0x2204, [
-        rmst, this._dbArg4(0), this._dbArg4(trackId), this._dbArg4(0)
+        rmst, this._dbArg4(trackId), this._dbArg4(0)
       ]);
       sock.write(req);
       const resp = await this._dbReadFullResponse(sock);
@@ -4059,9 +4288,11 @@ class BridgeCore {
 }
 
 module.exports = {
-  BridgeCore, getAllInterfaces,
+  BridgeCore, getAllInterfaces, interfaceSignature, sanitizeInterfaceSelection,
   mkOptIn, mkStatus, mkTime, mkAppResp, mkMetadataResp,
   mkDataMetrics, mkDataMeta, mkNotification, mkLowResArtwork,
-  parsePDJL,
+  parsePDJL, pdjlBridgeAnnounceId, pdjlIdentityByteFromMac,
+  buildPdjlBridgeHelloPacket, buildPdjlBridgeClaimPacket, buildPdjlBridgeKeepalivePacket,
+  buildDjmSubscribePacket, buildBridgeNotifyPacket,
   TC, PDJL, STATE, P1_TO_STATE, P1_NAME,
 };
