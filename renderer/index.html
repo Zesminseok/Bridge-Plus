@@ -887,9 +887,9 @@ body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-
 /* Tower: title/artist 앨범아트 수직 중앙 overlay (앨범아트는 블러 배경 역할) */
 body[data-layout="tower"] .tw-title{position:absolute;inset:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;text-align:center;padding:6px 12px;box-sizing:border-box;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.5) 50%,rgba(0,0,0,.3) 100%);pointer-events:none;z-index:2}
 body[data-layout="tower"] .tw-title::before{display:none}
-body[data-layout="tower"] .tw-title span[id^="dta"]{font:600 10.5px var(--sn);color:rgba(255,255,255,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;letter-spacing:.02em;min-height:14px;display:block;max-width:100%;text-shadow:0 1px 2px rgba(0,0,0,.85)}
+body[data-layout="tower"] .tw-title span[id^="dta"]{font:600 10.5px var(--sn);color:rgba(255,255,255,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;letter-spacing:.02em;min-height:14px;display:block;width:100%;max-width:100%;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.85)}
 body[data-layout="tower"] .tw-title span[id^="dta"]:empty::before{content:'\00a0';visibility:hidden}
-body[data-layout="tower"] .tw-title span[id^="dtn"]{font:700 14px var(--sn);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;min-height:19px;display:block;max-width:100%;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+body[data-layout="tower"] .tw-title span[id^="dtn"]{font:700 14px var(--sn);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;min-height:19px;display:block;width:100%;max-width:100%;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.9)}
 body[data-layout="tower"] .tw-title .dk-title-sep{display:none!important}
 body[data-layout="tower"] .tw-wf{display:flex;flex-direction:column;gap:3px}
 body[data-layout="tower"] .tw-wf .dwov{height:18px;border-radius:3px;margin:0}
@@ -5299,7 +5299,6 @@ function _mxBuildBody(){
     });
     html+=`<div class="mx-ch" id="mxCh${i}">
       <div class="mx-ch-hdr"><span class="mx-ch-lbl">CH${i+1}</span><span class="mx-ch-air">ON AIR</span></div>
-      <div class="mx-wf-wrap"><canvas class="mx-wf-canvas" id="mxWf${i}" width="60" height="108"></canvas></div>
       <div class="mx-knobs">${knobsHtml}</div>
       <div class="mx-cue"><span class="mx-cue-btn" id="mxCue${i}">CUE</span></div>
       <div class="mx-fdr-area">

@@ -2686,15 +2686,35 @@ class BridgeCore {
               // non-looping 상태에선 추론된 loop 경계 폐기
               acc._loopStartMs = 0; acc._loopEndMs = 0;
             }
-            if(!acc._fracMs || Math.abs(fracMs - acc._fracMs) > 50){
+            // Anchor 갱신 전략 (NXS2 지터 최소화):
+            //  - 큰 점프 (>200ms): hot cue/seek → anchor 바로 snap
+            //  - 중간 drift (50~200ms): anchor 를 목표 위치로 80% 블렌드 (천천히 수렴)
+            //  - 작은 drift (<50ms): anchor 유지 (packet jitter 흡수)
+            //  이렇게 하면 packet 도착 지터가 있어도 extrapolation 이 smooth 하게 흘러감.
+            if(!acc._fracMs){
               acc._fracMs = fracMs;
               acc._fracAnchorTime = Date.now();
               acc._anchorMs = fracMs;
               acc._anchorTime = Date.now();
+            } else {
+              const diff = fracMs - (acc._anchorMs || acc._fracMs);
+              if(Math.abs(diff) > 200 || p.isLooping){
+                // 큰 점프 or 루프 wrap — 즉시 snap
+                acc._fracMs = fracMs;
+                acc._fracAnchorTime = Date.now();
+                acc._anchorMs = fracMs;
+                acc._anchorTime = Date.now();
+              } else if(Math.abs(diff) > 50){
+                // 중간 drift — anchor 를 점진적으로 따라감 (드리프트 누적 방지)
+                acc._anchorMs = (acc._anchorMs || acc._fracMs) + diff * 0.2;
+                acc._fracMs = fracMs;
+              } else {
+                // 작은 drift — anchor 유지 (extrapolation 연속성 우선)
+                acc._fracMs = fracMs;
+              }
             }
             if(p.isLooping){
-              // 루프: 안전하게 raw 위치만 사용 (extrapolation 하면 경계 넘어 오버슈트).
-              // 0x0A 패킷 ~10Hz 로 충분히 fine-grained.
+              // 루프: extrapolation 없이 raw 사용 (경계 오버슈트 방지)
               timecodeMs = fracMs;
             } else {
               const elapsed = acc._fracAnchorTime ? Date.now() - acc._fracAnchorTime : 0;
