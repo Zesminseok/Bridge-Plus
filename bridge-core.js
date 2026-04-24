@@ -2155,6 +2155,13 @@ class BridgeCore {
   _startPDJLAnnounce(){
     const annSession = (this._pdjlAnnounceSession = (this._pdjlAnnounceSession||0) + 1);
     const liveSession = () => this.running && this._pdjlAnnounceSession===annSession;
+    // 이전 세션의 join state 리셋 — handleInterfacesChanged 등으로 재호출될 때
+    // 이전 세션의 _joinInProgress=true 가 남아 새 세션의 _bridgeJoin 을
+    // 차단해 Hello/Claim 이 전혀 송신 안 되는 버그 방지.
+    this._joinCompleted = false;
+    this._joinInProgress = false;
+    if(this._pdjlAnnTimer){ try{clearInterval(this._pdjlAnnTimer);}catch(_){} this._pdjlAnnTimer=null; }
+    if(this._djmSubTimer){ try{clearTimeout(this._djmSubTimer);}catch(_){} this._djmSubTimer=null; }
     // Determine the "primary" IP to embed in the PDJL keepalive packet.
     // CDJs use this IP to identify us on the network.
     // Priority: 1) pdjlBindAddr (user selected), 2) localAddr, 3) any available (including link-local)
