@@ -2638,9 +2638,24 @@ class BridgeCore {
             //  (1) 트랙 끝(마지막 30%) 근처에서 beatNum 리셋으로 prevFrac−2s 이상 역전
             //  (2) PLAYING 중 트랙 어느 지점에서든 갑자기 prevFrac−5s 이상 역전 (CDJ 순간 오류)
             //  역재생/CUEDOWN/루프는 여기 진입 전에 분기되므로 이 분기에서는 정상 후진 없음
+            //  단, hot cue 는 합법적 역방향 점프이므로 연속 2 패킷 이상 지속되면 수용.
             const endBackward   = prevFrac > totalLenMs * 0.7 && rawFracMs < prevFrac - 2000;
             const midBackward   = prevFrac > 5000 && rawFracMs < prevFrac - 5000 && !p.isReverse;
-            const fracMs = (endBackward || midBackward) ? prevFrac : rawFracMs;
+            let fracMs;
+            if(endBackward || midBackward){
+              // 첫 역전은 글리치 의심하고 skip. 연속 2회 이상이면 hot cue/seek 로 판단하고 수용.
+              acc._bwGuardCount = (acc._bwGuardCount || 0) + 1;
+              if(acc._bwGuardCount >= 2){
+                fracMs = rawFracMs;
+                acc._bwGuardCount = 0;
+                // anchor 리셋 필요 — 아래 if(!acc._fracMs || ...) 에서 처리됨
+              } else {
+                fracMs = prevFrac;
+              }
+            } else {
+              acc._bwGuardCount = 0;
+              fracMs = rawFracMs;
+            }
             if(!acc._fracMs || Math.abs(fracMs - acc._fracMs) > 50){
               acc._fracMs = fracMs;
               acc._fracAnchorTime = Date.now();

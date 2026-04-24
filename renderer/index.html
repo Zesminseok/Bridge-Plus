@@ -187,7 +187,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dwz canvas{flex:1;height:100%;display:block;min-width:0}
 .wf-key{position:absolute;top:4px;right:8px;font:700 14px var(--mn);color:var(--key);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 8px;border-radius:4px}
 .wf-bpm{position:absolute;bottom:4px;right:8px;font:600 12px var(--mn);color:var(--tx2);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 8px;border-radius:4px}
-.wf-key:empty,.wf-bpm:empty{display:none}
+/* 박스 항상 표시 — 빈 상태에서도 placeholder 로 렌더되므로 :empty hide 제거 */
 /* Expanded full-width deck — only widens, no height change */
 .dk.dk-wide{grid-column:1/-1}
 /* ======= DECK STRIP — HEADER + TITLE + BODY ======= */
@@ -3071,7 +3071,7 @@ function deckHTMLDefault(slot){
     <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
     <div class="dk-tc-info-row">
       <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:6px;flex-shrink:0"></div>
-      <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+      <span id="wfkey${slot}" class="dk-key-box">—</span>
       <div class="dktn-phs">${phas}</div>
     </div>
     <div class="dk-tc-time" id="dtime${slot}">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
@@ -3206,7 +3206,7 @@ function deckHTMLRow(slot){
         <span class="dtc" id="dtc${slot}" ${tcDim}>${tcStr}</span>
         <div class="rw-bpm-row">
           <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:6px;flex-shrink:0"></div>
-          <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+          <span id="wfkey${slot}" class="dk-key-box">—</span>
         </div>
         <div class="rw-phasor-row">${phas}</div>
         <div class="rw-ctl-sec">
@@ -3283,7 +3283,7 @@ function deckHTMLTower(slot){
     <div class="tw-bpm">
       <div class="tw-bpm-row">
         <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;justify-content:center"></div>
-        <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+        <span id="wfkey${slot}" class="dk-key-box">—</span>
       </div>
       ${phas}
     </div>
@@ -3355,7 +3355,7 @@ function deckHTMLCard(slot){
         <div class="cd-bpm-col">
           <div class="cd-bpm-row">
             <div id="wfbpm${slot}" style="display:flex;align-items:center;gap:6px;flex-shrink:0"></div>
-            <span id="wfkey${slot}" class="dk-key-box" style="display:none"></span>
+            <span id="wfkey${slot}" class="dk-key-box">—</span>
           </div>
           ${phas}
         </div>
@@ -4719,19 +4719,26 @@ function tick(){
     if(wfkEl){
       const raw=d.key||'';
       const cam=raw.split(' / ')[0]||'';
-      if(cam){wfkEl.textContent=cam;wfkEl.style.display='';}
-      else{wfkEl.textContent='';wfkEl.style.display='none';}
+      // 데이터 유무와 관계없이 박스 상시 표시. 없으면 '—'. → 리드로잉 자원 낭비 방지.
+      wfkEl.textContent=cam||'—';
+      wfkEl.style.display='';
     }
     const wfbEl=document.getElementById('wfbpm'+slot);
-    if(wfbEl&&d.bpm>0){
-      const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
-      const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
+    if(wfbEl){
+      const hasBpm=d.bpm>0;
       const _bpmFmt=(v)=>{const int=Math.floor(v),dec=((v-int)*10+0.5|0)%10;return`${int}<span style="font-size:0.7em;opacity:0.7">.${dec}</span>`;};
-      const baseVal=(d.baseBpm&&d.baseBpm>0)?d.baseBpm:d.bpm;
-      const baseStr=_bpmFmt(baseVal);
-      const curStr=_bpmFmt(d.bpm);
-      wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;
-    }else if(wfbEl)wfbEl.innerHTML='';
+      if(hasBpm){
+        const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
+        const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
+        const baseVal=(d.baseBpm&&d.baseBpm>0)?d.baseBpm:d.bpm;
+        const baseStr=_bpmFmt(baseVal);
+        const curStr=_bpmFmt(d.bpm);
+        wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;
+      }else{
+        // placeholder: 같은 구조 유지, '—' 로 채움 → 값 생길 때 textContent 교체만 해 DOM 리플로우 최소.
+        wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap">—</span><span style="font:500 11px var(--mn);color:var(--tx4);white-space:nowrap">±0.00%</span><span class="dk-bpm-cur" style="color:var(--tx4);opacity:.6">—<span style="font:400 9px var(--mn);color:var(--tx4);margin-left:2px">BPM</span></span>`;
+      }
+    }
     const dhwlEl=document.getElementById('dhwl'+slot);
     if(dhwlEl){const _hxSvg='<svg class="gi gi-hex"><use href="#i-hex"/></svg>';const _cirSvg='<svg class="gi gi-hex"><use href="#i-circle"/></svg>';dhwlEl.innerHTML=d.type==='hw'?(d.model?_hxSvg+' '+d.model:_hxSvg+' HW'):_cirSvg+' VIRTUAL';}
 
