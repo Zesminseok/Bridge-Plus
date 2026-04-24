@@ -2484,11 +2484,10 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
       if(cue.type==='loop')return '#ff8800';
       return '#fff';
     }
-    // 크기 축소: 핫큐 박스 7x9, 라벨 검정, 메모리큐 삼각형 작게.
+    // 레이아웃: 상단 마진 = hot cue + memory cue, 하단 마진 = CP (current cue).
     const hotTopY=cueTopY;
-    const hotMarkerH=9;
     const hotLabelW=9, hotLabelH=9;
-    const memMarkerH=7;
+    const memMarkerH=6;
     if(d.cuePoints&&d.dur>0){
       octx.font='bold 8px "DM Mono",monospace';
       for(const cue of d.cuePoints){
@@ -2503,11 +2502,11 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
           }
         }
         if(cpx<-16||cpx>=cw+16)continue;
-        // 세로 가이드 라인 — 얇게
+        // 세로 가이드 얇게
         octx.fillStyle=col.startsWith('rgb')?col:col+'88';
         octx.globalAlpha=.45; octx.fillRect(cpx-.5,cueTopY,1,ch-cueTopY); octx.globalAlpha=1;
         if(cue.type==='hot'){
-          // 초록 박스 + 검정 라벨 (크기 축소)
+          // 핫큐: 상단 마진 초록 박스 + 검정 라벨
           octx.fillStyle=col;
           octx.fillRect(cpx,hotTopY,hotLabelW,hotLabelH);
           if(cue.hotCueNum>0){
@@ -2525,20 +2524,22 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
             }
           }
         }else{
-          // 메모리큐: 빨강 작은 삼각형 (하단)
-          const apex=ch-memMarkerH, base=ch-1;
+          // 메모리큐: 상단 마진 빨강 삼각형 (▼ 아래 방향)
           octx.fillStyle=col;octx.beginPath();
-          octx.moveTo(cpx-3.5,base);octx.lineTo(cpx+3.5,base);octx.lineTo(cpx,apex);
+          octx.moveTo(cpx-3,hotTopY);octx.lineTo(cpx+3,hotTopY);octx.lineTo(cpx,hotTopY+memMarkerH);
           octx.closePath();octx.fill();
         }
       }
     }
     if(d.cp>0&&d.dur>0){
+      // CP (start cue) — 노랑, 하단 마진 삼각형 (▲ 위 방향)
       const cpx=Math.round((d.cp*1000-startMs)/msPerPx);
       if(cpx>=0&&cpx<cw){
-        octx.fillStyle='rgba(251,191,36,.9)';octx.fillRect(cpx-.5,0,1,ch);
-        octx.beginPath();octx.moveTo(cpx-3,0);octx.lineTo(cpx+3,0);octx.lineTo(cpx,4);octx.closePath();
-        octx.fillStyle='rgba(251,191,36,1)';octx.fill();
+        octx.fillStyle='rgba(255,214,0,.55)';octx.fillRect(cpx-.5,0,1,ch);
+        octx.beginPath();
+        octx.moveTo(cpx-4,ch);octx.lineTo(cpx+4,ch);octx.lineTo(cpx,ch-6);
+        octx.closePath();
+        octx.fillStyle='rgba(255,214,0,1)';octx.fill();
       }
     }
   });
@@ -2661,8 +2662,11 @@ function drawOverview(slot,prog){
     if(cue.type==='loop')return '#ff8800';
     return '#fff';
   }
-  // CDJ-3000 스타일: 상단 30% 가 마커 밴드, 아래 70% 가 파형(하단 반파)
-  const axisY = Math.round(H2 * 0.30);
+  // 캔버스 좌표 (y=0 top). WebGL shader 는 하단 10% + 상단 15% 마진이지만
+  // user 요청에 맞춰 2D 오버레이는: 상단 마진 (y=0..topM) = hot+memory,
+  // 하단 마진 (y=botM..H2) = CP (start cue).
+  const topM = Math.max(10, Math.round(H2 * 0.15));
+  const botM = H2 - Math.max(6, Math.round(H2 * 0.10));
 
   // 루프 오버레이 (노랑) - 전체 높이
   if(_ovDur>0&&d._loopStartMs>0&&d._loopEndMs>d._loopStartMs){
@@ -2681,7 +2685,6 @@ function drawOverview(slot,prog){
       const cx=Math.round(cue.timeMs/_ovDur*W2);
       if(cx<0||cx>=W2)continue;
       const col=_ovCueCol(cue);
-      // Loop cue range 노랑
       if(cue.type==='loop'&&cue.loopEndMs>0){
         const ex=Math.round(cue.loopEndMs/_ovDur*W2);
         if(ex>cx){
@@ -2691,32 +2694,30 @@ function drawOverview(slot,prog){
         }
       }
       if(cue.type==='hot'){
-        // 핫큐: 초록 작은 박스 + 초록 라벨 (글자 검정) — 크기 축소
-        const boxW=7, boxH=Math.max(6,axisY-2);
+        // 핫큐: 초록 박스 + 검정 라벨 — 상단 마진에
+        const boxW=7, boxH=Math.max(6,topM-2);
         olCtx.fillStyle=col;olCtx.fillRect(cx,0,Math.min(boxW,W2-cx),boxH);
         if(cue.hotCueNum>0){
           const label=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
           olCtx.fillStyle='#000';olCtx.fillText(label,cx+1.5,boxH-1);
         }
-        olCtx.fillStyle=col;olCtx.globalAlpha=.45;
-        olCtx.fillRect(cx-.5,axisY,1,H2-axisY);olCtx.globalAlpha=1;
       }else if(cue.type==='memory'){
-        // 메모리큐: 빨강 작은 삼각형 (하단에서 위)
+        // 메모리큐: 빨강 삼각형 — 상단 마진에 (위로 향한 apex ▼)
         olCtx.fillStyle=col;
         olCtx.beginPath();
-        olCtx.moveTo(cx-2.5,H2);olCtx.lineTo(cx+2.5,H2);olCtx.lineTo(cx,H2-4);
+        olCtx.moveTo(cx-2.5,0);olCtx.lineTo(cx+2.5,0);olCtx.lineTo(cx,4);
         olCtx.closePath();olCtx.fill();
       }else if(cue.type==='loop'){
-        olCtx.fillStyle=col;olCtx.fillRect(cx,0,1.5,axisY);
+        olCtx.fillStyle=col;olCtx.fillRect(cx,0,1.5,topM);
       }
     }
   }
   if(d.cp>0&&_ovDur>0){
-    // 현재 큐(CP) — 노랑 작은 삼각형
+    // 현재 큐(CP = start cue) — 노랑 삼각형, 하단 마진에
     const cx=Math.round(d.cp*1000/_ovDur*W2);
     olCtx.fillStyle='rgba(255,214,0,.95)';
     olCtx.beginPath();
-    olCtx.moveTo(cx-3,0);olCtx.lineTo(cx+3,0);olCtx.lineTo(cx,4);
+    olCtx.moveTo(cx-3,H2);olCtx.lineTo(cx+3,H2);olCtx.lineTo(cx,H2-5);
     olCtx.closePath();olCtx.fill();
   }
   // 플레이헤드: 세로 1px 전체

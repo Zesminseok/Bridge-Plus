@@ -759,12 +759,12 @@ function parsePDJL(msg){
     // Reverse detection: FFRV state or backward vinyl mode (p3=0x0A)
     const isReverse = state===STATE.FFRV || p3===0x0A;
     const pitchMultiplier = effPitchRaw / 0x100000;  // 1.0 = normal speed
-    // Loop start/end from CDJ-3000 512B extended packet (not available on shorter packets)
-    // Raw value × 65536 / 1000 = ms per ProDJLinkInput.h
+    // Loop start/end from CDJ-3000 512B extended packet.
+    // Pioneer 포맷: raw 는 position_ms × 1000 / 65536 으로 저장 → 역변환 ms = raw * 65536 / 1000.
     const loopStartRaw = msg.length>0x1C1 ? msg.readUInt32BE(0x1B6) : 0;
     const loopEndRaw   = msg.length>0x1C5 ? msg.readUInt32BE(0x1BE) : 0;
-    const loopStartMs  = loopStartRaw > 0 ? Math.round(loopStartRaw / 65.536) : 0;
-    const loopEndMs    = loopEndRaw   > 0 ? Math.round(loopEndRaw   / 65.536) : 0;
+    const loopStartMs  = loopStartRaw > 0 ? Math.round(loopStartRaw * 65536 / 1000) : 0;
+    const loopEndMs    = loopEndRaw   > 0 ? Math.round(loopEndRaw   * 65536 / 1000) : 0;
     return{
       kind:'cdj', playerNum:pNum, name, deviceName:name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
@@ -2567,14 +2567,12 @@ class BridgeCore {
           if(p.trackId>0 && p.hasTrack){
             this._tcAcc[li].metaRequested = true;
             // Find source device IP: trackDeviceId tells us which player owns the media.
-            // CDJ 일반 덱 먼저, 없으면 rekordbox 등 media source (_mediaSources),
-            // 마지막으로 packet sender IP 로 fallback.
             const srcDev = this.devices['cdj'+p.trackDeviceId];
-            const _ip = srcDev?.ip
-              || this._mediaSources?.[p.trackDeviceId]?.ip
-              || rinfo?.address;
+            const medSrc = this._mediaSources?.[p.trackDeviceId];
+            const _ip = srcDev?.ip || medSrc?.ip || rinfo?.address;
             const _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum, _tt=p.trackType||1;
-            // [TC] meta request muted
+            console.log(`[META] P${_pn} tid=${_tid} trackDeviceId=${p.trackDeviceId} slot=${_slot} tt=${_tt}`
+              +` → ip=${_ip} (src=${srcDev?'cdj'+p.trackDeviceId:medSrc?'mediaSrc '+medSrc.name:'rinfo'})`);
             setTimeout(()=>this.requestMetadata(_ip, _slot, _tid, _pn, true, _tt), this._dbReady?100:3000);
             this._dbReady = true;
           }
@@ -3020,19 +3018,25 @@ class BridgeCore {
       const pn = p.playerNum;
       // Skip self-announce (bridge device) — double-check name and IP
       if(p.name==='BRIDGE+'||p.name==='TCS-SHOWKONTROL'||rinfo.address==='127.0.0.1') return;
-      // 가상 장치/소프트웨어 announce 차단 (CDJ 덱 목록에는 안 나타남)
+      // 가상 장치/소프트웨어 announce — 덱 목록 제외.
       if(p.name && /rekordbox|rbdj|NXS-?GW|TCS-|prolink/i.test(p.name)){
-        // 단, rekordbox 는 CDJ 가 LAN Link Export 로 로드한 트랙의 메타데이터
-        // 출처이므로 IP 를 별도 _mediaSources 맵에 저장해 dbserver 쿼리에 사용.
-        if(p.name && /rekordbox|rbdj/i.test(p.name) && pn >= 1 && pn <= 50){
+        // rekordbox 는 CDJ 가 LAN Link Export 로 로드한 트랙의 메타데이터 출처 →
+        // IP 를 _mediaSources 에 저장. playerNum 이 0 이어도 저장 (CDJ 의 trackDeviceId
+        // 가 실제로 어떤 값일지 모르니 0, pn, 그리고 가능한 alias 모두 매핑).
+        if(p.name && /rekordbox|rbdj/i.test(p.name)){
           this._mediaSources = this._mediaSources || {};
-          this._mediaSources[pn] = { ip: rinfo.address, name: p.name, lastSeen: Date.now() };
+          const entry = { ip: rinfo.address, name: p.name, lastSeen: Date.now() };
+          if(pn >= 0 && pn <= 50) this._mediaSources[pn] = entry;
+          // rekordbox 흔한 trackDeviceId 들: 0x11(17), 0x21(33), 0x22(34), 0x23(35)
+          for(const k of [17, 33, 34, 35]){
+            if(!this._mediaSources[k]) this._mediaSources[k] = entry;
+          }
         }
         if(!this._fakeAnnLogged) this._fakeAnnLogged={};
         const fkey = `${p.name}@${rinfo.address}`;
         if(!this._fakeAnnLogged[fkey]){
           this._fakeAnnLogged[fkey]=true;
-          console.warn(`[PDJL] 가짜 announce 차단: name="${p.name}" from=${rinfo.address} (덱 목록 제외, trackDeviceId=${pn} 는 미디어 소스로 등록)`);
+          console.warn(`[PDJL] 가짜 announce 차단: name="${p.name}" from=${rinfo.address} pn=${pn} (media source 로 17/33/34/35 에 매핑)`);
         }
         return;
       }
@@ -4045,19 +4049,7 @@ class BridgeCore {
       catch(e){ console.warn(`[DBSRV] cue MENU P${playerNum} err:`, e.message); }
     }
     if(cues&&cues.length>0){
-      // Pioneer 큐 위치 단위 자동 감지:
-      //  - 실제 ms 면 트랙 길이 근처 값들 (수만~수십만)
-      //  - half-frames (1/150s) 이면 매우 작은 값 (수백~수천)
-      // maxVal 이 30초(=30000ms) 미만이면 half-frames 로 판단 → ×(1000/150) ms.
-      // trackLenMs 가 준비 안 됐어도 이 경험칙으로 정확히 구분됨.
-      const maxVal = Math.max(...cues.map(c => c.timeMs||0));
-      if(maxVal > 0 && maxVal < 30000){
-        console.log(`[DBSRV] cue P${playerNum} half-frame 감지 (maxVal=${maxVal}) → ms 변환 (×${(1000/150).toFixed(4)})`);
-        for(const c of cues){
-          c.timeMs   = Math.round((c.timeMs||0)   * 1000 / 150);
-          c.loopEndMs= Math.round((c.loopEndMs||0)* 1000 / 150);
-        }
-      }
+      // PCO2/PCOB 모두 timeMs 는 ms 단위 — 변환 불필요.
       this.onCuePoints?.(playerNum, cues);
       const hot=cues.filter(c=>c.type==='hot').length;
       const mem=cues.filter(c=>c.type==='memory').length;
@@ -4099,71 +4091,73 @@ class BridgeCore {
         // [DBSRV] PCO2 no ANLZ muted
         return null;
       }
-      // Parse ANLZ tag structure — find PCO2 tag
-      let pos=0;
-      while(pos<anlzData.length-12){
-        const tag=anlzData.toString('ascii',pos,pos+4);
-        const tHL=anlzData.readUInt32BE(pos+4);
-        const tTL=anlzData.readUInt32BE(pos+8);
-        if(tag==='PCO2'){
-          // PCO2 header: numCues at offset tHL-2 (uint16BE)
-          const numCues=anlzData.readUInt16BE(pos+tHL-2);
-          const cues=[];
-          let ePos=pos+tHL;
-          for(let ci=0;ci<numCues&&ePos<pos+tTL-12;ci++){
-            // Each entry starts with "PCP2" magic
-            const entTag=anlzData.toString('ascii',ePos,ePos+4);
-            if(entTag!=='PCP2')break;
-            const eHL=anlzData.readUInt32BE(ePos+4);
-            const eTL=anlzData.readUInt32BE(ePos+8);
-            if(eTL<0x1D){ePos+=eTL||1;continue;}
-            const hotCue=anlzData.readUInt32BE(ePos+0x0C);
-            const ctype=anlzData[ePos+0x10];  // 1=cue, 2=loop
-            const timeMs=anlzData.readUInt32BE(ePos+0x14);
-            const loopMs=anlzData.readUInt32BE(ePos+0x18);
-            const colorCode=anlzData[ePos+0x1C];
-            // Determine type
-            let type='memory';
-            if(hotCue>0) type='hot';
-            if(ctype===2||(loopMs>0&&loopMs!==0xFFFFFFFF)){
-              type='loop';
+      // ANLZ blob 선형 스캔으로 모든 PCO2 섹션 수집 (hot cue 섹션 + memory cue
+      // 섹션 2 개 존재 가능). 엔트리가 PCP2 아니면 최대 200B 까지 forward scan.
+      const cues=[];
+      const size=anlzData.length;
+      for(let i=0;i<=size-20;i++){
+        // "PCO2" 시그니처 탐색
+        if(anlzData[i]!==0x50||anlzData[i+1]!==0x43||anlzData[i+2]!==0x4F||anlzData[i+3]!==0x32) continue;
+        const lenHeader=anlzData.readUInt32BE(i+4);
+        const numCues=anlzData.readUInt16BE(i+16);   // STC: offset 16 (섹션 시작 기준)
+        if(numCues===0||numCues>200) continue;
+        let entryOff=i+lenHeader;
+        for(let c=0;c<numCues;c++){
+          if(entryOff+12>size) break;
+          // PCP2 마법 확인, 아니면 가까운 PCP2 까지 스캔 (≤200B)
+          if(anlzData[entryOff]!==0x50||anlzData[entryOff+1]!==0x43
+             ||anlzData[entryOff+2]!==0x50||anlzData[entryOff+3]!==0x32){
+            let found=-1;
+            for(let scan=entryOff;scan<=size-12&&scan<entryOff+200;scan++){
+              if(anlzData[scan]===0x50&&anlzData[scan+1]===0x43
+                 &&anlzData[scan+2]===0x50&&anlzData[scan+3]===0x32){ found=scan; break; }
             }
-            const cue={
-              name:'', timeMs, hotCueNum:hotCue, colorId:colorCode,
-              type, loopEndMs: type==='loop'?loopMs:0,
-              colorR:30, colorG:200, colorB:60, // defaults
-            };
-            // Read comment text if entry is large enough
-            if(eTL>=0x2C){
-              try{
-                const commentBytes=anlzData.readUInt32BE(ePos+0x28);
-                if(commentBytes>0&&commentBytes<512){
-                  const txt=anlzData.toString('utf16be',ePos+0x2C,ePos+0x2C+commentBytes).replace(/\0+$/,'');
-                  cue.name=txt;
-                  // RGB color after comment
-                  const colorOff=ePos+0x2C+commentBytes;
-                  if(colorOff+3<ePos+eTL){
-                    cue.colorR=anlzData[colorOff+1];
-                    cue.colorG=anlzData[colorOff+2];
-                    cue.colorB=anlzData[colorOff+3];
-                  }
-                }
-              }catch(_){}
-            }
-            // Default colors by type if no custom color
-            if(colorCode===0){
-              if(type==='memory'){cue.colorR=200;cue.colorG=30;cue.colorB=30;}
-              else if(type==='loop'){cue.colorR=255;cue.colorG=136;cue.colorB=0;}
-            }
-            cues.push(cue);
-            ePos+=eTL;
+            if(found<0) break;
+            entryOff=found;
           }
-          // [DBSRV] PCO2 cue entries muted
-          return cues;
+          const entryLen=anlzData.readUInt32BE(entryOff+8);
+          if(entryLen>4096||entryLen<0x1D||entryOff+entryLen>size){
+            entryOff+=Math.max(12,entryLen||12);
+            continue;
+          }
+          const e=entryOff;
+          const hotCue=anlzData.readUInt32BE(e+0x0C);
+          const ctype =anlzData[e+0x10];
+          const timeMs=anlzData.readUInt32BE(e+0x14);
+          const loopMs=anlzData.readUInt32BE(e+0x18);
+          if(ctype===0){ entryOff+=entryLen; continue; }  // STC: skip ctype=0
+          let type='memory';
+          if(hotCue>0) type='hot';
+          if(ctype===2||(loopMs!==0&&loopMs!==0xFFFFFFFF)) type='loop';
+          const cue={
+            name:'', timeMs, hotCueNum:hotCue, colorId:anlzData[e+0x1C],
+            type, loopEndMs:type==='loop'?loopMs:0,
+            colorR:30, colorG:200, colorB:60,
+          };
+          // Comment + RGB
+          if(entryLen>=0x2C){
+            try{
+              const commentBytes=anlzData.readUInt32BE(e+0x28);
+              if(commentBytes>0&&commentBytes<512){
+                cue.name=anlzData.toString('utf16be',e+0x2C,e+0x2C+commentBytes).replace(/\0+$/,'');
+                const colorOff=e+0x2C+commentBytes;
+                if(colorOff+3<e+entryLen){
+                  cue.colorR=anlzData[colorOff+1];
+                  cue.colorG=anlzData[colorOff+2];
+                  cue.colorB=anlzData[colorOff+3];
+                }
+              }
+            }catch(_){}
+          }
+          if(cue.colorId===0){
+            if(type==='memory'){cue.colorR=200;cue.colorG=30;cue.colorB=30;}
+            else if(type==='loop'){cue.colorR=255;cue.colorG=136;cue.colorB=0;}
+          }
+          cues.push(cue);
+          entryOff+=entryLen;
         }
-        if(tTL===0)break;
-        pos+=tTL;
       }
+      if(cues.length>0){ cues.sort((a,b)=>a.timeMs-b.timeMs); return cues; }
       // PCO2 tag not found — try PCOB fallback within same response
       pos=0;
       while(pos<anlzData.length-12){

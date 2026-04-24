@@ -672,12 +672,12 @@ vec4 cr4(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float t) {
 
 void main() {
   float W = u_res.x, H = u_res.y;
-  // CDJ-3000 스타일 반파 오버뷰:
-  //   상단 15% 마진 = 핫큐 라벨 공간
-  //   하단 10% 마진 = 메모리큐 삼각형 공간 + axis
-  //   axisY 에서 위로 파형이 자라남 (반파).
-  float axisY = H * 0.10;
-  float topLimit = H * 0.85;
+  // 반파 오버뷰 — 상하 마진 넉넉히 (마커 공간).
+  //   상단 25% 마진 = 핫큐 + 메모리큐 라벨
+  //   하단 15% 마진 = 시작큐(CP) 삼각형
+  //   중간 60% = 파형이 axisY 에서 위로 성장.
+  float axisY = H * 0.15;
+  float topLimit = H * 0.75;
   float t = gl_FragCoord.x / W;
 
   float curX = u_pos * W;
@@ -685,7 +685,6 @@ void main() {
     fragColor = vec4(1.0); return;
   }
 
-  // 범위 밖은 BG
   float yG = gl_FragCoord.y;
   if (yG < axisY || yG > topLimit) { fragColor = BG; return; }
 
@@ -707,9 +706,8 @@ void main() {
   vec4 a = mix(a1, clamp(cr4(a0, a1, a2, a3, ft), 0.0, 1.0), 0.35);
   vec4 b = mix(b1, clamp(cr4(b0, b1, b2, b3, ft), 0.0, 1.0), 0.35);
 
-  // 반파 높이 = axisY ~ topLimit (75% of H)
   float waveH = topLimit - axisY;
-  float yRel = yG - axisY;  // 0 at axis, positive going up
+  float yRel = yG - axisY;
   bool played = t < u_pos;
   const float AA = 0.55;
 
