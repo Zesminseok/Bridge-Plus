@@ -1,6 +1,6 @@
 {
   "name": "pro-dj-link-bridge-plus",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "BRIDGE+ — Professional DJ Bridge: CDJ/DJM Pro DJ Link ↔ TCNet ↔ Resolume Arena",
   "main": "main.js",
   "scripts": {
