@@ -6,6 +6,7 @@ node_modules/
 package/
 .claude/
 .serena/
+.build-number
 
 # Secrets / credentials
 .env
