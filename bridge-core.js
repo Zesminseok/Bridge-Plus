@@ -4,7 +4,7 @@
  *
  * Sends OptIn(0x02) + Status(0x05) + TIME(0xFE) on TCNet ports.
  * Receives CDJ status and DJM meter data via Pro DJ Link (UDP 50001/50002).
- * Packet layouts reverse-engineered from BRIDGE36 pcap captures.
+ * Packet layouts recovered from live traffic and device behavior.
  */
 const dgram = require('dgram');
 const net   = require('net');
@@ -46,7 +46,6 @@ const STATE = { IDLE:0, PLAYING:3, LOOPING:4, PAUSED:5, STOPPED:6, CUEDOWN:7, PL
 function toTCNetState(s){ return s || 0; }
 
 // Pro DJ Link P1 (0x7B) → TCNet LayerStatus 매핑
-// 소스: prolink-connect PlayState enum + Deep Symmetry djl-analysis
 // TCNet V3.5.1B: 0=IDLE,3=PLAYING,4=LOOPING,5=PAUSED,6=STOPPED,7=CUE,8=PLATTER,9=FFWD,10=FFRV,11=HOLD
 const P1_TO_STATE = {
   0x00: STATE.IDLE,          // Empty — 트랙 없음
@@ -55,7 +54,7 @@ const P1_TO_STATE = {
   0x04: STATE.LOOPING,       // Looping — 루프 재생
   0x05: STATE.PAUSED,        // Paused — 일시정지
   0x06: STATE.CUEDOWN,       // Cued — 큐 포인트에서 정지 (큐 버튼 홀드)
-  // ROLLBACK: 0x07 was PLAYING — prolink-connect: Cuing = 큐 탐색 중 (재생 아님)
+  // ROLLBACK: 0x07 was PLAYING — 큐 탐색 중 (재생 아님)
   0x07: STATE.CUEDOWN,       // Cuing — 큐 포인트 탐색
   0x08: STATE.PLATTERDOWN,   // PlatterHeld — 플래터 누름 (바이닐 모드)
   // ROLLBACK: 0x09 was PAUSED — TCNet에 FFWD(9) 상태 존재
@@ -63,7 +62,7 @@ const P1_TO_STATE = {
   0x0D: STATE.STOPPED,       // End — 트랙 끝 (루프 없이)
   // ROLLBACK: 0x0E was STOPPED — TCNet에 HOLD(11) 상태 존재
   0x0E: STATE.HOLD,          // SpunDown — 플래터 감속 정지 (홀드)
-  // ROLLBACK: 0x11 was PLAYING — prolink-connect: Ended = 트랙 끝
+  // ROLLBACK: 0x11 was PLAYING — 트랙 끝
   0x11: STATE.STOPPED,       // Ended — 트랙 종료
   0x12: STATE.LOOPING,       // Emergency Loop — 긴급 루프
   0x13: STATE.PLATTERDOWN,   // Vinyl Scratch — 재생 중 플래터 터치
@@ -85,7 +84,7 @@ const PDJL = {
 };
 
 function pdjlBridgeAnnounceId(platform=process.platform){
-  return platform==='darwin' ? 0xF9 : 0xC1;
+  return platform==='darwin' ? 0xDA : 0xC1;
 }
 
 function pdjlIdentityByteFromMac(mac, platform=process.platform){
@@ -143,7 +142,7 @@ function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=proc
   p[0x25]=0x00;
   for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
   for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
-  p[0x30]=0x03;
+  p[0x30]=platform==='darwin' ? 0x07 : 0x03;
   p[0x34]=deviceId&0xFF;
   p[0x35]=0x20;
   return p;
@@ -156,7 +155,7 @@ function buildDjmSubscribePacket(platform=process.platform){
   Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,11,0,15);
   p[31]=0x01;
   p[32]=0x00;
-  p[33]=platform==='darwin' ? 0xFE : 0x87;
+  p[33]=platform==='darwin' ? 0xE1 : 0x87;
   p[34]=0x00;
   p[35]=0x04;
   p[36]=0x01;
@@ -187,7 +186,7 @@ let _seq = 0;
 const u32 = n => (Math.max(0,n)&0xFFFFFFFF)>>>0;
 const clamp8 = n => Math.max(0,Math.min(255,Math.round(n)))&0xFF;
 
-// UTF-32LE writer — matches official Bridge TCNetOutput.h writeUtf32LE()
+// UTF-32LE writer
 function _writeUtf32LE(buf, offset, str, maxChars){
   for(let i=0;i<str.length&&i<maxChars;i++){
     const cp=str.codePointAt(i);
@@ -275,12 +274,11 @@ function detectBroadcastFor(bindAddr){
 
 function pdjlBroadcastTargets(bindAddr){
   const iface = getAllInterfaces().find(i=>!i.internal && i.address===bindAddr && i.broadcast && i.broadcast!=='127.255.255.255');
-  if(iface) return [iface.broadcast, '255.255.255.255'];
+  if(iface) return [iface.broadcast];
   return [...new Set(
     getAllInterfaces()
       .filter(i=>!i.internal && i.broadcast && i.broadcast!=='127.255.255.255')
       .map(i=>i.broadcast)
-      .concat(['255.255.255.255'])
   )];
 }
 
@@ -308,7 +306,7 @@ function mkOptIn(port, uptime, nc){
   const b = Buffer.alloc(TC.SZ_OI);
   buildHdr(TC.OPTIN).copy(b,0);
   const d = b.slice(24);
-  d.writeUInt16LE(nc||2, 0);           // body[0-1]: nodeCount (BRIDGE36: 2)
+  d.writeUInt16LE(nc||2, 0);           // body[0-1]: nodeCount
   d.writeUInt16LE(port||0, 2);  // body[2-3]: listenerPort
   d.writeUInt16LE(uptime||0, 4);       // body[4-5]: uptime seconds
   d.writeUInt16LE(0, 6);               // body[6-7]: padding
@@ -322,7 +320,7 @@ function mkOptIn(port, uptime, nc){
 /**
  * Status (0x05) — 300B
  *
- * body layout (node-tcnet spec):
+ * body layout:
  *   body[0-1]    = nodeCount (LE u16)
  *   body[2-3]    = nodeListenerPort (LE u16)
  *   body[10+n]   = layerSource[n] (n=0-7)
@@ -367,7 +365,7 @@ function mkStatus(port, devices, layers, faders, hwMode){
   }
 
   d[59] = 0x1E;  // smpteMode = 30fps
-  d[60] = 0x00;  // autoMasterMode = 0 (matching official Bridge)
+  d[60] = 0x00;  // autoMasterMode = 0
 
   // body[96-111]: device name
   d.write(TC.DEVICE.padEnd(16,'\0'), 96, 16, 'ascii');
@@ -386,7 +384,7 @@ function mkStatus(port, devices, layers, faders, hwMode){
 /**
  * TIME (0xFE) — 154B
  *
- * body layout (node-tcnet spec):
+ * body layout:
  *   body[0+n*4]  = layerCurrentTime[n] (LE u32, n=0-7)
  *   body[32+n*4] = layerTotalTime[n]   (LE u32, n=0-7)
  *   body[64+n]   = layerBeatmarker[n]  (n=0-7)
@@ -434,7 +432,7 @@ function mkTime(layers, uptimeMs, faders){
     if(ld) d[72+n] = toTCNetState(ld.state||0);
   }
 
-  // generalSMPTEMode at body[81] — 30fps (TCNet spec: valid values 24/25/29/30; 0=invalid)
+  // generalSMPTEMode at body[81] — 30fps
   d[81] = 30;
 
   // layerTimecode[0-7] at body[82-129] (6B each: mode, state, h, m, s, frames)
@@ -515,7 +513,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
   d[1] = layerIdx;        // 1-based layer index
 
   if(layerData){
-    // TCNet v3.5.1B spec offsets (body-relative, i.e. subtract 24 from absolute byte#)
+    // TCNet offsets (body-relative, subtract 24 from absolute byte index)
     d[3] = toTCNetState(layerData.state||0);   // byte 27: Layer State (TCNet: 0=Idle,1=Playing,2=Paused,3=Stopped)
     d[5] = 0x01;                 // byte 29: Sync Master (1=Master)
     d[7] = layerData.beatPhase || 0; // byte 31: Beat Marker (0-4)
@@ -524,7 +522,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
     const isPlaying = layerData.state === STATE.PLAYING || layerData.state === STATE.LOOPING;
     if(isPlaying && layerData._updateTime) curMs += (Date.now() - layerData._updateTime);
     d.writeUInt32LE(u32(curMs), 12);    // byte 36: Current Position (ms)
-    // byte 40: Speed — TCNet spec: 32768=100%, 0=0%, 65536=200%
+    // byte 40: Speed — 32768=100%, 0=0%, 65536=200%
     const pitch = layerData._pitch || 0;
     const speedVal = isPlaying ? Math.round(32768 * (1 + pitch / 100)) : 0;
     d.writeUInt32LE(u32(Math.max(0, Math.min(65536, speedVal))), 16);
@@ -548,7 +546,7 @@ function mkDataMetrics(layerIdx, layerData, faderVal){
 
 /**
  * DATA MixerData (0xC8, sub-type 150) — 270B
- * TCNet v3.5.1B spec: per-channel fader, EQ, filter, crossfader, master
+ * TCNet MixerData packet: per-channel fader, EQ, filter, crossfader, master
  */
 function mkMixerData(faders, mixerName, mixer){
   const b = Buffer.alloc(270);
@@ -626,7 +624,7 @@ function mkNotification(){
 
 /**
  * LowResArtwork (MessageType 0xCC = 204)
- * TCNet V3.5.1B spec page 29: File Data Packet - Low Res Artwork File
+ * TCNet File Data Packet - Low Res Artwork File
  * header(24B) + dataType(1B) + layerID(1B) + dataSize(4B LE) +
  * totalPackets(4B LE) + packetNo(4B LE) + dataClusterSize(4B LE) + JPEG data
  * Standard Data Cluster Size = 4800, Max payload per packet = 4842
@@ -644,10 +642,10 @@ function mkLowResArtwork(layerIdx, jpegBuf){
     buildHdr(TC.ARTWORK).copy(b, 0);  // Type 204 (0xCC) — TCNet File Data File Packet
     b[TC.H]     = TC.DT_ARTWORK;     // DataType 128 = Low Res Artwork File
     b[TC.H + 1] = layerIdx;          // 1-8 layer number
-    b.writeUInt32LE(jpegBuf.length, TC.H + 2);   // total Data Size (LE per spec)
-    b.writeUInt32LE(totalPackets,   TC.H + 6);   // Total Packets (LE per spec)
-    b.writeUInt32LE(i,              TC.H + 10);  // Packet No (LE per spec)
-    b.writeUInt32LE(CLUSTER_SIZE,   TC.H + 14);  // Data Cluster Size = 4800 (LE per spec)
+    b.writeUInt32LE(jpegBuf.length, TC.H + 2);   // total Data Size
+    b.writeUInt32LE(totalPackets,   TC.H + 6);   // Total Packets
+    b.writeUInt32LE(i,              TC.H + 10);  // Packet No
+    b.writeUInt32LE(CLUSTER_SIZE,   TC.H + 14);  // Data Cluster Size = 4800
     chunk.copy(b, TC.H + 18);
     packets.push(b);
   }
@@ -699,13 +697,13 @@ function parsePDJL(msg){
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
     const barsRemain = msg.length>0xA5 ? msg.readUInt16BE(0xA4) : 0;
     const trackBeats = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
-    // Playback position fraction 0x48-0x4B (prolink-connect confirmed): uint32BE / 1000 = 0.0~1.0
+    // Playback position fraction 0x48-0x4B: uint32BE / 1000 = 0.0~1.0
     // Available on CDJ-2000NXS2 and CDJ-3000 — gives absolute position for any track including BPM-less
     const posFracRaw = msg.length>0x4B ? msg.readUInt32BE(0x48) : 0;
     // Do not synthesize a fraction from beatNum/trackBeats on NXS2: 0xB4 is not a
-    // reliable total-duration field across captures, and creates timeline drift/jumps.
+    // reliable total-duration field here, and it creates timeline drift/jumps.
     const positionFraction = (posFracRaw>0 && posFracRaw<=1000) ? posFracRaw/1000 : 0;
-    // Flags byte F at 0x89 (Deep Symmetry spec):
+    // Flags byte F at 0x89:
     //   bit 6 = playing, bit 5 = master, bit 4 = sync, bit 3 = on-air
     const flags = msg.length>0x89 ? msg[0x89] : 0;
     const isSync   = !!(flags & 0x10);  // bit 4
@@ -748,7 +746,7 @@ function parsePDJL(msg){
   // Type 0x29: flat 56-byte layout (DJM-2000NXS, legacy)
   // Type 0x39: block 248-byte layout (DJM-900NXS2, V10, A9)
   if(type===PDJL.DJM2 && msg.length>=0x24){
-    // Type 0x29 — flat layout per Deep Symmetry docs
+    // Type 0x29 — flat layout
     // rekordbox/NXS-GW 가 fake 0x29 브로드캐스트 → 쓰레기값 원천 차단
     if(/rekordbox|NXS-?GW|TCS-/i.test(name)) return null;
     // Faders at 0x0F-0x12 (0-0x7F), scale to 0-255
@@ -783,7 +781,7 @@ function parsePDJL(msg){
       return null;
     }
     // Type 0x39 — 248-byte layout (DJM-900NXS2/A9/V10)
-    // pcap 확정 오프셋 (V10__nuevo_crossfader.pcapng 자체 캡처/검증)
+    // V10/A9 계열 추가 오프셋
     // Per-channel block (stride 0x18):
     //   +0 InputSource  +1 Trim  +2 Comp(V10)  +3 HI  +4 MID  +5 LoMid(V10)
     //   +6 LO  +7 Color  +8 Send(V10)  +9 CUE  +10 CueB(A9/V10)  +11 Fader  +12 XF Assign
@@ -870,9 +868,11 @@ function parsePDJL(msg){
       const gHex=msg.length>0xB4?Array.from(msg.slice(0xB4,Math.min(0xE8,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' '):'(none)';
       try{console.log(`[DJM-0x39] model=${name} ${isV10?'(V10/6ch)':'(4ch)'} len=${msg.length}\n  ${hex}\n  GLOBAL@0xB4=[${gHex}]`);}catch(_){}
     }
-    if(!parsePDJL._lastDjm||parsePDJL._lastDjm.length!==ch.length||parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
-      parsePDJL._lastDjm=ch.slice();
-      try{console.log(`[DJM-0x39] faders=[${ch}] xf=${xfader} mVol=${masterLvl} mCue=${masterCue} booth=${boothLvl} fCv=${faderCurve} xfCv=${xfCurve} hpLv=${hpLevel} hpMix=${hpMixing} beatFx=${beatFxSel}/${beatFxOn} colorFx=${colorFxSel}`);}catch(_){}
+    if(process.env.BRIDGE_DJM39_DEBUG){
+      if(!parsePDJL._lastDjm||parsePDJL._lastDjm.length!==ch.length||parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
+        parsePDJL._lastDjm=ch.slice();
+        try{console.log(`[DJM-0x39] faders=[${ch}] xf=${xfader} mVol=${masterLvl} mCue=${masterCue} booth=${boothLvl} fCv=${faderCurve} xfCv=${xfCurve} hpLv=${hpLevel} hpMix=${hpMixing} beatFx=${beatFxSel}/${beatFxOn} colorFx=${colorFxSel}`);}catch(_){}
+      }
     }
     return{
       kind:'djm',name, isV10, numCh,
@@ -893,7 +893,7 @@ function parsePDJL(msg){
     };
   }
   // DJM VU Metering (type 0x58, ~524B, port 50001)
-  // 자체 pcap 검증 오프셋 (15 × uint16BE per block, 0=silence, 32767=clip):
+  // 15 × uint16BE per block, 0=silence, 32767=clip:
   //   4-ch: CH1=0x02C CH2=0x068 CH3=0x0A4 CH4=0x0E0 MasterL=0x11C MasterR=0x158
   //   6-ch (V10): CH5=0x194 CH6=0x1D0 appended AFTER MasterR (same as 4-ch positions)
   if(type===PDJL.DJM_METER && msg.length>=0x176){
@@ -922,7 +922,7 @@ function parsePDJL(msg){
   if(type===PDJL.DJM_ONAIR && msg.length>=0x2C){
     const name2 = msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
     if(name2.includes('DJM')){
-      // 각 채널은 2바이트 페어로 상태 표현 (pcap 확정):
+      // 각 채널은 2바이트 페어로 상태 표현:
       //   CH1=(0x24,0x25)  CH2=(0x26,0x27)  CH3=(0x28,0x29)  CH4=(0x2A,0x2B)
       //   각 페어 내 두 바이트는 X-Fader A/B assign 또는 단독 on-air 비트 (DJM 내부 상태)
       //   페어 OR로 "채널 활성" 판정 → 단일 바이트만 읽으면 CH4 깜빡임 발생(이전 버그)
@@ -933,19 +933,19 @@ function parsePDJL(msg){
         const hex=Array.from(msg).map((b,i)=>`[0x${i.toString(16).padStart(2,'0')}]=0x${b.toString(16).padStart(2,'0')}`).join(' ');
         console.log(`[DJM-0x03] FULL DUMP len=${msg.length}: ${hex}`);
       }
-      if(!parsePDJL._djm03Baseline) parsePDJL._djm03Baseline=Buffer.from(msg);
-      else {
-        const changed=[];
-        for(let i=0x1B;i<Math.min(msg.length,parsePDJL._djm03Baseline.length);i++){
-          if(msg[i]!==parsePDJL._djm03Baseline[i]){
-            changed.push(`0x${i.toString(16)}:${parsePDJL._djm03Baseline[i]}→${msg[i]}`);
+      if(process.env.BRIDGE_DJM03_DEBUG){
+        if(!parsePDJL._djm03Baseline) parsePDJL._djm03Baseline=Buffer.from(msg);
+        else {
+          const changed=[];
+          for(let i=0x1B;i<Math.min(msg.length,parsePDJL._djm03Baseline.length);i++){
+            if(msg[i]!==parsePDJL._djm03Baseline[i]){
+              changed.push(`0x${i.toString(16)}:${parsePDJL._djm03Baseline[i]}→${msg[i]}`);
+            }
           }
-        }
-        if(process.env.BRIDGE_DJM03_DEBUG && changed.length){
-          parsePDJL._djm03Baseline=Buffer.from(msg);
-          console.log(`[DJM-0x03] BYTE CHANGE: ${changed.join(' ')}`);
-        }else if(changed.length){
-          parsePDJL._djm03Baseline=Buffer.from(msg);
+          if(changed.length){
+            parsePDJL._djm03Baseline=Buffer.from(msg);
+            console.log(`[DJM-0x03] BYTE CHANGE: ${changed.join(' ')}`);
+          }
         }
       }
 
@@ -962,7 +962,7 @@ function parsePDJL(msg){
   if(type===0x02 && msg.length>=42){
     const name2=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
     // Fader start: logged once per session via _pdjlDbg above
-    // Per docs: bytes 42-45 = C1,C2,C3,C4 commands
+      // bytes 42-45 = C1,C2,C3,C4 commands
     if(msg.length>=46){
       return{kind:'fader_start',name:name2,ch:[msg[42],msg[43],msg[44],msg[45]]};
     }
@@ -1026,7 +1026,7 @@ function parsePDJL(msg){
   }
   // CDJ-3000 Absolute Position (type 0x0b, port 50001, ~60B, ~30Hz pairs)
   // CDJ-3000 sends PAIRS: 1) real data (byte[33]=player 1-6), 2) garbage (byte[33]>=0x80)
-  // Filter by player number range — 자체 pcap 검증
+  // Filter by player number range
   // Offsets: [38-39] trackLen(s) uint16BE, [40-43] playhead(ms), [44-47] pitch, [56-59] bpm*10
   // Note: bytes[36-37] are separate fields (not part of trackLength).
   // Only bytes[38-39] as uint16BE give correct duration across all CDJ-3000 units.
@@ -1164,7 +1164,26 @@ class BridgeCore {
     this._virtualArt = {};  // slot -> Buffer (JPEG data for virtual deck artwork)
     this._dbSrv = null;  // virtual dbserver (TCP 12523 emulation)
     this._lastVdbTrackId = 0;  // last trackId from 0x2002 (cross-connection fallback)
+    this._logRate = {};
     this._djmSeenTypes = new Set();
+  }
+
+  _shouldLogRate(key, intervalMs=3000, summary=null){
+    const now = Date.now();
+    const prev = this._logRate[key];
+    if(!prev){
+      this._logRate[key] = { time: now, summary };
+      return true;
+    }
+    if(summary!=null && prev.summary!==summary){
+      this._logRate[key] = { time: now, summary };
+      return true;
+    }
+    if((now - prev.time) >= intervalMs){
+      this._logRate[key] = { time: now, summary: summary!=null ? summary : prev.summary };
+      return true;
+    }
+    return false;
   }
 
   _resolveBroadcast(){
@@ -1258,7 +1277,7 @@ class BridgeCore {
     // Arena sends MetadataRequest(0x14) to Bridge's txSocket source port
     this.txSocket.on('message',(msg,rinfo)=>this._handleTCNetMsg(msg, rinfo, 'tx-RX'));
 
-    // Dedicated DATA socket — official Bridge sends DATA/Metrics/Meta from separate ephemeral port
+    // Dedicated DATA socket — DATA/Metrics/Meta use a separate ephemeral port
     this._dataSocket = dgram.createSocket({type:'udp4', reuseAddr:true});
     this._dataSocket.on('error',()=>{});
     await new Promise(r=>this._dataSocket.bind(0, this.isLocalMode?'127.0.0.1':undefined, r));
@@ -1269,7 +1288,7 @@ class BridgeCore {
 
     await this._startListenerPortRx();
 
-    // Transmission rates matching BRIDGE36 captures:
+    // Transmission rates used by the current timing model:
     //   OptIn: ~1/sec, Status: ~6/sec, TIME: ~30/sec, DATA: ~6/sec per layer
     this._sendOptIn();
     this._sendStatus();
@@ -1288,7 +1307,7 @@ class BridgeCore {
       this.packetCount++;
     }, 33);
     // DATA packets cycle through layers: MetricsData + MetaData per layer
-    // Sent via dedicated _dataSocket (separate from txSocket) — matches official Bridge architecture
+    // Sent via dedicated _dataSocket (separate from txSocket)
     const t4 = setInterval(()=>this._sendDataCycle(), 170);
     // Mixer Data (Type 150) — fader levels to Arena at 10fps (on-air is binary, no need for 60fps)
     const t5 = setInterval(()=>{
@@ -1301,7 +1320,7 @@ class BridgeCore {
     this._timers = [t1, t2, t3, t4, t5];
     this._startTCNetRx();
 
-    // Start PDJL receiver in all modes (local mode uses pcap-replay simulation)
+    // Start PDJL receiver in all modes
     await this._startPDJLRx();
     if(!this.isLocalMode) this._startPDJLAnnounce();
     this._startVirtualDbServer();
@@ -1379,6 +1398,7 @@ class BridgeCore {
         try{this._pdjlAnnSock.close();}catch(_){}
       }
       this._pdjlAnnSock=null;
+      this._pdjlAnnTxSock=null;
       try{this._dbKaSock?.close();}catch(_){}
       this._dbKaSock=null;
       try{this._djmSubSock?.close();}catch(_){}
@@ -1541,6 +1561,7 @@ class BridgeCore {
       try{this._pdjlAnnSock.close();}catch(_){}
     }
     this._pdjlAnnSock=null;
+    this._pdjlAnnTxSock=null;
     if(this._pdjlSockets){ this._pdjlSockets.forEach(s=>{try{s.close();}catch(_){}}); }
     else if(this.pdjlSocket){ try{this.pdjlSocket.close();}catch(_){} }
     this._pdjlSockets=[]; this.pdjlSocket=null; this.pdjlPort=null;
@@ -1619,7 +1640,7 @@ class BridgeCore {
   }
   _uc(buf, port, ip){
     if(!this.running||!ip||!port) return;
-    // Use dedicated _dataSocket for DATA responses (official Bridge pattern)
+    // Use dedicated _dataSocket for DATA responses
     const sock = this._dataSocket || this.txSocket;
     if(!sock) return;
     try{ sock.send(buf, 0, buf.length, port, ip); }catch(_){}
@@ -1645,7 +1666,7 @@ class BridgeCore {
     }
   }
 
-  /** Send DATA packets via dedicated _dataSocket to Arena lPort (official Bridge pattern). */
+  /** Send DATA packets via dedicated _dataSocket to Arena lPort. */
   _sendDataToArenas(buf){
     const sock = this._dataSocket || this.txSocket;
     if(!this.running || !sock) return;
@@ -1730,7 +1751,7 @@ class BridgeCore {
       pkt = mkDataMetrics(layerIdx, layerData, faderVal);
     }
 
-    // Send via dedicated _dataSocket (official Bridge architecture)
+    // Send via dedicated _dataSocket
     this._sendDataToArenas(pkt);
 
     this._dataLayerIdx = (idx + 1) % 24;
@@ -1827,7 +1848,7 @@ class BridgeCore {
       // MetaResp log suppressed (too frequent, causes FPS drop)
     }
     // 0xC8 Data Packet — parse incoming MixerData (DataType 150) for VU meters
-    // TCNet v3.5.1B spec: Audio Level = real-time channel VU (0-255, pulses with music)
+    // Audio Level = real-time channel VU (0-255, pulses with music)
     if(type===TC.DATA && msg.length>=TC.H+2){
       const body = msg.slice(TC.H);
       const dataType = body[0];
@@ -2094,19 +2115,32 @@ class BridgeCore {
 
     const spoofPlayer=5;
 
-    // annSock: 이미 열려있는 port 50000 소켓 공유 우선 사용
-    // → 비동기 바인딩 없이 즉시 사용 가능, DJM이 port 50000에서 hello/claim 수신
-    // fallback: 새 소켓을 ephemeral port(0)에 바인딩 (port 충돌 없음)
-    // [2026-04-19] 인덱스 하드코딩 제거 — 포트 50000 바인드 실패 시에도 안전
-    this._pdjlAnnSock = this._pdjlSocketByPort?.[50000] || this._pdjlSockets?.[0] || null;
-    if(!this._pdjlAnnSock){
+    // annSock: hello/claim/keepalive 송신용 소켓.
+    // macOS: port 50000 RX 소켓(0.0.0.0) 공유 — BSD 커널이 라우팅 테이블로
+    //        올바른 NIC 자동 선택하므로 문제 없음.
+    // Windows: 0.0.0.0 바인드 소켓에서 브로드캐스트 송신 시 기본 경로 NIC로만
+    //          나감. Pioneer LINK 포트가 별도 이더넷(예: 169.254.x, 192.168.x)
+    //          이면 패킷이 DJM에 도달 못함. 전용 TX 소켓을 pdjlIP에 바인드해야 함.
+    //          (참조: ProDJLinkInput.h:375-416 "PLATFORM-SPECIFIC binding")
+    if(process.platform==='win32'){
+      try{ if(this._pdjlAnnTxSock){ this._pdjlAnnTxSock.close(); } }catch(_){}
       const s=dgram.createSocket({type:'udp4',reuseAddr:true});
       s.on('error',()=>{});
-      s.bind(0,()=>{ try{s.setBroadcast(true);}catch(_){} });
-      this._pdjlAnnSock=s;
+      s.bind(0, pdjlIP, ()=>{ try{s.setBroadcast(true);}catch(_){} });
+      this._pdjlAnnTxSock = s;
+      this._pdjlAnnSock = s;
+      console.log(`[PDJL] Windows: dedicated TX socket bound to ${pdjlIP}:0`);
+    } else {
+      // [2026-04-19] 인덱스 하드코딩 제거 — 포트 50000 바인드 실패 시에도 안전
+      this._pdjlAnnSock = this._pdjlSocketByPort?.[50000] || this._pdjlSockets?.[0] || null;
+      if(!this._pdjlAnnSock){
+        const s=dgram.createSocket({type:'udp4',reuseAddr:true});
+        s.on('error',()=>{});
+        s.bind(0,()=>{ try{s.setBroadcast(true);}catch(_){} });
+        this._pdjlAnnSock=s;
+      }
     }
-    // DJM subscribe socket. Hardware capture shows type 0x57 from UDP source
-    // port 50006 to DJM:50001; DJM answers with 0x39 to subscriberIP:50002.
+    // DJM subscribe socket. Use a fixed source port for 0x57/0x55 traffic.
     if(this._djmSubSock){ try{this._djmSubSock.close();}catch(_){} }
     this._djmSubSockReady=false;
     this._djmSubSock=dgram.createSocket({type:'udp4',reuseAddr:true});
@@ -2212,7 +2246,7 @@ class BridgeCore {
       for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
       for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
       // ROLLBACK: was pkt[0x35]=0x20
-      pkt[0x35]=0x64; // CDJ-3000 requires 0x64 (prolink-connect confirmed)
+      pkt[0x35]=0x64; // CDJ-3000 expects 0x64
       // Pioneer identification strings (required for CDJ-3000 dbserver access)
       Buffer.from('PIONEER DJ CORP','ascii').copy(pkt,54,0,15);
       Buffer.from('PRODJLINK BRIDGE','ascii').copy(pkt,74,0,16);
@@ -2276,7 +2310,7 @@ class BridgeCore {
           ].filter(Boolean).filter((s,i,a)=>a.indexOf(s)===i).slice(0,1);
       if(!subSocks.length){ console.warn('[PDJL] 0x57: no socket available'); return; }
       const srcs=[];
-      const idsSent=[];
+      const masksSent=[];
       for(const subSock of subSocks){
         for(const pkt of pkts){
           try{
@@ -2284,15 +2318,15 @@ class BridgeCore {
             const local=(()=>{try{return subSock.address();}catch(_){return null;}})();
             const src=local?`${local.address}:${local.port}`:'unknown';
             if(!srcs.includes(src)) srcs.push(src);
-            const id=`0x${pkt[0x24].toString(16)}`;
-            if(!idsSent.includes(id)) idsSent.push(id);
+            const mask=`0x${pkt[33].toString(16)}`;
+            if(!masksSent.includes(mask)) masksSent.push(mask);
           }catch(e){ console.warn('[PDJL] 0x57 send error:',e.message); }
         }
       }
       if(srcs.length){
         this._djmSubCount = (this._djmSubCount||0)+1;
         if(this._djmSubCount===1||this._djmSubCount%10===0){
-          console.log(`[PDJL] 0x57 subscribe #${this._djmSubCount} ${srcs.join(',')} → ${djmIp}:50001 ids=${idsSent.join('/')} hasRealFaders=${this._hasRealFaders}`);
+          console.log(`[PDJL] 0x57 subscribe #${this._djmSubCount} ${srcs.join(',')} → ${djmIp}:50001 mask=${masksSent.join('/')} hasRealFaders=${this._hasRealFaders}`);
         }
       }
     };
@@ -2694,7 +2728,7 @@ class BridgeCore {
         const has50002=!!this._pdjlSocketByPort?.[50002];
         console.warn(`[DJM] 0x58 meter 수신 중이나 0x39 fader 미수신: meterCount=${this._djmMeterCount} from=${rinfo.address}:${rinfo.port} udp50002=${has50002?'active':'missing'}`);
       }
-      this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum});
+      this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum, masterL:p.masterL, masterR:p.masterR, masterLBands:p.masterLBands, masterRBands:p.masterRBands});
     }
     // DJM Channels-On-Air (type 0x03 on port 50001)
     if(p.kind==='djm_onair'){
@@ -2824,14 +2858,13 @@ class BridgeCore {
       const pn = p.playerNum;
       // Skip self-announce (bridge device) — double-check name and IP
       if(p.name==='BRIDGE+'||p.name==='TCS-SHOWKONTROL'||rinfo.address==='127.0.0.1') return;
-      // Rekordbox (같은 PC/다른 PC 모두) 가 보내는 가짜 announce 차단
-      // Rekordbox는 "rekordbox", "NXS-GW", "rbdj" 등 다양한 이름 사용
+      // 가상 장치/소프트웨어 announce 차단
       if(p.name && /rekordbox|rbdj|NXS-?GW|TCS-|prolink/i.test(p.name)){
         if(!this._fakeAnnLogged) this._fakeAnnLogged={};
         const fkey = `${p.name}@${rinfo.address}`;
         if(!this._fakeAnnLogged[fkey]){
           this._fakeAnnLogged[fkey]=true;
-          console.warn(`[PDJL] 가짜 announce 차단: name="${p.name}" from=${rinfo.address} (Rekordbox/가상 장치)`);
+          console.warn(`[PDJL] 가짜 announce 차단: name="${p.name}" from=${rinfo.address} (가상 장치)`);
         }
         return;
       }
@@ -2966,7 +2999,7 @@ class BridgeCore {
 
   /** Send a virtual CDJ status packet (type 0x0A) so Resolume Arena sees
    *  a track-loaded player and queries our virtual dbserver for artwork.
-   *  Offsets verified from Deep Symmetry djl-analysis + parsePDJL in this file:
+   *  Relevant offsets:
    *    0x24=playerNum, 0x28=trackDeviceId, 0x29=slot, 0x2A=trackType, 0x2C=trackId(BE) */
   _sendVirtualCDJStatus(playerNum, trackId, bpm){
     if(!this._pdjlAnnSock || !trackId) return;
@@ -2980,28 +3013,28 @@ class BridgeCore {
       pkt[0x0B] = 0x00;
       const nm = 'TCS-SHOWKONTROL';
       Buffer.from(nm,'ascii').copy(pkt, 0x0C, 0, 15);
-      // Header fields — Deep Symmetry spec: 0x20=subtype(0x03=CDJ), 0x21=deviceNum
+      // Header fields — 0x20=subtype(0x03=CDJ), 0x21=deviceNum
       // ROLLBACK: was pkt[0x20]=0x01, pkt[0x21]=0x04
       pkt[0x20] = 0x03; pkt[0x21] = playerNum & 0xFF;
       pkt.writeUInt16BE(pktSize - 0x24, 0x22);  // lengthRemaining from 0x24 to end
       pkt[0x24] = playerNum & 0xFF;   // player number (NXS2 reads 0x21, CDJ-3000 reads 0x24)
       pkt[0x25] = 0x00;
       // 0x26-0x27: sub-field (unused, zero)
-      // Track source fields — verified offsets from parsePDJL
+      // Track source fields
       pkt[0x28] = playerNum & 0xFF;   // trackDeviceId = self (same player loaded it)
       pkt[0x29] = 0x03;               // slot = 3 (USB)
       pkt[0x2A] = 0x01;               // trackType = 1 (rekordbox analyzed track)
       pkt[0x2B] = 0x00;
       pkt.writeUInt32BE(trackId >>> 0, 0x2C);  // trackId (big-endian)
 
-      // prolink-connect: bytes 0x68 and 0x75 MUST be 1 for mp3 metadata delivery
+      // bytes 0x68 and 0x75 MUST be 1 for mp3 metadata delivery
       // ROLLBACK: was 0x00 (unset)
       pkt[0x68] = 0x01;
       pkt[0x75] = 0x01;
 
       // Playing state: P1 byte (0x7B) and flags (0x89)
-      // ROLLBACK: was pkt[0x7B]=0x09 (0x09=searching per Deep Symmetry spec)
-      pkt[0x7B] = 0x03;   // P1 = 0x03 = playing (Deep Symmetry: 0x03=playing, 0x09=search)
+      // ROLLBACK: was pkt[0x7B]=0x09
+      pkt[0x7B] = 0x03;   // P1 = 0x03 = playing
       // ROLLBACK: was 0x68 (bit5=Master set) — only P1 should be master, others sync+onAir
       pkt[0x89] = (playerNum === 1) ? 0x68 : 0x48;
       // 0x68 = play(0x40)+master(0x20)+onAir(0x08), 0x48 = play(0x40)+onAir(0x08)
@@ -3011,11 +3044,11 @@ class BridgeCore {
       const bpmVal = Math.round((bpm||128)*100);
       pkt.writeUInt16BE(bpmVal, 0x92);
       // Pitch: slider at 0x8D (3B), effective at 0x99 (3B) — neutral = 0x100000
-      // prolink-connect writes neutral pitch at both locations
+      // Write neutral pitch at both locations
       pkt[0x8D] = 0x10; pkt[0x8E] = 0x00; pkt[0x8F] = 0x00; // sliderPitch = 0x100000
       pkt[0x99] = 0x10; pkt[0x9A] = 0x00; pkt[0x9B] = 0x00; // effectivePitch = 0x100000
       // ROLLBACK: was pkt.writeUInt32BE(0x100000, 0x8C) — wrote 4B starting at 0x8C
-      // prolink-connect: 0xB6 MUST be 1 (firmware version check bypass)
+      // 0xB6 must be 1
       pkt[0xB6] = 0x01;
 
       // Unicast only to Arena + localhost — broadcasting reaches DJM and causes
@@ -3033,7 +3066,10 @@ class BridgeCore {
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50002,ip);}catch(_){}
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,ip);}catch(_){}
       }
-      console.log(`[PDJL-VIRT] CDJ status P${playerNum} trackId=${trackId} bpm=${bpm||128} size=${pktSize}`);
+      const _summary=`${trackId}_${bpm||128}_${pktSize}`;
+      if(this._shouldLogRate(`virt_status_${playerNum}`, 10000, _summary)){
+        console.log(`[PDJL-VIRT] CDJ status P${playerNum} trackId=${trackId} bpm=${bpm||128} size=${pktSize}`);
+      }
     }catch(e){console.warn('[PDJL-VIRT] status send error:',e.message);}
   }
 
@@ -3167,7 +3203,7 @@ class BridgeCore {
   /** Parse a dbserver message to extract txId, type, and UInt32 args.
    *  Format: magic(5) + txId(5) + type(3) + argc(2) + argTags(5+argc) + args...
    *  ROLLBACK: was using hardcoded offset 38 for arg1 — only correct for our fixed
-   *  12-byte tag list, but Arena/prolink-connect use variable-length tags (argc bytes). */
+   *  12-byte tag list, but clients here use variable-length tags (argc bytes). */
   _parseDbRequest(buf){
     if(buf.length < 15) return null;
     const txId = buf.readUInt32BE(6);   // [5]=0x11, [6-9]=value
@@ -3292,7 +3328,7 @@ class BridgeCore {
   // Build a 0x4101 MenuItem message — used to tell Arena about artworkId
   // args[3]=label1(str), args[4]=label2(str), args[6]=itemType, args[8]=artworkId
   _dbBuildMenuItem(txId, label1, label2, artworkId){
-    // argList type codes for 12 args of a MenuItem (prolink-connect protocol)
+    // argList type codes for 12 args of a MenuItem
     const TYPE_CODES = [0x06,0x06,0x06,0x26,0x26,0x06,0x06,0x06,0x06,0x06,0x26,0x06];
     const argList = Buffer.from(TYPE_CODES);
     const args = [
@@ -3328,7 +3364,7 @@ class BridgeCore {
   }
 
   // ── dbserver metadata client (TCP 12523) ────
-  // Protocol: Deep-Symmetry/dysentery reverse engineering
+  // Protocol implementation
   // Flow: port discovery → greeting → setup → metadata query → render → parse
 
   onTrackMetadata = null; // (playerNum, {title, artist, album, duration, artworkId, key, genre}) => {}
@@ -3346,7 +3382,9 @@ class BridgeCore {
     if(prev && (now - prev.time) < ttlMs) return;
     this._metaReqCache[cacheKey] = { time: now, force: !!force };
     this._dbserverMetadata(ip, slot, trackId, playerNum, trackType).catch(e=>{
-      console.warn(`[DBSRV] metadata request failed: ${e.message}`);
+      if(this._shouldLogRate(`db_meta_fail_${cacheKey}`, 10000, e.message)){
+        console.warn(`[DBSRV] metadata request failed: ${e.message}`);
+      }
       delete this._metaReqCache[cacheKey];
     });
   }
@@ -3371,8 +3409,44 @@ class BridgeCore {
       return;
     }
     this._dbserverArtwork(ip, slot, artworkId, playerNum, cacheKey).catch(e=>{
-      console.warn(`[DBSRV] artwork request failed: ${e.message}`);
+      if(this._shouldLogRate(`db_art_fail_${cacheKey}`, 10000, e.message)){
+        console.warn(`[DBSRV] artwork request failed: ${e.message}`);
+      }
     });
+  }
+
+  _scheduleDbFollowUps(ip, slot, trackId, playerNum, trackType, artworkId){
+    if(!this._dbFollowTimers) this._dbFollowTimers = {};
+    const key = `p${playerNum}`;
+    const prev = this._dbFollowTimers[key];
+    if(prev?.timers){
+      prev.timers.forEach(t=>clearTimeout(t));
+    }
+    const token = `${ip}_${slot}_${trackId}_${Date.now()}`;
+    const timers = [];
+    const alive = ()=>this._dbFollowTimers?.[key]?.token===token;
+    const defer = (delay, fn)=>{
+      const timer = setTimeout(()=>{
+        if(!alive()) return;
+        fn().catch(e=>{
+          if(this._shouldLogRate(`db_follow_fail_${playerNum}_${delay}`, 10000, e.message)){
+            console.warn(`[DBSRV] P${playerNum} follow-up failed:`, e.message);
+          }
+        });
+      }, delay);
+      timers.push(timer);
+    };
+    this._dbFollowTimers[key] = { token, timers };
+
+    if(artworkId){
+      defer(0, ()=>this._dbserverArtwork(ip, slot, artworkId, playerNum, `art_${ip}_${slot}_${artworkId}`));
+    }
+    defer(180, ()=>this._dbserverWaveform(ip, slot, trackId, playerNum, trackType));
+    defer(520, ()=>this._dbserverWaveformDetail(ip, slot, trackId, playerNum, trackType));
+    defer(920, ()=>this._dbserverWaveformNxs2(ip, slot, trackId, playerNum, trackType));
+    defer(1280, ()=>this._dbserverCuePoints(ip, slot, trackId, playerNum, trackType));
+    defer(1640, ()=>this._dbserverBeatGrid(ip, slot, trackId, playerNum, trackType));
+    defer(2320, ()=>this._dbserverSongStructure(ip, slot, trackId, playerNum, trackType));
   }
 
   // ── dbserver field builders ────
@@ -3381,7 +3455,7 @@ class BridgeCore {
   _dbNum4(v){ const b=Buffer.alloc(5); b[0]=0x11; b.writeUInt32BE(v>>>0,1); return b; }
 
   _dbBuildMsg(txId, type, args){
-    // prolink-connect format: each field wrapped in FieldType prefix
+    // Each field is wrapped in a FieldType prefix
     // UInt32=0x11(5B), UInt16=0x10(3B), UInt8=0x0F(2B), Binary=0x14(1+4+data)
     const argList = Buffer.alloc(12); // 12 type-tag slots
     for(let i=0;i<args.length&&i<12;i++) argList[i] = args[i].tag;
@@ -3566,7 +3640,7 @@ class BridgeCore {
   }
 
   async _dbserverMetadata(ip, slot, trackId, playerNum, trackType=1){
-    // Spoof as player 7 (Deep Symmetry recommended, avoids conflict with CDJs 1-6)
+    // Spoof as player 7 to avoid conflict with CDJs 1-6
     const spoofPlayer = 5;
     let sock;
     try{
@@ -3638,28 +3712,9 @@ class BridgeCore {
         sock.write(teardown);
       }catch(_){}
 
-      // Request artwork + waveform on separate connections (non-blocking)
-      if(meta.artworkId){
-        this._dbserverArtwork(ip, slot, meta.artworkId, playerNum, `art_${ip}_${slot}_${meta.artworkId}`)
-          .catch(e=>console.warn(`[DBSRV] P${playerNum} artwork failed:`,e.message));
-      }
-      this._dbserverWaveform(ip, slot, trackId, playerNum, tt)
-        .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform preview failed:`,e.message));
-      this._dbserverWaveformDetail(ip, slot, trackId, playerNum, tt)
-        .catch(e=>console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message));
-      // NXS2 extension: 3-band waveform (PWV7) — higher quality than single-byte encoding
-      this._dbserverWaveformNxs2(ip, slot, trackId, playerNum, tt)
-        .catch(e=>console.warn(`[DBSRV] P${playerNum} nxs2 waveform failed:`,e.message));
-      this._dbserverCuePoints(ip, slot, trackId, playerNum, tt)
-        .catch(e=>console.warn(`[DBSRV] P${playerNum} cue points failed:`,e.message));
-      this._dbserverBeatGrid(ip, slot, trackId, playerNum, tt)
-        .catch(e=>console.warn(`[DBSRV] P${playerNum} beat grid failed:`,e.message));
-      // PSSI 곡구조는 beat grid 이후에 요청해야 timeMs 계산 가능
-      // → beat grid 완료 대기 후 실행 (짧은 지연으로 충분)
-      setTimeout(()=>{
-        this._dbserverSongStructure(ip, slot, trackId, playerNum, tt)
-          .catch(e=>console.warn(`[DBSRV] P${playerNum} song structure failed:`,e.message));
-      }, 1500);
+      // Stagger heavy follow-up requests so HW track load does not create a burst
+      // of parallel TCP work that stalls UI/audio on slower systems.
+      this._scheduleDbFollowUps(ip, slot, trackId, playerNum, tt, meta.artworkId||0);
     }catch(e){
       throw e;
     }finally{
@@ -3733,7 +3788,7 @@ class BridgeCore {
         for(let i=0;i<data.length;i++){
           pts.push({height:data[i]&0x1F, color:(data[i]>>5)&0x07});
         }
-        // Waveform detail = 150 pts/sec (Deep Symmetry 공식 표준)
+        // Waveform detail = 150 pts/sec
         // rekordbox 분석 시 실제 오디오 파일 길이 기반 → ms 정밀도 확보 가능한 유일한 소스
         this._wfTrackLen = this._wfTrackLen || {};
         this._wfTrackLen[playerNum] = Math.round(pts.length * 1000 / 150);
@@ -4119,7 +4174,7 @@ class BridgeCore {
         return;
       }
       const body = anlzData.slice(pssiStart, pssiEnd);
-      // PSSI body layout (BE, Deep-Symmetry/Crate Digger 기준):
+      // PSSI body layout (big-endian):
       //  0:  "PSSI"
       //  4:  u4 len_header
       //  8:  u4 len_tag
