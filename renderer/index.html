@@ -552,9 +552,18 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-clip{min-width:86px;padding:9px 12px;border-radius:3px;font:800 10px var(--mn);letter-spacing:.08em;text-align:center;border:1.5px solid rgba(255,60,60,.15);color:rgba(255,60,60,.25);background:transparent;transition:all .15s}
 .mx-clip.on{border-color:rgba(255,60,60,.7);color:#ff4444;background:rgba(255,60,60,.1);animation:clip-flash .3s ease-in-out}
 @keyframes clip-flash{0%,100%{opacity:1}50%{opacity:.5}}
+/* Unified mixer layout — Claude design pass */
+.mx-primary{display:flex;gap:10px;align-items:flex-start;min-height:0}
+.mx-primary .mx-body{flex:1;min-width:0}
+.mx-right-col{display:flex;flex-direction:column;gap:8px;width:188px;flex-shrink:0}
+.mx-right-col .mx-aux-group{min-height:0;padding:9px 10px}
+.mx-fx-row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.mx-fx-row .mx-aux-group{flex:1 1 180px;min-height:0}
+.mx-aux-full{width:100%;min-width:0;padding:7px 10px;font-size:9.5px}
+/* Legacy — kept for fallback */
 .mx-aux-shell{display:flex;flex-direction:column;gap:8px}
 .mx-aux-row-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px}
-.mx-aux-group{display:flex;flex-direction:column;gap:8px;padding:10px 10px 9px;background:rgba(20,22,26,.72);border:1px solid rgba(255,255,255,.07);border-radius:10px;min-height:104px}
+.mx-aux-group{display:flex;flex-direction:column;gap:7px;padding:9px 10px 8px;background:rgba(20,22,26,.62);border:1px solid rgba(255,255,255,.06);border-radius:8px}
 .mx-aux-group.is-v10{background:rgba(150,100,200,.05);border-color:rgba(150,100,200,.18)}
 .mx-aux-gtitle{font:800 9px var(--lb);color:var(--tx2);letter-spacing:.14em}
 .mx-aux-gsub{font:600 7px var(--mn);color:var(--tx4);letter-spacing:.08em}
@@ -857,10 +866,11 @@ body[data-layout="tower"] .tw-head-btm .dhwl{min-width:0;overflow:hidden;text-ov
 body[data-layout="tower"] .tw-head-btm .dksm{display:none!important}
 body[data-layout="tower"] .tw-art-wrap .dkart{width:100%;height:auto;aspect-ratio:1;border-radius:4px;overflow:hidden;border:1px solid var(--bdr);margin:0 auto}
 body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block}
-body[data-layout="tower"] .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;min-height:40px;justify-content:center;padding:3px 2px 4px}
+body[data-layout="tower"] .tw-title{display:flex;flex-direction:column;gap:2px;text-align:center;height:50px;min-height:50px;max-height:50px;justify-content:center;padding:3px 2px 4px;box-sizing:border-box;overflow:hidden}
 body[data-layout="tower"] .tw-title::before{content:'';width:36px;height:1px;background:var(--bdr2);align-self:center;margin:0 auto 4px;opacity:.6}
-body[data-layout="tower"] .tw-title span[id^="dta"]{font:600 10.5px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;letter-spacing:.02em}
-body[data-layout="tower"] .tw-title span[id^="dtn"]{font:700 13px var(--sn);color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+body[data-layout="tower"] .tw-title span[id^="dta"]{font:600 10.5px var(--sn);color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;letter-spacing:.02em;min-height:14px;display:block}
+body[data-layout="tower"] .tw-title span[id^="dta"]:empty::before{content:'\00a0';visibility:hidden}
+body[data-layout="tower"] .tw-title span[id^="dtn"]{font:700 13px var(--sn);color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;min-height:17px;display:block}
 body[data-layout="tower"] .tw-wf{display:flex;flex-direction:column;gap:3px}
 body[data-layout="tower"] .tw-wf .dwov{height:18px;border-radius:3px;margin:0}
 body[data-layout="tower"] .tw-wf .dwz-row{height:56px}
@@ -1100,137 +1110,129 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
       <span class="mx-empty-sub">Pro DJ Link 네트워크에 DJM을 연결하면<br>실시간 믹서 데이터가 표시됩니다</span>
     </div>
     <div id="mxContent" style="display:none">
-      <div class="mx-body" id="mxBody"></div>
+      <!-- Primary mixer: channels + master + monitor column (unified) -->
+      <div class="mx-primary">
+        <div class="mx-body" id="mxBody"></div>
+        <div class="mx-right-col">
+          <div class="mx-aux-group monitor">
+            <span class="mx-aux-gtitle">MONITOR</span>
+            <div class="mx-aux-grid2">
+              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBalKnobHost"></div><span class="mx-aux-klabel">BALANCE</span><span class="mx-aux-kval" id="mxBalVal">C</span></div>
+              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBoothKnobHost"></div><span class="mx-aux-klabel">BOOTH</span><span class="mx-aux-kval" id="mxBoothVal">0</span></div>
+              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpMixKnobHost"></div><span class="mx-aux-klabel">HP MIX</span><span class="mx-aux-kval" id="mxHpMixVal">0</span></div>
+              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpLevelKnobHost"></div><span class="mx-aux-klabel">HP LEVEL</span><span class="mx-aux-kval" id="mxHpVal">0</span></div>
+            </div>
+            <span class="mx-aux-toggle ylw mx-aux-full" id="mxCueMasterAux">MASTER CUE</span>
+          </div>
+          <div class="mx-aux-group booth-eq" id="mxBoothEqGroup">
+            <span class="mx-aux-gtitle">BOOTH EQ</span>
+            <div class="mx-aux-grid2">
+              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBthHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxBthHiVal">0</span></div>
+              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBthLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxBthLoVal">0</span></div>
+            </div>
+            <span class="mx-aux-toggle mx-aux-full" id="mxBthEqBtn">EQ ON</span>
+          </div>
+          <div class="mx-aux-group hp-b" id="mxHpBGroup">
+            <span class="mx-aux-gtitle">HEADPHONES B</span>
+            <div class="mx-aux-grid2">
+              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpMixBKnobHost"></div><span class="mx-aux-klabel">HP MIX B</span><span class="mx-aux-kval" id="mxHpMixB">0</span></div>
+              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpLevelBKnobHost"></div><span class="mx-aux-klabel">HP LEVEL B</span><span class="mx-aux-kval" id="mxHpValB">0</span></div>
+            </div>
+            <span class="mx-aux-toggle ylw mx-aux-full" id="mxHpLinkB">CUE LINK</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- X-Fader -->
       <div class="mx-xfader">
         <span class="mx-xf-lbl">X-FADER</span>
         <span class="mx-xf-a">A</span>
         <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
         <span class="mx-xf-b">B</span>
       </div>
-      <div class="mx-aux-shell" id="mxAuxPanel">
-        <div class="mx-aux-row-grid">
-          <div class="mx-aux-group monitor">
-            <span class="mx-aux-gtitle">MONITOR</span>
-            <div class="mx-aux-spread">
-              <div class="mx-aux-inline">
-                <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBalKnobHost"></div><span class="mx-aux-klabel">BALANCE</span><span class="mx-aux-kval" id="mxBalVal">C</span></div>
-                <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBoothKnobHost"></div><span class="mx-aux-klabel">BOOTH</span><span class="mx-aux-kval" id="mxBoothVal">0</span></div>
-                <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpMixKnobHost"></div><span class="mx-aux-klabel">HP MIX</span><span class="mx-aux-kval" id="mxHpMixVal">0</span></div>
-                <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpLevelKnobHost"></div><span class="mx-aux-klabel">HP LEVEL</span><span class="mx-aux-kval" id="mxHpVal">0</span></div>
-              </div>
-              <div class="mx-aux-stack">
-                <span class="mx-aux-gsub">MASTER CUE</span>
-                <span class="mx-aux-toggle ylw" id="mxCueMasterAux">CUE</span>
-              </div>
-            </div>
-          </div>
-          <div class="mx-aux-group curves">
-            <span class="mx-aux-gtitle">CURVE</span>
-            <div class="mx-aux-stack">
-              <span class="mx-aux-gsub">CHANNEL EQ</span>
-              <div class="mx-aux-pills">
-                <span class="mx-aux-pill" id="mxEqIso">ISO</span>
-                <span class="mx-aux-pill" id="mxEqStd">STD</span>
-                <span class="mx-aux-pill hot" id="mxEqHot">HOT</span>
-              </div>
-            </div>
-            <div class="mx-aux-stack">
-              <span class="mx-aux-gsub">FADER</span>
-              <div class="mx-aux-pills">
-                <span class="mx-aux-pill" id="mxFdrLong">LONG</span>
-                <span class="mx-aux-pill" id="mxFdrStd">STD</span>
-                <span class="mx-aux-pill hot" id="mxFdrSharp">SHARP</span>
-              </div>
-            </div>
-          </div>
-          <div class="mx-aux-group beatfx">
-            <span class="mx-aux-gtitle">BEAT FX</span>
-            <div class="mx-aux-spread">
-              <div class="mx-aux-stack">
-                <span class="mx-aux-readout" id="mxBfxSel">DELAY</span>
-                <span class="mx-aux-mini" id="mxBfxAssign">MASTER</span>
-                <span class="mx-aux-mini" id="mxSndRtn">SND/RTN 0</span>
-              </div>
-              <span class="mx-aux-toggle pur" id="mxBfxOn">ON</span>
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBfxLvlKnobHost"></div><span class="mx-aux-klabel">LEVEL/DEPTH</span><span class="mx-aux-kval" id="mxBfxLvlVal">0</span></div>
-            </div>
-            <div class="mx-aux-stack">
-              <span class="mx-aux-gsub">FREQ</span>
-              <div class="mx-aux-pills">
-                <span id="mxFxFLo" class="mx-aux-pill">LO</span>
-                <span id="mxFxFMid" class="mx-aux-pill">MID</span>
-                <span id="mxFxFHi" class="mx-aux-pill">HI</span>
-              </div>
-            </div>
-          </div>
-          <div class="mx-aux-group colorfx">
-            <span class="mx-aux-gtitle">SOUND COLOR FX</span>
-            <span class="mx-aux-readout" id="mxCfxSel">OFF</span>
-            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxCfxKnobHost"></div><span class="mx-aux-klabel">PARAMETER</span><span class="mx-aux-kval" id="mxCfxVal">0</span></div>
-          </div>
-        </div>
-        <div class="mx-aux-row-grid" id="mxAuxExt">
-          <div class="mx-aux-group mic">
-            <span class="mx-aux-gtitle">MIC EQ</span>
-            <div class="mx-aux-inline">
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxMicHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxMicHiVal">0</span></div>
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxMicLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxMicLoVal">0</span></div>
-            </div>
-          </div>
-          <div class="mx-aux-group booth-eq" id="mxBoothEqGroup">
-            <span class="mx-aux-gtitle">BOOTH EQ</span>
-            <div class="mx-aux-spread">
-              <div class="mx-aux-inline">
-                <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBthHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxBthHiVal">0</span></div>
-                <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBthLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxBthLoVal">0</span></div>
-              </div>
-              <div class="mx-aux-stack">
-                <span class="mx-aux-gsub">EQ</span>
-                <span class="mx-aux-toggle" id="mxBthEqBtn">ON</span>
-              </div>
-            </div>
-          </div>
-          <div class="mx-aux-group hp-b" id="mxHpBGroup">
-            <span class="mx-aux-gtitle">HEADPHONES B</span>
-            <div class="mx-aux-spread">
-              <div class="mx-aux-inline">
-                <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpMixBKnobHost"></div><span class="mx-aux-klabel">HP MIX B</span><span class="mx-aux-kval" id="mxHpMixB">0</span></div>
-                <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpLevelBKnobHost"></div><span class="mx-aux-klabel">HP LEVEL B</span><span class="mx-aux-kval" id="mxHpValB">0</span></div>
-              </div>
-              <div class="mx-aux-stack">
-                <span class="mx-aux-gsub">CUE LINK</span>
-                <span class="mx-aux-toggle ylw" id="mxHpLinkB">LINK</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div id="mxAuxV10" class="mx-aux-row-grid" style="display:none">
-          <div class="mx-aux-group is-v10 filter">
-            <span class="mx-aux-gtitle">FILTER</span>
+
+      <!-- FX / Curves / Color / Mic — flat single row -->
+      <div class="mx-fx-row">
+        <div class="mx-aux-group curves">
+          <span class="mx-aux-gtitle">CURVE</span>
+          <div class="mx-aux-stack">
+            <span class="mx-aux-gsub">CHANNEL EQ</span>
             <div class="mx-aux-pills">
-              <span id="mxFltLPF" class="mx-aux-pill pur">LPF</span>
-              <span id="mxFltHPF" class="mx-aux-pill pur">HPF</span>
-            </div>
-            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxFltResoKnobHost"></div><span class="mx-aux-klabel">RESONANCE</span><span class="mx-aux-kval" id="mxFltResoVal">0</span></div>
-          </div>
-          <div class="mx-aux-group is-v10 iso">
-            <span class="mx-aux-gtitle">ISOLATOR</span>
-            <span class="mx-aux-toggle pur" id="mxIsoOn">ON</span>
-            <div class="mx-aux-grid3">
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxIsoHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxIsoHiVal">0</span></div>
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxIsoMidKnobHost"></div><span class="mx-aux-klabel">MID</span><span class="mx-aux-kval" id="mxIsoMidVal">0</span></div>
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxIsoLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxIsoLoVal">0</span></div>
+              <span class="mx-aux-pill" id="mxEqIso">ISO</span>
+              <span class="mx-aux-pill" id="mxEqStd">STD</span>
+              <span class="mx-aux-pill hot" id="mxEqHot">HOT</span>
             </div>
           </div>
-          <div class="mx-aux-group is-v10 master-mix">
-            <span class="mx-aux-gtitle">MASTER MIX</span>
-            <span class="mx-aux-toggle pur" id="mxMmxOn">ON</span>
-            <div class="mx-aux-grid2">
-              <span class="mx-aux-mini">SIZE <span class="mx-aux-readout dim" id="mxMmxSize">0</span></span>
-              <span class="mx-aux-mini">TIME <span class="mx-aux-readout dim" id="mxMmxTime">0</span></span>
-              <span class="mx-aux-mini">TONE <span class="mx-aux-readout dim" id="mxMmxTone">0</span></span>
-              <span class="mx-aux-mini">LVL <span class="mx-aux-readout dim" id="mxMmxLvl">0</span></span>
+          <div class="mx-aux-stack">
+            <span class="mx-aux-gsub">FADER</span>
+            <div class="mx-aux-pills">
+              <span class="mx-aux-pill" id="mxFdrLong">LONG</span>
+              <span class="mx-aux-pill" id="mxFdrStd">STD</span>
+              <span class="mx-aux-pill hot" id="mxFdrSharp">SHARP</span>
             </div>
+          </div>
+        </div>
+        <div class="mx-aux-group beatfx">
+          <span class="mx-aux-gtitle">BEAT FX</span>
+          <div class="mx-aux-spread">
+            <div class="mx-aux-stack">
+              <span class="mx-aux-readout" id="mxBfxSel">DELAY</span>
+              <span class="mx-aux-mini" id="mxBfxAssign">MASTER</span>
+              <span class="mx-aux-mini" id="mxSndRtn">SND/RTN 0</span>
+            </div>
+            <span class="mx-aux-toggle pur" id="mxBfxOn">ON</span>
+            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBfxLvlKnobHost"></div><span class="mx-aux-klabel">LEVEL/DEPTH</span><span class="mx-aux-kval" id="mxBfxLvlVal">0</span></div>
+          </div>
+          <div class="mx-aux-stack">
+            <span class="mx-aux-gsub">FREQ</span>
+            <div class="mx-aux-pills">
+              <span id="mxFxFLo" class="mx-aux-pill">LO</span>
+              <span id="mxFxFMid" class="mx-aux-pill">MID</span>
+              <span id="mxFxFHi" class="mx-aux-pill">HI</span>
+            </div>
+          </div>
+        </div>
+        <div class="mx-aux-group colorfx">
+          <span class="mx-aux-gtitle">SOUND COLOR FX</span>
+          <span class="mx-aux-readout" id="mxCfxSel">OFF</span>
+          <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxCfxKnobHost"></div><span class="mx-aux-klabel">PARAMETER</span><span class="mx-aux-kval" id="mxCfxVal">0</span></div>
+        </div>
+        <div class="mx-aux-group mic">
+          <span class="mx-aux-gtitle">MIC EQ</span>
+          <div class="mx-aux-grid2">
+            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxMicHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxMicHiVal">0</span></div>
+            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxMicLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxMicLoVal">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- V10 extras — only shown for DJM-V10 -->
+      <div id="mxAuxV10" class="mx-fx-row" style="display:none">
+        <div class="mx-aux-group is-v10 filter">
+          <span class="mx-aux-gtitle">FILTER</span>
+          <div class="mx-aux-pills">
+            <span id="mxFltLPF" class="mx-aux-pill pur">LPF</span>
+            <span id="mxFltHPF" class="mx-aux-pill pur">HPF</span>
+          </div>
+          <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxFltResoKnobHost"></div><span class="mx-aux-klabel">RESONANCE</span><span class="mx-aux-kval" id="mxFltResoVal">0</span></div>
+        </div>
+        <div class="mx-aux-group is-v10 iso">
+          <span class="mx-aux-gtitle">ISOLATOR</span>
+          <span class="mx-aux-toggle pur" id="mxIsoOn">ON</span>
+          <div class="mx-aux-grid3">
+            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxIsoHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxIsoHiVal">0</span></div>
+            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxIsoMidKnobHost"></div><span class="mx-aux-klabel">MID</span><span class="mx-aux-kval" id="mxIsoMidVal">0</span></div>
+            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxIsoLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxIsoLoVal">0</span></div>
+          </div>
+        </div>
+        <div class="mx-aux-group is-v10 master-mix">
+          <span class="mx-aux-gtitle">MASTER MIX</span>
+          <span class="mx-aux-toggle pur" id="mxMmxOn">ON</span>
+          <div class="mx-aux-grid2">
+            <span class="mx-aux-mini">SIZE <span class="mx-aux-readout dim" id="mxMmxSize">0</span></span>
+            <span class="mx-aux-mini">TIME <span class="mx-aux-readout dim" id="mxMmxTime">0</span></span>
+            <span class="mx-aux-mini">TONE <span class="mx-aux-readout dim" id="mxMmxTone">0</span></span>
+            <span class="mx-aux-mini">LVL <span class="mx-aux-readout dim" id="mxMmxLvl">0</span></span>
           </div>
         </div>
       </div>
