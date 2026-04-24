@@ -571,7 +571,19 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-right-col .mx-aux-group{min-height:0;padding:8px 10px;border-right:none;border-bottom:1px solid rgba(255,255,255,.05)}
 .mx-right-col .mx-aux-group:last-child{border-bottom:none}
 .mx-fx-row{display:flex;gap:0;align-items:stretch;flex-wrap:nowrap;overflow-x:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
-.mx-fx-row .mx-aux-group{flex:1 1 180px;min-height:0}
+.mx-fx-row .mx-aux-group{flex:1 1 140px;min-width:140px;min-height:0;padding:7px 10px;gap:5px}
+.mx-fx-row .mx-aux-gtitle{font-size:8px}
+.mx-fx-row .mx-aux-gsub{font-size:6.5px}
+.mx-fx-row .mx-aux-pill{min-width:34px;padding:3px 5px;font-size:7px}
+.mx-fx-row .mx-aux-knob-face{width:34px;height:34px}
+.mx-fx-row .mx-aux-knob{min-width:44px;gap:2px}
+.mx-fx-row .mx-aux-klabel{font-size:6.5px}
+.mx-fx-row .mx-aux-kval{font-size:7px}
+.mx-fx-row .mx-aux-toggle{min-width:48px;padding:5px 8px;font-size:8px}
+.mx-fx-row .mx-aux-readout{font-size:9px}
+.mx-fx-row .mx-aux-mini{font-size:7px}
+.mx-fx-row .mx-aux-spread{gap:6px}
+.mx-fx-row .mx-aux-inline{gap:6px}
 .mx-aux-full{width:100%;min-width:0;padding:7px 10px;font-size:9.5px}
 /* X-fader — 콘솔 안쪽 내장 스타일 */
 .mx-console .mx-xfader{background:transparent;border:1px solid rgba(255,255,255,.06);padding:10px 16px;max-width:none;align-self:stretch;width:auto}
@@ -883,9 +895,12 @@ body[data-layout="tower"] .tw-head-btm .dhwl{min-width:0;overflow:hidden;text-ov
 body[data-layout="tower"] .tw-head-btm .dksm{display:inline-flex;gap:3px;flex-shrink:0}
 body[data-layout="tower"] .tw-art-wrap{position:relative;width:100%;height:144px;border-radius:4px;overflow:hidden;border:1px solid var(--bdr)}
 body[data-layout="tower"] .tw-art-wrap .dkart{width:100%;height:100%;border-radius:0;overflow:hidden;border:none;margin:0}
-body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.55) blur(1px)}
-/* Tower: title/artist 앨범아트 수직 중앙 overlay (앨범아트는 블러 배경 역할) */
-body[data-layout="tower"] .tw-title{position:absolute;inset:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;text-align:center;padding:6px 12px;box-sizing:border-box;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.5) 50%,rgba(0,0,0,.3) 100%);pointer-events:none;z-index:2}
+body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.78)}
+/* SYNC/MASTER 뱃지를 앨범아트 우측 상단에 오버레이 (타워 헤더에서 숨김) */
+body[data-layout="tower"] .tw-art-wrap .dksm{position:absolute;top:6px;right:6px;z-index:3;display:inline-flex;gap:3px;flex-shrink:0}
+body[data-layout="tower"] .tw-head-btm .dksm{display:none}
+/* Tower: title/artist 앨범아트 수직 중앙 overlay */
+body[data-layout="tower"] .tw-title{position:absolute;inset:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;text-align:center;padding:6px 12px;box-sizing:border-box;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,.62) 50%,rgba(0,0,0,.35) 100%);pointer-events:none;z-index:2}
 body[data-layout="tower"] .tw-title::before{display:none}
 body[data-layout="tower"] .tw-title span[id^="dta"]{font:600 10.5px var(--sn);color:rgba(255,255,255,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;letter-spacing:.02em;min-height:14px;display:block;width:100%;max-width:100%;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.85)}
 body[data-layout="tower"] .tw-title span[id^="dta"]:empty::before{content:'\00a0';visibility:hidden}
@@ -3276,16 +3291,16 @@ function deckHTMLTower(slot){
         <span class="dbadge bm" id="dbg${slot}" style="margin-left:auto">STOP</span>
       </div>
       <div class="tw-head-btm">
-        <span class="dhwl" id="dhwl${slot}" style="font:500 8px var(--mn);color:var(--tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:3px">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+d.model:''):'VIRTUAL'}</span>
-        <div class="dksm" id="dksm${slot}" style="gap:2px;margin-left:auto">
-          <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}" style="padding:1px 4px;font-size:6px;min-width:26px">SYNC</span>
-          <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:1px 4px;font-size:6px;min-width:34px">MASTER</span>
-        </div>
+        <span class="dhwl" id="dhwl${slot}" style="font:500 8px var(--mn);color:var(--tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:3px;margin-left:auto">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+d.model:''):'VIRTUAL'}</span>
         ${isHW?'':`<button class="dhtb cdl" data-a="remove" data-i="${slot}" style="padding:2px 5px"><svg class="gi gi-close"><use href="#i-close"/></svg></button>`}
       </div>
       <span class="dbadge br off" id="dair${slot}" style="display:none"></span>
     </div>
     <div class="tw-art-wrap">${artEl}
+      <div class="dksm" id="dksm${slot}" style="gap:3px">
+        <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}" style="padding:3px 6px;font-size:8px;min-width:32px">SYNC</span>
+        <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:3px 6px;font-size:8px;min-width:42px">MASTER</span>
+      </div>
       <div class="tw-title">
         <span id="dta${slot}">${isLoaded?(d.ar||''):''}</span>
         <span class="dk-title-sep" id="dtsep${slot}" style="display:none">—</span>
@@ -4709,16 +4724,10 @@ function tick(){
       if(curTxt!==txt||firstTime){
         dtnEl.classList.remove('scrolling');
         if(curTxt!==txt) dtnEl.textContent=txt;
-        // Measure overflow after layout settles. 초기 로드에선 clientWidth=0 이
-        // 나올 수 있어 재시도 필요.
-        const tryMeasure=(retries=0)=>{
-          if(!dtnEl.parentElement) return;
+        const applyMarquee=()=>{
+          if(!dtnEl.parentElement) return false;
           const cw=dtnEl.clientWidth, sw=dtnEl.scrollWidth;
-          if(cw===0 && retries<5){
-            // 레이아웃 아직 안 됨 → 다음 frame 재시도
-            requestAnimationFrame(()=>tryMeasure(retries+1));
-            return;
-          }
+          if(cw===0) return false;
           if(sw>cw+5 && txt){
             const inner=document.createElement('span');
             inner.className='mq-inner';
@@ -4730,9 +4739,20 @@ function tick(){
             dtnEl.style.setProperty('--scroll-dur',Math.max(5,overflow/25)+'s');
             dtnEl.classList.add('scrolling');
           }
-          if(cw>0) dtnEl.dataset.mqChecked='1';
+          dtnEl.dataset.mqChecked='1';
+          return true;
         };
-        requestAnimationFrame(()=>tryMeasure());
+        // 1) 즉시 시도 (대부분의 경우 성공)
+        requestAnimationFrame(()=>{
+          if(applyMarquee()) return;
+          // 2) clientWidth=0 (탭 미가시) → ResizeObserver 로 크기 확정 시 재시도
+          if(!dtnEl._mqRO){
+            dtnEl._mqRO=new ResizeObserver(()=>{
+              if(applyMarquee()){ try{dtnEl._mqRO.disconnect();}catch(_){} dtnEl._mqRO=null; }
+            });
+            dtnEl._mqRO.observe(dtnEl);
+          }
+        });
       }
     }
     const dtaEl=document.getElementById('dta'+slot);
@@ -4743,13 +4763,10 @@ function tick(){
       if(artCur!==artTxt||artFirst){
         dtaEl.classList.remove('scrolling');
         if(artCur!==artTxt) dtaEl.textContent=artTxt;
-        const tryMA=(retries=0)=>{
-          if(!dtaEl.parentElement) return;
+        const applyA=()=>{
+          if(!dtaEl.parentElement) return false;
           const cw=dtaEl.clientWidth, sw=dtaEl.scrollWidth;
-          if(cw===0 && retries<5){
-            requestAnimationFrame(()=>tryMA(retries+1));
-            return;
-          }
+          if(cw===0) return false;
           if(sw>cw+5&&artTxt){
             const inner=document.createElement('span');
             inner.className='mq-inner';
@@ -4761,9 +4778,18 @@ function tick(){
             dtaEl.style.setProperty('--scroll-dur',Math.max(5,overflow/25)+'s');
             dtaEl.classList.add('scrolling');
           }
-          if(cw>0) dtaEl.dataset.mqChecked='1';
+          dtaEl.dataset.mqChecked='1';
+          return true;
         };
-        requestAnimationFrame(()=>tryMA());
+        requestAnimationFrame(()=>{
+          if(applyA()) return;
+          if(!dtaEl._mqRO){
+            dtaEl._mqRO=new ResizeObserver(()=>{
+              if(applyA()){ try{dtaEl._mqRO.disconnect();}catch(_){} dtaEl._mqRO=null; }
+            });
+            dtaEl._mqRO.observe(dtaEl);
+          }
+        });
       }
     }
     const dtsepEl=document.getElementById('dtsep'+slot);if(dtsepEl)dtsepEl.style.display=d.ar?'':'none';
