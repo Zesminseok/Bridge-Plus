@@ -768,7 +768,9 @@ function parsePDJL(msg){
     return{
       kind:'cdj', playerNum:pNum, name, deviceName:name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
-      isPlaying: state===STATE.PLAYING || state===STATE.FFWD || state===STATE.FFRV,
+      // p1=0x07 (Cuing) 은 CUE 버튼 홀드로 preview-play 중 — 오디오/TC 진행 중
+      //   매핑 상태는 CUEDOWN 유지 (TCNet out 호환) 하되 isPlaying 은 true.
+      isPlaying: state===STATE.PLAYING || state===STATE.FFWD || state===STATE.FFRV || p1===0x07,
       isLooping: state===STATE.LOOPING,
       isReverse,
       loopStartMs, loopEndMs,
@@ -2649,72 +2651,59 @@ class BridgeCore {
           acc._prevState = p.state;
 
           if(p.positionFraction > 0 && totalLenMs > 0){
-            // positionFraction = beatNum/trackBeats → absolute position anchor
+            // NXS2 positionFraction 은 beatNum/trackBeats 비율 → BEAT 단위로 quantize
+            // 되어 있다 (128BPM 에서 ~469ms 간격). beat 사이에는 rawFracMs 가
+            // 정지하므로 내부적으로 extrapolation 필요. "beat 크로싱" 감지 시에만
+            // anchor 갱신하고 연속성을 보존해야 뚝뚝 끊기는 현상 제거.
             const rawFracMs = Math.round(p.positionFraction * totalLenMs);
-            const prevFrac = acc._fracMs || 0;
-            let fracMs;
+            const prevRaw = acc._prevRawFrac ?? -1;
+            const rawChanged = rawFracMs !== prevRaw;
+            const now = Date.now();
+
+            // 루프 경계 추론 — rawFracMs 가 역으로 점프할 때만 (loop wrap)
             if(p.isLooping){
-              // 루프 모드: backward guard 완전 비활성. 루프 경계에서의 정상 역전이므로
-              // raw packet 위치를 즉시 수용하고 TC extrapolation 도 꺼야 loop wrap 시각화 정확.
-              acc._bwGuardCount = 0;
-              fracMs = rawFracMs;
-              // NXS2 는 0x0A 256B 패킷에 loopStartMs/End 가 없으므로 positionFraction
-              // 역전 패턴으로 loop 경계 추론 (오버레이 표시에 사용).
-              if(prevFrac > 0 && rawFracMs < prevFrac - 100){
+              if(prevRaw > 0 && rawFracMs < prevRaw - 100){
                 acc._loopStartMs = rawFracMs;
-                acc._loopEndMs   = prevFrac;
+                acc._loopEndMs   = prevRaw;
               }
             } else {
-              // Backward-jump guard:
-              //  (1) 트랙 끝(마지막 30%) 근처에서 beatNum 리셋으로 prevFrac−2s 이상 역전
-              //  (2) PLAYING 중 트랙 어느 지점에서든 갑자기 prevFrac−5s 이상 역전 (CDJ 순간 오류)
-              //  단, hot cue/seek 는 합법적 역방향 점프이므로 연속 2 패킷 이상 지속되면 수용.
-              const endBackward   = prevFrac > totalLenMs * 0.7 && rawFracMs < prevFrac - 2000;
-              const midBackward   = prevFrac > 5000 && rawFracMs < prevFrac - 5000 && !p.isReverse;
-              if(endBackward || midBackward){
-                acc._bwGuardCount = (acc._bwGuardCount || 0) + 1;
-                if(acc._bwGuardCount >= 2){
-                  fracMs = rawFracMs;
-                  acc._bwGuardCount = 0;
-                } else {
-                  fracMs = prevFrac;
-                }
-              } else {
-                acc._bwGuardCount = 0;
-                fracMs = rawFracMs;
-              }
-              // non-looping 상태에선 추론된 loop 경계 폐기
               acc._loopStartMs = 0; acc._loopEndMs = 0;
             }
-            // Anchor 갱신 — 3-zone 정책으로 jitter 제거:
-            //  |drift| > 200ms → snap (hot cue/seek/loop wrap)
-            //  50~200ms         → anchor = expected + drift*0.5 (실제 drift 보정)
-            //  <50ms            → drift 무시 (packet 지터를 anchor 에 흘리지 않음)
-            //  정상 play 에서는 drift≈0 에 가까워 이 경로에선 _anchorMs 값을
-            //  변경하지 않고 elapsed 만 누적 → 완벽히 선형 TC.
-            const now = Date.now();
+
             if(!acc._anchorMs){
-              acc._anchorMs = fracMs;
+              // 초기 앵커
+              acc._anchorMs = rawFracMs;
               acc._anchorTime = now;
-            } else {
-              const elapsedA = now - (acc._anchorTime || now);
+            } else if(rawChanged){
+              // beat 크로싱 (또는 hot cue / seek / loop wrap)
+              const elapsedA = now - acc._anchorTime;
               const expected = acc._anchorMs + elapsedA * p.pitchMultiplier;
-              const drift = fracMs - expected;
-              const absD = Math.abs(drift);
-              if(absD > 200 || p.isLooping){
-                acc._anchorMs = fracMs;
+              const delta = rawFracMs - expected;
+              const absD = Math.abs(delta);
+              // Snap 조건:
+              //  - 역방향 (delta<-100): hot cue back / loop wrap / seek
+              //  - 큰 전방 (delta>1000): hot cue forward / seek
+              //  - isLooping: 루프 경계
+              // 정상 beat 크로싱은 +500ms 이하 forward 여서 여기 해당 안 함.
+              if(delta < -100 || delta > 1000 || p.isLooping){
+                acc._anchorMs = rawFracMs;
                 acc._anchorTime = now;
-              } else if(absD > 50){
-                acc._anchorMs = expected + drift * 0.5;
+              } else {
+                // 정상 beat 크로싱 (+0~+1000ms). extrapolation 연속성 우선 →
+                // anchor 미세 보정만 (15% blend).
+                acc._anchorMs = expected + delta * 0.15;
                 acc._anchorTime = now;
               }
-              // else: drift < 50ms → 무시. anchor/anchorTime 유지해 extrapolation
-              //        연속성 보존 (packet arrival jitter 흡수).
+              acc._prevRawFrac = rawFracMs;
             }
-            acc._fracMs = fracMs;
+            // rawChanged 아니면 anchor 유지, extrapolation 만 이어감 → 뚝뚝 없음.
+
+            acc._fracMs = rawFracMs;
             acc._fracAnchorTime = now;
             if(p.isLooping){
-              timecodeMs = fracMs;
+              // 루프: 경계 오버슈트 방지 위해 extrapolation 제한 (최대 500ms)
+              const elapsed = Math.min(now - acc._anchorTime, 500);
+              timecodeMs = Math.round(acc._anchorMs + elapsed * p.pitchMultiplier);
             } else {
               const elapsed = now - acc._anchorTime;
               timecodeMs = Math.round(acc._anchorMs + elapsed * p.pitchMultiplier);

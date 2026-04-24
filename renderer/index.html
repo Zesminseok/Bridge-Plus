@@ -6549,9 +6549,11 @@ if(E){
     }
     dk._noTrackCount=0;
     // STATE: IDLE=0, STOPPED=2, PLAYING=3, LOOPING=4, PAUSED=5, CUEDOWN=7
+    // CUE 버튼 홀드로 preview-play 시 state 는 CUEDOWN(7) 이지만 오디오 재생 중
+    // → bridge 가 isPlaying=true 로 마킹. renderer 도 이 플래그 우선 해석해 TC 진행.
     const wasPl=dk.pl, wasCu=dk.cu;
-    dk.pl=status.state===3||status.state===4; // PLAYING or LOOPING
-    dk.cu=status.state===7||status.state===8;  // CUEDOWN or PLATTERDOWN
+    dk.pl=status.state===3||status.state===4||!!status.isPlaying;
+    dk.cu=(status.state===7||status.state===8) && !status.isPlaying;
     dk._isLooping=!!status.isLooping; // CDJ active loop state
     dk._isReverse=!!status.isReverse; // 역재생 중
     if(status.loopStartMs > 0) dk._loopStartMs = status.loopStartMs;
