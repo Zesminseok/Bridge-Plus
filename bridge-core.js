@@ -84,7 +84,10 @@ const PDJL = {
 };
 
 function pdjlBridgeAnnounceId(platform=process.platform){
-  return platform==='darwin' ? 0xDA : 0xC1;
+  // pcap 확정: Pioneer 공식 브릿지 keepalive byte 0x24 identity
+  //   Mac    (Downloads/ceo_2.pcapng): 0xDA
+  //   Windows (fullcap4.pcapng):        0xBD
+  return platform==='darwin' ? 0xDA : 0xBD;
 }
 
 function pdjlIdentityByteFromMac(mac, platform=process.platform){
@@ -121,7 +124,10 @@ function buildPdjlBridgeClaimPacket(annIP, annMAC, seqN=1, deviceId=5, platform=
   for(let i=0;i<6;i++) p[0x28+i]=cMAC[i]||0;
   p[0x2E]=((cMAC[5]||0) ^ ((seqN*3+0xFB)&0xFF)) & 0xFF;
   p[0x2F]=seqN&0xFF;
-  p[0x30]=platform==='darwin' ? (deviceId&0xFF) : 0xC0;
+  // pcap 확정: Pioneer 공식 브릿지 claim byte 0x30 = deviceId (양쪽 동일)
+  //   Mac    (ceo_2): 0x05
+  //   Windows (fullcap4): 0x05
+  p[0x30]=deviceId&0xFF;
   p[0x31]=0x00;
   return p;
 }
@@ -142,7 +148,10 @@ function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=proc
   p[0x25]=0x00;
   for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
   for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
-  p[0x30]=platform==='darwin' ? 0x07 : 0x03;
+  // pcap 확정: Pioneer 공식 브릿지 keepalive byte 0x30
+  //   Mac    (ceo_2):    0x07
+  //   Windows (fullcap4): 0x08
+  p[0x30]=platform==='darwin' ? 0x07 : 0x08;
   p[0x34]=deviceId&0xFF;
   p[0x35]=0x20;
   return p;
@@ -155,10 +164,34 @@ function buildDjmSubscribePacket(platform=process.platform){
   Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,11,0,15);
   p[31]=0x01;
   p[32]=0x00;
-  p[33]=platform==='darwin' ? 0xE1 : 0x87;
+  // pcap 확정: Pioneer 공식 브릿지 0x57 subscribe byte 33 bitmask
+  //   Mac    (ceo_2):    0xE1 (fader + VU + onair)
+  //   Windows (fullcap4): 0xFF (전체 subscribe)
+  p[33]=platform==='darwin' ? 0xE1 : 0xFF;
   p[34]=0x00;
   p[35]=0x04;
   p[36]=0x01;
+  return p;
+}
+
+function buildDbServerKeepalivePacket(annIP, annMAC, deviceId=5, platform=process.platform){
+  const aIP=String(annIP||'0.0.0.0').split('.').map(Number);
+  const aMAC=String(annMAC||'00:00:00:00:00:00').split(':').map(h=>parseInt(h,16));
+  const p=Buffer.alloc(95);
+  PDJL.MAGIC.copy(p,0);
+  p[0x0A]=0x06;
+  const bridgeName = platform==='win32' ? 'BRIDGE+' : 'TCS-SHOWKONTROL';
+  Buffer.from(bridgeName,'ascii').copy(p,0x0C,0,Math.min(bridgeName.length, 20));
+  p[0x20]=0x01;
+  p[0x21]=0x01;
+  p[0x23]=0x36;
+  p[0x24]=deviceId&0xFF;
+  for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
+  for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
+  p[0x35]=0x64;
+  Buffer.from('PIONEER DJ CORP','ascii').copy(p,54,0,15);
+  Buffer.from('PRODJLINK BRIDGE','ascii').copy(p,74,0,16);
+  p[94]=0x43;
   return p;
 }
 
@@ -1322,7 +1355,13 @@ class BridgeCore {
 
     // Start PDJL receiver in all modes
     await this._startPDJLRx();
-    if(!this.isLocalMode) this._startPDJLAnnounce();
+    if(!this.isLocalMode){
+      if(this._shouldDelayWinAutoPdjl()){
+        console.log('[PDJL] Windows auto mode: delaying announce until remote PDJL device is detected');
+      }else{
+        this._startPDJLAnnounce();
+      }
+    }
     this._startVirtualDbServer();
 
     const nid = TC.NID[1].toString(16)+TC.NID[0].toString(16);
@@ -1505,12 +1544,36 @@ class BridgeCore {
     return null;
   }
 
+  _isLinkLocalIp(ip){
+    return typeof ip==='string' && ip.startsWith('169.254.');
+  }
+
+  _pickAutoPdjlIface(){
+    const ifaces = getAllInterfaces().filter(iface=>!iface.internal && iface.address && iface.address!=='127.0.0.1');
+    if(!ifaces.length) return null;
+    if(process.platform==='win32'){
+      const linkLocal = ifaces.find(iface=>this._isLinkLocalIp(iface.address));
+      if(linkLocal) return linkLocal;
+    }
+    if(this.localAddr){
+      const localMatch = ifaces.find(iface=>iface.address===this.localAddr);
+      if(localMatch) return localMatch;
+    }
+    return ifaces[0] || null;
+  }
+
+  _shouldDelayWinAutoPdjl(){
+    return process.platform==='win32'
+      && (!this.pdjlBindAddr || this.pdjlBindAddr==='auto' || this.pdjlBindAddr==='0.0.0.0');
+  }
+
   // 원격 장비(CDJ/DJM) 최초 발견 시 해당 서브넷과 매칭되는 로컬 인터페이스로 자동 전환.
   // 사용자가 수동으로 인터페이스를 선택한 경우 무시. 한 번 매칭되면 _autoPdjlLocked 로 중복 전환 방지.
   async handleInterfacesChanged(ifaces){
     if(!this.running) return;
     console.log(`[NET] interfaces changed (${(ifaces||[]).length} ifaces) — refreshing PDJL`);
     if(!this.pdjlBindAddr || this.pdjlBindAddr==='auto' || this.pdjlBindAddr==='0.0.0.0'){
+      if(this._shouldDelayWinAutoPdjl()) return;
       this._startPDJLAnnounce();
     }
   }
@@ -1569,7 +1632,13 @@ class BridgeCore {
     if(this._pdjlAnnTimer){ clearInterval(this._pdjlAnnTimer); this._pdjlAnnTimer=null; }
 
     await this._startPDJLRx();
-    if(!this.isLocalMode) this._startPDJLAnnounce();
+    if(!this.isLocalMode){
+      if(this._shouldDelayWinAutoPdjl()){
+        console.log('[PDJL] Windows auto mode: waiting for remote PDJL after rebind reset');
+      }else{
+        this._startPDJLAnnounce();
+      }
+    }
     console.log(`[PDJL] rebind complete — port=${this.pdjlPort}`);
   }
 
@@ -2051,10 +2120,16 @@ class BridgeCore {
     // to receive both broadcast and unicast packets from CDJs and DJMs.
     // Binding 50002 to specific IP blocks DJM mixer status packets from other interfaces.
     // Standard PDJL ports + extra Pioneer ports (fader data might arrive on unknown port)
+    const autoPdjlIface = (process.platform==='win32' && !this._shouldDelayWinAutoPdjl())
+      ? this._pickAutoPdjlIface()
+      : null;
+    const winBindIp = process.platform==='win32'
+      ? ((this.pdjlBindAddr && this.pdjlBindAddr!=='auto' && this.pdjlBindAddr!=='0.0.0.0') ? this.pdjlBindAddr : (autoPdjlIface?.address || undefined))
+      : undefined;
     for(const port of [50000, 50001, 50002, 50003, 50004]){
       try{
         const sock = dgram.createSocket({type:'udp4', reuseAddr:true});
-        const bindAddr = undefined; // always INADDR_ANY for all ports
+        const bindAddr = process.platform==='win32' ? winBindIp : undefined;
         await new Promise((res,rej)=>{
           sock.on('error',rej);
           sock.bind(port, bindAddr, ()=>{ try{sock.setBroadcast(true);}catch(_){} res(); });
@@ -2087,19 +2162,14 @@ class BridgeCore {
         if(iface.address===pdjlIP){ pdjlMAC=iface.mac||pdjlMAC; break; }
       }
     }
-    // 2) Fall back to localAddr (TCNet interface)
-    if(!pdjlIP && this.localAddr && !this.isLocalMode){
-      pdjlIP = this.localAddr;
-      for(const iface of getAllInterfaces()){
-        if(iface.address===pdjlIP){ pdjlMAC=iface.mac||pdjlMAC; break; }
-      }
-    }
-    // 3) Fall back to any non-internal interface (including link-local for USB LAN CDJ setups)
+    // 2) Automatic interface selection.
+    // Windows: prefer link-local PDJL adapters first to avoid starting on the
+    // wrong 192.168/10.x NIC and racing the DJM registration before rebind.
     if(!pdjlIP){
-      for(const iface of getAllInterfaces()){
-        if(!iface.internal && iface.address!=='127.0.0.1'){
-          pdjlIP=iface.address; pdjlMAC=iface.mac||pdjlMAC; break;
-        }
+      const autoIface = this._pickAutoPdjlIface();
+      if(autoIface){
+        pdjlIP = autoIface.address;
+        pdjlMAC = autoIface.mac || pdjlMAC;
       }
     }
     if(!pdjlIP){ console.warn('[PDJL] no interface found for keep-alive'); return; }
@@ -2123,13 +2193,13 @@ class BridgeCore {
     //          이면 패킷이 DJM에 도달 못함. 전용 TX 소켓을 pdjlIP에 바인드해야 함.
     //          (참조: ProDJLinkInput.h:375-416 "PLATFORM-SPECIFIC binding")
     if(process.platform==='win32'){
-      try{ if(this._pdjlAnnTxSock){ this._pdjlAnnTxSock.close(); } }catch(_){}
-      const s=dgram.createSocket({type:'udp4',reuseAddr:true});
-      s.on('error',()=>{});
-      s.bind(0, pdjlIP, ()=>{ try{s.setBroadcast(true);}catch(_){} });
-      this._pdjlAnnTxSock = s;
-      this._pdjlAnnSock = s;
-      console.log(`[PDJL] Windows: dedicated TX socket bound to ${pdjlIP}:0`);
+      this._pdjlAnnSock = this._pdjlSocketByPort?.[50000] || this._pdjlSockets?.[0] || null;
+      if(!this._pdjlAnnSock){
+        const s=dgram.createSocket({type:'udp4',reuseAddr:true});
+        s.on('error',()=>{});
+        s.bind(50000, pdjlIP, ()=>{ try{s.setBroadcast(true);}catch(_){} });
+        this._pdjlAnnSock = s;
+      }
     } else {
       // [2026-04-19] 인덱스 하드코딩 제거 — 포트 50000 바인드 실패 시에도 안전
       this._pdjlAnnSock = this._pdjlSocketByPort?.[50000] || this._pdjlSockets?.[0] || null;
@@ -2141,21 +2211,30 @@ class BridgeCore {
       }
     }
     // DJM subscribe socket. Use a fixed source port for 0x57/0x55 traffic.
-    if(this._djmSubSock){ try{this._djmSubSock.close();}catch(_){} }
+    if(this._djmSubSock && this._djmSubSock!==this._pdjlSocketByPort?.[50001]){ try{this._djmSubSock.close();}catch(_){} }
     this._djmSubSockReady=false;
-    this._djmSubSock=dgram.createSocket({type:'udp4',reuseAddr:true});
-    this._djmSubSock.on('error',e=>console.warn('[PDJL] DJM sub socket error:',e.message));
-    this._djmSubSock.on('message',(msg,rinfo)=>{
-      if(!liveSession()) return;
-      this._onPDJL(msg, rinfo);
-    });
-    try{
-      this._djmSubSock.bind(50006, pdjlIP, ()=>{
-        this._djmSubSockReady=true;
-        console.log(`[PDJL] DJM subscribe socket active ${pdjlIP}:50006`);
+    if(process.platform==='win32'){
+      this._djmSubSock=this._pdjlSocketByPort?.[50001] || null;
+      if(this._djmSubSock){
+        console.log(`[PDJL] DJM subscribe socket active ${pdjlIP}:50001`);
+      }else{
+        console.warn('[PDJL] DJM subscribe socket unavailable on 50001');
+      }
+    }else{
+      this._djmSubSock=dgram.createSocket({type:'udp4',reuseAddr:true});
+      this._djmSubSock.on('error',e=>console.warn('[PDJL] DJM sub socket error:',e.message));
+      this._djmSubSock.on('message',(msg,rinfo)=>{
+        if(!liveSession()) return;
+        this._onPDJL(msg, rinfo);
       });
-    }catch(e){
-      console.warn('[PDJL] DJM sub socket bind failed:',e.message);
+      try{
+        this._djmSubSock.bind(50006, pdjlIP, ()=>{
+          this._djmSubSockReady=true;
+          console.log(`[PDJL] DJM subscribe socket active ${pdjlIP}:50006`);
+        });
+      }catch(e){
+        console.warn('[PDJL] DJM sub socket bind failed:',e.message);
+      }
     }
 
     const sendAnn=()=>{
@@ -2237,20 +2316,7 @@ class BridgeCore {
     this._dbKaSock.bind(0, pdjlIP, ()=>{});
     const _dbKeepaliveSocket = this._dbKaSock;
     const sendDbKeepalive=()=>{
-      const pkt=Buffer.alloc(95);
-      PDJL.MAGIC.copy(pkt,0);
-      pkt[0x0A]=0x06;
-      Buffer.from('TCS-SHOWKONTROL','ascii').copy(pkt,0x0C,0,15);
-      pkt[0x20]=0x01; pkt[0x21]=0x01; pkt[0x23]=0x36;
-      pkt[0x24]=spoofPlayer; // player=5
-      for(let i=0;i<6;i++) pkt[0x26+i]=macBytes[i]||0;
-      for(let i=0;i<4;i++) pkt[0x2C+i]=ipParts[i];
-      // ROLLBACK: was pkt[0x35]=0x20
-      pkt[0x35]=0x64; // CDJ-3000 expects 0x64
-      // Pioneer identification strings (required for CDJ-3000 dbserver access)
-      Buffer.from('PIONEER DJ CORP','ascii').copy(pkt,54,0,15);
-      Buffer.from('PRODJLINK BRIDGE','ascii').copy(pkt,74,0,16);
-      pkt[94]=0x43; // 'C'
+      const pkt=buildDbServerKeepalivePacket(pdjlIP, pdjlMAC, spoofPlayer, process.platform);
       // Unicast to each CDJ only (not DJM!)
       for(const[k,dev] of Object.entries(this.devices)){
         if(dev.type==='CDJ'&&dev.ip){
@@ -2299,7 +2365,9 @@ class BridgeCore {
       if(!djmIp){ return; }
       const pkts=buildSubPkts();
       // port 50001 소켓 우선 사용 (DJM이 선호하는 소스 포트)
-      const subSocks = this._djmSubSockReady
+      const subSocks = process.platform==='win32'
+        ? [this._pdjlSocketByPort?.[50001]].filter(Boolean)
+        : this._djmSubSockReady
         ? [this._djmSubSock]
         : [
             this._pdjlSocketByPort?.[50001],
@@ -4327,6 +4395,6 @@ module.exports = {
   mkDataMetrics, mkDataMeta, mkNotification, mkLowResArtwork,
   parsePDJL, pdjlBridgeAnnounceId, pdjlIdentityByteFromMac,
   buildPdjlBridgeHelloPacket, buildPdjlBridgeClaimPacket, buildPdjlBridgeKeepalivePacket,
-  buildDjmSubscribePacket, buildBridgeNotifyPacket,
+  buildDjmSubscribePacket, buildBridgeNotifyPacket, buildDbServerKeepalivePacket,
   TC, PDJL, STATE, P1_TO_STATE, P1_NAME,
 };
