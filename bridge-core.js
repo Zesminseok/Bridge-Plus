@@ -83,16 +83,12 @@ const PDJL = {
   DJM_METER:0x58,  // DJM VU Metering (port 50001, 524B)
 };
 
-// Pioneer 공식 브릿지는 keepalive byte 0x24 identity 를 세션마다 다르게 생성
-// (Mac pcap 1: 0xDA, Mac pcap 2: 0xD3, Windows pcap: 0xBD 등)
-// DJM 이 "동일 identity 는 이미 처리" state 에 고착될 가능성 차단용으로
-// 프로세스 시작마다 0x80-0xFE 범위 랜덤 생성. 플랫폼 구분 없이 랜덤.
-let _sessionIdentityByte = 0;
+// pcap 확정 (관찰된 값들):
+//   Windows Pioneer: 0xBD (2회 세션 모두)
+//   Mac     Pioneer: 0xDA, 0xD3 (2회 세션 다름 — 가변인지 단일 값인지 불확정)
+// 이전 동작 유지: Mac = 0xDA (과거 정상 동작 이력), Windows = 0xBD.
 function pdjlBridgeAnnounceId(platform=process.platform){
-  if(!_sessionIdentityByte){
-    _sessionIdentityByte = 0x80 + Math.floor(Math.random() * 0x7F);
-  }
-  return _sessionIdentityByte;
+  return platform==='darwin' ? 0xDA : 0xBD;
 }
 
 function pdjlIdentityByteFromMac(mac, platform=process.platform){
@@ -127,7 +123,10 @@ function buildPdjlBridgeClaimPacket(annIP, annMAC, seqN=1, deviceId=5, platform=
   p[0x23]=0x32;
   for(let i=0;i<4;i++) p[0x24+i]=cIP[i]||0;
   for(let i=0;i<6;i++) p[0x28+i]=cMAC[i]||0;
-  p[0x2E]=((cMAC[5]||0) ^ ((seqN*3+0xFB)&0xFF)) & 0xFF;
+  // pcap 확정: Pioneer 공식 브릿지 claim byte 0x2E checksum
+  //   MAC[5] XOR (0x57 + seqN)
+  //   예: MAC[5]=0xB2, seqN=1 → 0xB2^0x58 = 0xEA (win-bridge.pcapng 일치)
+  p[0x2E]=((cMAC[5]||0) ^ ((0x57 + seqN) & 0xFF)) & 0xFF;
   p[0x2F]=seqN&0xFF;
   // pcap 확정: Pioneer 공식 브릿지 claim byte 0x30 = deviceId (양쪽 동일)
   //   Mac    (ceo_2): 0x05
