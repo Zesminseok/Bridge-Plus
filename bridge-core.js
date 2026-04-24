@@ -2686,39 +2686,35 @@ class BridgeCore {
               // non-looping 상태에선 추론된 loop 경계 폐기
               acc._loopStartMs = 0; acc._loopEndMs = 0;
             }
-            // Anchor 갱신 전략 (NXS2 지터 최소화):
-            //  - 큰 점프 (>200ms): hot cue/seek → anchor 바로 snap
-            //  - 중간 drift (50~200ms): anchor 를 목표 위치로 80% 블렌드 (천천히 수렴)
-            //  - 작은 drift (<50ms): anchor 유지 (packet jitter 흡수)
-            //  이렇게 하면 packet 도착 지터가 있어도 extrapolation 이 smooth 하게 흘러감.
-            if(!acc._fracMs){
-              acc._fracMs = fracMs;
-              acc._fracAnchorTime = Date.now();
+            // Anchor 갱신 — unexpected drift 기반 (정상 forward 는 full update).
+            //  expected = anchor + elapsed*pitch
+            //  drift = fracMs - expected
+            //  - |drift|>200 or 루프: snap (hot cue/seek/loop wrap)
+            //  - 그 외: anchor = expected + drift*0.5 (jitter 50% 흡수)
+            //    정상 play 에서는 drift≈0 → anchor 가 자연스럽게 갱신됨 → 드래그 없음
+            const now = Date.now();
+            if(!acc._anchorMs){
               acc._anchorMs = fracMs;
-              acc._anchorTime = Date.now();
+              acc._anchorTime = now;
             } else {
-              const diff = fracMs - (acc._anchorMs || acc._fracMs);
-              if(Math.abs(diff) > 200 || p.isLooping){
-                // 큰 점프 or 루프 wrap — 즉시 snap
-                acc._fracMs = fracMs;
-                acc._fracAnchorTime = Date.now();
+              const elapsedA = now - (acc._anchorTime || now);
+              const expected = acc._anchorMs + elapsedA * p.pitchMultiplier;
+              const drift = fracMs - expected;
+              if(Math.abs(drift) > 200 || p.isLooping){
                 acc._anchorMs = fracMs;
-                acc._anchorTime = Date.now();
-              } else if(Math.abs(diff) > 50){
-                // 중간 drift — anchor 를 점진적으로 따라감 (드리프트 누적 방지)
-                acc._anchorMs = (acc._anchorMs || acc._fracMs) + diff * 0.2;
-                acc._fracMs = fracMs;
+                acc._anchorTime = now;
               } else {
-                // 작은 drift — anchor 유지 (extrapolation 연속성 우선)
-                acc._fracMs = fracMs;
+                acc._anchorMs = expected + drift * 0.5;
+                acc._anchorTime = now;
               }
             }
+            acc._fracMs = fracMs;
+            acc._fracAnchorTime = now;
             if(p.isLooping){
-              // 루프: extrapolation 없이 raw 사용 (경계 오버슈트 방지)
               timecodeMs = fracMs;
             } else {
-              const elapsed = acc._fracAnchorTime ? Date.now() - acc._fracAnchorTime : 0;
-              timecodeMs = Math.round((acc._anchorMs||fracMs) + elapsed * p.pitchMultiplier);
+              const elapsed = now - acc._anchorTime;
+              timecodeMs = Math.round(acc._anchorMs + elapsed * p.pitchMultiplier);
             }
           } else {
             // Beat-link fallback (no positionFraction: BPM-less track or trackBeats=0)
