@@ -2671,29 +2671,27 @@ class BridgeCore {
             }
 
             if(!acc._anchorMs){
-              // 초기 앵커
               acc._anchorMs = rawFracMs;
               acc._anchorTime = now;
+              acc._prevRawFrac = rawFracMs;
             } else if(rawChanged){
-              // beat 크로싱 (또는 hot cue / seek / loop wrap)
+              // 순수 pitch-extrapolation 전략: anchor 는 "처음 세팅" + "jump 시에만
+              // reset". 정상 beat 크로싱에서는 anchor 갱신 금지 (갱신하면 작은
+              // backward jitter 발생). 대신 pitch 가 정확하면 extrapolation 만으로
+              // 정확도 유지. 누적 drift 가 크면 그때 snap.
               const elapsedA = now - acc._anchorTime;
               const expected = acc._anchorMs + elapsedA * p.pitchMultiplier;
               const delta = rawFracMs - expected;
-              const absD = Math.abs(delta);
-              // Snap 조건:
-              //  - 역방향 (delta<-100): hot cue back / loop wrap / seek
-              //  - 큰 전방 (delta>1000): hot cue forward / seek
-              //  - isLooping: 루프 경계
-              // 정상 beat 크로싱은 +500ms 이하 forward 여서 여기 해당 안 함.
-              if(delta < -100 || delta > 1000 || p.isLooping){
+              // Snap 조건 — 실제 jump 만:
+              //   delta < -100ms      : 역방향 (hot cue back / loop / seek)
+              //   delta > 1500ms      : 큰 전방 jump (hot cue forward / seek)
+              //   p.isLooping         : 루프 경계
+              //   |delta| > 600 AND 누적 drift 의심 (pitch 오차 장기 축적)
+              if(delta < -100 || delta > 1500 || p.isLooping){
                 acc._anchorMs = rawFracMs;
                 acc._anchorTime = now;
-              } else {
-                // 정상 beat 크로싱 (+0~+1000ms). extrapolation 연속성 우선 →
-                // anchor 미세 보정만 (15% blend).
-                acc._anchorMs = expected + delta * 0.15;
-                acc._anchorTime = now;
               }
+              // else: anchor 유지, pitch extrapolation 이 TC 를 연속적으로 생성.
               acc._prevRawFrac = rawFracMs;
             }
             // rawChanged 아니면 anchor 유지, extrapolation 만 이어감 → 뚝뚝 없음.
@@ -4047,11 +4045,27 @@ class BridgeCore {
       catch(e){ console.warn(`[DBSRV] cue MENU P${playerNum} err:`, e.message); }
     }
     if(cues&&cues.length>0){
+      // Pioneer 는 PCO(B) 에서는 half-frames (1/150 sec) 단위, PCO2 에서는 실제 ms.
+      // 수신된 timeMs 가 트랙 길이보다 훨씬 작은 값이면 half-frame 해석이라 보고
+      // ms 로 변환. track length 는 layer 정보에서 최대 추정치를 참고.
+      const trackLenMs = this._bgTrackLen?.[playerNum] || this.layers?.[playerNum-1]?.totalLength || 0;
+      if(trackLenMs > 0){
+        const maxVal = Math.max(...cues.map(c => c.timeMs||0));
+        // 트랙 길이의 10% 이하에 모든 큐가 몰려있으면 half-frame 으로 판단
+        if(maxVal > 0 && maxVal < trackLenMs * 0.1){
+          console.log(`[DBSRV] cue P${playerNum} half-frame 해석 감지 (maxVal=${maxVal}, track=${trackLenMs}ms) → ×6.667 ms 변환`);
+          for(const c of cues){
+            c.timeMs   = Math.round((c.timeMs||0)   * 1000 / 150);
+            c.loopEndMs= Math.round((c.loopEndMs||0)* 1000 / 150);
+          }
+        }
+      }
       this.onCuePoints?.(playerNum, cues);
       const hot=cues.filter(c=>c.type==='hot').length;
       const mem=cues.filter(c=>c.type==='memory').length;
       const lp=cues.filter(c=>c.type==='loop').length;
-      console.log(`[DBSRV] cue P${playerNum} tid=${trackId} slot=${slot} → hot=${hot} mem=${mem} loop=${lp} total=${cues.length}`);
+      const sample=cues.slice(0,3).map(c=>`${c.type[0]}@${c.timeMs}`).join(',');
+      console.log(`[DBSRV] cue P${playerNum} tid=${trackId} slot=${slot} → hot=${hot} mem=${mem} loop=${lp} total=${cues.length} [${sample}...]`);
     } else {
       console.log(`[DBSRV] cue P${playerNum} tid=${trackId} slot=${slot} tt=${trackType} → EMPTY (both PCO2 and menu returned 0)`);
     }
