@@ -870,7 +870,7 @@ body[data-layout="tower"] .tw-head-top .dk-num{font:800 22px var(--mn);color:var
 body[data-layout="tower"] .tw-head-btm{display:flex;align-items:center;gap:5px;height:20px;flex:1;min-width:0;justify-content:flex-end}
 body[data-layout="tower"] .tw-head-btm .dhwl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body[data-layout="tower"] .tw-head-btm .dksm{display:none!important}
-body[data-layout="tower"] .tw-art-wrap{position:relative;width:100%;height:72px;border-radius:4px;overflow:hidden;border:1px solid var(--bdr)}
+body[data-layout="tower"] .tw-art-wrap{position:relative;width:100%;height:144px;border-radius:4px;overflow:hidden;border:1px solid var(--bdr)}
 body[data-layout="tower"] .tw-art-wrap .dkart{width:100%;height:100%;border-radius:0;overflow:hidden;border:none;margin:0}
 body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.55) blur(1px)}
 /* Tower: title/artist 앨범아트 수직 중앙 overlay (앨범아트는 블러 배경 역할) */
@@ -891,8 +891,10 @@ body[data-layout="tower"] .tw-bpm-row{display:flex;flex-direction:row;flex-wrap:
 body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]{flex-wrap:nowrap!important;gap:4px!important}
 body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]>span:first-child{font-size:12px!important}
 body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]>span:nth-child(2){font-size:9px!important}
-body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling{text-align:left}
-body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
+body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling,
+body[data-layout="tower"] .tw-title span[id^="dta"].scrolling{text-align:left;overflow:hidden;text-overflow:clip}
+body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling .mq-inner,
+body[data-layout="tower"] .tw-title span[id^="dta"].scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
 body[data-layout="tower"] .tw-bpm .dk-bpm-cur{font-size:15px;height:25px;padding:2px 9px}
 body[data-layout="tower"] .tw-bpm .dphs{display:flex;gap:3px;width:100%;max-width:100%;height:12px}
 body[data-layout="tower"] .tw-bpm .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
@@ -1006,6 +1008,7 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
       <span style="font:500 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-transform:uppercase" id="hSt">READY</span>
     </div>
     <button class="btn btng" id="mainBtn">START</button>
+    <button class="btn" id="reloadBtn" title="UI 다시 로드 (Cmd/Ctrl+R)" onclick="window.location.reload()" style="padding:6px 8px;-webkit-app-region:no-drag"><svg class="gi" style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
     <div style="display:flex;align-items:center;gap:5px;-webkit-app-region:no-drag" title="출력 볼륨">
       <span style="font:700 8px var(--mn);color:var(--tx4);letter-spacing:.06em">M.VOL</span>
       <input type="range" id="masterVol" min="0" max="100" value="100" step="1"
@@ -4712,7 +4715,32 @@ function tick(){
         });
       }
     }
-    const dtaEl=document.getElementById('dta'+slot);if(dtaEl)dtaEl.textContent=d.ar||'';
+    const dtaEl=document.getElementById('dta'+slot);
+    if(dtaEl){
+      const artTxt=d.ar||'';
+      const artCur=dtaEl.querySelector('.mq-inner')?.textContent||dtaEl.textContent;
+      const artFirst=!dtaEl.dataset.mqChecked;
+      if(artCur!==artTxt||artFirst){
+        dtaEl.classList.remove('scrolling');
+        if(artCur!==artTxt) dtaEl.textContent=artTxt;
+        requestAnimationFrame(()=>{
+          if(!dtaEl.parentElement) return;
+          const cw=dtaEl.clientWidth, sw=dtaEl.scrollWidth;
+          if(sw>cw+5&&artTxt){
+            const inner=document.createElement('span');
+            inner.className='mq-inner';
+            inner.textContent=artTxt;
+            dtaEl.textContent='';
+            dtaEl.appendChild(inner);
+            const overflow=sw-cw;
+            dtaEl.style.setProperty('--scroll-dist','-'+overflow+'px');
+            dtaEl.style.setProperty('--scroll-dur',Math.max(5,overflow/25)+'s');
+            dtaEl.classList.add('scrolling');
+          }
+          dtaEl.dataset.mqChecked='1';
+        });
+      }
+    }
     const dtsepEl=document.getElementById('dtsep'+slot);if(dtsepEl)dtsepEl.style.display=d.ar?'':'none';
     // Waveform key + BPM — 2-line display in TC info section
     const wfkEl=document.getElementById('wfkey'+slot);
@@ -4735,8 +4763,10 @@ function tick(){
         const curStr=_bpmFmt(d.bpm);
         wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;
       }else{
-        // placeholder: 같은 구조 유지, '—' 로 채움 → 값 생길 때 textContent 교체만 해 DOM 리플로우 최소.
-        wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap">—</span><span style="font:500 11px var(--mn);color:var(--tx4);white-space:nowrap">±0.00%</span><span class="dk-bpm-cur" style="color:var(--tx4);opacity:.6">—<span style="font:400 9px var(--mn);color:var(--tx4);margin-left:2px">BPM</span></span>`;
+        // BPM 없는 트랙 — pitch fader 값은 별도로 수신되므로 표기, BPM 자리는 '—'.
+        const pp=(d.pitch!==undefined)?d.pitch:0;
+        const ps=Math.abs(pp)<0.05?'±0.00%':(pp>0?'+':'')+pp.toFixed(2)+'%';
+        wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap">—</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur" style="color:var(--tx4);opacity:.6">—<span style="font:400 9px var(--mn);color:var(--tx4);margin-left:2px">BPM</span></span>`;
       }
     }
     const dhwlEl=document.getElementById('dhwl'+slot);

@@ -2635,6 +2635,18 @@ class BridgeCore {
         } else if(p.isPlaying || p.isLooping){
           // ── Playing/Looping: CDJ-2000NXS2 interpolation (+ CDJ-3000 fallback without 0x0b) ──
           if(!acc) this._tcAcc[li] = acc = { prevBn:0, elapsedMs:0, trackId:p.trackId, dbgCount:0, metaRequested:false };
+          // State transition: CUED/PAUSED/STOPPED → PLAYING 순간 accumulator 리셋.
+          // (hot cue / play 버튼 모두 이 전환을 거치며, 점프 위치를 즉시 반영)
+          const prevSt = acc._prevState;
+          const wasStoppedLike = prevSt === STATE.CUEDOWN || prevSt === STATE.PAUSED || prevSt === STATE.STOPPED || prevSt === STATE.IDLE;
+          if(wasStoppedLike){
+            acc._fracMs = null; acc._fracAnchorTime = null;
+            acc._anchorMs = null; acc._anchorTime = null;
+            acc._noBeatAnchorTime = null; acc._noBeatAnchorMs = null;
+            acc._bwGuardCount = 0;
+            acc.prevBn = 0;
+          }
+          acc._prevState = p.state;
 
           if(p.positionFraction > 0 && totalLenMs > 0){
             // positionFraction = beatNum/trackBeats → absolute position anchor
@@ -2721,6 +2733,8 @@ class BridgeCore {
           }
         } else {
           // ── Stopped/Paused/Cued ──
+          // state 트래킹 유지 (다음 playing 진입 때 transition 감지용)
+          if(acc) acc._prevState = p.state;
           if(p.state === STATE.CUEDOWN){
             // beatNum in CUEDOWN = current cue position
             const cueBeat = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;

@@ -2,7 +2,10 @@
 // Prevent EPIPE crashes when stdout pipe is broken
 process.stdout?.on('error',()=>{});
 process.stderr?.on('error',()=>{});
-const{app,BrowserWindow,ipcMain,protocol,net}=require('electron');
+const{app,BrowserWindow,ipcMain,protocol,net,Menu}=require('electron');
+// Windows/Linux 상단 기본 메뉴 (File / View / Window) 제거 — 커스텀 UI 만 사용.
+// macOS 는 시스템 메뉴 규약상 유지.
+if(process.platform!=='darwin') try{ Menu.setApplicationMenu(null); }catch(_){}
 
 // Single instance lock — prevent duplicate app windows
 const gotLock=app.requestSingleInstanceLock();
@@ -11,7 +14,8 @@ app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.foc
 const path=require('path'),os=require('os'),fs=require('fs'),crypto=require('crypto');
 const{spawn}=require('child_process');
 const dgram=require('dgram');
-const{BridgeCore,getAllInterfaces,interfaceSignature}=require('./bridge-core');
+const{BridgeCore,getAllInterfaces}=require('./bridge-core');
+function interfaceSignature(ifaces){return (ifaces||[]).map(i=>`${i.name}|${i.address}|${i.netmask}`).sort().join(';');}
 
 // ═══ FFmpeg multi-channel audio decode ═══════════════════════════════
 let _ffmpegPath=null;
@@ -486,8 +490,10 @@ function createWindow(){
     width:saved?.width||1040, height:saved?.height||840,
     minWidth:900,minHeight:680,show:false,
     backgroundColor:'#111318',titleBarStyle:'hiddenInset',
+    autoHideMenuBar:true, menuBarVisible:false,
     webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false},
   });
+  try{ win.setMenuBarVisibility(false); }catch(_){}
   // Show splash while loading
   showSplash('BRIDGE+ 시작 중...','네트워크 초기화');
   win.once('ready-to-show',()=>{
@@ -584,7 +590,13 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
       // diagnostics
       pktType:f.pktType, pktLen:f.pktLen, rawHex:f.rawHex
     });
-    bridge.onDJMMeter=d=>_send('bridge:djmmeter',d);
+    let _djmMeterLastTs=0;
+    bridge.onDJMMeter=d=>{
+      const now=Date.now();
+      if(now-_djmMeterLastTs<33) return; // ~30Hz cap to renderer (source ~50Hz)
+      _djmMeterLastTs=now;
+      _send('bridge:djmmeter',d);
+    };
     bridge.onTCMixerVU=d=>_send('bridge:tcmixervu',d);
     bridge.onDeviceList=devs=>{
       // stale(>10s) 기기 필터링 — UI에 유령 장치/쓰레기값 남지 않도록
@@ -602,8 +614,6 @@ ipcMain.handle('bridge:start',async(_,opts)=>{
     await bridge.start();push();
     // Re-request metadata for already-loaded tracks — retry at 3s, 8s, 20s
     setTimeout(()=>bridge?.refreshAllMetadata(), 3000);
-    setTimeout(()=>bridge?.refreshAllMetadata(), 8000);
-    setTimeout(()=>bridge?.refreshAllMetadata(), 20000);
     return{ok:true,pdjlPort:bridge.getPDJLPort(),broadcastAddr:bridge.broadcastAddr,nodeName:bridge.nodeName||'BRIDGE+'};
   }catch(e){return{ok:false,err:e.message};}
 });
@@ -614,18 +624,6 @@ ipcMain.handle('bridge:cpuUsage',()=>{
   metrics.forEach(m=>{cpu+=m.cpu.percentCPUUsage;});
   const mem=process.memoryUsage();
   return{cpu:Math.round(cpu*10)/10, memMB:Math.round(mem.rss/1048576)};
-});
-// Raw PDJL packet capture for protocol analysis (ALL sources, ALL types)
-ipcMain.handle('bridge:djmCaptureStart',()=>{
-  if(!bridge)return{ok:false,err:'bridge not running'};
-  const path=require('path');
-  const filePath=path.join(app.getPath('desktop'),`pdjl-raw-capture-${Date.now()}.txt`);
-  bridge.startDJMCapture(filePath);
-  return{ok:true,path:filePath};
-});
-ipcMain.handle('bridge:djmCaptureStop',()=>{
-  bridge?.stopDJMCapture();
-  return{ok:true};
 });
 ipcMain.handle('bridge:updateLayer',(_,{i,data})=>{bridge?.updateLayer(i,data);return{ok:true};});
 ipcMain.on('bridge:setFader',(_,{i,val})=>{if(bridge&&bridge.faders)bridge.faders[i]=Math.max(0,Math.min(255,val));});
