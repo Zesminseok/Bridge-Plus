@@ -1,21 +1,21 @@
 #!/usr/bin/env node
-// 빌드 카운터(마지막 2자리) 증가 + -stub 접미사 추가.
+// 빌드 산출물을 /tmp/bridge-plus-build (Dropbox 외부) 에서 꺼내와
+// 프로젝트의 dist/ 폴더로 복사. 파일명에 -stub 및 자동 증가 빌드 카운터(BB)
+// 붙임. intermediate 수천 개 파일이 Dropbox sync 되는 것 방지 목적.
 //
 // 버전 규칙: X.Y.Z.BB
-//   X.Y.Z = package.json 의 semver (수동 bump)
-//   BB    = 자동 증가 2자리 빌드 카운터 (.build-number 파일 관리)
-// 빌드 카운터는 semver 가 바뀌면 00 으로 리셋.
+//   X.Y.Z = package.json semver (수동 bump)
+//   BB    = 2자리 빌드 카운터 (.build-number 자동 증가, semver 바뀌면 00 리셋)
 //
-// 결과 파일명: BRIDGE+ X.Y.Z.BB-stub.exe
-//
-// CI 네이티브 빌드는 electron-builder 를 직접 호출하므로 이 스크립트
-// 영향 없음 (CI 는 X.Y.Z 그대로 유지).
+// 결과: dist/BRIDGE+ X.Y.Z.BB-stub.exe  (이거 하나만)
 const fs = require('fs');
 const path = require('path');
 const pkg = require('../package.json');
 const semver = pkg.version;
-const dist = path.resolve(__dirname, '..', 'dist');
-const stateFile = path.resolve(__dirname, '..', '.build-number');
+const projRoot = path.resolve(__dirname, '..');
+const buildOut = '/tmp/bridge-plus-build';
+const distDir = path.join(projRoot, 'dist');
+const stateFile = path.join(projRoot, '.build-number');
 
 let state = { version: '', build: -1 };
 try { state = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch(_) {}
@@ -28,22 +28,41 @@ fs.writeFileSync(stateFile, JSON.stringify(state) + '\n');
 const bb = String(state.build).padStart(2, '0');
 const fullVer = `${semver}.${bb}`;
 
-const targets = [
-  `BRIDGE+ ${semver}.exe`,
-  `BRIDGE+ Setup ${semver}.exe`,
-  `BRIDGE+ Setup ${semver}.exe.blockmap`,
+if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
+
+const copyMap = [
+  { src: `BRIDGE+ ${semver}.exe`,          dst: `BRIDGE+ ${fullVer}-stub.exe` },
+  { src: `BRIDGE+ Setup ${semver}.exe`,    dst: `BRIDGE+ Setup ${fullVer}-stub.exe` },
 ];
 
-let renamed = 0;
-for (const name of targets) {
-  const src = path.join(dist, name);
-  if (!fs.existsSync(src)) continue;
-  // BRIDGE+ 0.9.2.exe → BRIDGE+ 0.9.2.01-stub.exe
-  const dst = src.replace(`${semver}.exe`, `${fullVer}-stub.exe`);
-  fs.renameSync(src, dst);
-  console.log(`[stub] ${name} → ${path.basename(dst)}`);
-  renamed++;
+let moved = 0;
+for (const { src, dst } of copyMap) {
+  const srcPath = path.join(buildOut, src);
+  if (!fs.existsSync(srcPath)) continue;
+  const dstPath = path.join(distDir, dst);
+  fs.copyFileSync(srcPath, dstPath);
+  console.log(`[stub] copied → ${dst}`);
+  moved++;
 }
 
-if (renamed === 0) console.log(`[stub] no Windows artifacts found (expected version ${semver})`);
-else console.log(`[stub] build ${fullVer} — renamed ${renamed} file(s)`);
+// 기존 같은 semver 의 이전 BB 빌드 제거 (예: 0.9.2.15-stub.exe 삭제)
+if (moved > 0) {
+  try {
+    for (const name of fs.readdirSync(distDir)) {
+      if (name === copyMap[0].dst || name === copyMap[1].dst) continue;
+      const m = name.match(new RegExp(`^BRIDGE\\+ (Setup )?${semver.replace(/\./g,'\\.')}\\.(\\d+)-stub\\.exe$`));
+      if (m && m[2] !== bb) {
+        try { fs.unlinkSync(path.join(distDir, name)); console.log(`[stub] pruned old build ${name}`); } catch(_) {}
+      }
+    }
+  } catch(_) {}
+}
+
+// 빌드 폴더 정리 (Dropbox sync 방지용). 최종 exe 만 dist/ 로 복사했으므로 안전.
+try {
+  fs.rmSync(buildOut, { recursive: true, force: true });
+  console.log(`[stub] cleaned ${buildOut}`);
+} catch(_) {}
+
+if (moved === 0) console.log(`[stub] no artifacts found in ${buildOut}`);
+else console.log(`[stub] build ${fullVer} — ${moved} file(s) copied to dist/`);
