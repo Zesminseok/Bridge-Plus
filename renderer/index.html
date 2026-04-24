@@ -4647,9 +4647,10 @@ function tick(){
     let displayPos=d.pos||0;
     if(d.type==='hw'&&d._posTime){
       const now=Date.now();
-      // extrapolation cap: 패킷이 끊겨도 최대 100ms 까지만 앞으로 예측.
-      // 네트워크 stall 시 TC 가 무한정 앞으로 가는 것 방지.
-      const elapsed=Math.min(now-d._posTime, 100);
+      // extrapolation cap: 넥서스2 는 0x0A 5Hz (200ms 간격) 패킷이므로 100ms cap
+      // 이면 매 패킷 사이 100ms 동안 TC freeze → jump 반복 (사용자 "뚝뚝끊켜").
+      // 500ms 로 확대해 패킷 간 부드럽게 extrapolate. 네트워크 stall 은 500ms 넘어야 감지.
+      const elapsed=Math.min(now-d._posTime, 500);
       if(d._trackChangePending){
         // 트랙 체인지 확정 전: 새 pos 를 old dur/waveform 에 투영하면
         // cursor 가 0 으로 튐. 확정될 때까지 0 으로 고정 → 깔끔한 전환.

@@ -4045,19 +4045,17 @@ class BridgeCore {
       catch(e){ console.warn(`[DBSRV] cue MENU P${playerNum} err:`, e.message); }
     }
     if(cues&&cues.length>0){
-      // Pioneer 는 PCO(B) 에서는 half-frames (1/150 sec) 단위, PCO2 에서는 실제 ms.
-      // 수신된 timeMs 가 트랙 길이보다 훨씬 작은 값이면 half-frame 해석이라 보고
-      // ms 로 변환. track length 는 layer 정보에서 최대 추정치를 참고.
-      const trackLenMs = this._bgTrackLen?.[playerNum] || this.layers?.[playerNum-1]?.totalLength || 0;
-      if(trackLenMs > 0){
-        const maxVal = Math.max(...cues.map(c => c.timeMs||0));
-        // 트랙 길이의 10% 이하에 모든 큐가 몰려있으면 half-frame 으로 판단
-        if(maxVal > 0 && maxVal < trackLenMs * 0.1){
-          console.log(`[DBSRV] cue P${playerNum} half-frame 해석 감지 (maxVal=${maxVal}, track=${trackLenMs}ms) → ×6.667 ms 변환`);
-          for(const c of cues){
-            c.timeMs   = Math.round((c.timeMs||0)   * 1000 / 150);
-            c.loopEndMs= Math.round((c.loopEndMs||0)* 1000 / 150);
-          }
+      // Pioneer 큐 위치 단위 자동 감지:
+      //  - 실제 ms 면 트랙 길이 근처 값들 (수만~수십만)
+      //  - half-frames (1/150s) 이면 매우 작은 값 (수백~수천)
+      // maxVal 이 30초(=30000ms) 미만이면 half-frames 로 판단 → ×(1000/150) ms.
+      // trackLenMs 가 준비 안 됐어도 이 경험칙으로 정확히 구분됨.
+      const maxVal = Math.max(...cues.map(c => c.timeMs||0));
+      if(maxVal > 0 && maxVal < 30000){
+        console.log(`[DBSRV] cue P${playerNum} half-frame 감지 (maxVal=${maxVal}) → ms 변환 (×${(1000/150).toFixed(4)})`);
+        for(const c of cues){
+          c.timeMs   = Math.round((c.timeMs||0)   * 1000 / 150);
+          c.loopEndMs= Math.round((c.loopEndMs||0)* 1000 / 150);
         }
       }
       this.onCuePoints?.(playerNum, cues);
