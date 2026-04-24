@@ -2261,13 +2261,16 @@ class BridgeCore {
         return;
       }
       this._joinInProgress = true;
-      // Bridge join 시퀀스 (자체 설계, 라이브 환경 튜닝 완료):
-      //   Hello(0x0A) × 2  @ 300ms 간격 (broadcast only)
-      //   Claim(0x02) × 11 @ 500ms 간격 (인터페이스별 IP/MAC 개별 패킷)
-      //   keepalive는 join 완료 후 시작 (sendAnn 루프 1500ms 주기)
-      const HELLO_GAP = 300, CLAIM_GAP = 500, CLAIM_N = 11;
-      const helloEnd = HELLO_GAP*2; // 600ms
-      for(let h=0;h<2;h++){
+      // Bridge join 시퀀스 (Pioneer pcap 매칭):
+      //   Hello(0x0A) × 14 @ 110ms 간격 = 1540ms (pcap 타이밍과 일치)
+      //   Claim(0x02) × 22 @ 150ms 간격 = 3300ms
+      //   keepalive는 join 완료 후 시작
+      //
+      // 기존 2/11 카운트는 DJM이 bridge joining 상태로 인식 못 해
+      // 0x39 송신 거부하는 것으로 확인 (/tmp/ours.pcapng 분석 결과).
+      const HELLO_GAP = 110, CLAIM_GAP = 150, HELLO_N = 14, CLAIM_N = 22;
+      const helloEnd = HELLO_GAP*HELLO_N; // 1540ms
+      for(let h=0;h<HELLO_N;h++){
         setTimeout(()=>{
           if(!liveSession()||!this._pdjlAnnSock) return;
           const p=buildPdjlBridgeHelloPacket(spoofPlayer);
