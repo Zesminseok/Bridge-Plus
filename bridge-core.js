@@ -730,10 +730,17 @@ function parsePDJL(msg){
     let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+effPitch/100)*100)/100 : 0;
     if(bpmEff > 500) bpmEff = 0;
     const baseBpm = trackBpm;
-    const beatNum   = msg.length>0xA3 ? msg.readUInt32BE(0xA0) : 0;
+    // beatNum at 0xA0 is reliable on CDJ-3000; on CDJ-2000NXS2 the same offset
+    // may hold unrelated float data (e.g. 0x40000000 = 2.0f raw) yielding
+    // nonsense beat counts like 1073741824. Sanity-clamp: realistic tracks
+    // rarely exceed 10k beats (~40min @ 250BPM). Anything beyond is garbage.
+    const BEAT_MAX = 65535;
+    const _beatNumRaw = msg.length>0xA3 ? msg.readUInt32BE(0xA0) : 0;
+    const beatNum   = _beatNumRaw <= BEAT_MAX ? _beatNumRaw : 0;
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
     const barsRemain = msg.length>0xA5 ? msg.readUInt16BE(0xA4) : 0;
-    const trackBeats = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
+    const _trackBeatsRaw = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
+    const trackBeats = _trackBeatsRaw <= BEAT_MAX ? _trackBeatsRaw : 0;
     // Playback position fraction 0x48-0x4B: uint32BE / 1000 = 0.0~1.0
     // Available on CDJ-2000NXS2 and CDJ-3000 — gives absolute position for any track including BPM-less
     const posFracRaw = msg.length>0x4B ? msg.readUInt32BE(0x48) : 0;
