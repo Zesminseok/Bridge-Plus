@@ -83,11 +83,16 @@ const PDJL = {
   DJM_METER:0x58,  // DJM VU Metering (port 50001, 524B)
 };
 
+// Pioneer 공식 브릿지는 keepalive byte 0x24 identity 를 세션마다 다르게 생성
+// (Mac pcap 1: 0xDA, Mac pcap 2: 0xD3, Windows pcap: 0xBD 등)
+// DJM 이 "동일 identity 는 이미 처리" state 에 고착될 가능성 차단용으로
+// 프로세스 시작마다 0x80-0xFE 범위 랜덤 생성. 플랫폼 구분 없이 랜덤.
+let _sessionIdentityByte = 0;
 function pdjlBridgeAnnounceId(platform=process.platform){
-  // pcap 확정: Pioneer 공식 브릿지 keepalive byte 0x24 identity
-  //   Mac    (Downloads/ceo_2.pcapng): 0xDA
-  //   Windows (fullcap4.pcapng):        0xBD
-  return platform==='darwin' ? 0xDA : 0xBD;
+  if(!_sessionIdentityByte){
+    _sessionIdentityByte = 0x80 + Math.floor(Math.random() * 0x7F);
+  }
+  return _sessionIdentityByte;
 }
 
 function pdjlIdentityByteFromMac(mac, platform=process.platform){
