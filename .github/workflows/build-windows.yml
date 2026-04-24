@@ -36,7 +36,7 @@ jobs:
       - name: Package Windows x64 (NSIS + portable)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder --win --x64
+        run: npx electron-builder --win --x64 --publish never
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
