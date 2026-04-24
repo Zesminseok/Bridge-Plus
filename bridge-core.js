@@ -2564,9 +2564,13 @@ class BridgeCore {
           // Auto-request metadata — must query the SOURCE device's dbserver (Link Export)
           if(p.trackId>0 && p.hasTrack){
             this._tcAcc[li].metaRequested = true;
-            // Find source device IP: trackDeviceId tells us which player owns the media
+            // Find source device IP: trackDeviceId tells us which player owns the media.
+            // CDJ 일반 덱 먼저, 없으면 rekordbox 등 media source (_mediaSources),
+            // 마지막으로 packet sender IP 로 fallback.
             const srcDev = this.devices['cdj'+p.trackDeviceId];
-            const _ip = srcDev?.ip || rinfo?.address;
+            const _ip = srcDev?.ip
+              || this._mediaSources?.[p.trackDeviceId]?.ip
+              || rinfo?.address;
             const _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum, _tt=p.trackType||1;
             // [TC] meta request muted
             setTimeout(()=>this.requestMetadata(_ip, _slot, _tid, _pn, true, _tt), this._dbReady?100:3000);
@@ -2575,7 +2579,9 @@ class BridgeCore {
         } else if(acc && !acc.metaRequested && p.trackId>0 && p.hasTrack){
           acc.metaRequested = true;
           const srcDev = this.devices['cdj'+p.trackDeviceId];
-          const _ip = srcDev?.ip || rinfo?.address;
+          const _ip = srcDev?.ip
+            || this._mediaSources?.[p.trackDeviceId]?.ip
+            || rinfo?.address;
           // [TC] metadata retry muted
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
@@ -2971,13 +2977,19 @@ class BridgeCore {
       const pn = p.playerNum;
       // Skip self-announce (bridge device) — double-check name and IP
       if(p.name==='BRIDGE+'||p.name==='TCS-SHOWKONTROL'||rinfo.address==='127.0.0.1') return;
-      // 가상 장치/소프트웨어 announce 차단
+      // 가상 장치/소프트웨어 announce 차단 (CDJ 덱 목록에는 안 나타남)
       if(p.name && /rekordbox|rbdj|NXS-?GW|TCS-|prolink/i.test(p.name)){
+        // 단, rekordbox 는 CDJ 가 LAN Link Export 로 로드한 트랙의 메타데이터
+        // 출처이므로 IP 를 별도 _mediaSources 맵에 저장해 dbserver 쿼리에 사용.
+        if(p.name && /rekordbox|rbdj/i.test(p.name) && pn >= 1 && pn <= 50){
+          this._mediaSources = this._mediaSources || {};
+          this._mediaSources[pn] = { ip: rinfo.address, name: p.name, lastSeen: Date.now() };
+        }
         if(!this._fakeAnnLogged) this._fakeAnnLogged={};
         const fkey = `${p.name}@${rinfo.address}`;
         if(!this._fakeAnnLogged[fkey]){
           this._fakeAnnLogged[fkey]=true;
-          console.warn(`[PDJL] 가짜 announce 차단: name="${p.name}" from=${rinfo.address} (가상 장치)`);
+          console.warn(`[PDJL] 가짜 announce 차단: name="${p.name}" from=${rinfo.address} (덱 목록 제외, trackDeviceId=${pn} 는 미디어 소스로 등록)`);
         }
         return;
       }
