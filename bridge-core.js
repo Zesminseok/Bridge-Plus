@@ -2399,10 +2399,19 @@ class BridgeCore {
       }
     };
     // 타이밍 설계: join 완료(≈6.6s) → keepalive 시작 → 추가 3s 뒤 첫 subscribe (경합 방지)
+    // Pioneer 공식 브릿지는 0x57 을 단 1번만 보냄 (pcap 확정, 0424_.pcapng).
+    // 반복 subscribe 는 DJM 상태를 교란할 수 있어 제거. 15초 뒤 0x39/0x58 모두
+    // 미수신일 때만 1회 재시도 fallback.
     setTimeout(sendDjmSub, 9700);
-    const _subTimer=setInterval(()=>{ if(!liveSession())return; sendDjmSub(); },2000);
-    this._djmSubTimer=_subTimer;
-    this._timers.push(_subTimer);
+    const _subRetryT = setTimeout(()=>{
+      if(!liveSession()) return;
+      if(this._hasRealFaders) return;
+      if(this._djmMeterCount>0) return;
+      console.log('[PDJL] 0x57 no response — single retry');
+      sendDjmSub();
+    }, 25000);
+    this._djmSubTimer=_subRetryT;
+    this._timers.push(_subRetryT);
     const _notifyTimer=setInterval(()=>{ if(!liveSession()) return; sendBridgeNotifyToAll(); },2000);
     this._bridgeNotifyTimer=_notifyTimer;
     this._timers.push(_notifyTimer);
