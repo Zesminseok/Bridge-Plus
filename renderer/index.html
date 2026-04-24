@@ -482,11 +482,16 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-empty .material-symbols-outlined{font-size:48px;opacity:.2}
 .mx-empty-tx{font:400 12px var(--sn);text-align:center;line-height:1.6}
 .mx-empty-sub{font:400 10px var(--mn);color:var(--tx4);opacity:.6}
-.mx-content-on{display:flex!important;flex:1;flex-direction:column;gap:12px;min-height:0}
-.mx-body{display:flex;gap:8px;min-height:0;overflow-x:auto;padding-bottom:2px;align-items:flex-start}
+/* 통합 믹서 패널 — 물리적 DJM 처럼 하나의 블록으로 보이게 */
+.mx-content-on{display:flex!important;flex:1;flex-direction:column;gap:10px;min-height:0}
+.mx-console{background:linear-gradient(180deg,rgba(18,20,25,.92),rgba(12,14,18,.96));border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.mx-body{display:flex;gap:0;min-height:0;overflow-x:auto;padding-bottom:2px;align-items:flex-start}
 /* Channel strip — layout: header → waveform → knobs → CUE → fader+VU → A/B */
-.mx-ch{flex:1;display:flex;flex-direction:column;background:rgba(20,22,26,.95);border:1px solid var(--bdr);border-radius:10px;padding:9px 6px 8px;gap:6px;min-width:58px;max-width:110px;align-items:center;transition:border-color .3s}
-.mx-ch.on-air{border-color:rgba(255,80,80,.3)}
+/* 채널 스트립 — 개별 카드 대신 부드러운 세로 구분선으로 분리 */
+.mx-ch{flex:1;display:flex;flex-direction:column;background:transparent;border:none;border-right:1px solid rgba(255,255,255,.06);border-radius:0;padding:4px 8px 6px;gap:6px;min-width:58px;max-width:110px;align-items:center;transition:background .2s;position:relative}
+.mx-ch:last-of-type{border-right:none}
+.mx-ch.on-air{background:rgba(255,80,80,.04)}
+.mx-ch.on-air::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:rgba(255,80,80,.55)}
 .mx-ch-hdr{display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 2px}
 .mx-ch-num{font:800 12px var(--lb);color:var(--tx)}
 .mx-ch-air{font:700 6.5px var(--mn);padding:2px 5px;border-radius:999px;letter-spacing:.08em;background:rgba(255,80,80,.12);color:var(--red);opacity:0;transition:opacity .2s}
@@ -537,7 +542,8 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-ab-b{color:rgba(255,140,60,.7);border:1.5px solid rgba(255,140,60,.25);background:rgba(255,140,60,.06)}
 .mx-ab-thru{color:var(--tx3);border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02)}
 /* Master section */
-.mx-master{width:128px;display:flex;flex-direction:column;background:rgba(20,22,26,.75);border:1px solid var(--bdr);border-radius:10px;padding:12px 8px 10px;gap:8px;flex-shrink:0;align-items:center}
+/* Master 섹션 — 카드 대신 왼쪽 구분선 + 강조 그라디언트 */
+.mx-master{width:128px;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(255,165,0,.04),rgba(20,22,26,.25));border:none;border-left:2px solid rgba(255,165,0,.2);border-radius:0;padding:6px 8px 8px 12px;gap:8px;flex-shrink:0;align-items:center;margin-left:2px}
 .mx-master-lbl{font:800 11px var(--lb);color:var(--tx);text-align:center;letter-spacing:.1em;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:6px;width:100%}
 .mx-master-sub{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.06em;text-align:center}
 /* VU LED dots — tall vertical columns */
@@ -558,18 +564,23 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-clip{min-width:86px;padding:9px 12px;border-radius:3px;font:800 10px var(--mn);letter-spacing:.08em;text-align:center;border:1.5px solid rgba(255,60,60,.15);color:rgba(255,60,60,.25);background:transparent;transition:all .15s}
 .mx-clip.on{border-color:rgba(255,60,60,.7);color:#ff4444;background:rgba(255,60,60,.1);animation:clip-flash .3s ease-in-out}
 @keyframes clip-flash{0%,100%{opacity:1}50%{opacity:.5}}
-/* Unified mixer layout — Claude design pass */
-.mx-primary{display:flex;gap:10px;align-items:flex-start;min-height:0}
+/* Unified mixer layout — 모든 구역을 .mx-console 안에서 구분선/섹션으로 정리 */
+.mx-primary{display:flex;gap:0;align-items:flex-start;min-height:0;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.05)}
 .mx-primary .mx-body{flex:1;min-width:0}
-.mx-right-col{display:flex;flex-direction:column;gap:8px;width:188px;flex-shrink:0}
-.mx-right-col .mx-aux-group{min-height:0;padding:9px 10px}
-.mx-fx-row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.mx-right-col{display:flex;flex-direction:column;gap:0;width:188px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.05);margin-left:2px}
+.mx-right-col .mx-aux-group{min-height:0;padding:8px 10px;border-right:none;border-bottom:1px solid rgba(255,255,255,.05)}
+.mx-right-col .mx-aux-group:last-child{border-bottom:none}
+.mx-fx-row{display:flex;gap:0;align-items:stretch;flex-wrap:nowrap;overflow-x:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
 .mx-fx-row .mx-aux-group{flex:1 1 180px;min-height:0}
 .mx-aux-full{width:100%;min-width:0;padding:7px 10px;font-size:9.5px}
-/* Legacy — kept for fallback */
+/* X-fader — 콘솔 안쪽 내장 스타일 */
+.mx-console .mx-xfader{background:transparent;border:1px solid rgba(255,255,255,.06);padding:10px 16px;max-width:none;align-self:stretch;width:auto}
+/* Legacy fallback */
 .mx-aux-shell{display:flex;flex-direction:column;gap:8px}
 .mx-aux-row-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px}
-.mx-aux-group{display:flex;flex-direction:column;gap:7px;padding:9px 10px 8px;background:rgba(20,22,26,.62);border:1px solid rgba(255,255,255,.06);border-radius:8px}
+/* Aux group — 개별 카드 대신 통합 패널 안 구분선 기반 섹션 */
+.mx-aux-group{display:flex;flex-direction:column;gap:7px;padding:8px 12px;background:transparent;border:none;border-right:1px solid rgba(255,255,255,.06);border-radius:0}
+.mx-aux-group:last-child{border-right:none}
 .mx-aux-group.is-v10{background:rgba(150,100,200,.05);border-color:rgba(150,100,200,.18)}
 .mx-aux-gtitle{font:800 9px var(--lb);color:var(--tx2);letter-spacing:.14em}
 .mx-aux-gsub{font:600 7px var(--mn);color:var(--tx4);letter-spacing:.08em}
@@ -869,7 +880,7 @@ body[data-layout="tower"] .tw-head-top .dk-player-lbl{font:600 8px var(--sn);col
 body[data-layout="tower"] .tw-head-top .dk-num{font:800 22px var(--mn);color:var(--key);line-height:1}
 body[data-layout="tower"] .tw-head-btm{display:flex;align-items:center;gap:5px;height:20px;flex:1;min-width:0;justify-content:flex-end}
 body[data-layout="tower"] .tw-head-btm .dhwl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body[data-layout="tower"] .tw-head-btm .dksm{display:none!important}
+body[data-layout="tower"] .tw-head-btm .dksm{display:inline-flex;gap:3px;flex-shrink:0}
 body[data-layout="tower"] .tw-art-wrap{position:relative;width:100%;height:144px;border-radius:4px;overflow:hidden;border:1px solid var(--bdr)}
 body[data-layout="tower"] .tw-art-wrap .dkart{width:100%;height:100%;border-radius:0;overflow:hidden;border:none;margin:0}
 body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.55) blur(1px)}
@@ -1008,7 +1019,7 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
       <span style="font:500 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-transform:uppercase" id="hSt">READY</span>
     </div>
     <button class="btn btng" id="mainBtn">START</button>
-    <button class="btn" id="reloadBtn" title="UI 다시 로드 (Cmd/Ctrl+R)" onclick="window.location.reload()" style="padding:6px 8px;-webkit-app-region:no-drag"><svg class="gi" style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+    <button class="btn" id="reloadBtn" title="UI 다시 로드 (Cmd/Ctrl+R)" onclick="window.location.reload()" style="padding:6px 9px;-webkit-app-region:no-drag;display:inline-flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
     <div style="display:flex;align-items:center;gap:5px;-webkit-app-region:no-drag" title="출력 볼륨">
       <span style="font:700 8px var(--mn);color:var(--tx4);letter-spacing:.06em">M.VOL</span>
       <input type="range" id="masterVol" min="0" max="100" value="100" step="1"
@@ -1122,7 +1133,8 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
       <span class="mx-empty-sub">Pro DJ Link 네트워크에 DJM을 연결하면<br>실시간 믹서 데이터가 표시됩니다</span>
     </div>
     <div id="mxContent" style="display:none">
-      <!-- Primary mixer: channels + master + monitor column (unified) -->
+      <!-- Primary mixer: channels + master + monitor column (unified physical mixer style) -->
+      <div class="mx-console">
       <div class="mx-primary">
         <div class="mx-body" id="mxBody"></div>
         <div class="mx-right-col">
@@ -1248,6 +1260,7 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
           </div>
         </div>
       </div>
+      </div><!-- /mx-console -->
       <div style="display:flex;gap:6px;align-items:center">
         <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').style.transform=_djmLogOpen?'rotate(90deg)':'rotate(0deg)'" style="flex:1"><span style="display:inline-flex;align-items:center;transition:transform .15s"><svg class="gi gi-chv"><use href="#i-chevron-right"/></svg></span> DJM PACKET LOG</div>
       </div>
@@ -4696,11 +4709,17 @@ function tick(){
       if(curTxt!==txt||firstTime){
         dtnEl.classList.remove('scrolling');
         if(curTxt!==txt) dtnEl.textContent=txt;
-        // Measure overflow after layout settles
-        requestAnimationFrame(()=>{
+        // Measure overflow after layout settles. 초기 로드에선 clientWidth=0 이
+        // 나올 수 있어 재시도 필요.
+        const tryMeasure=(retries=0)=>{
           if(!dtnEl.parentElement) return;
           const cw=dtnEl.clientWidth, sw=dtnEl.scrollWidth;
-          if(sw>cw+5){
+          if(cw===0 && retries<5){
+            // 레이아웃 아직 안 됨 → 다음 frame 재시도
+            requestAnimationFrame(()=>tryMeasure(retries+1));
+            return;
+          }
+          if(sw>cw+5 && txt){
             const inner=document.createElement('span');
             inner.className='mq-inner';
             inner.textContent=txt;
@@ -4711,8 +4730,9 @@ function tick(){
             dtnEl.style.setProperty('--scroll-dur',Math.max(5,overflow/25)+'s');
             dtnEl.classList.add('scrolling');
           }
-          dtnEl.dataset.mqChecked='1';
-        });
+          if(cw>0) dtnEl.dataset.mqChecked='1';
+        };
+        requestAnimationFrame(()=>tryMeasure());
       }
     }
     const dtaEl=document.getElementById('dta'+slot);
@@ -4723,9 +4743,13 @@ function tick(){
       if(artCur!==artTxt||artFirst){
         dtaEl.classList.remove('scrolling');
         if(artCur!==artTxt) dtaEl.textContent=artTxt;
-        requestAnimationFrame(()=>{
+        const tryMA=(retries=0)=>{
           if(!dtaEl.parentElement) return;
           const cw=dtaEl.clientWidth, sw=dtaEl.scrollWidth;
+          if(cw===0 && retries<5){
+            requestAnimationFrame(()=>tryMA(retries+1));
+            return;
+          }
           if(sw>cw+5&&artTxt){
             const inner=document.createElement('span');
             inner.className='mq-inner';
@@ -4737,8 +4761,9 @@ function tick(){
             dtaEl.style.setProperty('--scroll-dur',Math.max(5,overflow/25)+'s');
             dtaEl.classList.add('scrolling');
           }
-          dtaEl.dataset.mqChecked='1';
-        });
+          if(cw>0) dtaEl.dataset.mqChecked='1';
+        };
+        requestAnimationFrame(()=>tryMA());
       }
     }
     const dtsepEl=document.getElementById('dtsep'+slot);if(dtsepEl)dtsepEl.style.display=d.ar?'':'none';
