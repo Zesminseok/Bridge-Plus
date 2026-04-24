@@ -2686,12 +2686,12 @@ class BridgeCore {
               // non-looping 상태에선 추론된 loop 경계 폐기
               acc._loopStartMs = 0; acc._loopEndMs = 0;
             }
-            // Anchor 갱신 — unexpected drift 기반 (정상 forward 는 full update).
-            //  expected = anchor + elapsed*pitch
-            //  drift = fracMs - expected
-            //  - |drift|>200 or 루프: snap (hot cue/seek/loop wrap)
-            //  - 그 외: anchor = expected + drift*0.5 (jitter 50% 흡수)
-            //    정상 play 에서는 drift≈0 → anchor 가 자연스럽게 갱신됨 → 드래그 없음
+            // Anchor 갱신 — 3-zone 정책으로 jitter 제거:
+            //  |drift| > 200ms → snap (hot cue/seek/loop wrap)
+            //  50~200ms         → anchor = expected + drift*0.5 (실제 drift 보정)
+            //  <50ms            → drift 무시 (packet 지터를 anchor 에 흘리지 않음)
+            //  정상 play 에서는 drift≈0 에 가까워 이 경로에선 _anchorMs 값을
+            //  변경하지 않고 elapsed 만 누적 → 완벽히 선형 TC.
             const now = Date.now();
             if(!acc._anchorMs){
               acc._anchorMs = fracMs;
@@ -2700,13 +2700,16 @@ class BridgeCore {
               const elapsedA = now - (acc._anchorTime || now);
               const expected = acc._anchorMs + elapsedA * p.pitchMultiplier;
               const drift = fracMs - expected;
-              if(Math.abs(drift) > 200 || p.isLooping){
+              const absD = Math.abs(drift);
+              if(absD > 200 || p.isLooping){
                 acc._anchorMs = fracMs;
                 acc._anchorTime = now;
-              } else {
+              } else if(absD > 50){
                 acc._anchorMs = expected + drift * 0.5;
                 acc._anchorTime = now;
               }
+              // else: drift < 50ms → 무시. anchor/anchorTime 유지해 extrapolation
+              //        연속성 보존 (packet arrival jitter 흡수).
             }
             acc._fracMs = fracMs;
             acc._fracAnchorTime = now;

@@ -497,8 +497,7 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-ch-air{font:700 6.5px var(--mn);padding:2px 5px;border-radius:999px;letter-spacing:.08em;background:rgba(255,80,80,.12);color:var(--red);opacity:0;transition:opacity .2s}
 .mx-ch.on-air .mx-ch-air{opacity:1}
 /* Vertical waveform — at top, above knobs, grows to fill */
-.mx-wf-wrap{width:100%;flex:0 0 26%;min-height:92px;max-height:168px;padding:0 1px}
-.mx-wf-canvas{width:100%;height:100%;border-radius:4px;background:rgba(255,255,255,.02)}
+/* (mx-wf 제거됨 — 웨이브폼 없이 VU 만 표시) */
 /* SVG Knob */
 .mx-knob{display:flex;flex-direction:column;align-items:center;gap:0}
 .mx-knob svg{display:block;overflow:visible}
@@ -904,9 +903,9 @@ body[data-layout="tower"] .tw-head-btm .dksm{display:none}
 /* Tower: title/artist 앨범아트 수직 중앙 overlay */
 body[data-layout="tower"] .tw-title{position:absolute;inset:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;text-align:center;padding:6px 12px;box-sizing:border-box;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,.62) 50%,rgba(0,0,0,.35) 100%);pointer-events:none;z-index:2}
 body[data-layout="tower"] .tw-title::before{display:none}
-body[data-layout="tower"] .tw-title span[id^="dta"]{font:600 10.5px var(--sn);color:rgba(255,255,255,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;letter-spacing:.02em;min-height:14px;display:block;width:100%;max-width:100%;text-align:center}
+body[data-layout="tower"] .tw-title span[id^="dta"]{font:600 8.5px var(--sn)!important;color:rgba(255,255,255,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;letter-spacing:.02em;min-height:12px;display:block;width:100%;max-width:100%;text-align:center!important;padding:0;margin:0}
 body[data-layout="tower"] .tw-title span[id^="dta"]:empty::before{content:'\00a0';visibility:hidden}
-body[data-layout="tower"] .tw-title span[id^="dtn"]{font:700 14px var(--sn);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;min-height:19px;display:block;width:100%;max-width:100%;text-align:center}
+body[data-layout="tower"] .tw-title span[id^="dtn"]{font:700 12px var(--sn)!important;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;min-height:16px;display:block;width:100%;max-width:100%;text-align:center!important;padding:0;margin:0}
 body[data-layout="tower"] .tw-title .dk-title-sep{display:none!important}
 body[data-layout="tower"] .tw-wf{display:flex;flex-direction:column;gap:3px}
 body[data-layout="tower"] .tw-wf .dwov{height:18px;border-radius:3px;margin:0}
@@ -2906,7 +2905,7 @@ function drawZoomOverlay(slot, prog){
 
   // Skip redraw if playhead hasn't moved by ≥0.5px (saves GPU at 60fps)
   const overlayPx=Math.round(posMs/msPerPx*2)/2; // 0.5px resolution
-  const cueHash=_getZoomCueStateKey(d)+'_'+(d._isLooping?1:0);
+  const cueHash=_getZoomCueStateKey(d)+'_'+(d._isLooping?1:0)+'_L'+(d._loopStartMs||0)+'-'+(d._loopEndMs||0);
   if(d._olLastPx===overlayPx&&d._olLastCue===cueHash&&d._olLastZoom===viewMs)return;
   d._olLastPx=overlayPx;d._olLastCue=cueHash;d._olLastZoom=viewMs;
   _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,true);
@@ -5162,11 +5161,10 @@ setInterval(async()=>{
 },2000);
 
 // ════ Mixer panel — real-time DJM data visualization ══════════
-let _mxPeaks=[0,0,0,0], _mxBuilt=false, _mxWfBufs=null;
+let _mxPeaks=[0,0,0,0], _mxBuilt=false;
 let _mixerDirty=true, _lastMixerPaint=0;
 const _MIXER_TICK_MS=1000/60;
 const _hwWfRenderTimers={};
-let _mxWaveTick=0;
 function _markMixerDirty(){ _mixerDirty=true; }
 function _vuDisplayFrom255(v,gain=1.7,gamma=0.72){
   const n=Math.max(0,Math.min(1,(Number(v)||0)/255));
@@ -5188,12 +5186,6 @@ function _mixRgb(a,b,t){
     Math.round(a[1]+(b[1]-a[1])*t),
     Math.round(a[2]+(b[2]-a[2])*t)
   ];
-}
-function _mxWaveColor(v){
-  const x=Math.max(0,Math.min(1,v));
-  const blue=[70,122,255], orange=[255,158,54], red=[255,84,84];
-  const rgb=x<0.45?_mixRgb(blue,orange,x/0.45):_mixRgb(orange,red,(x-0.45)/0.55);
-  return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${0.22+x*0.72})`;
 }
 function _scheduleHwWaveformRefresh(slot,delay=260){
   clearTimeout(_hwWfRenderTimers[slot]);
@@ -5341,8 +5333,6 @@ function _mxBuildBody(){
   </div>`;
   body.innerHTML=html;
   _mxBuilt=true;
-  _mxWfBufs=[];
-  for(let i=0;i<nCh;i++)_mxWfBufs.push(new Float32Array(32));
 }
 
 function updateMixer(){
@@ -5408,38 +5398,7 @@ function updateMixer(){
     // CUE button state from headphone CUE flags
     const cueBtn=document.getElementById('mxCue'+i);
     if(cueBtn)cueBtn.classList.toggle('on',!!(_djmHpCue&(1<<i)));
-    // Vertical waveform (scrolling VU history, bottom→top) — above TRIM
-    if(_mxWfBufs&&_mxWfBufs[i]){
-      const buf=_mxWfBufs[i];
-      buf.copyWithin(0,1);
-      buf[buf.length-1]=meter;
-      const cvs=document.getElementById('mxWf'+i);
-      if(cvs && (_mxWaveTick%4===0)){
-        // Sync canvas buffer to CSS size on first draw
-        const rect=cvs.getBoundingClientRect();
-        if(rect.width>0&&(cvs.width!==Math.round(rect.width)||cvs.height!==Math.round(rect.height))){
-          cvs.width=Math.round(rect.width);cvs.height=Math.round(rect.height);
-        }
-        const ctx=cvs.getContext('2d');
-        const w=cvs.width,h=cvs.height;
-        ctx.clearRect(0,0,w,h);
-        const rows=Math.min(buf.length, Math.max(12, Math.floor(h/6)));
-        const rowH=Math.max(3, Math.ceil(h/rows));
-        const step=buf.length/rows;
-        for(let y=0;y<rows;y++){
-          const bi=Math.min(buf.length-1,Math.floor(y*step));
-          const v=buf[bi];
-          if(v<0.035)continue;
-          const q=Math.round(v*8)/8;
-          const barW=Math.max(3,Math.round(q*w*0.82));
-          const x=(w-barW)/2;
-          ctx.fillStyle=_mxWaveColor(q);
-          ctx.fillRect(x,h-((y+1)*rowH),barW,rowH-1);
-        }
-      }
-    }
   }
-  _mxWaveTick++;
   // Crossfader position — _djmXfader 기본값 128 이므로 데이터 없을 때 자연스레 중앙
   const xfKnob=document.getElementById('mxXfKnob');
   if(xfKnob)xfKnob.style.left=(_djmXfader/255*100)+'%';
