@@ -4900,7 +4900,12 @@ function tick(){
       // Waveform + overlay draw — position-gated (saves GPU when paused)
       const progPx=Math.round(prog*10000); // ~0.01% precision
       const wzc2=document.getElementById('wzc'+slot);
-      if(wzc2&&wzc2.width>0)drawZoomWaveform(slot,prog); // detail waveform: 60fps
+      // Detail waveform: 30fps (every 2nd tick) — user 요청, 시각적 충분
+      if(!d._wzTick)d._wzTick=0;
+      if(d._wfDirty||++d._wzTick>=2){
+        d._wzTick=0;
+        if(wzc2&&wzc2.width>0)drawZoomWaveform(slot,prog);
+      }
       // Overview: ~10fps (every 6th tick) — playhead barely moves
       if(!d._ovTick)d._ovTick=0;
       if(d._wfDirty||++d._ovTick>=6||progPx!==d._lastProgPx){
