@@ -4577,7 +4577,12 @@ function tick(){
       // extrapolation cap: 패킷이 끊겨도 최대 100ms 까지만 앞으로 예측.
       // 네트워크 stall 시 TC 가 무한정 앞으로 가는 것 방지.
       const elapsed=Math.min(now-d._posTime, 100);
-      if(d._isLooping){
+      if(d._trackChangePending){
+        // 트랙 체인지 확정 전: 새 pos 를 old dur/waveform 에 투영하면
+        // cursor 가 0 으로 튐. 확정될 때까지 0 으로 고정 → 깔끔한 전환.
+        displayPos = 0;
+        d._smoothPos = null;
+      }else if(d._isLooping){
         // 루프 중: 매우 빠른 루프 (1/16 beat @ 128BPM ≈ 30ms) 에서 forward
         // extrapolation 하면 루프 경계 넘어 오버슈트. CDJ-3000 30Hz precise_pos
         // 가 fine-grained 하므로 raw packet pos 만으로도 시각적 충분.
@@ -6453,6 +6458,10 @@ if(E){
       if(dk._tidChangeTo!==newTid){
         dk._tidChangeTo=newTid;
         dk._tidChangeCount=1;
+        // pending track change: 확정 전까지 TC/웨이브폼 렌더 freeze
+        // (새 pos 가 old waveform/dur 에 잘못 투영되는 것 방지)
+        dk._trackChangePending=true;
+        dk._smoothPos=null; dk._inferredSpeed=null;
       }else{
         dk._tidChangeCount=(dk._tidChangeCount||0)+1;
       }
@@ -6461,6 +6470,7 @@ if(E){
         dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfFine=null;dk._rgbWfFinePromise=null;dk._rgbWfFineToken=(dk._rgbWfFineToken||0)+1;dk._audioBlob=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;
         dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
         dk._trackId=newTid;dk._tidChangeCount=0;dk._tidChangeTo=0;
+        dk._trackChangePending=false; dk._smoothPos=null;
         const _artEl=document.getElementById('dart'+layerIndex);
         if(_artEl)_artEl.innerHTML='<img src="assets/default-art.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
         // Update title/artist DOM
