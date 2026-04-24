@@ -9,32 +9,63 @@ function _wglWaveformLength(wfData) {
   return _wglIsPackedWaveform(wfData) ? Math.floor(wfData.length / 8) : (wfData?.length || 0);
 }
 
+// Texture layout for STACKED packed virtual waveforms:
+//   Row 0 RGBA = low_env, mid_env, hi_env, air_env (unsigned u8)
+//   Row 1 RGBA = full_mn,  full_mx,  band_env, rms_raw
+// Legacy HW path (object {r,g,b,h}): row 0 = band envelopes, row 1 = signed full contour.
 function _wglWritePoint(px, row1, dstIdx, wfData, srcIdx) {
   const dst = dstIdx * 4;
   const dstShape = row1 + dst;
   if (_wglIsPackedWaveform(wfData)) {
     const src = srcIdx * 8;
-    px[dst] = wfData[src];
-    px[dst + 1] = wfData[src + 1];
-    px[dst + 2] = wfData[src + 2];
-    px[dst + 3] = wfData[src + 3]; // bassSigned_u8 (was 0)
-    px[dstShape] = wfData[src + 4];
+    px[dst]       = wfData[src];
+    px[dst + 1]   = wfData[src + 1];
+    px[dst + 2]   = wfData[src + 2];
+    px[dst + 3]   = wfData[src + 3];
+    px[dstShape]     = wfData[src + 4];
     px[dstShape + 1] = wfData[src + 5];
-    px[dstShape + 2] = 0;
-    px[dstShape + 3] = 255;
+    px[dstShape + 2] = wfData[src + 6];
+    px[dstShape + 3] = wfData[src + 7];
     return;
   }
+  // HW path: {r:low, g:mid, b:hi} band amplitudes -> symmetric envelope contract
   const p = wfData[srcIdx] || {};
-  px[dst] = Math.min(255, (p.r || 0) * 255) | 0;
-  px[dst + 1] = Math.min(255, (p.g || 0) * 255) | 0;
-  px[dst + 2] = Math.min(255, (p.b || 0) * 255) | 0;
-  px[dst + 3] = 128; // bassSigned default: silence
-  const mxS = (p.mx !== undefined) ? p.mx : (p.h || 0);
-  const mnS = (p.mn !== undefined) ? p.mn : -(p.h || 0);
-  px[dstShape] = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mxS)) + 1) * 127.5)));
-  px[dstShape + 1] = Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, mnS)) + 1) * 127.5)));
-  px[dstShape + 2] = 0;
-  px[dstShape + 3] = 255;
+  const enc = v => Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, v)) + 1) * 127.5)));
+  const encU = v => Math.max(0, Math.min(255, Math.round(Math.max(0, Math.min(1, v)) * 255)));
+  const lo = Math.min(1, Math.max(0, p.r || 0));
+  const mi = Math.min(1, Math.max(0, p.g || 0));
+  const hi = Math.min(1, Math.max(0, p.b || 0));
+  const h = Math.min(1, Math.max(0, p.h || Math.max(lo, mi, hi)));
+  px[dst]     = encU(lo);
+  px[dst + 1] = encU(mi);
+  px[dst + 2] = encU(hi);
+  px[dst + 3] = encU(h);
+  px[dstShape]     = enc(p.mn !== undefined ? p.mn : -h);
+  px[dstShape + 1] = enc(p.mx !== undefined ? p.mx : h);
+  px[dstShape + 2] = encU(h);
+  px[dstShape + 3] = encU(h);
+}
+
+// Peak-preserving pool for stacked-layout bytes.
+// Row 0 envelopes: MAX all channels. Row 1: full_mn MIN, full_mx MAX, envelope MAX.
+function _wglPoolRow(dst, dstOff, src, srcRow, j0, j1, isRow1) {
+  let a = isRow1 ? 255 : 0, b = 0, c = 0, d = 0;
+  for (let j = j0; j < j1; j++) {
+    const o = srcRow + j * 4;
+    if (isRow1) {
+      if (src[o] < a) a = src[o];
+      if (src[o + 1] > b) b = src[o + 1];
+    } else {
+      if (src[o] > a) a = src[o];
+      if (src[o + 1] > b) b = src[o + 1];
+    }
+    if (src[o + 2] > c) c = src[o + 2];
+    if (src[o + 3] > d) d = src[o + 3];
+  }
+  dst[dstOff]     = a;
+  dst[dstOff + 1] = b;
+  dst[dstOff + 2] = c;
+  dst[dstOff + 3] = d;
 }
 
 /**
@@ -65,10 +96,8 @@ class WaveformGL {
       res:     gl.getUniformLocation(this._prog, 'u_res'),
       centerX: gl.getUniformLocation(this._prog, 'u_centerX'),
       mode:    gl.getUniformLocation(this._prog, 'u_mode'),
-      viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
-      paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+      theme:   gl.getUniformLocation(this._prog, 'uTheme'),
       sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
-      oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
     };
   }
 
@@ -91,10 +120,8 @@ class WaveformGL {
           res:     gl.getUniformLocation(this._prog, 'u_res'),
           centerX: gl.getUniformLocation(this._prog, 'u_centerX'),
           mode:    gl.getUniformLocation(this._prog, 'u_mode'),
-          viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
-          paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+          theme:   gl.getUniformLocation(this._prog, 'uTheme'),
           sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
-          oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
         };
       } catch(e) { console.warn('[WGL] recover failed:', e.message); return; }
     }
@@ -120,25 +147,8 @@ class WaveformGL {
       for (let i = 0; i < texN; i++) {
         const j0 = Math.floor(i * stride);
         const j1 = Math.min(n, Math.max(j0 + 1, Math.floor((i + 1) * stride)));
-        let mr=0, mg=0, mb=0, ma=0, mxMx=0, mnMn=255;
-        for (let j = j0; j < j1; j++) {
-          const o = j * 4;
-          if (px[o]   > mr) mr = px[o];
-          if (px[o+1] > mg) mg = px[o+1];
-          if (px[o+2] > mb) mb = px[o+2];
-          if (px[o+3] > ma) ma = px[o+3];
-          const o2 = row1 + j * 4;
-          if (px[o2]   > mxMx) mxMx = px[o2];     // keep the largest +peak
-          if (px[o2+1] < mnMn) mnMn = px[o2+1];   // keep the smallest encoded (=most negative)
-        }
-        texPx[i*4]   = mr;
-        texPx[i*4+1] = mg;
-        texPx[i*4+2] = mb;
-        texPx[i*4+3] = ma;
-        texPx[tRow1 + i*4]   = mxMx;
-        texPx[tRow1 + i*4+1] = mnMn;
-        texPx[tRow1 + i*4+2] = 0;
-        texPx[tRow1 + i*4+3] = 255;
+        _wglPoolRow(texPx, i*4, px, 0, j0, j1, false);
+        _wglPoolRow(texPx, tRow1 + i*4, px, row1, j0, j1, true);
       }
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
@@ -150,15 +160,6 @@ class WaveformGL {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this._winKey = '';
-  }
-
-  setOscilloscope(value) {
-    const osc = Math.max(0, Math.min(1, value || 0));
-    if (this._oscilloscope !== osc) {
-      this._oscilloscope = osc;
-      this._dirty = true;
-      this._lastDrawKey = '';
-    }
   }
 
   /** Upload only a window of the detail waveform at native resolution (no downsample). */
@@ -187,10 +188,8 @@ class WaveformGL {
           res:  gl.getUniformLocation(this._prog, 'u_res'),
           centerX: gl.getUniformLocation(this._prog, 'u_centerX'),
           mode: gl.getUniformLocation(this._prog, 'u_mode'),
-          viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
-          paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+          theme: gl.getUniformLocation(this._prog, 'uTheme'),
           sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
-          oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
         };
       } catch(e) { console.warn('[WGL] wgl recover failed:', e.message); return; }
     }
@@ -211,25 +210,8 @@ class WaveformGL {
       for (let i = 0; i < texN; i++) {
         const j0 = Math.floor(i * stride);
         const j1 = Math.min(n, Math.max(j0 + 1, Math.floor((i + 1) * stride)));
-        let mr=0, mg=0, mb=0, ma=0, mxMx=0, mnMn=255;
-        for (let j = j0; j < j1; j++) {
-          const o = j * 4;
-          if (px[o]   > mr) mr = px[o];
-          if (px[o+1] > mg) mg = px[o+1];
-          if (px[o+2] > mb) mb = px[o+2];
-          if (px[o+3] > ma) ma = px[o+3];
-          const o2 = row1 + j * 4;
-          if (px[o2]   > mxMx) mxMx = px[o2];
-          if (px[o2+1] < mnMn) mnMn = px[o2+1];
-        }
-        texPx[i*4]   = mr;
-        texPx[i*4+1] = mg;
-        texPx[i*4+2] = mb;
-        texPx[i*4+3] = ma;
-        texPx[tRow1 + i*4]   = mxMx;
-        texPx[tRow1 + i*4+1] = mnMn;
-        texPx[tRow1 + i*4+2] = 0;
-        texPx[tRow1 + i*4+3] = 255;
+        _wglPoolRow(texPx, i*4, px, 0, j0, j1, false);
+        _wglPoolRow(texPx, tRow1 + i*4, px, row1, j0, j1, true);
       }
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
@@ -247,17 +229,14 @@ class WaveformGL {
     this._lastDrawKey = '';
   }
 
-  /** Render waveform. mode keeps data layout; viewMode: 0=A, 1=B, 2=C. */
-  draw(posMs, zoomMs, centerX, mode, viewMode = 0, paletteMode = 1, sharpness = 0, oscilloscope = 0) {
+  /** Render waveform. mode keeps data layout. */
+  draw(posMs, zoomMs, centerX, mode, sharpness = 0, theme = 0) {
     if (!this._wfTex) return;
     // Detect WebGL context reset: canvas.width assignment clears all GPU objects
-    // gl.isProgram() returns false for handles invalidated by context reset
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
-    if (arguments.length >= 8) this.setOscilloscope(oscilloscope);
-    const osc = this._oscilloscope || 0;
-    const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${mode}|${viewMode}|${paletteMode}|${sharpness}|${osc}`;
+    const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${mode}|${sharpness}|${theme}`;
     if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
@@ -271,10 +250,8 @@ class WaveformGL {
     gl.uniform2f(this._locs.res,     cv.width, cv.height);
     gl.uniform1f(this._locs.centerX, centerX);
     gl.uniform1i(this._locs.mode,    mode | 0);
-    gl.uniform1i(this._locs.viewMode, viewMode | 0);
-    gl.uniform1i(this._locs.paletteMode, paletteMode | 0);
+    gl.uniform1i(this._locs.theme,   theme | 0);
     gl.uniform1f(this._locs.sharpness, Math.max(0, Math.min(1, sharpness || 0)));
-    gl.uniform1f(this._locs.oscilloscope, osc);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this._dirty = false;
     this._lastDrawKey = drawKey;
@@ -340,7 +317,6 @@ class OverviewGL {
     this._wfTex = null;
     this._dirty = true;
     this._lastDrawKey = '';
-    this._oscilloscope = 0;
     this._prog = this._compileProgram(_WGL_VS, _WGL_OV_FS);
     this._initGeometry();
     this._locs = {
@@ -348,10 +324,8 @@ class OverviewGL {
       pos:  gl.getUniformLocation(this._prog, 'u_pos'),
       res:  gl.getUniformLocation(this._prog, 'u_res'),
       mode: gl.getUniformLocation(this._prog, 'u_mode'),
-      viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
-      paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+      theme: gl.getUniformLocation(this._prog, 'uTheme'),
       sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
-      oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
     };
   }
 
@@ -370,10 +344,8 @@ class OverviewGL {
           pos:  gl.getUniformLocation(this._prog, 'u_pos'),
           res:  gl.getUniformLocation(this._prog, 'u_res'),
           mode: gl.getUniformLocation(this._prog, 'u_mode'),
-          viewMode: gl.getUniformLocation(this._prog, 'uViewMode'),
-          paletteMode: gl.getUniformLocation(this._prog, 'uPaletteMode'),
+          theme: gl.getUniformLocation(this._prog, 'uTheme'),
           sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
-          oscilloscope: gl.getUniformLocation(this._prog, 'uOscilloscope'),
         };
       } catch(e) { console.warn('[WGL] ovgl recover failed:', e.message); return; }
     }
@@ -395,25 +367,8 @@ class OverviewGL {
       for (let i = 0; i < texN; i++) {
         const j0 = Math.floor(i * stride);
         const j1 = Math.min(n, Math.max(j0 + 1, Math.floor((i + 1) * stride)));
-        let mr=0, mg=0, mb=0, ma=0, mxMx=0, mnMn=255;
-        for (let j = j0; j < j1; j++) {
-          const o = j * 4;
-          if (px[o]   > mr) mr = px[o];
-          if (px[o+1] > mg) mg = px[o+1];
-          if (px[o+2] > mb) mb = px[o+2];
-          if (px[o+3] > ma) ma = px[o+3];
-          const o2 = row1 + j * 4;
-          if (px[o2]   > mxMx) mxMx = px[o2];
-          if (px[o2+1] < mnMn) mnMn = px[o2+1];
-        }
-        texPx[i*4]   = mr;
-        texPx[i*4+1] = mg;
-        texPx[i*4+2] = mb;
-        texPx[i*4+3] = ma;
-        texPx[tRow1 + i*4]   = mxMx;
-        texPx[tRow1 + i*4+1] = mnMn;
-        texPx[tRow1 + i*4+2] = 0;
-        texPx[tRow1 + i*4+3] = 255;
+        _wglPoolRow(texPx, i*4, px, 0, j0, j1, false);
+        _wglPoolRow(texPx, tRow1 + i*4, px, row1, j0, j1, true);
       }
     }
     if (this._wfTex) gl.deleteTexture(this._wfTex);
@@ -426,22 +381,12 @@ class OverviewGL {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
-  setOscilloscope(value) {
-    const osc = Math.max(0, Math.min(1, value || 0));
-    if (this._oscilloscope !== osc) {
-      this._oscilloscope = osc;
-      this._dirty = true;
-      this._lastDrawKey = '';
-    }
-  }
-
-  draw(pos, mode, viewMode = 0, paletteMode = 1, sharpness = 0) {
+  draw(pos, mode, sharpness = 0, theme = 0) {
     if (!this._wfTex) return;
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
-    const osc = this._oscilloscope || 0;
-    const drawKey = `${cv.width}x${cv.height}|${pos}|${mode}|${viewMode}|${paletteMode}|${sharpness}|${osc}`;
+    const drawKey = `${cv.width}x${cv.height}|${pos}|${mode}|${sharpness}|${theme}`;
     if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
@@ -452,10 +397,8 @@ class OverviewGL {
     gl.uniform1f(this._locs.pos,  pos);
     gl.uniform2f(this._locs.res,  cv.width, cv.height);
     gl.uniform1i(this._locs.mode, mode | 0);
-    gl.uniform1i(this._locs.viewMode, viewMode | 0);
-    gl.uniform1i(this._locs.paletteMode, paletteMode | 0);
+    gl.uniform1i(this._locs.theme, theme | 0);
     gl.uniform1f(this._locs.sharpness, Math.max(0, Math.min(1, sharpness || 0)));
-    gl.uniform1f(this._locs.oscilloscope, osc);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this._dirty = false;
     this._lastDrawKey = drawKey;
@@ -515,8 +458,9 @@ void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
 `;
 
 // ─── Zoom waveform fragment shader ──────────────────────────────────────────
-// Wavypy-style stacked 3-band: bass(outer/blue) → mid(amber) → treble(inner/white)
-// sqrt scaling for dynamic range; independent heights; Rekordbox color palette
+// Stacked 3-band symmetric solid fill (rekordbox style):
+//   row0 RGBA are temporally smoothed band-energy envelopes.
+//   row1 RG keeps the full signed contour for subtle oscilloscope edge detail.
 const _WGL_ZOOM_FS = `#version 300 es
 precision highp float;
 uniform sampler2D u_wf;
@@ -525,447 +469,279 @@ uniform float u_zoomMs;
 uniform float u_durMs;
 uniform vec2  u_res;
 uniform float u_centerX;
-uniform int   u_mode;
-uniform int   uViewMode;
-uniform int   uPaletteMode;
-uniform float uSharpness;
-uniform float uOscilloscope;
+uniform int   u_mode;         // legacy, unused
+uniform int   uTheme;         // 0=3 Band, 1=RGB
+uniform float uSharpness;     // legacy, unused
 out vec4 fragColor;
-const vec4 BG = vec4(0.067, 0.075, 0.094, 1.0);
 
-vec4 sampleSmooth(float t) {
-  int sx = textureSize(u_wf, 0).x;
-  int ix = int(floor(clamp(t, 0.0, 0.999999) * float(sx)));
-  ix = clamp(ix, 0, sx - 1);
-  vec4 c1 = texelFetch(u_wf, ivec2(ix, 0), 0);
-  if (uSharpness <= 0.001) return c1;
-  int ix0 = max(ix - 1, 0);
-  int ix2 = min(ix + 1, sx - 1);
-  vec4 c0 = texelFetch(u_wf, ivec2(ix0, 0), 0);
-  vec4 c2 = texelFetch(u_wf, ivec2(ix2, 0), 0);
-  float we = 0.08 * uSharpness;
-  float wc = 1.0 - 2.0 * we;
-  return we * c0 + wc * c1 + we * c2;
+const vec4 BG    = vec4(0.035, 0.040, 0.055, 1.0);
+const vec3 C_LOW = vec3(0.000, 0.333, 0.886);  // #0055e2
+const vec3 C_MID = vec3(0.710, 0.431, 0.157);  // #b56e28
+const vec3 C_HI  = vec3(1.000, 1.000, 1.000);  // #ffffff
+const vec3 C_AIR = vec3(1.000, 0.965, 0.878);  // #fff6e0
+
+float dec(float u) { return u * 2.0 - 1.003922; } // (u - 128/255) * 2
+
+float symMask(float y, float h, float aa) {
+  float H = max(h, 0.0);
+  float lower = smoothstep(-H - aa, -H + aa, y);
+  float upper = 1.0 - smoothstep(H - aa, H + aa, y);
+  return lower * upper;
 }
 
-// Signed envelope per column: x = peak +, y = peak - (both in [-1, 1])
-vec2 sampleShape(float t) {
-  int sx = textureSize(u_wf, 0).x;
-  int ix = int(floor(clamp(t, 0.0, 0.999999) * float(sx)));
-  ix = clamp(ix, 0, sx - 1);
-  vec4 s = texelFetch(u_wf, ivec2(ix, 1), 0);
-  return vec2(s.r * 2.0 - 1.0, s.g * 2.0 - 1.0);
+float signedMask(float y, float mn, float mx, float aa) {
+  float lo = min(mn, mx);
+  float hi = max(mn, mx);
+  float lower = smoothstep(lo - aa, lo + aa, y);
+  float upper = 1.0 - smoothstep(hi - aa, hi + aa, y);
+  return lower * upper;
 }
 
-vec3 monoColor(float e) {
-  e = clamp(e, 0.0, 1.0);
-  if (uPaletteMode == 0) {
-    vec3 navy = vec3(0.015, 0.045, 0.12);
-    vec3 cyan = vec3(0.02, 0.58, 1.0);
-    vec3 white = vec3(0.92, 0.98, 1.0);
-    return e < 0.72 ? mix(navy, cyan, e / 0.72) : mix(cyan, white, (e - 0.72) / 0.28);
-  }
-  vec3 brown = vec3(0.12, 0.045, 0.018);
-  vec3 orange = vec3(1.0, 0.42, 0.17);
-  vec3 warmWhite = vec3(1.0, 0.92, 0.78);
-  return e < 0.70 ? mix(brown, orange, e / 0.70) : mix(orange, warmWhite, (e - 0.70) / 0.30);
+float scaledSignedMask(float y, float mn, float mx, float scale, float aa) {
+  float c = (mn + mx) * 0.5;
+  float lo = mix(c, mn, clamp(scale, 0.0, 1.0));
+  float hi = mix(c, mx, clamp(scale, 0.0, 1.0));
+  return signedMask(y, lo, hi, aa);
 }
 
-vec3 multiColor(float B, float M, float T, bool hwPwv7) {
-  if (hwPwv7) {
-    if (uPaletteMode == 0) {
-      vec3 low = vec3(0.125, 0.325, 0.85);
-      vec3 mid = vec3(0.95, 0.667, 0.235);
-      vec3 hi = vec3(1.0, 1.0, 1.0);
-      return low * B + mid * M + hi * T;
-    }
-    vec3 low = vec3(0.05, 0.23, 0.42);
-    vec3 mid = vec3(1.0, 0.42, 0.17);
-    vec3 hi = vec3(0.95, 0.72, 0.32);
-    return low * B + mid * M + hi * T;
-  }
-  if (uPaletteMode == 0) {
-    vec3 low = vec3(0.05, 0.23, 0.42);
-    vec3 mid = vec3(1.0, 0.42, 0.17);
-    vec3 hi = vec3(0.95, 0.72, 0.32);
-    return low * B + mid * M + hi * T;
-  }
-  vec3 low = vec3(0.35, 0.12, 0.045);
-  vec3 mid = vec3(1.0, 0.42, 0.17);
-  vec3 hi = vec3(1.0, 0.72, 0.22);
-  return low * B + mid * M + hi * T;
+vec3 layer(vec3 base, vec3 color, float mask, float alpha) {
+  return mix(base, color, clamp(mask * alpha, 0.0, 1.0));
 }
 
-vec3 gradientColor(vec4 amps, float yDist, float outerH, vec3 lowCol, vec3 bodyCol, vec3 presCol, vec3 airCol, float AA) {
-  float safeH = max(outerH, 1.0);
-  float yT = clamp(1.0 - yDist / safeH, 0.0, 1.0);
-  float ampSum = dot(amps, vec4(1.0)) + 0.0001;
-  vec4 ampN = amps / ampSum;
-  float loEnd = clamp(0.26 + 0.18 * ampN.x - 0.06 * ampN.w, 0.18, 0.44);
-  float midEnd = clamp(loEnd + 0.24 + 0.16 * ampN.y, loEnd + 0.16, 0.72);
-  float presEnd = clamp(midEnd + 0.16 + 0.14 * ampN.z, midEnd + 0.10, 0.90);
-  float soft = clamp((AA * 3.0) / safeH, 0.025, 0.22);
-  float loZone = 1.0 - smoothstep(loEnd - soft, loEnd + soft, yT);
-  float midRise = smoothstep(loEnd - soft, loEnd + soft, yT);
-  float midFall = 1.0 - smoothstep(midEnd - soft, midEnd + soft, yT);
-  float presRise = smoothstep(midEnd - soft, midEnd + soft, yT);
-  float presFall = 1.0 - smoothstep(presEnd - soft, presEnd + soft, yT);
-  float airZone = smoothstep(presEnd - soft, presEnd + soft, yT);
-  vec4 zones = vec4(loZone, midRise * midFall, presRise * presFall, airZone);
-  vec4 w = zones * (0.24 + 0.76 * amps);
-  float wSum = dot(w, vec4(1.0)) + 0.0001;
-  return (lowCol * w.x + bodyCol * w.y + presCol * w.z + airCol * w.w) / wSum;
+vec3 rgbTraceColor(vec4 e) {
+  float low = max(e.r, 0.0);
+  float mid = max(e.g, 0.0);
+  float high = max(e.b + e.a * 0.55, 0.0);
+  float sum = low + mid + high;
+  if (sum <= 0.0001) return C_MID;
+  low /= sum;
+  mid /= sum;
+  high /= sum;
+  return C_LOW * low + C_MID * mid + C_HI * high;
 }
 
-float displayPeak(float p) {
-  return pow(clamp(p, 0.0, 1.0), 1.18) * 0.76;
+// Catmull-Rom cubic spline (uniform, 4 control points; passes through p1 at t=0, p2 at t=1)
+vec4 cr4(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float t) {
+  float t2 = t*t, t3 = t2*t;
+  return 0.5 * ((2.0*p1)
+              + (-p0 + p2) * t
+              + (2.0*p0 - 5.0*p1 + 4.0*p2 - p3) * t2
+              + (-p0 + 3.0*p1 - 3.0*p2 + p3) * t3);
 }
 
 void main() {
   float W = u_res.x, H = u_res.y, midY = H * 0.5;
   float cX = u_centerX * W;
   float pxMs = u_posMs + (gl_FragCoord.x - cX) * (u_zoomMs / W);
+  if (pxMs < 0.0 || pxMs > u_durMs) { fragColor = BG; return; }
 
-  if (pxMs < 0.0 || pxMs > u_durMs) {
-    fragColor = BG; return;
-  }
   float tU = clamp(pxMs / u_durMs, 0.0, 1.0);
-  vec4 wf = sampleSmooth(tU);
-  float bass = wf.r, midf = wf.g, treble = wf.b;
+  int sx = textureSize(u_wf, 0).x;
+  float fx = tU * float(sx) - 0.5;
+  int ix  = clamp(int(floor(fx)), 0, sx - 1);
+  float ft = clamp(fx - float(ix), 0.0, 1.0);
+  int im  = clamp(ix - 1, 0, sx - 1);
+  int ip  = clamp(ix + 1, 0, sx - 1);
+  int iq  = clamp(ix + 2, 0, sx - 1);
+  vec4 a0 = texelFetch(u_wf, ivec2(im, 0), 0);
+  vec4 a1 = texelFetch(u_wf, ivec2(ix, 0), 0);
+  vec4 a2 = texelFetch(u_wf, ivec2(ip, 0), 0);
+  vec4 a3 = texelFetch(u_wf, ivec2(iq, 0), 0);
+  vec4 b0 = texelFetch(u_wf, ivec2(im, 1), 0);
+  vec4 b1 = texelFetch(u_wf, ivec2(ix, 1), 0);
+  vec4 b2 = texelFetch(u_wf, ivec2(ip, 1), 0);
+  vec4 b3 = texelFetch(u_wf, ivec2(iq, 1), 0);
+  vec4 a = mix(a1, clamp(cr4(a0, a1, a2, a3, ft), 0.0, 1.0), 0.35);
+  vec4 b = mix(b1, clamp(cr4(b0, b1, b2, b3, ft), 0.0, 1.0), 0.35);
 
-  float scale = midY * 0.95;
-  float yRel = gl_FragCoord.y - midY;        // signed, + = above midline
-  float yDist = abs(yRel);
+  // ShowKontrol 스타일: 위/아래 3% 여백 (cue marker 공간 확보). 기존 0.98 → 0.94.
+  float sLow = midY * 0.94;
+  float sMid = midY * 0.75;
+  float sHi  = midY * 0.40;
+  float sAir = midY * 0.23;
+  float yRel = gl_FragCoord.y - midY;
+  const float AA = 0.55;
 
-  // Signed envelope per column (zigzag asymmetric shape). Falls back to ±h for HW.
-  vec2 sh = sampleShape(tU);
-  float posPk = max(sh.x, 0.0);             // upper envelope [0, 1]
-  float negPk = max(-sh.y, 0.0);            // lower envelope [0, 1]
-  float mxAbs = max(abs(sh.x), abs(sh.y));
-  float absPk = max(mxAbs, 0.0001);
-  float sideE = (yRel >= 0.0) ? posPk : negPk;
-  float sideF = (absPk > 0.001) ? (sideE / absPk) : 1.0;    // 0..1 side scale factor
+  float loEnv = a.r;
+  float miEnv = a.g;
+  float hiEnv = a.b;
+  float airEnv = a.a;
+  float loT = loEnv * sLow;
+  float miT = miEnv * sMid;
+  float hiT = hiEnv * sHi;
+  float airT = airEnv * sAir;
+  float fullMn = dec(b.r) * sLow;
+  float fullMx = dec(b.g) * sLow;
 
-  if (uViewMode == 1 || u_mode == 2) {
-    // Mode B: mono height, asymmetric envelope.
-    float e = sqrt(max(max(bass, max(midf, treble)), wf.a));
-    float outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
-    float alpha = 1.0 - smoothstep(outerH - 1.2, outerH + 1.2, yDist);
-    if (alpha < 0.005) { fragColor = BG; return; }
-    fragColor = vec4(monoColor(e) * alpha, 1.0);
+  float mShape = signedMask(yRel, fullMn, fullMx, AA);
+  float mLow = mShape;
+  float mMid = scaledSignedMask(yRel, fullMn, fullMx, 0.26 + miEnv * 0.54, AA);
+  float mHi  = scaledSignedMask(yRel, fullMn, fullMx, 0.16 + hiEnv * 0.42, AA);
+  float mAir = scaledSignedMask(yRel, fullMn, fullMx, 0.12 + airEnv * 0.28, AA);
+
+  if (uTheme == 1) {
+    float rgbMn = mix(dec(b1.r), dec(b.r), 0.28) * sLow;
+    float rgbMx = mix(dec(b1.g), dec(b.g), 0.28) * sLow;
+    float mPulse = signedMask(yRel, rgbMn, rgbMx, 0.38);
+    if (mPulse < 0.01) { fragColor = BG; return; }
+    vec3 pulseCol = rgbTraceColor(mix(a1, a, 0.18));
+    pulseCol *= mix(0.72, 1.18, clamp(max(max(a1.r, a1.g), max(a1.b, a1.a)), 0.0, 1.0));
+    fragColor = vec4(mix(BG.rgb, clamp(pulseCol, 0.0, 1.0), mPulse), 1.0);
     return;
   }
 
-  // ── Mode 4: HW Native RGB — CDJ colors displayed as-is ──
-  if (u_mode == 4) {
-    float h = wf.a;
-    float outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
-    float AA = 1.0;
-    float inside = 1.0 - smoothstep(outerH - AA * 2.5, outerH + AA * 2.5, yDist);
-    if (inside < 0.005) { fragColor = BG; return; }
-    float mx = max(bass, max(midf, treble));
-    vec3 col = mx > 0.001 ? vec3(bass, midf, treble) / mx : vec3(0.3);
-    float yT = clamp(1.0 - yDist / max(outerH, 1.0), 0.0, 1.0);
-    col = mix(col * 0.68, mix(col, vec3(1.0), 0.22), smoothstep(0.08, 0.92, yT));
-    col *= mix(0.62, 1.15, smoothstep(0.08, 0.95, max(mx, h)));
-    fragColor = vec4(col * inside, 1.0);
-    return;
-  }
+  vec3 col = BG.rgb;
+  col = layer(col, C_LOW, mLow, 0.98);
+  col = layer(col, C_MID, mMid, 0.96);
+  col = layer(col, C_HI,  mHi, 0.82);
+  col = layer(col, C_AIR, mAir, 0.56);
+  float alpha = max(max(mLow, mMid), max(mHi, mAir));
 
-  // ── Mode A/C for virtual and HW PWV7 ──
-  float B = bass, M = midf, T = treble;
-  float outerH, inside;
-  vec3 col;
-
-  if (uViewMode == 2 || u_mode == 3) {
-    // Mode C: multi-band RGB layout. HW PWV7 uses low/mid/hi as R/G/B.
-    float h = wf.a;
-    outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
-    float AA = 1.0;
-    inside = 1.0 - smoothstep(outerH - AA * 2.5, outerH + AA * 2.5, yDist);
-    float ridge = 1.0 - smoothstep(1.0, 4.5, abs(yDist - outerH));
-    if (inside < 0.005 && ridge < 0.005) { fragColor = BG; return; }
-    vec3 lowCol, bodyCol, presCol, airCol;
-    if (u_mode == 3 && uPaletteMode == 0) {
-      lowCol = vec3(0.125, 0.325, 0.85);
-      bodyCol = vec3(0.95, 0.667, 0.235);
-      presCol = vec3(1.0, 0.88, 0.48);
-      airCol = vec3(1.0);
-    } else if (uPaletteMode == 0) {
-      lowCol = vec3(0.05, 0.23, 0.42);
-      bodyCol = vec3(0.95, 0.39, 0.18);
-      presCol = vec3(0.92, 0.68, 0.34);
-      airCol = vec3(0.96, 0.97, 0.92);
-    } else {
-      lowCol = vec3(0.125, 0.325, 0.85);
-      bodyCol = vec3(0.95, 0.667, 0.235);
-      presCol = vec3(1.0, 1.0, 1.0);
-      airCol = vec3(1.0, 1.0, 1.0);
-    }
-    vec4 amps = vec4(max(B, 0.0), max(M, 0.0), max(T, 0.0), max(h, 0.0));
-    col = gradientColor(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA);
-    col *= mix(0.62, 1.15, smoothstep(0.08, 0.95, max(max(B, M), max(T, h))));
-  } else {
-    // Mode A: Virtual waveform uses signed min/max peaks for the actual silhouette.
-    float bV = max(B, 0.0);
-    float mV = max(M, 0.0);
-    float pV = max(T, 0.0);
-    float tV = max(wf.a, 0.0);
-    float AA = 1.0;
-    float edgeAA = AA * 2.5;
-    float topH = displayPeak(max(sh.x, 0.0)) * scale;
-    float botH = -displayPeak(max(-sh.y, 0.0)) * scale;
-    float spanH = max(topH - botH, 1.0);
-    outerH = spanH * 0.5;
-    float bassSigned = (wf.a - 0.5019608) * 2.0;  // 128/255 -> 0.0
-    float bassH = clamp(bassSigned, -1.0, 1.0) * scale;
-    float lineThickness = 1.5;
-    float lineMask = 1.0 - smoothstep(lineThickness - 0.5, lineThickness + 0.5, abs(yRel - bassH));
-    float lower = smoothstep(botH - edgeAA, botH + edgeAA, yRel);
-    float upper = 1.0 - smoothstep(topH - edgeAA, topH + edgeAA, yRel);
-    inside = lower * upper;
-    float ridge = 1.0 - smoothstep(0.7, 3.8, min(abs(yRel - topH), abs(yRel - botH)));
-    float fillMask = max(inside, ridge * 0.70);
-    inside = mix(fillMask, lineMask, uOscilloscope);
-    if (inside < 0.005 && ridge < 0.005) { fragColor = BG; return; }
-    vec3 lowCol = vec3(0.05, 0.23, 0.42);
-    vec3 bodyCol = vec3(1.0, 0.42, 0.17);
-    vec3 presCol = vec3(0.95, 0.72, 0.32);
-    vec3 airCol  = vec3(1.0, 0.94, 0.82);
-    if (uPaletteMode == 0) {
-      lowCol = vec3(0.04, 0.21, 0.46);
-      bodyCol = vec3(0.95, 0.39, 0.18);
-      presCol = vec3(0.92, 0.68, 0.34);
-      airCol = vec3(0.96, 0.97, 0.92);
-    }
-    vec4 amps = vec4(bV, mV, pV, tV);
-    col = gradientColor(amps, yDist, max(max(abs(topH), abs(botH)), 1.0), lowCol, bodyCol, presCol, airCol, AA);
-    col *= mix(0.60, 1.15, smoothstep(0.08, 0.95, max(max(bV, mV), max(pV, tV))));
-  }
-
-  fragColor = vec4(clamp(col, 0.0, 1.0) * inside, 1.0);
+  if (alpha < 0.01) { fragColor = BG; return; }
+  fragColor = vec4(col, 1.0);
 }
 `;
 
 // ─── Overview waveform fragment shader ──────────────────────────────────────
-// Wavypy-style: same palette + sqrt scaling, with playhead and played-section dim
+// Same stacked 3-band algorithm as zoom, plus playhead line and played-section dim.
 const _WGL_OV_FS = `#version 300 es
 precision highp float;
 uniform sampler2D u_wf;
 uniform float u_pos;
 uniform vec2  u_res;
 uniform int   u_mode;
-uniform int   uViewMode;
-uniform int   uPaletteMode;
+uniform int   uTheme;
 uniform float uSharpness;
-uniform float uOscilloscope;
 out vec4 fragColor;
-const vec4 BG = vec4(0.067, 0.075, 0.094, 1.0);
-const vec4 BG_PLAYED = vec4(0.090, 0.098, 0.122, 1.0);
 
-vec4 sampleSmooth(float t) {
-  int sx = textureSize(u_wf, 0).x;
-  int ix = int(floor(clamp(t, 0.0, 0.999999) * float(sx)));
-  ix = clamp(ix, 0, sx - 1);
-  vec4 c1 = texelFetch(u_wf, ivec2(ix, 0), 0);
-  if (uSharpness <= 0.001) return c1;
-  int ix0 = max(ix - 1, 0);
-  int ix2 = min(ix + 1, sx - 1);
-  vec4 c0 = texelFetch(u_wf, ivec2(ix0, 0), 0);
-  vec4 c2 = texelFetch(u_wf, ivec2(ix2, 0), 0);
-  float we = 0.08 * uSharpness;
-  float wc = 1.0 - 2.0 * we;
-  return we * c0 + wc * c1 + we * c2;
+const vec4 BG        = vec4(0.035, 0.040, 0.055, 1.0);
+const vec4 BG_PLAYED = vec4(0.050, 0.055, 0.075, 1.0);
+const vec3 C_LOW = vec3(0.000, 0.333, 0.886);
+const vec3 C_MID = vec3(0.710, 0.431, 0.157);
+const vec3 C_HI  = vec3(1.000, 1.000, 1.000);
+const vec3 C_AIR = vec3(1.000, 0.965, 0.878);
+
+float dec(float u) { return u * 2.0 - 1.003922; }
+
+float symMask(float y, float h, float aa) {
+  float H = max(h, 0.0);
+  float lower = smoothstep(-H - aa, -H + aa, y);
+  float upper = 1.0 - smoothstep(H - aa, H + aa, y);
+  return lower * upper;
 }
 
-// Signed envelope per column: x = peak +, y = peak - (both in [-1, 1])
-vec2 sampleShape(float t) {
-  int sx = textureSize(u_wf, 0).x;
-  int ix = int(floor(clamp(t, 0.0, 0.999999) * float(sx)));
-  ix = clamp(ix, 0, sx - 1);
-  vec4 s = texelFetch(u_wf, ivec2(ix, 1), 0);
-  return vec2(s.r * 2.0 - 1.0, s.g * 2.0 - 1.0);
+float signedMask(float y, float mn, float mx, float aa) {
+  float lo = min(mn, mx);
+  float hi = max(mn, mx);
+  float lower = smoothstep(lo - aa, lo + aa, y);
+  float upper = 1.0 - smoothstep(hi - aa, hi + aa, y);
+  return lower * upper;
 }
 
-vec3 monoColor(float e) {
-  e = clamp(e, 0.0, 1.0);
-  if (uPaletteMode == 0) {
-    vec3 navy = vec3(0.015, 0.045, 0.12);
-    vec3 cyan = vec3(0.02, 0.58, 1.0);
-    vec3 white = vec3(0.92, 0.98, 1.0);
-    return e < 0.72 ? mix(navy, cyan, e / 0.72) : mix(cyan, white, (e - 0.72) / 0.28);
-  }
-  vec3 brown = vec3(0.12, 0.045, 0.018);
-  vec3 orange = vec3(1.0, 0.42, 0.17);
-  vec3 warmWhite = vec3(1.0, 0.92, 0.78);
-  return e < 0.70 ? mix(brown, orange, e / 0.70) : mix(orange, warmWhite, (e - 0.70) / 0.30);
+float scaledSignedMask(float y, float mn, float mx, float scale, float aa) {
+  float c = (mn + mx) * 0.5;
+  float lo = mix(c, mn, clamp(scale, 0.0, 1.0));
+  float hi = mix(c, mx, clamp(scale, 0.0, 1.0));
+  return signedMask(y, lo, hi, aa);
 }
 
-vec3 multiColor(float B, float M, float T, bool hwPwv7) {
-  if (hwPwv7) {
-    if (uPaletteMode == 0) {
-      return vec3(0.125, 0.325, 0.85) * B + vec3(0.95, 0.667, 0.235) * M + vec3(1.0) * T;
-    }
-    return vec3(0.05, 0.23, 0.42) * B + vec3(1.0, 0.42, 0.17) * M + vec3(0.95, 0.72, 0.32) * T;
-  }
-  if (uPaletteMode == 0) {
-    return vec3(0.05, 0.23, 0.42) * B + vec3(1.0, 0.42, 0.17) * M + vec3(0.95, 0.72, 0.32) * T;
-  }
-  return vec3(0.35, 0.12, 0.045) * B + vec3(1.0, 0.42, 0.17) * M + vec3(1.0, 0.72, 0.22) * T;
+vec3 layer(vec3 base, vec3 color, float mask, float alpha) {
+  return mix(base, color, clamp(mask * alpha, 0.0, 1.0));
 }
 
-vec3 overviewGradient(vec4 amps, float yDist, float outerH, vec3 lowCol, vec3 bodyCol, vec3 presCol, vec3 airCol, float AA) {
-  float safeH = max(outerH, 1.0);
-  float yT = clamp(1.0 - yDist / safeH, 0.0, 1.0);
-  float ampSum = dot(amps, vec4(1.0)) + 0.0001;
-  vec4 ampN = amps / ampSum;
-  float loEnd = clamp(0.30 + 0.16 * ampN.x, 0.20, 0.46);
-  float midEnd = clamp(loEnd + 0.24 + 0.12 * ampN.y, loEnd + 0.16, 0.74);
-  float presEnd = clamp(midEnd + 0.17 + 0.10 * ampN.z, midEnd + 0.10, 0.90);
-  float soft = clamp((AA * 3.0) / safeH, 0.04, 0.26);
-  float loZone = 1.0 - smoothstep(loEnd - soft, loEnd + soft, yT);
-  float midZone = smoothstep(loEnd - soft, loEnd + soft, yT) * (1.0 - smoothstep(midEnd - soft, midEnd + soft, yT));
-  float presZone = smoothstep(midEnd - soft, midEnd + soft, yT) * (1.0 - smoothstep(presEnd - soft, presEnd + soft, yT));
-  float airZone = smoothstep(presEnd - soft, presEnd + soft, yT);
-  vec4 w = vec4(loZone, midZone, presZone, airZone) * (0.32 + 0.68 * amps);
-  float wSum = dot(w, vec4(1.0)) + 0.0001;
-  return (lowCol * w.x + bodyCol * w.y + presCol * w.z + airCol * w.w) / wSum;
+vec3 rgbTraceColor(vec4 e) {
+  float low = max(e.r, 0.0);
+  float mid = max(e.g, 0.0);
+  float high = max(e.b + e.a * 0.55, 0.0);
+  float sum = low + mid + high;
+  if (sum <= 0.0001) return C_MID;
+  low /= sum;
+  mid /= sum;
+  high /= sum;
+  return C_LOW * low + C_MID * mid + C_HI * high;
 }
 
-float displayPeak(float p) {
-  return pow(clamp(p, 0.0, 1.0), 1.18) * 0.76;
+vec4 cr4(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float t) {
+  float t2 = t*t, t3 = t2*t;
+  return 0.5 * ((2.0*p1)
+              + (-p0 + p2) * t
+              + (2.0*p0 - 5.0*p1 + 4.0*p2 - p3) * t2
+              + (-p0 + 3.0*p1 - 3.0*p2 + p3) * t3);
 }
 
 void main() {
   float W = u_res.x, H = u_res.y, midY = H * 0.5;
   float t = gl_FragCoord.x / W;
-  vec4 wf = sampleSmooth(t);
-  float bass=wf.r, midf=wf.g, treble=wf.b;
 
-  // Playhead line
   float curX = u_pos * W;
   if (abs(gl_FragCoord.x - curX) < 0.8) {
-    fragColor = vec4(1.0, 1.0, 1.0, 1.0); return;
+    fragColor = vec4(1.0); return;
   }
 
+  int sx = textureSize(u_wf, 0).x;
+  float fx = t * float(sx) - 0.5;
+  int ix  = clamp(int(floor(fx)), 0, sx - 1);
+  float ft = clamp(fx - float(ix), 0.0, 1.0);
+  int im  = clamp(ix - 1, 0, sx - 1);
+  int ip  = clamp(ix + 1, 0, sx - 1);
+  int iq  = clamp(ix + 2, 0, sx - 1);
+  vec4 a0 = texelFetch(u_wf, ivec2(im, 0), 0);
+  vec4 a1 = texelFetch(u_wf, ivec2(ix, 0), 0);
+  vec4 a2 = texelFetch(u_wf, ivec2(ip, 0), 0);
+  vec4 a3 = texelFetch(u_wf, ivec2(iq, 0), 0);
+  vec4 b0 = texelFetch(u_wf, ivec2(im, 1), 0);
+  vec4 b1 = texelFetch(u_wf, ivec2(ix, 1), 0);
+  vec4 b2 = texelFetch(u_wf, ivec2(ip, 1), 0);
+  vec4 b3 = texelFetch(u_wf, ivec2(iq, 1), 0);
+  vec4 a = mix(a1, clamp(cr4(a0, a1, a2, a3, ft), 0.0, 1.0), 0.35);
+  vec4 b = mix(b1, clamp(cr4(b0, b1, b2, b3, ft), 0.0, 1.0), 0.35);
+
+  // ShowKontrol 스타일: 위/아래 3% 여백 (cue marker 공간 확보). 기존 0.98 → 0.94.
+  float sLow = midY * 0.94;
+  float sMid = midY * 0.75;
+  float sHi  = midY * 0.40;
+  float sAir = midY * 0.23;
   float yRel = gl_FragCoord.y - midY;
-  float yDist = abs(yRel);
-  float scale = midY * 0.95;
   bool played = t < u_pos;
+  const float AA = 0.55;
 
-  // Signed envelope per column (asymmetric zigzag shape, ±h fallback for HW)
-  vec2 sh = sampleShape(t);
-  float posPk = max(sh.x, 0.0);
-  float negPk = max(-sh.y, 0.0);
-  float mxAbs = max(abs(sh.x), abs(sh.y));
-  float absPk = max(mxAbs, 0.0001);
-  float sideE = (yRel >= 0.0) ? posPk : negPk;
-  float sideF = (absPk > 0.001) ? (sideE / absPk) : 1.0;
+  float loEnv = a.r;
+  float miEnv = a.g;
+  float hiEnv = a.b;
+  float airEnv = a.a;
+  float loT = loEnv * sLow;
+  float miT = miEnv * sMid;
+  float hiT = hiEnv * sHi;
+  float airT = airEnv * sAir;
+  float fullMn = dec(b.r) * sLow;
+  float fullMx = dec(b.g) * sLow;
 
-  if (uViewMode == 1 || u_mode == 2) {
-    float e = sqrt(max(max(bass, max(midf, treble)), wf.a));
-    float outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
-    float alpha = 1.0 - smoothstep(outerH - 0.6, outerH + 0.6, yDist);
-    if (alpha < 0.005) {
-      fragColor = played ? BG_PLAYED : BG;
-      return;
-    }
-    float dim = played ? 0.4 : 1.0;
-    fragColor = vec4(monoColor(e) * alpha * dim, 1.0);
+  float mShape = signedMask(yRel, fullMn, fullMx, AA);
+  float mLow = mShape;
+  float mMid = scaledSignedMask(yRel, fullMn, fullMx, 0.26 + miEnv * 0.54, AA);
+  float mHi  = scaledSignedMask(yRel, fullMn, fullMx, 0.16 + hiEnv * 0.42, AA);
+  float mAir = scaledSignedMask(yRel, fullMn, fullMx, 0.12 + airEnv * 0.28, AA);
+
+  if (uTheme == 1) {
+    float rgbMn = mix(dec(b1.r), dec(b.r), 0.28) * sLow;
+    float rgbMx = mix(dec(b1.g), dec(b.g), 0.28) * sLow;
+    float mPulse = signedMask(yRel, rgbMn, rgbMx, 0.30);
+    vec3 base = (played ? BG_PLAYED : BG).rgb;
+    vec3 pulseCol = rgbTraceColor(mix(a1, a, 0.18));
+    pulseCol *= mix(0.74, 1.14, clamp(max(max(a1.r, a1.g), max(a1.b, a1.a)), 0.0, 1.0));
+    vec3 col = mix(base, clamp(pulseCol, 0.0, 1.0), mPulse);
+    if (played) col *= 0.55;
+    fragColor = vec4(col, 1.0);
     return;
   }
 
-  // ── Mode 4: HW Native RGB — CDJ colors as-is ──
-  if (u_mode == 4) {
-    float h = wf.a;
-    float outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
-    float AA2 = 0.6;
-    float inside = 1.0 - smoothstep(outerH - AA2 * 2.5, outerH + AA2 * 2.5, yDist);
-    if (inside < 0.005) {
-      fragColor = played ? BG_PLAYED : BG; return;
-    }
-    float mx = max(bass, max(midf, treble));
-    vec3 col = mx > 0.001 ? vec3(bass, midf, treble) / mx : vec3(0.3);
-    float yT = clamp(1.0 - yDist / max(outerH, 1.0), 0.0, 1.0);
-    col = mix(col * 0.74, mix(col, vec3(1.0), 0.16), smoothstep(0.10, 0.90, yT));
-    col *= mix(0.68, 1.10, smoothstep(0.08, 0.95, max(mx, h)));
-    float dim = played ? 0.38 : 1.0;
-    fragColor = vec4(col * inside * dim, 1.0);
-    return;
-  }
+  vec3 col = (played ? BG_PLAYED : BG).rgb;
+  col = layer(col, C_LOW, mLow, 0.98);
+  col = layer(col, C_MID, mMid, 0.96);
+  col = layer(col, C_HI,  mHi, 0.82);
+  col = layer(col, C_AIR, mAir, 0.56);
 
-  // ── Mode A/C for virtual and HW PWV7 ──
-  float B = bass, M = midf, T = treble;
-  float outerH, inside;
-  vec3 col;
-
-  if (uViewMode == 2 || u_mode == 3) {
-    // Mode C: multi-band RGB layout.
-    float h = wf.a;
-    outerH = (yRel >= 0.0 ? max(sh.x, 0.0) : max(-sh.y, 0.0)) * scale;
-    float AA2 = 0.6;
-    inside = 1.0 - smoothstep(outerH - AA2 * 2.5, outerH + AA2 * 2.5, yDist);
-    float ridge = 1.0 - smoothstep(0.7, 3.5, abs(yDist - outerH));
-    if (inside < 0.005 && ridge < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
-    vec3 lowCol, bodyCol, presCol, airCol;
-    if (u_mode == 3 && uPaletteMode == 0) {
-      lowCol = vec3(0.125, 0.325, 0.85);
-      bodyCol = vec3(0.95, 0.667, 0.235);
-      presCol = vec3(1.0, 0.88, 0.48);
-      airCol = vec3(1.0);
-    } else if (uPaletteMode == 0) {
-      lowCol = vec3(0.05, 0.23, 0.42);
-      bodyCol = vec3(0.95, 0.39, 0.18);
-      presCol = vec3(0.92, 0.68, 0.34);
-      airCol = vec3(0.96, 0.97, 0.92);
-    } else {
-      lowCol = vec3(0.125, 0.325, 0.85);
-      bodyCol = vec3(0.95, 0.667, 0.235);
-      presCol = vec3(1.0, 1.0, 1.0);
-      airCol = vec3(1.0, 1.0, 1.0);
-    }
-    vec4 amps = vec4(max(B, 0.0), max(M, 0.0), max(T, 0.0), max(h, 0.0));
-    col = overviewGradient(amps, yDist, outerH, lowCol, bodyCol, presCol, airCol, AA2);
-    col *= mix(0.68, 1.10, smoothstep(0.08, 0.95, max(max(B, M), max(T, h))));
-  } else {
-    // Virtual: signed min/max peaks define the silhouette; bands only color it.
-    float bV = max(B, 0.0);
-    float mV = max(M, 0.0);
-    float pV = max(T, 0.0);
-    float tV = max(wf.a, 0.0);
-    float AA2 = 0.6;
-    float edgeAA = AA2 * 2.5;
-    float topH = displayPeak(max(sh.x, 0.0)) * scale;
-    float botH = -displayPeak(max(-sh.y, 0.0)) * scale;
-    float spanH = max(topH - botH, 1.0);
-    outerH = spanH * 0.5;
-    float bassSigned = (wf.a - 0.5019608) * 2.0;  // 128/255 -> 0.0
-    float bassH = clamp(bassSigned, -1.0, 1.0) * scale;
-    float lineThickness = 1.5;
-    float lineMask = 1.0 - smoothstep(lineThickness - 0.5, lineThickness + 0.5, abs(yRel - bassH));
-    float lower = smoothstep(botH - edgeAA, botH + edgeAA, yRel);
-    float upper = 1.0 - smoothstep(topH - edgeAA, topH + edgeAA, yRel);
-    inside = lower * upper;
-    float ridge = 1.0 - smoothstep(0.7, 3.5, min(abs(yRel - topH), abs(yRel - botH)));
-    float fillMask = max(inside, ridge * 0.70);
-    inside = mix(fillMask, lineMask, uOscilloscope);
-    if (inside < 0.005 && ridge < 0.005) { fragColor = played ? BG_PLAYED : BG; return; }
-    vec3 lowCol = vec3(0.05, 0.23, 0.42);
-    vec3 bodyCol = vec3(1.0, 0.42, 0.17);
-    vec3 presCol = vec3(0.95, 0.72, 0.32);
-    vec3 airCol  = vec3(1.0, 0.94, 0.82);
-    if (uPaletteMode == 0) {
-      lowCol = vec3(0.04, 0.21, 0.46);
-      bodyCol = vec3(0.95, 0.39, 0.18);
-      presCol = vec3(0.92, 0.68, 0.34);
-      airCol = vec3(0.96, 0.97, 0.92);
-    }
-    vec4 amps = vec4(bV, mV, pV, tV);
-    col = overviewGradient(amps, yDist, max(max(abs(topH), abs(botH)), 1.0), lowCol, bodyCol, presCol, airCol, AA2);
-    col *= mix(0.66, 1.10, smoothstep(0.08, 0.95, max(max(bV, mV), max(pV, tV))));
-  }
-
-  float dim = played ? 0.38 : 1.0;
-  fragColor = vec4(clamp(col, 0.0, 1.0) * inside * dim, 1.0);
+  if (played) col *= 0.55;
+  fragColor = vec4(col, 1.0);
 }
 `;

@@ -4039,18 +4039,21 @@ class BridgeCore {
 
   async _dbserverCuePoints(ip, slot, trackId, playerNum, trackType){
     // Try NXS2 PCO2 first (has loop end positions + RGB colors), fall back to menu 0x2104
-    let cues = await this._dbserverCuePointsNxs2(ip, slot, trackId, playerNum, trackType);
+    let cues = null;
+    try{ cues = await this._dbserverCuePointsNxs2(ip, slot, trackId, playerNum, trackType); }
+    catch(e){ console.warn(`[DBSRV] cue NXS2 P${playerNum} err:`, e.message); }
     if(!cues||cues.length===0){
-      cues = await this._dbserverCuePointsMenu(ip, slot, trackId, playerNum, trackType);
+      try{ cues = await this._dbserverCuePointsMenu(ip, slot, trackId, playerNum, trackType); }
+      catch(e){ console.warn(`[DBSRV] cue MENU P${playerNum} err:`, e.message); }
     }
     if(cues&&cues.length>0){
       this.onCuePoints?.(playerNum, cues);
       const hot=cues.filter(c=>c.type==='hot').length;
       const mem=cues.filter(c=>c.type==='memory').length;
       const lp=cues.filter(c=>c.type==='loop').length;
-      // [DBSRV] cue points muted
+      console.log(`[DBSRV] cue P${playerNum} tid=${trackId} slot=${slot} → hot=${hot} mem=${mem} loop=${lp} total=${cues.length}`);
     } else {
-      // [DBSRV] cue points none muted
+      console.log(`[DBSRV] cue P${playerNum} tid=${trackId} slot=${slot} tt=${trackType} → EMPTY (both PCO2 and menu returned 0)`);
     }
   }
 

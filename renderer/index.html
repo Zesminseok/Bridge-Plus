@@ -2372,12 +2372,15 @@ function _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX){
     const epx=Math.round((endMs  -posMs)/msPerPx+cX);
     if(epx<=0||cpx>=W)return;
     const lx=Math.max(0,cpx),rx=Math.min(W,epx);
-    ctx.fillStyle=active?'rgba(255,136,0,.22)':'rgba(255,136,0,.10)';
+    // ShowKontrol 스타일: 노란색 배경 fill + 상/하단 띠 + 경계 bar
+    ctx.fillStyle=active?'rgba(255,220,0,.26)':'rgba(255,220,0,.12)';
     ctx.fillRect(lx,0,rx-lx,H);
-    ctx.fillStyle=active?'rgba(255,136,0,.85)':'rgba(255,136,0,.50)';
+    // 경계 바 (진한 노랑)
+    ctx.fillStyle=active?'rgba(255,230,0,.92)':'rgba(255,200,0,.55)';
     if(cpx>=0&&cpx<W)ctx.fillRect(cpx-0.5,0,1.5,H);
     if(epx>=0&&epx<W)ctx.fillRect(epx-0.5,0,1.5,H);
-    ctx.fillStyle=active?'rgba(255,200,0,.55)':'rgba(255,180,0,.25)';
+    // 상/하단 띠 (구간 강조)
+    ctx.fillStyle=active?'rgba(255,245,0,.62)':'rgba(255,220,0,.28)';
     ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
   };
   // 1) CDJ active loop from status packet (0x0A 512B — 가장 정확한 경로)
