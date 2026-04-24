@@ -670,7 +670,10 @@ vec4 cr4(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float t) {
 }
 
 void main() {
-  float W = u_res.x, H = u_res.y, midY = H * 0.5;
+  float W = u_res.x, H = u_res.y;
+  // CDJ-3000 스타일 오버뷰: 하단 반파만 그려 상단 30% 영역을 마커(핫큐/메모리큐) 공간으로.
+  //  axisY = 파형의 기준선 (수평 0 라인). 상단 30% 는 marker 밴드, 아래 70% 에 파형.
+  float axisY = H * 0.30;   // 파형 기준선 (H 의 30% 지점)
   float t = gl_FragCoord.x / W;
 
   float curX = u_pos * W;
@@ -696,12 +699,17 @@ void main() {
   vec4 a = mix(a1, clamp(cr4(a0, a1, a2, a3, ft), 0.0, 1.0), 0.35);
   vec4 b = mix(b1, clamp(cr4(b0, b1, b2, b3, ft), 0.0, 1.0), 0.35);
 
-  // ShowKontrol 스타일: 위/아래 3% 여백 (cue marker 공간 확보). 기존 0.98 → 0.94.
-  float sLow = midY * 0.94;
-  float sMid = midY * 0.75;
-  float sHi  = midY * 0.40;
-  float sAir = midY * 0.23;
-  float yRel = gl_FragCoord.y - midY;
+  // 하단 반파 스케일 (axisY 부터 H 까지 = 70% 영역, 여기에 파형 그림)
+  float halfH = H - axisY;  // 70% of H
+  float sLow = halfH * 0.95;
+  float sMid = halfH * 0.75;
+  float sHi  = halfH * 0.40;
+  float sAir = halfH * 0.22;
+  // yRel: axisY 기준 아래로 양수 (파형이 axisY 아래로만 그려짐)
+  float yRel = gl_FragCoord.y - axisY;
+  // 상단 margin 영역은 BG
+  if (yRel > 0.0) { fragColor = BG; return; }
+  yRel = -yRel;  // 아래 방향 양수로 reflect
   bool played = t < u_pos;
   const float AA = 0.55;
 
@@ -709,27 +717,22 @@ void main() {
   float miEnv = a.g;
   float hiEnv = a.b;
   float airEnv = a.a;
-  float loT = loEnv * sLow;
-  float miT = miEnv * sMid;
-  float hiT = hiEnv * sHi;
-  float airT = airEnv * sAir;
-  float fullMn = dec(b.r) * sLow;
-  float fullMx = dec(b.g) * sLow;
-
-  float mShape = signedMask(yRel, fullMn, fullMx, AA);
-  float mLow = mShape;
-  float mMid = scaledSignedMask(yRel, fullMn, fullMx, 0.26 + miEnv * 0.54, AA);
-  float mHi  = scaledSignedMask(yRel, fullMn, fullMx, 0.16 + hiEnv * 0.42, AA);
-  float mAir = scaledSignedMask(yRel, fullMn, fullMx, 0.12 + airEnv * 0.28, AA);
+  // 하단 반파: 각 밴드별로 axisY 부터 아래로 envelope*scale 만큼 채움.
+  float fullEnv = max(abs(dec(b.r)), abs(dec(b.g)));
+  float hLow = fullEnv * sLow;
+  float hMid = (0.26 + miEnv*0.54) * fullEnv * sLow;
+  float hHi  = (0.16 + hiEnv*0.42) * fullEnv * sLow;
+  float hAir = (0.12 + airEnv*0.28) * fullEnv * sLow;
+  float mLow = 1.0 - smoothstep(hLow - AA, hLow + AA, yRel);
+  float mMid = 1.0 - smoothstep(hMid - AA, hMid + AA, yRel);
+  float mHi  = 1.0 - smoothstep(hHi  - AA, hHi  + AA, yRel);
+  float mAir = 1.0 - smoothstep(hAir - AA, hAir + AA, yRel);
 
   if (uTheme == 1) {
-    float rgbMn = mix(dec(b1.r), dec(b.r), 0.28) * sLow;
-    float rgbMx = mix(dec(b1.g), dec(b.g), 0.28) * sLow;
-    float mPulse = signedMask(yRel, rgbMn, rgbMx, 0.30);
     vec3 base = (played ? BG_PLAYED : BG).rgb;
     vec3 pulseCol = rgbTraceColor(mix(a1, a, 0.18));
     pulseCol *= mix(0.74, 1.14, clamp(max(max(a1.r, a1.g), max(a1.b, a1.a)), 0.0, 1.0));
-    vec3 col = mix(base, clamp(pulseCol, 0.0, 1.0), mPulse);
+    vec3 col = mix(base, clamp(pulseCol, 0.0, 1.0), mLow);
     if (played) col *= 0.55;
     fragColor = vec4(col, 1.0);
     return;
