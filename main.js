@@ -472,15 +472,35 @@ function saveBounds(){
 let splash=null;
 function showSplash(msg,sub){
   if(splash&&!splash.isDestroyed()){try{splash.destroy();}catch(_){}}
+  const W=460, H=260;
   splash=new BrowserWindow({
-    width:320,height:160,frame:false,transparent:true,alwaysOnTop:true,
+    width:W,height:H,frame:false,transparent:true,alwaysOnTop:true,
     resizable:false,skipTaskbar:true,
     webPreferences:{contextIsolation:true,nodeIntegration:false},
   });
-  splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:rgba(17,19,24,.95);border-radius:12px;border:1px solid rgba(60,74,66,.15);flex-direction:column;gap:8px;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;-webkit-app-region:drag"><div style="font:700 15px 'Plus Jakarta Sans',-apple-system,sans-serif;color:#e2e2e8;letter-spacing:-.01em">${msg}</div><div style="font:500 11px 'DM Mono',monospace;color:#85948b">${sub}</div></body></html>`)}`);
+  const html=`<!DOCTYPE html><html><head><style>
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;height:100%;overflow:hidden;-webkit-user-select:none;user-select:none}
+    body{background:linear-gradient(180deg,rgba(22,24,30,.97),rgba(14,16,20,.97));border-radius:14px;border:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;-webkit-app-region:drag}
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+    .logo{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,#8787ff,#ff6b2c);display:flex;align-items:center;justify-content:center;font:800 18px 'Plus Jakarta Sans',sans-serif;color:#0f1116;letter-spacing:-.02em}
+    .wm{font:800 22px 'Plus Jakarta Sans',sans-serif;color:#e6e8ee;letter-spacing:.02em}
+    .wm small{font:500 11px 'DM Mono',monospace;color:#8a94a3;letter-spacing:.14em;margin-left:8px}
+    .msg{font:600 15px 'Plus Jakarta Sans',sans-serif;color:#e2e2e8}
+    .sub{font:500 11px 'DM Mono',monospace;color:#7e8796;letter-spacing:.05em}
+    .bar{margin-top:6px;width:70%;height:3px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden;position:relative}
+    .bar::after{content:'';position:absolute;top:0;bottom:0;width:30%;background:linear-gradient(90deg,#8787ff,#ff6b2c);border-radius:2px;animation:sld 1.4s ease-in-out infinite}
+    @keyframes sld{0%{left:-30%}100%{left:100%}}
+  </style></head><body>
+    <div class="brand"><div class="logo">B+</div><div class="wm">BRIDGE+<small>PRO DJ LINK</small></div></div>
+    <div class="msg">${msg}</div>
+    <div class="sub">${sub}</div>
+    <div class="bar"></div>
+  </body></html>`;
+  splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
   if(win&&!win.isDestroyed()){
     const wb=win.getBounds();
-    splash.setPosition(Math.round(wb.x+wb.width/2-160),Math.round(wb.y+wb.height/2-80));
+    splash.setPosition(Math.round(wb.x+wb.width/2-W/2),Math.round(wb.y+wb.height/2-H/2));
   }
 }
 function createWindow(){
@@ -498,7 +518,7 @@ function createWindow(){
   showSplash('BRIDGE+ 시작 중...','네트워크 초기화');
   win.once('ready-to-show',()=>{
     win.show();
-    setTimeout(()=>{if(splash&&!splash.isDestroyed())splash.destroy();splash=null;},500);
+    setTimeout(()=>{if(splash&&!splash.isDestroyed())splash.destroy();splash=null;},1500);
   });
   // Save bounds on move/resize (debounced) and on close
   let _saveTmr;
