@@ -564,26 +564,28 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-clip{min-width:86px;padding:9px 12px;border-radius:3px;font:800 10px var(--mn);letter-spacing:.08em;text-align:center;border:1.5px solid rgba(255,60,60,.15);color:rgba(255,60,60,.25);background:transparent;transition:all .15s}
 .mx-clip.on{border-color:rgba(255,60,60,.7);color:#ff4444;background:rgba(255,60,60,.1);animation:clip-flash .3s ease-in-out}
 @keyframes clip-flash{0%,100%{opacity:1}50%{opacity:.5}}
-/* Unified mixer layout — 모든 구역을 .mx-console 안에서 구분선/섹션으로 정리 */
-.mx-primary{display:flex;gap:0;align-items:flex-start;min-height:0;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.05)}
-.mx-primary .mx-body{flex:1;min-width:0}
-.mx-right-col{display:flex;flex-direction:column;gap:0;width:188px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.05);margin-left:2px}
-.mx-right-col .mx-aux-group{min-height:0;padding:8px 10px;border-right:none;border-bottom:1px solid rgba(255,255,255,.05)}
+/* 모든 섹션을 단일 가로 행으로 통합 (아래로 쌓지 않음) */
+.mx-primary{display:flex;gap:0;align-items:stretch;min-height:0;overflow-x:auto}
+.mx-primary .mx-body{display:flex;flex-direction:row;flex-shrink:0}
+.mx-right-col{display:flex;flex-direction:column;gap:0;width:170px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.08);margin-left:2px;padding:0}
+.mx-right-col .mx-aux-group{min-height:0;padding:7px 10px;border-right:none;border-bottom:1px solid rgba(255,255,255,.05);flex:1 1 auto}
 .mx-right-col .mx-aux-group:last-child{border-bottom:none}
-.mx-fx-row{display:flex;gap:0;align-items:stretch;flex-wrap:nowrap;overflow-x:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
-.mx-fx-row .mx-aux-group{flex:1 1 140px;min-width:140px;min-height:0;padding:7px 10px;gap:5px}
-.mx-fx-row .mx-aux-gtitle{font-size:8px}
-.mx-fx-row .mx-aux-gsub{font-size:6.5px}
-.mx-fx-row .mx-aux-pill{min-width:34px;padding:3px 5px;font-size:7px}
-.mx-fx-row .mx-aux-knob-face{width:34px;height:34px}
-.mx-fx-row .mx-aux-knob{min-width:44px;gap:2px}
-.mx-fx-row .mx-aux-klabel{font-size:6.5px}
-.mx-fx-row .mx-aux-kval{font-size:7px}
-.mx-fx-row .mx-aux-toggle{min-width:48px;padding:5px 8px;font-size:8px}
-.mx-fx-row .mx-aux-readout{font-size:9px}
-.mx-fx-row .mx-aux-mini{font-size:7px}
-.mx-fx-row .mx-aux-spread{gap:6px}
-.mx-fx-row .mx-aux-inline{gap:6px}
+/* FX 섹션 — 마스터 컬럼 우측에 세로 스택으로 붙임 (가로 레이아웃 유지) */
+.mx-fx-col{display:flex;flex-direction:column;gap:0;width:190px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.08);padding:0}
+.mx-fx-col .mx-aux-group{min-height:0;padding:7px 10px;border-right:none;border-bottom:1px solid rgba(255,255,255,.05);gap:5px}
+.mx-fx-col .mx-aux-group:last-child{border-bottom:none}
+.mx-fx-col .mx-aux-gtitle{font-size:8px;letter-spacing:.1em}
+.mx-fx-col .mx-aux-gsub{font-size:6.5px}
+.mx-fx-col .mx-aux-pill{min-width:32px;padding:3px 5px;font-size:7px}
+.mx-fx-col .mx-aux-knob-face{width:30px;height:30px}
+.mx-fx-col .mx-aux-knob{min-width:40px;gap:2px}
+.mx-fx-col .mx-aux-klabel{font-size:6.5px}
+.mx-fx-col .mx-aux-kval{font-size:7px}
+.mx-fx-col .mx-aux-toggle{min-width:44px;padding:4px 6px;font-size:7.5px}
+.mx-fx-col .mx-aux-readout{font-size:9px}
+.mx-fx-col .mx-aux-mini{font-size:7px}
+.mx-fx-col .mx-aux-spread{gap:4px;flex-wrap:nowrap}
+.mx-fx-col .mx-aux-inline{gap:4px;flex-wrap:nowrap}
 .mx-aux-full{width:100%;min-width:0;padding:7px 10px;font-size:9.5px}
 /* X-fader — 콘솔 안쪽 내장 스타일 */
 .mx-console .mx-xfader{background:transparent;border:1px solid rgba(255,255,255,.06);padding:10px 16px;max-width:none;align-self:stretch;width:auto}
@@ -1180,18 +1182,8 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
             <span class="mx-aux-toggle ylw mx-aux-full" id="mxHpLinkB">CUE LINK</span>
           </div>
         </div>
-      </div>
-
-      <!-- X-Fader -->
-      <div class="mx-xfader">
-        <span class="mx-xf-lbl">X-FADER</span>
-        <span class="mx-xf-a">A</span>
-        <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
-        <span class="mx-xf-b">B</span>
-      </div>
-
-      <!-- FX / Curves / Color / Mic — flat single row -->
-      <div class="mx-fx-row">
+        <!-- FX column — 마스터/모니터 우측에 붙음 (세로 스택, 가로 공간 차지) -->
+        <div class="mx-fx-col">
         <div class="mx-aux-group curves">
           <span class="mx-aux-gtitle">CURVE</span>
           <div class="mx-aux-stack">
@@ -1243,6 +1235,15 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
             <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxMicLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxMicLoVal">0</span></div>
           </div>
         </div>
+        </div><!-- /.mx-fx-col -->
+      </div><!-- /.mx-primary -->
+
+      <!-- X-Fader (primary 밑 가로 전체) -->
+      <div class="mx-xfader">
+        <span class="mx-xf-lbl">X-FADER</span>
+        <span class="mx-xf-a">A</span>
+        <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
+        <span class="mx-xf-b">B</span>
       </div>
 
       <!-- V10 extras — only shown for DJM-V10 -->
@@ -4742,17 +4743,30 @@ function tick(){
           dtnEl.dataset.mqChecked='1';
           return true;
         };
-        // 1) 즉시 시도 (대부분의 경우 성공)
-        requestAnimationFrame(()=>{
+        // 다단계 재시도: rAF × 3 → setTimeout 200/500/1000ms → ResizeObserver (탭 숨김 대응)
+        const scheduleRetries=()=>{
           if(applyMarquee()) return;
-          // 2) clientWidth=0 (탭 미가시) → ResizeObserver 로 크기 확정 시 재시도
-          if(!dtnEl._mqRO){
-            dtnEl._mqRO=new ResizeObserver(()=>{
-              if(applyMarquee()){ try{dtnEl._mqRO.disconnect();}catch(_){} dtnEl._mqRO=null; }
+          requestAnimationFrame(()=>{
+            if(applyMarquee()) return;
+            requestAnimationFrame(()=>{
+              if(applyMarquee()) return;
+              setTimeout(()=>{ if(applyMarquee()) return;
+                setTimeout(()=>{ if(applyMarquee()) return;
+                  setTimeout(()=>{ if(applyMarquee()) return;
+                    // 최종 fallback: ResizeObserver 로 탭 보일 때까지 대기
+                    if(!dtnEl._mqRO){
+                      dtnEl._mqRO=new ResizeObserver(()=>{
+                        if(applyMarquee()){ try{dtnEl._mqRO.disconnect();}catch(_){} dtnEl._mqRO=null; }
+                      });
+                      dtnEl._mqRO.observe(dtnEl);
+                    }
+                  },1000);
+                },500);
+              },200);
             });
-            dtnEl._mqRO.observe(dtnEl);
-          }
-        });
+          });
+        };
+        requestAnimationFrame(scheduleRetries);
       }
     }
     const dtaEl=document.getElementById('dta'+slot);
@@ -4781,15 +4795,25 @@ function tick(){
           dtaEl.dataset.mqChecked='1';
           return true;
         };
-        requestAnimationFrame(()=>{
+        const scheduleA=()=>{
           if(applyA()) return;
-          if(!dtaEl._mqRO){
-            dtaEl._mqRO=new ResizeObserver(()=>{
-              if(applyA()){ try{dtaEl._mqRO.disconnect();}catch(_){} dtaEl._mqRO=null; }
-            });
-            dtaEl._mqRO.observe(dtaEl);
-          }
-        });
+          requestAnimationFrame(()=>{
+            if(applyA()) return;
+            setTimeout(()=>{ if(applyA()) return;
+              setTimeout(()=>{ if(applyA()) return;
+                setTimeout(()=>{ if(applyA()) return;
+                  if(!dtaEl._mqRO){
+                    dtaEl._mqRO=new ResizeObserver(()=>{
+                      if(applyA()){ try{dtaEl._mqRO.disconnect();}catch(_){} dtaEl._mqRO=null; }
+                    });
+                    dtaEl._mqRO.observe(dtaEl);
+                  }
+                },1000);
+              },500);
+            },200);
+          });
+        };
+        requestAnimationFrame(scheduleA);
       }
     }
     const dtsepEl=document.getElementById('dtsep'+slot);if(dtsepEl)dtsepEl.style.display=d.ar?'':'none';
@@ -6419,6 +6443,23 @@ document.getElementById('sidebar').onclick=e=>{
   if(curTab==='ablink')renderAblink();
   if(curTab==='settings'){loadInterfaces();renderSettings();}
   if(curTab==='history')renderHistory();
+  // Link 탭 전환 시 marquee 상태 리셋 + 여러 delay 로 재측정 시도
+  if(curTab==='link'){
+    const remeasure=()=>{
+      document.querySelectorAll('[id^="dtn"],[id^="dta"]').forEach(el=>{
+        el.classList.remove('scrolling');
+        // 기존 mq-inner 래퍼를 평문으로 되돌려 clientWidth/scrollWidth 재측정 가능하게
+        const inner=el.querySelector('.mq-inner');
+        if(inner){ el.textContent=inner.textContent; }
+        el.dataset.mqChecked='';
+        if(el._mqRO){ try{el._mqRO.disconnect();}catch(_){}  el._mqRO=null; }
+      });
+    };
+    // 즉시 + 100ms + 400ms 3단 재시도 (layout/paint 타이밍 다양한 상황 커버)
+    requestAnimationFrame(remeasure);
+    setTimeout(remeasure,100);
+    setTimeout(remeasure,400);
+  }
 };
 
 async function loadInterfaces(){
