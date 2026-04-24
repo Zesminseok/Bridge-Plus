@@ -31,6 +31,7 @@
     "directories": {
       "output": "dist"
     },
+    "npmRebuild": false,
     "files": [
       "main.js",
       "bridge-core.js",
