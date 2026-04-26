@@ -3,7 +3,7 @@
 <!-- MONO 테마 (E/F/G 레이아웃) 전용 폰트 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Space+Grotesk:wght@500;700&display=swap');
 @font-face{font-family:'Noto Sans KR';src:url('./fonts/NotoSansKR-VariableFont_wght.ttf') format('truetype');font-weight:100 900;font-style:normal;font-display:swap}
@@ -1119,6 +1119,347 @@ body[data-layout="card"] .dk-tc-time{font:400 10px var(--mn)!important;color:var
 /* 빈 덱 placeholder */
 body[data-layout="card"] .cd-ddz{padding:32px 16px!important;text-align:center!important;border:1px dashed var(--bdr2)!important;border-radius:0!important;margin:0!important}
 body[data-layout="card"] .cd-ddz .ddzi{font-size:28px!important;color:var(--tx3)!important;margin-bottom:8px!important;line-height:1!important}
+
+/* ═════════════════════════════════════════════════════════════ */
+/* ═ OBSERVATORY 테마 — CRT phosphor terminal (4 채널 2×2 콘솔) ═ */
+/* ═════════════════════════════════════════════════════════════ */
+body[data-layout="observatory"]{
+  --obs-void:#04060a;--obs-plate:#0a0d12;--obs-plate-2:#11151c;
+  --obs-amber:#f6a516;--obs-amber-2:#d68a09;--obs-amber-dim:#6e4806;--obs-amber-faint:#2c1d04;
+  --obs-green:#6df08c;--obs-green-dim:#2e7c44;
+  --obs-red:#ff5b3b;--obs-cyan:#4fd0e0;
+  --obs-ink-low:#45556a;--obs-ink-mid:#7c8fa8;
+  background:var(--obs-void)!important;
+}
+body[data-layout="observatory"] .pg{background:var(--obs-void)}
+body[data-layout="observatory"] *{border-radius:0!important}
+
+/* CRT scanlines + vignette overlay */
+body[data-layout="observatory"]::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:
+    repeating-linear-gradient(180deg,rgba(255,255,255,.018) 0,rgba(255,255,255,.018) 1px,transparent 1px,transparent 3px),
+    radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.4) 100%);
+}
+
+/* 4 채널 2×2 그리드 */
+body[data-layout="observatory"] #vtRow.deck-row,
+body[data-layout="observatory"] .deck-row{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:0!important;
+  flex-direction:unset!important;
+  flex-wrap:unset!important;
+  overflow:visible!important;
+  padding:0!important;
+  border:1px solid var(--obs-amber-dim);
+  background:var(--obs-plate);
+}
+body[data-layout="observatory"] .deck-row.compact{gap:0!important}
+
+/* 덱 컨테이너 */
+body[data-layout="observatory"] .dk.obs-dk{
+  background:var(--obs-plate)!important;
+  border:none;
+  border-right:1px solid var(--obs-amber-faint);
+  border-bottom:1px solid var(--obs-amber-faint);
+  color:var(--obs-amber);
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11.5px;
+  letter-spacing:.005em;
+  -webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;
+  min-width:0;overflow:hidden;
+}
+body[data-layout="observatory"] .dk.obs-dk:nth-child(2n){border-right:none}
+body[data-layout="observatory"] .dk.obs-dk:nth-last-child(-n+2){border-bottom:none}
+body[data-layout="observatory"] .dk.obs-dk[data-st="play"]{border-color:var(--obs-amber-faint)!important;background:var(--obs-plate)!important}
+body[data-layout="observatory"] .dk.obs-dk[data-st="cue"]{border-color:var(--obs-amber-faint)!important;background:var(--obs-plate)!important}
+
+/* HEADER */
+body[data-layout="observatory"] .obs-hdr{
+  display:grid;
+  grid-template-columns:auto 1fr auto auto auto;
+  gap:12px;align-items:center;
+  padding:8px 14px;
+  border-bottom:1px solid var(--obs-amber-faint);
+}
+body[data-layout="observatory"] .obs-num{
+  font-family:'VT323',monospace;
+  font-size:30px;line-height:.8;color:var(--obs-amber);
+  width:30px;text-align:center;
+  -webkit-font-smoothing:none;
+}
+body[data-layout="observatory"] .obs-id{display:flex;flex-direction:column;gap:2px;min-width:0}
+body[data-layout="observatory"] .obs-name{font-size:11px;letter-spacing:.22em;color:var(--obs-amber);font-weight:500}
+body[data-layout="observatory"] .obs-model{font-size:9px;letter-spacing:.18em;color:var(--obs-amber-dim)}
+body[data-layout="observatory"] .obs-flags{display:flex;gap:5px}
+body[data-layout="observatory"] .obs-flags .obs-flag,
+body[data-layout="observatory"] .obs-flags .dksm-btn{
+  padding:2px 6px 2px;
+  border:1px solid var(--obs-amber-dim);
+  font:500 8.5px 'JetBrains Mono',monospace;
+  letter-spacing:.18em;
+  color:var(--obs-amber-dim);
+  background:var(--obs-void);
+  text-transform:uppercase;
+  height:auto;border-radius:0!important;
+}
+body[data-layout="observatory"] .obs-flags .dksm-sync.on{background:var(--obs-amber);color:var(--obs-plate);border-color:var(--obs-amber)}
+body[data-layout="observatory"] .obs-flags .dksm-master.on{background:var(--obs-green);color:var(--obs-void);border-color:var(--obs-green)}
+body[data-layout="observatory"] .obs-flags .obs-air{background:var(--obs-void);color:var(--obs-amber-dim);border:1px solid var(--obs-amber-dim);padding:2px 6px}
+body[data-layout="observatory"] .obs-flags .obs-air:not(.off){background:var(--obs-red);color:var(--obs-void);border-color:var(--obs-red)}
+body[data-layout="observatory"] .obs-flags .obs-air.off{display:inline-flex!important}
+body[data-layout="observatory"] .dk[data-type="virtual"] .dbadge.br.obs-air{display:inline-flex!important}
+
+/* MINI bars (state pill 옆) */
+body[data-layout="observatory"] .obs-mini{
+  display:flex;gap:3px;height:24px;align-items:stretch;
+}
+body[data-layout="observatory"] .obs-mini .col{
+  width:5px;border:1px solid var(--obs-amber-dim);
+  background:var(--obs-void);position:relative;overflow:hidden;
+}
+body[data-layout="observatory"] .obs-mini .dvu-hfill{
+  position:absolute!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;
+  width:auto!important;height:var(--vu-level,0%)!important;border-radius:0!important;
+}
+body[data-layout="observatory"] .obs-mini .col.fader .dvu-hfill{background:var(--obs-amber)!important}
+body[data-layout="observatory"] .obs-mini .col.vu .dvu-hfill{
+  background:linear-gradient(0deg,var(--obs-green) 0%,var(--obs-green) 55%,var(--obs-amber) 78%,var(--obs-red) 95%)!important;
+}
+body[data-layout="observatory"] .obs-mini .col::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(0,0,0,.5) 5px 6px);
+}
+
+/* STATE pill */
+body[data-layout="observatory"] .obs-state.dbadge.bm{
+  font-family:'JetBrains Mono',monospace;
+  font-weight:700;font-size:12px;letter-spacing:.28em;
+  color:var(--obs-amber);
+  padding:4px 10px 5px;
+  border:1px solid var(--obs-amber-dim);
+  background:var(--obs-void);
+  border-radius:0;
+  text-transform:uppercase;
+}
+body[data-layout="observatory"] .dk.obs-dk[data-st="play"] .obs-state{color:var(--obs-green);border-color:var(--obs-green)}
+body[data-layout="observatory"] .dk.obs-dk[data-st="cue"] .obs-state{color:var(--obs-amber);border-color:var(--obs-amber)}
+body[data-layout="observatory"] .dk.obs-dk[data-st="loop"] .obs-state{color:var(--obs-cyan);border-color:var(--obs-cyan)}
+body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-state{color:var(--obs-ink-low);border-color:var(--obs-ink-low)}
+
+/* BODY */
+body[data-layout="observatory"] .obs-body{
+  display:grid;
+  grid-template-columns:90px 1fr 158px;
+  flex:1;min-height:0;
+}
+body[data-layout="observatory"] .obs-meta{
+  border-right:1px solid var(--obs-amber-faint);
+  display:flex;flex-direction:column;
+  padding:10px;gap:8px;
+}
+body[data-layout="observatory"] .obs-meta .dkart{
+  width:70px;height:70px;
+  border:1px solid var(--obs-amber-dim)!important;
+  background:var(--obs-void)!important;
+  border-radius:0!important;
+  margin:0;
+  position:relative;overflow:hidden;
+  flex-shrink:0;
+}
+body[data-layout="observatory"] .obs-meta .dkart img{
+  width:100%;height:100%;object-fit:cover;display:block;
+  filter:brightness(.7) saturate(.8);
+}
+body[data-layout="observatory"] .obs-meta-list{
+  display:flex;flex-direction:column;gap:4px;
+  font-size:9px;letter-spacing:.06em;color:var(--obs-amber-2);
+}
+body[data-layout="observatory"] .obs-meta-list .row{display:grid;grid-template-columns:28px 1fr;gap:4px}
+body[data-layout="observatory"] .obs-meta-list .row .k{color:var(--obs-amber-dim)}
+body[data-layout="observatory"] .obs-meta-list .row .v{color:var(--obs-amber);font-weight:500}
+
+/* CENTER */
+body[data-layout="observatory"] .obs-center{
+  padding:10px 12px;
+  display:flex;flex-direction:column;gap:7px;
+  min-width:0;
+}
+body[data-layout="observatory"] .obs-title-line{
+  display:grid;grid-template-columns:1fr auto;gap:12px;
+  align-items:stretch;
+  border-bottom:1px dashed var(--obs-amber-faint);
+  padding-bottom:6px;
+}
+body[data-layout="observatory"] .obs-title-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+body[data-layout="observatory"] .obs-track,
+body[data-layout="observatory"] [id^="dtn"].obs-track{
+  font-size:13px!important;font-weight:700!important;
+  color:var(--obs-amber)!important;letter-spacing:.04em!important;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-family:'JetBrains Mono',monospace!important;
+  text-transform:uppercase;
+}
+body[data-layout="observatory"] .obs-artist,
+body[data-layout="observatory"] [id^="dta"].obs-artist{
+  font-size:10px!important;color:var(--obs-amber-2)!important;
+  letter-spacing:.08em!important;font-family:'JetBrains Mono',monospace!important;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+body[data-layout="observatory"] .obs-artist::before{content:'> ';color:var(--obs-green-dim)}
+
+/* KEY 배지 (라벨 없음, 36×36 정사각) */
+body[data-layout="observatory"] .obs-kbadge{
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--obs-amber-dim);
+  width:36px;height:36px;flex-shrink:0;align-self:center;
+  background:var(--obs-void);
+}
+body[data-layout="observatory"] .obs-kbadge .dk-key-box{
+  font-family:'VT323',monospace!important;
+  font-size:18px!important;line-height:1!important;
+  color:var(--obs-green)!important;
+  background:transparent!important;border:none!important;
+  padding:0!important;height:auto!important;
+  -webkit-font-smoothing:none;letter-spacing:0!important;
+}
+
+/* WAVEFORM */
+body[data-layout="observatory"] .obs-wf{display:flex;flex-direction:column;gap:4px}
+body[data-layout="observatory"] .obs-wf .dwov{
+  height:22px!important;
+  border:1px solid var(--obs-amber-dim)!important;
+  background:var(--obs-void)!important;
+  border-radius:0!important;margin:0!important;
+}
+body[data-layout="observatory"] .obs-wf .dwz{
+  height:56px!important;
+  border:1px solid var(--obs-amber-dim)!important;
+  background:var(--obs-void)!important;
+  border-radius:0!important;margin:0!important;
+}
+
+/* RIGHT — TIME hero / divider / BPM 블록 */
+body[data-layout="observatory"] .obs-right{
+  border-left:1px solid var(--obs-amber-faint);
+  padding:10px 12px;
+  display:flex;flex-direction:column;gap:9px;
+  min-width:0;
+}
+body[data-layout="observatory"] .obs-tc-stack{display:flex;flex-direction:column;gap:1px}
+body[data-layout="observatory"] .obs-tc-now,
+body[data-layout="observatory"] .obs-tc-stack .dtc{
+  font-family:'VT323',monospace!important;
+  font-size:32px!important;
+  line-height:.85!important;
+  color:var(--obs-amber)!important;
+  -webkit-font-smoothing:none;letter-spacing:0!important;
+  text-align:left!important;
+  white-space:nowrap;
+}
+body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-tc-now{color:var(--obs-ink-low)!important}
+body[data-layout="observatory"] .obs-tc-rem{
+  font-size:10px;color:var(--obs-amber-2);letter-spacing:.1em;
+  margin-top:2px;white-space:nowrap;
+}
+body[data-layout="observatory"] .obs-tc-rem .neg{color:var(--obs-red)}
+body[data-layout="observatory"] .obs-tc-rem .total{color:var(--obs-amber-dim)}
+
+body[data-layout="observatory"] .obs-divider{
+  height:1px;background:var(--obs-amber-faint);margin:1px 0;
+}
+
+/* BPM 블록 — 좌: BPM 스택(라벨 없음), 우: PITCH 박스. wfbpm 재배치 via CSS Grid */
+body[data-layout="observatory"] [id^="wfbpm"]{
+  display:grid!important;
+  grid-template-columns:1fr auto!important;
+  grid-template-rows:auto auto!important;
+  gap:1px 8px!important;
+  align-items:center!important;
+  flex-wrap:unset!important;
+  justify-content:flex-start!important;
+}
+/* span:first-child = base BPM */
+body[data-layout="observatory"] [id^="wfbpm"]>span:first-child{
+  grid-column:1!important;grid-row:2!important;
+  font-family:'JetBrains Mono',monospace!important;
+  font-size:13px!important;color:var(--obs-amber-2)!important;
+  font-weight:500!important;line-height:1!important;
+  font-variant-numeric:tabular-nums!important;
+  text-shadow:none!important;
+}
+/* span:nth-child(2) = pitch% */
+body[data-layout="observatory"] [id^="wfbpm"]>span:nth-child(2){
+  grid-column:2!important;grid-row:1 / span 2!important;
+  border:1px solid var(--obs-amber-faint)!important;
+  padding:6px 10px!important;
+  font-family:'JetBrains Mono',monospace!important;
+  font-size:13px!important;color:var(--obs-amber)!important;
+  font-weight:500!important;line-height:1!important;
+  letter-spacing:.04em!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  min-width:56px!important;
+  background:var(--obs-void)!important;
+  text-shadow:none!important;
+}
+/* .dk-bpm-cur = effective BPM */
+body[data-layout="observatory"] [id^="wfbpm"] .dk-bpm-cur{
+  grid-column:1!important;grid-row:1!important;
+  font-family:'VT323',monospace!important;
+  font-size:18px!important;
+  color:var(--obs-amber)!important;
+  background:transparent!important;border:none!important;
+  padding:0!important;height:auto!important;line-height:1!important;
+  -webkit-font-smoothing:none;letter-spacing:0!important;
+  display:flex!important;align-items:baseline!important;gap:3px!important;
+}
+body[data-layout="observatory"] [id^="wfbpm"] .dk-bpm-cur>span{
+  font-family:'JetBrains Mono',monospace!important;
+  font-size:8px!important;color:var(--obs-amber-dim)!important;
+  margin-left:2px!important;
+  -webkit-font-smoothing:antialiased;letter-spacing:.18em!important;
+}
+
+/* Phrase strip */
+body[data-layout="observatory"] .obs-right .dphs,
+body[data-layout="observatory"] [class~="dphs"][id^="dphs"]{
+  display:grid!important;
+  grid-template-columns:repeat(4,1fr)!important;
+  grid-template-rows:unset!important;
+  gap:2px!important;height:14px!important;
+  margin:0!important;padding:0!important;width:100%!important;
+}
+body[data-layout="observatory"] .obs-right .dphs .dphs-seg{
+  border:1px solid var(--obs-amber-dim)!important;
+  background:var(--obs-void)!important;
+  position:relative!important;overflow:hidden!important;
+  border-radius:0!important;
+}
+body[data-layout="observatory"] .obs-right .dphs .dphs-fill{
+  position:absolute!important;inset:0!important;
+  background:var(--obs-amber)!important;
+  transition:opacity .06s!important;
+}
+body[data-layout="observatory"] .obs-right .dphs .dphs-seg:nth-child(1) .dphs-fill{
+  background:var(--obs-amber)!important;
+}
+
+/* Empty deck dimming */
+body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-meta,
+body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-center,
+body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-right{opacity:.55}
+
+/* Empty deck add button — restore margin */
+body[data-layout="observatory"] #addDeckBtn{margin-top:8px!important}
+
+/* 숨김: Observatory 에선 사용 안 하는 표준 strip 들 */
+body[data-layout="observatory"] .obs-dk .dvu-strip,
+body[data-layout="observatory"] .obs-dk .deq-strip,
+body[data-layout="observatory"] .obs-dk .tw-ctl-sec,
+body[data-layout="observatory"] .obs-dk .dk-tc-time,
+body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
 
 </style>
 <script src="./i18n.js"></script>
@@ -3250,6 +3591,7 @@ function deckHTML(slot){
   if(L==='row')return deckHTMLRow(slot);
   if(L==='tower')return deckHTMLTower(slot);
   if(L==='card')return deckHTMLCard(slot);
+  if(L==='observatory')return deckHTMLObservatory(slot);
   return deckHTMLDefault(slot);
 }
 
@@ -3643,6 +3985,65 @@ function deckHTMLCard(slot){
         </div>
       </div>
       <div class="dk-tc-time" id="dtime${slot}" style="font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
+    </div>
+  </div>`;
+}
+
+/* ═════════ Observatory — CRT phosphor terminal (4 채널 2×2 콘솔) ═════════ */
+function deckHTMLObservatory(slot){
+  const P=_deckCommonParts(slot);
+  const {d,isHW,isLoaded,phas,wfOverview,wfZoom,artEl}=P;
+  const stEmpty=!isLoaded && !isHW;
+  const stAttr=stEmpty?'empty':'stop';
+  const playerNum=slot+1;
+  const modelTxt=isHW?(d.model||'CDJ'):'VIRTUAL';
+  return `<div class="dk obs-dk" id="dk${slot}" data-st="${stAttr}" data-type="${isHW?'hw':'virtual'}">
+    <div class="dshim"></div>
+    <div class="obs-hdr">
+      <span class="obs-num" id="did${slot}">${playerNum}</span>
+      <div class="obs-id">
+        <div class="obs-name">CHANNEL 0${playerNum}</div>
+        <div class="obs-model" id="dhwl${slot}">${modelTxt}</div>
+      </div>
+      <div class="obs-flags">
+        <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}">SYNC</span>
+        <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}">MAST</span>
+        <span class="dbadge br off obs-air" id="dair${slot}">AIR</span>
+      </div>
+      <div class="obs-mini">
+        <div class="dvu-hbar col fader"><div class="dvu-hfill" id="dvuF${slot}" style="--vu-level:0%"></div></div>
+        <div class="dvu-hbar col vu"><div class="dvu-hfill" id="dvuL${slot}" style="--vu-level:0%"></div></div>
+      </div>
+      <span class="dbadge bm obs-state" id="dbg${slot}">${stEmpty?'EMPTY':'STOP'}</span>
+    </div>
+    <div class="obs-body">
+      <aside class="obs-meta">
+        ${artEl}
+        <div class="obs-meta-list">
+          <div class="row"><span class="k">SRC</span><span class="v">${isHW?'LINK':'LOCAL'}</span></div>
+          <div class="row"><span class="k">TYPE</span><span class="v">${isHW?'HW':'VIRT'}</span></div>
+        </div>
+      </aside>
+      <div class="obs-center">
+        <div class="obs-title-line">
+          <div class="obs-title-text">
+            <span class="obs-track" id="dtn${slot}">${isLoaded?(d.tn||'—'):'— NO TRACK —'}</span>
+            <span class="obs-artist" id="dta${slot}">${(isLoaded&&d.ar)?d.ar:'—'}</span>
+          </div>
+          <div class="obs-kbadge">
+            <span id="wfkey${slot}" class="dk-key-box">—</span>
+          </div>
+        </div>
+        <div class="obs-wf">${wfOverview}<div class="dwz-row" style="height:auto">${wfZoom}</div></div>
+      </div>
+      <aside class="obs-right">
+        <div class="obs-tc-stack">
+          <span class="dtc obs-tc-now" id="dtc${slot}">${isLoaded?'00:00:00:00':'--:--:--:--'}</span>
+        </div>
+        <div class="obs-divider"></div>
+        <div id="wfbpm${slot}"></div>
+        ${phas}
+      </aside>
     </div>
   </div>`;
 }
