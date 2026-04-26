@@ -41,28 +41,41 @@ for (const { src, dst } of copyMap) {
   if (!fs.existsSync(srcPath)) continue;
   const dstPath = path.join(distDir, dst);
   fs.copyFileSync(srcPath, dstPath);
-  console.log(`[stub] copied → ${dst}`);
+  console.log(`[STUB] copied → ${dst}`);
   moved++;
 }
 
-// 기존 같은 semver 의 이전 BB 빌드 제거 (예: 0.9.2.15-stub.exe 삭제)
+// 보존 정책: 현재 빌드 + 직전 1개만 유지 (총 2개). 그 이전은 삭제.
+// 이유: Dropbox 가 rename 을 변경으로 인식 → 프로그램 실행 중 동기화 중단.
+// rename 없이 이전 빌드를 그대로 두고, 새 빌드는 새 이름으로 추가만 함.
+// 다음 빌드에서 (현재-2) 만 삭제하므로 직전 1개는 항상 유지됨.
 if (moved > 0) {
   try {
+    // 같은 semver 의 모든 stub.exe 수집 → BB 기준 정렬
+    const allBuilds = [];
     for (const name of fs.readdirSync(distDir)) {
-      if (name === copyMap[0].dst || name === copyMap[1].dst) continue;
       const m = name.match(new RegExp(`^BRIDGE\\+ (Setup )?${semver.replace(/\./g,'\\.')}\\.(\\d+)-stub\\.exe$`));
-      if (m && m[2] !== bb) {
-        try { fs.unlinkSync(path.join(distDir, name)); console.log(`[stub] pruned old build ${name}`); } catch(_) {}
+      if (m) allBuilds.push({ name, bb: parseInt(m[2], 10), kind: m[1] ? 'setup' : 'main' });
+    }
+    // kind 별로 그룹핑 후 BB 내림차순 정렬, 상위 2개(현재+직전)만 유지
+    for (const kind of ['main', 'setup']) {
+      const group = allBuilds.filter(b => b.kind === kind).sort((a, b) => b.bb - a.bb);
+      const toDelete = group.slice(2); // 3번째부터 삭제
+      for (const b of toDelete) {
+        try { fs.unlinkSync(path.join(distDir, b.name)); console.log(`[STUB] pruned old build ${b.name}`); } catch(_) {}
+      }
+      if (group.length >= 2) {
+        console.log(`[STUB] kept: ${group[0].name} (current) + ${group[1].name} (previous)`);
       }
     }
-  } catch(_) {}
+  } catch(e) { console.warn('[STUB] prune error:', e.message); }
 }
 
 // 빌드 폴더 정리 (Dropbox sync 방지용). 최종 exe 만 dist/ 로 복사했으므로 안전.
 try {
   fs.rmSync(buildOut, { recursive: true, force: true });
-  console.log(`[stub] cleaned ${buildOut}`);
+  console.log(`[STUB] cleaned ${buildOut}`);
 } catch(_) {}
 
-if (moved === 0) console.log(`[stub] no artifacts found in ${buildOut}`);
-else console.log(`[stub] build ${fullVer} — ${moved} file(s) copied to dist/`);
+if (moved === 0) console.log(`[STUB] no artifacts found in ${buildOut}`);
+else console.log(`[STUB] build ${fullVer} — ${moved} file(s) copied to dist/`);

@@ -15,7 +15,7 @@ Pioneer Pro DJ Link 네트워크의 CDJ/DJM 상태를 실시간으로 읽어 TCN
 | **LTC 오디오 출력** | AudioWorklet 기반 Linear Timecode 생성 |
 | **MIDI Clock/MTC** | BPM 동기화 및 MIDI Timecode 출력 |
 | **Virtual Deck** | 하드웨어 없이 로컬 음원 파일로 테스트 가능 — MP3 · WAV · FLAC · AAC · OGG · M4A · AIFF (최대 6덱) |
-| **RGB 웨이브폼** | IIR 밴드스플릿 필터 — BLUE / RGB / 3BAND 컬러 프리셋 |
+| **RGB 웨이브폼** | IIR 밴드스플릿 필터 — 3 Band / RGB 표시 모드 |
 | **CDJ-3000 웨이브폼** | 컬러/모노 프리뷰 + 디테일 웨이브폼 수신 |
 | **비트 그리드** | dbserver 비트그리드(0x2204) 파싱 + 오버레이 |
 | **큐 포인트** | Hot Cue / Memory Cue 마커 표시 + 메모리 |
@@ -27,10 +27,9 @@ Pioneer Pro DJ Link 네트워크의 CDJ/DJM 상태를 실시간으로 읽어 TCN
 **BRIDGE+ Onyx Studio** — "The Tactile Command Center"
 
 - **컬러**: Deep obsidian tonal layering (#111318 → #0c0e12 → #282a2e)
-- **폰트**: Plus Jakarta Sans (UI) + Space Grotesk (라벨) + DM Mono (데이터)
+- **폰트**: Inter / Space Grotesk / DM Mono 계열 UI 타이포그래피
 - **악센트**: Primary Green (#5af0b3), Secondary Blue (#a4c9ff), Tertiary Gold (#ffd16d)
 - **컴포넌트**: No-border 디자인, Ambient Glow, Glassmorphism
-- **Stitch 프로젝트**: 4개 화면 (LINK, PRO DJ LINK, TCNet, SETTINGS)
 
 ## 설치 및 실행
 
@@ -73,8 +72,8 @@ npm start
 
 MIT
 
-## 크레딧
+## 참고 자료
 
-- [Deep Symmetry / dysentery](https://github.com/Deep-Symmetry/dysentery) — Pro DJ Link 프로토콜 리버스 엔지니어링 참고
-- [Stitch by Google](https://stitch.withgoogle.com) — UI 디자인 시스템 생성
+- Pro DJ Link 패킷 구조 분석: `docs/PRO_DJ_LINK_INDEX.md`
+- TCNet 출력 구현: `bridge-core.js` 및 `TCNet-V3-5-1B.pdf`
 - Electron + Web Audio API 기반

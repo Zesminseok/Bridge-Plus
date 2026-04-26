@@ -2479,7 +2479,7 @@ function _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX){
     const epx=(endMs  -posMs)/msPerPx+cX;
     if(epx<=0||cpx>=W)return;
     const lx=Math.max(0,cpx),rx=Math.min(W,epx);
-    // ShowKontrol 스타일: 노란색 배경 fill + 상/하단 띠 + 경계 bar
+    // 루프 구간: 노란색 배경 fill + 상/하단 띠 + 경계 bar
     ctx.fillStyle=active?'rgba(255,220,0,.26)':'rgba(255,220,0,.12)';
     ctx.fillRect(lx,0,rx-lx,H);
     // 경계 바 (진한 노랑)

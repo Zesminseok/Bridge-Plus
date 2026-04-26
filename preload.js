@@ -1,6 +1,7 @@
 'use strict';
 const{contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('bridge',{
+  platform: process.platform,
   start:(o)=>ipcRenderer.invoke('bridge:start',o),
   stop:()=>ipcRenderer.invoke('bridge:stop'),
   getInterfaces:()=>ipcRenderer.invoke('bridge:getInterfaces'),
@@ -47,9 +48,15 @@ contextBridge.exposeInMainWorld('bridge',{
   linkSetTempo:(bpm)=>ipcRenderer.send('link:setTempo',{bpm}),
   linkGetStatus:()=>ipcRenderer.invoke('link:getStatus'),
   linkAlignBeat:(beat)=>ipcRenderer.invoke('link:alignBeat',{beat}),
+  licenseGetStatus:()=>ipcRenderer.invoke('license:getStatus'),
+  licenseActivate:(email,serial)=>ipcRenderer.invoke('license:activate',{email,serial}),
+  licenseDeactivate:()=>ipcRenderer.invoke('license:deactivate'),
+  licenseRefresh:()=>ipcRenderer.invoke('license:refresh'),
   rebindTCNet:(addr)=>ipcRenderer.invoke('bridge:rebindTCNet',{addr}),
   rebindPDJL:(addr)=>ipcRenderer.invoke('bridge:rebindPDJL',{addr}),
   setTCNetMode:(mode)=>ipcRenderer.invoke('bridge:setTCNetMode',{mode}),
+  cleanupZombies:()=>ipcRenderer.invoke('bridge:cleanupZombies'),
+  getAppVersion:()=>ipcRenderer.invoke('app:getVersion'),
   // Multi-channel audio decode
   checkFFmpeg:()=>ipcRenderer.invoke('bridge:checkFFmpeg'),
   decodeAudio:(filePath,slot)=>ipcRenderer.invoke('bridge:decodeAudio',{filePath,slot}),
@@ -57,6 +64,4 @@ contextBridge.exposeInMainWorld('bridge',{
   onAudioProgress:(cb)=>ipcRenderer.on('bridge:audioProgress',(_,d)=>cb(d)),
   onQuitting:(cb)=>ipcRenderer.on('app:quitting',()=>cb()),
   getCpuUsage:()=>ipcRenderer.invoke('bridge:cpuUsage'),
-  djmCaptureStart:()=>ipcRenderer.invoke('bridge:djmCaptureStart'),
-  djmCaptureStop:()=>ipcRenderer.invoke('bridge:djmCaptureStop'),
 });

@@ -12,240 +12,91 @@ const os    = require('os');
 const path  = require('path');
 const fs    = require('fs');
 
+// Cue 디버그 로그 — 바탕화면(Desktop)에 누적. OneDrive Desktop 포함 여러 후보 시도.
+// 비동기 + buffered write 로 UI freeze 방지 (이전 sync write 가 매 호출 메인 스레드 블록했음).
+function _resolveDbgLogPath(){
+  const home = os.homedir();
+  const candidates = [
+    path.join(home, 'Desktop', 'bridge-debug.log'),
+    path.join(home, 'OneDrive', 'Desktop', 'bridge-debug.log'),
+    path.join(home, 'OneDrive', '바탕 화면', 'bridge-debug.log'),
+    path.join(home, '바탕 화면', 'bridge-debug.log'),
+  ];
+  // OneDrive — Personal 변종 (OneDrive - <Org>) 도 자동 탐색
+  try{
+    for(const dir of fs.readdirSync(home)){
+      if(dir.startsWith('OneDrive')){
+        candidates.push(path.join(home, dir, 'Desktop', 'bridge-debug.log'));
+        candidates.push(path.join(home, dir, '바탕 화면', 'bridge-debug.log'));
+      }
+    }
+  }catch(_){}
+  for(const p of candidates){
+    try{
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, '');
+      return p;
+    }catch(_){}
+  }
+  return null;
+}
+const _DBG_LOG_PATH = _resolveDbgLogPath();
+let _dbgLogInited = false;
+let _dbgLogQueue = [];
+let _dbgLogFlushScheduled = false;
+function _dbgLogFlush(){
+  if(!_DBG_LOG_PATH || _dbgLogQueue.length===0){ _dbgLogFlushScheduled=false; return; }
+  const chunk = _dbgLogQueue.join('');
+  _dbgLogQueue = [];
+  fs.appendFile(_DBG_LOG_PATH, chunk, ()=>{ _dbgLogFlushScheduled=false; });
+}
+function _dbgLog(msg){
+  console.log(msg);
+  if(!_DBG_LOG_PATH) return;
+  try{
+    if(!_dbgLogInited){
+      // 초기 헤더는 한 번만 sync 로 — 이후엔 모두 비동기
+      try{ fs.writeFileSync(_DBG_LOG_PATH, `=== BRIDGE+ BRIDGE+ debug log — started ${new Date().toISOString()} ===\nlog path: ${_DBG_LOG_PATH}\n`); }catch(_){}
+      _dbgLogInited = true;
+    }
+    _dbgLogQueue.push(`[${new Date().toISOString()}] ${msg}\n`);
+    if(!_dbgLogFlushScheduled){
+      _dbgLogFlushScheduled = true;
+      setImmediate(_dbgLogFlush);
+    }
+  }catch(_){}
+}
+
 // ─────────────────────────────────────────────
 // TCNet 상수
 // ─────────────────────────────────────────────
-const TC = {
-  MAGIC : Buffer.from('TCN'),
-  VER   : Buffer.from([0x03, 0x05]),  // TCNet V3.5 wire version used by Arena
-  OPTIN : 0x02, OPTOUT: 0x03, STATUS: 0x05,
-  DATA  : 0xC8, TIME  : 0xFE,  APP   : 0x1E,
-  ARTWORK: 0xCC, // MessageType 204 = LowResArtwork (JPEG)
-  NOTIFY: 0x0D,
-  P_BC  : 60000, P_TIME: 60001, P_DATA: 60002,
-  NID   : Buffer.from([Math.floor(Math.random()*256), 0xFE]), // random per instance
-  NNAME : 'Bridge01',
-  NTYPE : 0x02,   // 0x02 = Server (Arena = 0x04 = Client)
-  NOPTS : Buffer.from([0x07, 0x00]),
-  VENDOR: 'BRIDGE+', DEVICE: 'BRIDGE+',
-  APPV  : { ma:1, mi:1, bug:67 },
-  H     : 24,
-  SZ_OI : 68, SZ_ST: 300, SZ_TM: 162,
-  SZ_DT_METRICS: 122, SZ_DT_META: 548,
-  LPORT : 0,  // dynamically assigned each run
-  DT_METRICS: 0x02,  // MetricsData: fader, gain, pitch, BPM, status per layer
-  DT_META:    0x04,  // MetaData: track name, artist, waveform, artwork per layer
-  DT_ARTWORK: 0x80,  // LowResArtworkFile (128) — JPEG artwork per layer
-  DT_MIXER:   0x96,  // MixerData (150) — per-channel fader/EQ/VU + master
-};
+// TCNet 상수/STATE/P1 매핑 → tcnet/packets.js (Phase 4.10 modularization)
+const {
+  TC, STATE, toTCNetState, P1_TO_STATE, P1_NAME,
+  u32, clamp8, buildHdr,
+  mkOptIn, mkStatus, mkTime, mkAppResp, mkMetadataResp,
+  mkDataMetrics, mkMixerData, mkDataMeta, mkNotification, mkLowResArtwork,
+} = require('./tcnet/packets');
 
-// TCNet V3.5.1B LayerStatus values — these ARE the protocol values, send directly
-// ROLLBACK: was using toTCNetState() that collapsed CUEDOWN(7)/PLATTERDOWN(8) to 2(Paused)
-const STATE = { IDLE:0, PLAYING:3, LOOPING:4, PAUSED:5, STOPPED:6, CUEDOWN:7, PLATTERDOWN:8, FFWD:9, FFRV:10, HOLD:11 };
-// Identity function — STATE values are already TCNet protocol values
-function toTCNetState(s){ return s || 0; }
-
-// Pro DJ Link P1 (0x7B) → TCNet LayerStatus 매핑
-// TCNet V3.5.1B: 0=IDLE,3=PLAYING,4=LOOPING,5=PAUSED,6=STOPPED,7=CUE,8=PLATTER,9=FFWD,10=FFRV,11=HOLD
-const P1_TO_STATE = {
-  0x00: STATE.IDLE,          // Empty — 트랙 없음
-  0x02: STATE.STOPPED,       // Loading — 트랙 로딩 중
-  0x03: STATE.PLAYING,       // Playing — 재생
-  0x04: STATE.LOOPING,       // Looping — 루프 재생
-  0x05: STATE.PAUSED,        // Paused — 일시정지
-  0x06: STATE.CUEDOWN,       // Cued — 큐 포인트에서 정지 (큐 버튼 홀드)
-  // ROLLBACK: 0x07 was PLAYING — 큐 탐색 중 (재생 아님)
-  0x07: STATE.CUEDOWN,       // Cuing — 큐 포인트 탐색
-  0x08: STATE.PLATTERDOWN,   // PlatterHeld — 플래터 누름 (바이닐 모드)
-  // ROLLBACK: 0x09 was PAUSED — TCNet에 FFWD(9) 상태 존재
-  0x09: STATE.FFWD,          // Searching — 탐색 (빨리감기/되감기)
-  0x0D: STATE.STOPPED,       // End — 트랙 끝 (루프 없이)
-  // ROLLBACK: 0x0E was STOPPED — TCNet에 HOLD(11) 상태 존재
-  0x0E: STATE.HOLD,          // SpunDown — 플래터 감속 정지 (홀드)
-  // ROLLBACK: 0x11 was PLAYING — 트랙 끝
-  0x11: STATE.STOPPED,       // Ended — 트랙 종료
-  0x12: STATE.LOOPING,       // Emergency Loop — 긴급 루프
-  0x13: STATE.PLATTERDOWN,   // Vinyl Scratch — 재생 중 플래터 터치
-};
-const P1_NAME = {
-  0x00:'no track',0x02:'loading',0x03:'playing',0x04:'loop',
-  0x05:'paused',0x06:'cued',0x07:'cuing',0x08:'platter held',
-  0x09:'searching',0x0D:'end of track',0x0E:'spun down',0x11:'ended',
-  0x12:'emergency loop',0x13:'vinyl scratch',
-};
-
-const PDJL = {
-  MAGIC: Buffer.from([0x51,0x73,0x70,0x74,0x31,0x57,0x6D,0x4A,0x4F,0x4C]),
-  CDJ:0x0A, DJM:0x39, DJM2:0x29, ANN:0x06,
-  CDJ_BEAT:0x28,   // CDJ beat packet (port 50002, 96B) — beat timing only
-  CDJ_WF:0x56,     // CDJ waveform preview (port 50002, ~1420B)
-  DJM_ONAIR:0x03,  // DJM Channels On-Air (port 50001, 45B)
-  DJM_METER:0x58,  // DJM VU Metering (port 50001, 524B)
-};
-
-// pcap 확정 (관찰된 값들):
-//   Windows Pioneer: 0xBD (2회 세션 모두)
-//   Mac     Pioneer: 0xDA, 0xD3 (2회 세션 다름 — 가변인지 단일 값인지 불확정)
-// 이전 동작 유지: Mac = 0xDA (과거 정상 동작 이력), Windows = 0xBD.
-function pdjlBridgeAnnounceId(platform=process.platform){
-  return platform==='darwin' ? 0xDA : 0xBD;
-}
-
-function pdjlIdentityByteFromMac(mac, platform=process.platform){
-  return pdjlBridgeAnnounceId(platform);
-}
-
-function buildPdjlBridgeHelloPacket(deviceId=5){
-  const p=Buffer.alloc(37);
-  PDJL.MAGIC.copy(p,0);
-  p[0x0A]=0x0A;
-  p[0x0B]=0x00;
-  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
-  p[0x20]=0x01;
-  p[0x21]=0x01;
-  p[0x22]=0x00;
-  p[0x23]=0x25;
-  p[0x24]=deviceId&0xFF;
-  return p;
-}
-
-function buildPdjlBridgeClaimPacket(annIP, annMAC, seqN=1, deviceId=5, platform=process.platform){
-  const cIP=String(annIP||'0.0.0.0').split('.').map(Number);
-  const cMAC=String(annMAC||'00:00:00:00:00:00').split(':').map(h=>parseInt(h,16));
-  const p=Buffer.alloc(50);
-  PDJL.MAGIC.copy(p,0);
-  p[0x0A]=0x02;
-  p[0x0B]=0x00;
-  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
-  p[0x20]=0x01;
-  p[0x21]=0x01;
-  p[0x22]=0x00;
-  p[0x23]=0x32;
-  for(let i=0;i<4;i++) p[0x24+i]=cIP[i]||0;
-  for(let i=0;i<6;i++) p[0x28+i]=cMAC[i]||0;
-  // pcap 확정: Pioneer 공식 브릿지 claim byte 0x2E checksum
-  //   MAC[5] XOR (0x57 + seqN)
-  //   예: MAC[5]=0xB2, seqN=1 → 0xB2^0x58 = 0xEA (win-bridge.pcapng 일치)
-  p[0x2E]=((cMAC[5]||0) ^ ((0x57 + seqN) & 0xFF)) & 0xFF;
-  p[0x2F]=seqN&0xFF;
-  // pcap 확정: Pioneer 공식 브릿지 claim byte 0x30 = deviceId (양쪽 동일)
-  //   Mac    (ceo_2): 0x05
-  //   Windows (fullcap4): 0x05
-  p[0x30]=deviceId&0xFF;
-  p[0x31]=0x00;
-  return p;
-}
-
-function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=process.platform){
-  const aIP=String(annIP||'0.0.0.0').split('.').map(Number);
-  const aMAC=String(annMAC||'00:00:00:00:00:00').split(':').map(h=>parseInt(h,16));
-  const p=Buffer.alloc(54);
-  PDJL.MAGIC.copy(p,0);
-  p[0x0A]=0x06;
-  p[0x0B]=0x00;
-  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0C,0,15);
-  p[0x20]=0x01;
-  p[0x21]=0x01;
-  p[0x22]=0x00;
-  p[0x23]=0x36;
-  p[0x24]=pdjlIdentityByteFromMac(annMAC, platform);
-  p[0x25]=0x00;
-  for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
-  for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
-  // pcap 확정: Pioneer 공식 브릿지 keepalive byte 0x30
-  //   Mac    (ceo_2):    0x07
-  //   Windows (fullcap4): 0x08
-  p[0x30]=platform==='darwin' ? 0x07 : 0x08;
-  p[0x34]=deviceId&0xFF;
-  p[0x35]=0x20;
-  return p;
-}
-
-function buildDjmSubscribePacket(platform=process.platform){
-  const p=Buffer.alloc(40);
-  PDJL.MAGIC.copy(p,0);
-  p[10]=0x57;
-  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,11,0,15);
-  p[31]=0x01;
-  p[32]=0x00;
-  // pcap 확정: Pioneer 공식 브릿지 0x57 subscribe byte 33 bitmask
-  //   Mac    (ceo_2):    0xE1 (fader + VU + onair)
-  //   Windows (fullcap4): 0xFF (전체 subscribe)
-  p[33]=platform==='darwin' ? 0xE1 : 0xFF;
-  p[34]=0x00;
-  p[35]=0x04;
-  p[36]=0x01;
-  return p;
-}
-
-function buildDbServerKeepalivePacket(annIP, annMAC, deviceId=5, platform=process.platform){
-  const aIP=String(annIP||'0.0.0.0').split('.').map(Number);
-  const aMAC=String(annMAC||'00:00:00:00:00:00').split(':').map(h=>parseInt(h,16));
-  const p=Buffer.alloc(95);
-  PDJL.MAGIC.copy(p,0);
-  p[0x0A]=0x06;
-  const bridgeName = platform==='win32' ? 'BRIDGE+' : 'TCS-SHOWKONTROL';
-  Buffer.from(bridgeName,'ascii').copy(p,0x0C,0,Math.min(bridgeName.length, 20));
-  p[0x20]=0x01;
-  p[0x21]=0x01;
-  p[0x23]=0x36;
-  p[0x24]=deviceId&0xFF;
-  for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
-  for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
-  p[0x35]=0x64;
-  Buffer.from('PIONEER DJ CORP','ascii').copy(p,54,0,15);
-  Buffer.from('PRODJLINK BRIDGE','ascii').copy(p,74,0,16);
-  p[94]=0x43;
-  return p;
-}
-
-function buildBridgeNotifyPacket(deviceId=5){
-  const p=Buffer.alloc(44);
-  PDJL.MAGIC.copy(p,0);
-  p[0x0A]=0x55;
-  Buffer.from('TCS-SHOWKONTROL','ascii').copy(p,0x0B,0,15);
-  p[31]=0x01;
-  p[32]=0x00;
-  p[33]=0x8B;
-  p[34]=0x08;
-  p[39]=0x01;
-  p[40]=deviceId&0xFF;
-  p[41]=0x01;
-  p[42]=0x03;
-  p[43]=0x01;
-  return p;
-}
+// PDJL 패킷 빌더 → pdjl/packets.js (Phase 4.8 modularization)
+const {
+  PDJL,
+  pdjlBridgeAnnounceId,
+  pdjlIdentityByteFromMac,
+  buildPdjlBridgeHelloPacket,
+  buildPdjlBridgeClaimPacket,
+  buildPdjlBridgeKeepalivePacket,
+  buildDjmSubscribePacket,
+  buildDbServerKeepalivePacket,
+  buildBridgeNotifyPacket,
+  hasPDJLMagic,
+  readPDJLNameField,
+} = require('./pdjl/packets');
 
 // ─────────────────────────────────────────────
 // Utilities
 // ─────────────────────────────────────────────
-let _seq = 0;
-const u32 = n => (Math.max(0,n)&0xFFFFFFFF)>>>0;
-const clamp8 = n => Math.max(0,Math.min(255,Math.round(n)))&0xFF;
-
-// UTF-32LE writer
-function _writeUtf32LE(buf, offset, str, maxChars){
-  for(let i=0;i<str.length&&i<maxChars;i++){
-    const cp=str.codePointAt(i);
-    const off=offset+i*4;
-    buf[off]  = cp&0xFF;
-    buf[off+1]=(cp>>8)&0xFF;
-    buf[off+2]=(cp>>16)&0xFF;
-    buf[off+3]=(cp>>24)&0xFF;
-    if(cp>0xFFFF) i++; // surrogate pair
-  }
-}
-
-function buildHdr(type){
-  const b = Buffer.alloc(TC.H);
-  TC.NID.copy(b,0); TC.VER.copy(b,2); TC.MAGIC.copy(b,4);
-  b[7] = type;
-  b.write(TC.NNAME.padEnd(8,'\0'), 8, 8, 'ascii');
-  b[16] = (_seq++)&0xFF; b[17] = TC.NTYPE; TC.NOPTS.copy(b,18);
-  const hr = process.hrtime();
-  b.writeUInt32LE(u32(hr[0]*1e6+Math.floor(hr[1]/1000)), 20);
-  return b;
-}
+// _seq / u32 / clamp8 / _writeUtf32LE / buildHdr → tcnet/packets.js (위 require)
 
 // macOS: map device name (en0) → hardware port name (Wi-Fi) via networksetup
 let _hwPortMap = null;
@@ -319,812 +170,16 @@ function pdjlBroadcastTargets(bindAddr){
   )];
 }
 
-function hasPDJLMagic(msg){
-  if(!msg || msg.length < PDJL.MAGIC.length) return false;
-  for(let i=0;i<PDJL.MAGIC.length;i++) if(msg[i]!==PDJL.MAGIC[i]) return false;
-  return true;
-}
-
-function readPDJLNameField(msg){
-  if(!msg || msg.length <= 0x0B) return '';
-  const end = Math.min(0x1B, msg.length);
-  if(end <= 0x0B) return '';
-  return msg.slice(0x0B, end).toString('ascii').replace(/\0/g,'').trim();
-}
-
-// ─────────────────────────────────────────────
-// TCNet 패킷 빌더
-// ─────────────────────────────────────────────
-
-/**
- * OptIn (0x02) — 68B
- */
-function mkOptIn(port, uptime, nc){
-  const b = Buffer.alloc(TC.SZ_OI);
-  buildHdr(TC.OPTIN).copy(b,0);
-  const d = b.slice(24);
-  d.writeUInt16LE(nc||2, 0);           // body[0-1]: nodeCount
-  d.writeUInt16LE(port||0, 2);  // body[2-3]: listenerPort
-  d.writeUInt16LE(uptime||0, 4);       // body[4-5]: uptime seconds
-  d.writeUInt16LE(0, 6);               // body[6-7]: padding
-  d.write(TC.VENDOR.padEnd(16,'\0'), 8, 16, 'ascii');   // body[8-23]: vendor
-  d.write(TC.DEVICE.padEnd(16,'\0'), 24, 16, 'ascii');  // body[24-39]: device
-  d[40]=TC.APPV.ma; d[41]=TC.APPV.mi; d[42]=TC.APPV.bug; // body[40-42]: version
-  d[43]=0;  // body[43]: padding
-  return b;
-}
-
-/**
- * Status (0x05) — 300B
- *
- * body layout:
- *   body[0-1]    = nodeCount (LE u16)
- *   body[2-3]    = nodeListenerPort (LE u16)
- *   body[10+n]   = layerSource[n] (n=0-7)
- *   body[18+n]   = layerStatus[n] (n=0-7)
- *   body[26+n*4] = trackID[n] (LE u32, n=0-7)
- *   body[59]     = smpteMode
- *   body[148+n*16]= layerName[n] (16B ASCII, n=0-7)
- */
-function mkStatus(port, devices, layers, faders, hwMode){
-  const b = Buffer.alloc(TC.SZ_ST);
-  buildHdr(TC.STATUS).copy(b,0);
-  const d = b.slice(24);  // body 276B
-
-  // nodeCount = number of active layers OR hwMode slots (even if idle)
-  let nc=0;
-  for(let n=0;n<8;n++){
-    if(layers&&layers[n]) nc++;
-    else if(hwMode&&hwMode[n]) nc++;
-  }
-  d.writeUInt16LE(nc||1, 0);
-  d.writeUInt16LE(port||0, 2);     // nodeListenerPort
-
-  // layerSource[0-7] at body[10-17] — TCNet absolute byte 34..41
-  for(let n=0;n<8;n++){
-    const hasLayer = layers && layers[n];
-    const isHW = hwMode && hwMode[n];
-    d[10+n] = (hasLayer || isHW) ? (n+1) : 0;
-  }
-
-  // layerStatus[0-7] at body[18-25] — raw TCNetLayerStatus (0=IDLE,3=PLAYING,5=PAUSED,6=STOPPED)
-  for(let n=0;n<8;n++){
-    const layerData = layers && layers[n];
-    d[18+n] = layerData ? toTCNetState(layerData.state||0) : 0;
-  }
-
-  // trackID[0-7] at body[26-57] (LE u32 × 8)
-  for(let n=0;n<8;n++){
-    const layerData = layers && layers[n];
-    if(layerData && layerData.trackId){
-      d.writeUInt32LE(layerData.trackId, 26+n*4);
-    }
-  }
-
-  d[59] = 0x1E;  // smpteMode = 30fps
-  d[60] = 0x00;  // autoMasterMode = 0
-
-  // body[96-111]: device name
-  d.write(TC.DEVICE.padEnd(16,'\0'), 96, 16, 'ascii');
-
-  // layerName[0-7] at body[148-275] (16B ASCII × 8)
-  // Official Bridge puts CDJ model name here, NOT track name
-  for(let n=0;n<8;n++){
-    const layerData = layers && layers[n];
-    const name = layerData?.deviceName ? layerData.deviceName.slice(0,15) : '';
-    if(name) d.write(name.padEnd(16,'\0'), 148+n*16, 16, 'ascii');
-  }
-
-  return b;
-}
-
-/**
- * TIME (0xFE) — 154B
- *
- * body layout:
- *   body[0+n*4]  = layerCurrentTime[n] (LE u32, n=0-7)
- *   body[32+n*4] = layerTotalTime[n]   (LE u32, n=0-7)
- *   body[64+n]   = layerBeatmarker[n]  (n=0-7)
- *   body[72+n]   = layerState[n]       (n=0-7)
- *   body[81]     = generalSMPTEMode
- *   body[82+n*6] = layerTimecode[n]    (6B: mode,state,h,m,s,frames, n=0-7)
- */
-function mkTime(layers, uptimeMs, faders){
-  const b = Buffer.alloc(TC.SZ_TM);
-  buildHdr(TC.TIME).copy(b,0);
-  const d = b.slice(24);  // body 138B
-
-  // layerCurrentTime[0-7] at body[0-31] — interpolated from wall clock
-  const now = Date.now();
-  for(let n=0;n<8;n++){
-    const ld = layers && layers[n];
-    if(ld){
-      let ms = ld.timecodeMs || 0;
-      // Interpolate: if playing/looping/searching, add elapsed time since last beat update (pitch-corrected)
-      const isActive = ld.state === STATE.PLAYING || ld.state === STATE.LOOPING
-        || ld.state === STATE.FFWD || ld.state === STATE.FFRV;
-      if(isActive && ld._updateTime){
-        const pitch = ld._pitch || 0;
-        ms += (now - ld._updateTime) * (1 + pitch / 100);
-      }
-      d.writeUInt32LE(u32(ms), n*4);
-    }
-  }
-
-  // layerTotalTime[0-7] at body[32-63]
-  for(let n=0;n<8;n++){
-    const ld = layers && layers[n];
-    if(ld) d.writeUInt32LE(u32(ld.totalLength||0), 32+n*4);
-  }
-
-  // layerBeatmarker[0-7] at body[64-71]
-  for(let n=0;n<8;n++){
-    const ld = layers && layers[n];
-    if(ld) d[64+n] = ld.beatPhase || 0;
-  }
-
-  // layerState[0-7] at body[72-79] — TCNet state (0=Idle,1=Playing,2=Paused,3=Stopped)
-  for(let n=0;n<8;n++){
-    const ld = layers && layers[n];
-    if(ld) d[72+n] = toTCNetState(ld.state||0);
-  }
-
-  // generalSMPTEMode at body[81] — 30fps
-  d[81] = 30;
-
-  // layerTimecode[0-7] at body[82-129] (6B each: mode, state, h, m, s, frames)
-  for(let n=0;n<8;n++){
-    const ld = layers && layers[n];
-    if(ld){
-      let ms = ld.timecodeMs || 0;
-      const isPlaying = ld.state === STATE.PLAYING || ld.state === STATE.LOOPING;
-      if(isPlaying && ld._updateTime) ms += (now - ld._updateTime);
-      const totalSec = Math.floor(ms / 1000);
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = totalSec % 60;
-      const frames = Math.floor((ms % 1000) / 33.33);  // ~30fps
-      const off = 82 + n*6;
-      d[off+0] = 30;     // layer SMPTE mode = 30fps
-      // TC state: 0=Stopped, 1=Running, 2=Force Re-sync (재생→정지 전환 시 1회 Arena 강제 seek)
-      const tcState = isPlaying ? 1 : (ld._needResync ? 2 : 0);
-      if(ld._needResync) ld._needResync = false;  // 1회만 전송
-      d[off+1] = tcState;
-      d[off+2] = h;
-      d[off+3] = m;
-      d[off+4] = s;
-      d[off+5] = frames;
-    }
-  }
-
-  // layerOnAir[0-7] at body[130-137] — fader position 0-255
-  for(let n=0;n<8;n++){
-    d[130+n] = faders?.[n] || 0;
-  }
-
-  return b;
-}
-
-function mkAppResp(lPort){
-  const b = Buffer.alloc(62);
-  buildHdr(TC.APP).copy(b,0);
-  const d = b.slice(24);
-  d[0]=0xFF; d[1]=0xFF; d[2]=0x14; d[3]=0;
-  d.writeUInt32LE(1,4); d.writeUInt32LE(1,8);
-  d.writeUInt16LE(lPort||0, 20);
-  return b;
-}
-
-/**
- * MetadataResponse (0x14) — reply to Arena's MetadataRequest
- */
-function mkMetadataResp(layer, reqType, layerData){
-  const trackName  = layerData?.trackName  || '';
-  const artistName = layerData?.artistName || '';
-  const dataLen = 2 + 2 + trackName.length + 2 + artistName.length + 16;  // padding
-  const totalLen = TC.H + dataLen;
-  const b = Buffer.alloc(totalLen);
-  buildHdr(0x14).copy(b,0);  // type 0x14 = MetadataResponse
-  const d = b.slice(TC.H);
-  d[0] = layer;     // layerIndex
-  d[1] = reqType;   // responseType (echo back)
-  // Simple metadata: track name + artist name as null-terminated strings
-  let off = 2;
-  d.writeUInt16LE(trackName.length, off); off+=2;
-  if(trackName.length > 0){ d.write(trackName, off, trackName.length, 'utf8'); off += trackName.length; }
-  d.writeUInt16LE(artistName.length, off); off+=2;
-  if(artistName.length > 0){ d.write(artistName, off, artistName.length, 'utf8'); off += artistName.length; }
-  return b;
-}
-
-/**
- * DATA MetricsData (0xC8, sub-type 0x02) — 122B
- * Per-layer: fader, gain, pitch, BPM, status, beat info
- */
-function mkDataMetrics(layerIdx, layerData, faderVal){
-  const b = Buffer.alloc(TC.SZ_DT_METRICS);
-  buildHdr(TC.DATA).copy(b, 0);
-  const d = b.slice(TC.H);  // body 98B
-
-  d[0] = TC.DT_METRICS;  // sub-type 0x02
-  d[1] = layerIdx;        // 1-based layer index
-
-  if(layerData){
-    // TCNet offsets (body-relative, subtract 24 from absolute byte index)
-    d[3] = toTCNetState(layerData.state||0);   // byte 27: Layer State (TCNet: 0=Idle,1=Playing,2=Paused,3=Stopped)
-    d[5] = 0x01;                 // byte 29: Sync Master (1=Master)
-    d[7] = layerData.beatPhase || 0; // byte 31: Beat Marker (0-4)
-    d.writeUInt32LE(layerData.totalLength || 0, 8);   // byte 32: Track Length (ms)
-    let curMs = layerData.timecodeMs || 0;
-    const isPlaying = layerData.state === STATE.PLAYING || layerData.state === STATE.LOOPING;
-    if(isPlaying && layerData._updateTime) curMs += (Date.now() - layerData._updateTime);
-    d.writeUInt32LE(u32(curMs), 12);    // byte 36: Current Position (ms)
-    // byte 40: Speed — 32768=100%, 0=0%, 65536=200%
-    const pitch = layerData._pitch || 0;
-    const speedVal = isPlaying ? Math.round(32768 * (1 + pitch / 100)) : 0;
-    d.writeUInt32LE(u32(Math.max(0, Math.min(65536, speedVal))), 16);
-    d.writeUInt32LE(0, 33);              // byte 57: Beat Number
-    const bpm = layerData.bpm || 0;
-    d.writeUInt32LE(u32(Math.round(bpm * 100)), 88);  // byte 112: BPM ×100
-    // byte 116: Pitch Bend — 32768=100%, scale from pitch%
-    const pbVal = Math.round(32768 * (1 + pitch / 100));
-    d.writeUInt16LE(Math.max(0, Math.min(65535, pbVal)), 92);
-    d.writeUInt32LE(layerData.trackId || 0, 94);  // byte 118: Track ID
-    // Debug first MetricsData per layer
-    if(!mkDataMetrics._dbg) mkDataMetrics._dbg={};
-    if(!mkDataMetrics._dbg[layerIdx]){
-      mkDataMetrics._dbg[layerIdx]=true;
-      // [METRICS] muted
-    }
-  }
-
-  return b;
-}
-
-/**
- * DATA MixerData (0xC8, sub-type 150) — 270B
- * TCNet MixerData packet: per-channel fader, EQ, filter, crossfader, master
- */
-function mkMixerData(faders, mixerName, mixer){
-  const b = Buffer.alloc(270);
-  buildHdr(TC.DATA).copy(b, 0);
-  const d = b.slice(TC.H);  // body 246B
-
-  d[0] = 150;  // DataType = Mixer Data
-  d[1] = 1;    // Mixer ID
-  d[2] = 0;    // Mixer Type
-  // Mixer Name at body offset 5 (byte 29), 16 chars
-  const nm = (mixerName || 'DJM-900NXS2').padEnd(16, '\0');
-  Buffer.from(nm, 'ascii').copy(d, 5, 0, 16);
-  // Master Audio Level — use real DJM masterLvl if available
-  d[37] = mixer?.masterLvl != null ? mixer.masterLvl : 255;
-  // Master Fader Level
-  d[38] = mixer?.masterLvl != null ? mixer.masterLvl : 255;
-  // Cross Fader — real xfader value (0=A, 128=center, 255=B)
-  d[75] = mixer?.xfader != null ? mixer.xfader : 127;
-  // Per-channel data: each channel block starts at body offset 101 + (ch * 24)
-  for(let ch=0; ch<4; ch++){
-    const off = 101 + ch * 24;
-    d[off]   = ch + 1;                                  // Source Select (1-4)
-    d[off+1] = faders?.[ch] != null ? faders[ch] : 0;  // Audio Level (fader 0-255)
-    d[off+2] = faders?.[ch] != null ? faders[ch] : 0;  // Fader Level
-    // TCNet V3.5 channel block: source, audio, fader, trim, comp, hi, mid,
-    // lo-mid, low, color/send/cue placeholders, xf assign.
-    d[off+3]  = mixer?.eq?.[ch]?.[0] != null ? mixer.eq[ch][0] : 200;  // TRIM
-    d[off+4]  = 0;                                                       // COMP / reserved
-    d[off+5]  = mixer?.eq?.[ch]?.[1] != null ? mixer.eq[ch][1] : 128;   // HI
-    d[off+6]  = mixer?.eq?.[ch]?.[2] != null ? mixer.eq[ch][2] : 128;   // MID
-    d[off+7]  = 0;                                                       // LO-MID / reserved
-    d[off+8]  = mixer?.eq?.[ch]?.[3] != null ? mixer.eq[ch][3] : 128;   // LOW
-    d[off+13] = mixer?.xfAssign?.[ch] != null ? mixer.xfAssign[ch] : 0; // XF Assign
-  }
-  return b;
-}
-
-/**
- * DATA MetaData (0xC8, sub-type 0x04) — 548B
- * Per-layer: track name, artist name, key, trackID
- */
-function mkDataMeta(layerIdx, layerData){
-  const b = Buffer.alloc(TC.SZ_DT_META);
-  buildHdr(TC.DATA).copy(b, 0);
-  const d = b.slice(TC.H);  // body 524B
-
-  d[0] = TC.DT_META;  // sub-type 0x04
-  d[1] = layerIdx;     // 1-based layer index
-
-  if(layerData){
-    // Official Bridge uses UTF-32LE (4 bytes/char, 64 chars max = 256 bytes)
-    const artist = layerData.artistName || '';
-    if(artist) _writeUtf32LE(d, 5, artist, 64);
-
-    const track = layerData.trackName || '';
-    if(track) _writeUtf32LE(d, 261, track, 64);
-
-    d.writeUInt16LE(0, 517);  // trackKey
-    d.writeUInt32LE(layerData.trackId || 0, 519);
-  }
-
-  return b;
-}
-
-/**
- * Notification (0x0D) — 30B
- */
-function mkNotification(){
-  const b = Buffer.alloc(30);
-  buildHdr(TC.NOTIFY).copy(b, 0);
-  const d = b.slice(TC.H);
-  d[0]=0xFF; d[1]=0xFF; d[2]=0xFF; d[3]=0x00; d[4]=0x1E; d[5]=0x00;
-  return b;
-}
-
-/**
- * LowResArtwork (MessageType 0xCC = 204)
- * TCNet File Data Packet - Low Res Artwork File
- * header(24B) + dataType(1B) + layerID(1B) + dataSize(4B LE) +
- * totalPackets(4B LE) + packetNo(4B LE) + dataClusterSize(4B LE) + JPEG data
- * Standard Data Cluster Size = 4800, Max payload per packet = 4842
- */
-function mkLowResArtwork(layerIdx, jpegBuf){
-  const CLUSTER_SIZE = 4800;  // TCNet standard Data Cluster Size
-  const totalPackets = Math.ceil(jpegBuf.length / CLUSTER_SIZE);
-  const packets = [];
-
-  for(let i = 0; i < totalPackets; i++){
-    const chunkStart = i * CLUSTER_SIZE;
-    const chunk = jpegBuf.slice(chunkStart, chunkStart + CLUSTER_SIZE);
-    // header(24) + dataType(1) + layerID(1) + dataSize(4) + totalPackets(4) + packetNo(4) + clusterSize(4) + data
-    const b = Buffer.alloc(TC.H + 18 + chunk.length);
-    buildHdr(TC.ARTWORK).copy(b, 0);  // Type 204 (0xCC) — TCNet File Data File Packet
-    b[TC.H]     = TC.DT_ARTWORK;     // DataType 128 = Low Res Artwork File
-    b[TC.H + 1] = layerIdx;          // 1-8 layer number
-    b.writeUInt32LE(jpegBuf.length, TC.H + 2);   // total Data Size
-    b.writeUInt32LE(totalPackets,   TC.H + 6);   // Total Packets
-    b.writeUInt32LE(i,              TC.H + 10);  // Packet No
-    b.writeUInt32LE(CLUSTER_SIZE,   TC.H + 14);  // Data Cluster Size = 4800
-    chunk.copy(b, TC.H + 18);
-    packets.push(b);
-  }
-  return packets;
-}
+// hasPDJLMagic / readPDJLNameField → pdjl/packets.js (위 require 로 가져옴)
+// TCNet 패킷 빌더 mk* (mkOptIn~mkLowResArtwork) → tcnet/packets.js (Phase 4.10)
 
 // ─────────────────────────────────────────────
 // Pro DJ Link parser
 // ─────────────────────────────────────────────
-function parsePDJL(msg){
-  if(msg.length<11) return null;
-  const hasMagic = hasPDJLMagic(msg);
-  const type = msg[10];
-  const name = readPDJLNameField(msg);
-  const isKnownDjmShape =
-    (type===PDJL.DJM && msg.length>=0x80) ||
-    (type===PDJL.DJM2 && msg.length>=0x24) ||
-    (type===PDJL.DJM_ONAIR && msg.length>=0x2C) ||
-    (type===PDJL.DJM_METER && msg.length>=0x180);
-  if(!hasMagic && !isKnownDjmShape) return null;
-
-  if(type===PDJL.CDJ && msg.length>=0x90){
-    // Device number: CDJ-2000NXS2 uses 0x21, CDJ-3000 uses 0x24
-    let pNum = msg[0x21]; if(pNum<1||pNum>6) pNum = msg[0x24];
-    if(pNum<1||pNum>6) return null;
-    // Model detection — use full model name to avoid false-positives (e.g. future CDJ-3000NXS2)
-    const isNXS2 = name.includes('2000NXS2');
-    const p1   = msg[0x7B];
-    const state= P1_TO_STATE[p1] ?? STATE.IDLE;
-    // BPM: uint16BE at 0x92–0x93 = TRACK BPM (original, no pitch) × 100
-    const bpmRaw16 = msg.length>0x93 ? msg.readUInt16BE(0x92) : 0;
-    const trackBpm = (bpmRaw16>0 && bpmRaw16!==0xFFFF) ? bpmRaw16/100 : 0;
-    // Fader pitch: 3 bytes uint24 at 0x8D, neutral=0x100000, range 0~0x200000 (-100%~+100%)
-    const pitchRaw = msg.length>0x8F ? (msg[0x8D]*65536 + msg[0x8E]*256 + msg[0x8F]) : 0x100000;
-    const pitch = (pitchRaw-0x100000)/0x100000*100;
-    // Effective pitch (includes jog wheel nudge) — model-specific:
-    // CDJ-2000NXS2: offset 0x99 (3B) is reliable (jog nudge), fallback to 0x8D if zero
-    // CDJ-3000: offset 0x99 is 0x000000 in cued/paused state → always use fader pitch 0x8D
-    const v99 = isNXS2 && msg.length>0x9B ? (msg[0x99]*65536 + msg[0x9A]*256 + msg[0x9B]) : 0;
-    const effPitchRaw = isNXS2
-      ? (v99 || pitchRaw)  // NXS2: 0x99 includes jog nudge
-      : pitchRaw;          // CDJ-3000: fader pitch only
-    const effPitch = (effPitchRaw-0x100000)/0x100000*100;
-    // Effective BPM: trackBpm × (1 + effPitch/100)
-    let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+effPitch/100)*100)/100 : 0;
-    if(bpmEff > 500) bpmEff = 0;
-    const baseBpm = trackBpm;
-    // beatNum at 0xA0 is reliable on CDJ-3000; on CDJ-2000NXS2 the same offset
-    // may hold unrelated float data (e.g. 0x40000000 = 2.0f raw) yielding
-    // nonsense beat counts like 1073741824. Sanity-clamp: realistic tracks
-    // rarely exceed 10k beats (~40min @ 250BPM). Anything beyond is garbage.
-    const BEAT_MAX = 65535;
-    const _beatNumRaw = msg.length>0xA3 ? msg.readUInt32BE(0xA0) : 0;
-    const beatNum   = _beatNumRaw <= BEAT_MAX ? _beatNumRaw : 0;
-    const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
-    const barsRemain = msg.length>0xA5 ? msg.readUInt16BE(0xA4) : 0;
-    const _trackBeatsRaw = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
-    const trackBeats = _trackBeatsRaw <= BEAT_MAX ? _trackBeatsRaw : 0;
-    // Playback position fraction 0x48-0x4B: uint32BE / 1000 = 0.0~1.0
-    // Available on CDJ-2000NXS2 and CDJ-3000 — gives absolute position for any track including BPM-less
-    const posFracRaw = msg.length>0x4B ? msg.readUInt32BE(0x48) : 0;
-    // Do not synthesize a fraction from beatNum/trackBeats on NXS2: 0xB4 is not a
-    // reliable total-duration field here, and it creates timeline drift/jumps.
-    const positionFraction = (posFracRaw>0 && posFracRaw<=1000) ? posFracRaw/1000 : 0;
-    // Flags byte F at 0x89:
-    //   bit 6 = playing, bit 5 = master, bit 4 = sync, bit 3 = on-air
-    const flags = msg.length>0x89 ? msg[0x89] : 0;
-    const isSync   = !!(flags & 0x10);  // bit 4
-    const isMaster = !!(flags & 0x20);  // bit 5
-    const isOnAir  = !!(flags & 0x08);  // bit 3
-    // Vinyl/CDJ jog mode at 0x9D (P3)
-    const p3 = msg.length>0x9D ? msg[0x9D] : 0;
-    const isVinylMode = (p3===0x09 || p3===0x0A); // forward/backward vinyl
-    // Reverse detection: FFRV state or backward vinyl mode (p3=0x0A)
-    const isReverse = state===STATE.FFRV || p3===0x0A;
-    const pitchMultiplier = effPitchRaw / 0x100000;  // 1.0 = normal speed
-    // Loop start/end from CDJ-3000 512B extended packet.
-    // Pioneer 포맷: raw 는 position_ms × 1000 / 65536 으로 저장 → 역변환 ms = raw * 65536 / 1000.
-    const loopStartRaw = msg.length>0x1C1 ? msg.readUInt32BE(0x1B6) : 0;
-    const loopEndRaw   = msg.length>0x1C5 ? msg.readUInt32BE(0x1BE) : 0;
-    const loopStartMs  = loopStartRaw > 0 ? Math.round(loopStartRaw * 65536 / 1000) : 0;
-    const loopEndMs    = loopEndRaw   > 0 ? Math.round(loopEndRaw   * 65536 / 1000) : 0;
-    return{
-      kind:'cdj', playerNum:pNum, name, deviceName:name, p1, state,
-      p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
-      // p1=0x07 (Cuing) 은 CUE 버튼 홀드로 preview-play 중 — 오디오/TC 진행 중
-      //   매핑 상태는 CUEDOWN 유지 (TCNet out 호환) 하되 isPlaying 은 true.
-      isPlaying: state===STATE.PLAYING || state===STATE.FFWD || state===STATE.FFRV || p1===0x07,
-      isLooping: state===STATE.LOOPING,
-      isReverse,
-      loopStartMs, loopEndMs,
-      bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
-      pitch, effectivePitch:effPitch, pitchMultiplier,
-      isNXS2,
-      trackId: msg.readUInt32BE(0x2C),
-      trackDeviceId: msg[0x28],
-      slot:     msg[0x29],
-      trackType: msg[0x2A],
-      hasTrack: msg[0x29]>0,
-      beatNum, beatInBar, barsRemain, trackBeats,
-      firmware: msg.slice(0x7C,0x80).toString('ascii').replace(/\0/g,'').trim(),
-      isOnAir, isMaster, isSync, isVinylMode,
-      positionFraction, // 0.0-1.0 absolute playback position (0x48 field)
-    };
-  }
-  // ── DJM Mixer Status ──
-  // Type 0x29: flat 56-byte layout (DJM-2000NXS, legacy)
-  // Type 0x39: block 248-byte layout (DJM-900NXS2, V10, A9)
-  if(type===PDJL.DJM2 && msg.length>=0x24){
-    // Type 0x29 — flat layout
-    // rekordbox/NXS-GW 가 fake 0x29 브로드캐스트 → 쓰레기값 원천 차단
-    if(/rekordbox|NXS-?GW|TCS-/i.test(name)) return null;
-    // Faders at 0x0F-0x12 (0-0x7F), scale to 0-255
-    const ch=[0,1,2,3].map(c=>{ const v=msg[0x0F+c]||0; return Math.min(255,Math.round(v*255/0x7F)); });
-    const xfader=Math.min(255,Math.round((msg[0x13]||0)*255/0x7F));
-    const masterLvl=Math.min(255,Math.round((msg[0x14]||0)*255/0x7F));
-    const hpLevel=msg.length>0x15?Math.min(255,Math.round(msg[0x15]*255/0x7F)):0;
-    const hpCueCh=msg.length>0x16?msg[0x16]:0;
-    // EQ: 0x17+ch*3, [Hi,Mid,Lo] 0-0x7F → renderer 형식 [TRIM,HI,MID,LOW,COLOR] 0-255 center=128
-    const eq=[0,1,2,3].map(c=>{
-      const b=0x17+c*3;
-      const hi  = b  <msg.length ? Math.min(255,msg[b  ]*2) : 128;
-      const mid = b+1<msg.length ? Math.min(255,msg[b+1]*2) : 128;
-      const lo  = b+2<msg.length ? Math.min(255,msg[b+2]*2) : 128;
-      return[128, hi, mid, lo, 128]; // TRIM/COLOR neutral
-    });
-    if(!parsePDJL._djm29Logged){
-      parsePDJL._djm29Logged=true;
-      const hex=Array.from(msg.slice(0,Math.min(56,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' ');
-      try{console.log(`[DJM-0x29] name="${name}" len=${msg.length} hex=[${hex}]`);}catch(_){}
-    }
-    return{kind:'djm',name,channel:ch,eq,xfader,masterLvl,boothLvl:0,hpLevel,hpCueCh,chExtra:[]};
-  }
-  if(type===PDJL.DJM && msg.length>=0x80){
-    // Rekordbox 가 생성하는 가짜 0x39 (가상 믹서 state) 차단
-    // 실제 DJM은 "DJM-900NXS2", "DJM-V10", "DJM-A9" 등으로만 이름 시작
-    if(/rekordbox|rbdj|NXS-?GW|TCS-|prolink/i.test(name)){
-      if(!parsePDJL._fake39Logged){
-        parsePDJL._fake39Logged=true;
-        console.warn(`[DJM-0x39] 가짜 패킷 차단: name="${name}" len=${msg.length}`);
-      }
-      return null;
-    }
-    // Type 0x39 — 248-byte layout (DJM-900NXS2/A9/V10)
-    // V10/A9 계열 추가 오프셋
-    // Per-channel block (stride 0x18):
-    //   +0 InputSource  +1 Trim  +2 Comp(V10)  +3 HI  +4 MID  +5 LoMid(V10)
-    //   +6 LO  +7 Color  +8 Send(V10)  +9 CUE  +10 CueB(A9/V10)  +11 Fader  +12 XF Assign
-    const isV10 = /V10/i.test(name);
-    const numCh = isV10 ? 6 : 4;
-    const CH_BASES = [0x024,0x03C,0x054,0x06C,0x084,0x09C];
-    const readB = (o,dflt=0)=> o<msg.length ? msg[o] : dflt;
-    const ch      = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+11,0));
-    const cueBtn  = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+9,0));
-    const cueBtnB = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+10,0));
-    const xfAssign= new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+12,0));
-    // eq: [TRIM, HI, MID, LOW, COLOR] for display compatibility
-    const eq = new Array(numCh).fill(0).map((_,c)=>{
-      const b=CH_BASES[c];
-      return [readB(b+1,128), readB(b+3,128), readB(b+4,128), readB(b+6,128), readB(b+7,128)];
-    });
-    // V10 extras per channel
-    const chComp  = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+2,0));
-    const chLoMid = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+5,128));
-    const chSend  = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+8,0));
-    const chInput = new Array(numCh).fill(0).map((_,c)=>readB(CH_BASES[c]+0,0));
-    const chExtra = new Array(numCh).fill(0).map((_,c)=>({
-      cue:cueBtn[c], cueB:cueBtnB[c], xfa:xfAssign[c],
-      comp:chComp[c], loMid:chLoMid[c], send:chSend[c], input:chInput[c]
-    }));
-    // Global / Master (absolute offsets — same for 4ch & 6ch)
-    const xfader      = readB(0x0B4,128);
-    const faderCurve  = readB(0x0B5,1);
-    const xfCurve     = readB(0x0B6,1);
-    const masterLvl   = readB(0x0B7,128);
-    const masterCue   = readB(0x0B9,0);
-    const masterCueB  = readB(0x0BA,0);  // A9/V10
-    const isolatorOn  = readB(0x0BB,0);  // A9/V10
-    const isolatorHi  = readB(0x0BC,128);// V10
-    const isolatorMid = readB(0x0BD,128);// V10
-    const isolatorLo  = readB(0x0BE,128);// V10
-    const boothLvl    = readB(0x0BF,0);
-    const boothEqHi   = readB(0x0C0,128);// A9/V10
-    const boothEqLo   = readB(0x0C1,128);// A9/V10
-    // Headphones
-    const hpCueLink   = readB(0x0C4,0);
-    const hpCueLinkB  = readB(0x0C5,0);  // A9/V10
-    const hpMixing    = readB(0x0E3,0);
-    const hpLevel     = readB(0x0E4,0);
-    const boothEqBtn  = readB(0x0E5,0);  // A9/V10
-    const hpMixingB   = readB(0x0E6,0);  // A9/V10
-    const hpLevelB    = readB(0x0E7,0);  // A9/V10
-    // Beat FX
-    const fxFreqLo    = readB(0x0C6,0);
-    const fxFreqMid   = readB(0x0C7,0);
-    const fxFreqHi    = readB(0x0C8,0);
-    const beatFxSel   = readB(0x0C9,0);
-    const beatFxAssign= readB(0x0CA,0);
-    const beatFxLevel = readB(0x0CB,0);
-    const beatFxOn    = readB(0x0CC,0);
-    const multiIoSel  = readB(0x0CE,0);
-    const sendReturn  = readB(0x0CF,0);
-    // Mic
-    const micEqHi     = readB(0x0D6,128);
-    const micEqLo     = readB(0x0D7,128);
-    // Filter (V10)
-    const filterLPF   = readB(0x0D8,0);
-    const filterHPF   = readB(0x0D9,0);
-    const filterReso  = readB(0x0DA,0);
-    // Color FX / Send ext
-    const colorFxSel  = readB(0x0DB,255);
-    const sendExt1    = readB(0x0DC,0);
-    const sendExt2    = readB(0x0DD,0);
-    const colorFxParam= readB(0x0E2,128);
-    // Master Mix (V10 — shares 0x0E2 with ColorFxParam)
-    const masterMixOn   = readB(0x0DE,0);
-    const masterMixSize = readB(0x0DF,0);
-    const masterMixTime = readB(0x0E0,0);
-    const masterMixTone = readB(0x0E1,0);
-    const masterMixLevel= readB(0x0E2,0);
-    // Legacy aliases kept for backward compatibility with renderer
-    const eqCurve = faderCurve; // historical name; actually fader curve
-    const masterBalance = 128;  // not in 0x39 (V10 has isolator instead)
-    const hpCueCh = hpCueLink;  // legacy alias
-    // Debug hex dump: first receive (per-channel + global ranges)
-    if(!parsePDJL._djm39Logged){
-      parsePDJL._djm39Logged=true;
-      const hex=CH_BASES.slice(0,numCh).map((b,c)=>`CH${c+1}[${Array.from(msg.slice(b,Math.min(b+13,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' ')}]`).join(' ');
-      const gHex=msg.length>0xB4?Array.from(msg.slice(0xB4,Math.min(0xE8,msg.length))).map(x=>x.toString(16).padStart(2,'0')).join(' '):'(none)';
-      try{console.log(`[DJM-0x39] model=${name} ${isV10?'(V10/6ch)':'(4ch)'} len=${msg.length}\n  ${hex}\n  GLOBAL@0xB4=[${gHex}]`);}catch(_){}
-    }
-    if(process.env.BRIDGE_DJM39_DEBUG){
-      if(!parsePDJL._lastDjm||parsePDJL._lastDjm.length!==ch.length||parsePDJL._lastDjm.some((v,i)=>v!==ch[i])){
-        parsePDJL._lastDjm=ch.slice();
-        try{console.log(`[DJM-0x39] faders=[${ch}] xf=${xfader} mVol=${masterLvl} mCue=${masterCue} booth=${boothLvl} fCv=${faderCurve} xfCv=${xfCurve} hpLv=${hpLevel} hpMix=${hpMixing} beatFx=${beatFxSel}/${beatFxOn} colorFx=${colorFxSel}`);}catch(_){}
-      }
-    }
-    return{
-      kind:'djm',name, isV10, numCh,
-      channel:ch, eq, cueBtn, cueBtnB, xfAssign, chExtra,
-      xfader, masterLvl, masterCue, masterCueB,
-      faderCurve, xfCurve,
-      isolatorOn, isolatorHi, isolatorMid, isolatorLo,
-      boothLvl, boothEqHi, boothEqLo, boothEqBtn,
-      hpCueLink, hpCueLinkB, hpMixing, hpMixingB, hpLevel, hpLevelB,
-      fxFreqLo, fxFreqMid, fxFreqHi,
-      beatFxSel, beatFxAssign, beatFxLevel, beatFxOn, multiIoSel, sendReturn,
-      micEqHi, micEqLo,
-      filterLPF, filterHPF, filterReso,
-      colorFxSel, sendExt1, sendExt2, colorFxParam,
-      masterMixOn, masterMixSize, masterMixTime, masterMixTone, masterMixLevel,
-      // legacy aliases
-      masterBalance, eqCurve, hpCueCh
-    };
-  }
-  // DJM VU Metering (type 0x58, ~524B, port 50001)
-  // 15 × uint16BE per block, 0=silence, 32767=clip:
-  //   4-ch: CH1=0x02C CH2=0x068 CH3=0x0A4 CH4=0x0E0 MasterL=0x11C MasterR=0x158
-  //   6-ch (V10): CH5=0x194 CH6=0x1D0 appended AFTER MasterR (same as 4-ch positions)
-  if(type===PDJL.DJM_METER && msg.length>=0x176){
-    const isV10 = /V10/i.test(name);
-    const chOff4 = [0x02C,0x068,0x0A4,0x0E0];
-    const chOff6 = [0x02C,0x068,0x0A4,0x0E0,0x194,0x1D0];
-    const masterLOff = 0x11C, masterROff = 0x158;
-    const chOffsets = isV10 ? chOff6 : chOff4;
-    const readBlock = (base)=>{
-      const bands=[]; let peak=0;
-      for(let b=0;b<15;b++){
-        const off=base+b*2;
-        if(off+1<msg.length){const v=msg.readUInt16BE(off); if(v>peak)peak=v; bands.push(Math.min(255,Math.round(v/32767*255)));}
-        else bands.push(0);
-      }
-      return {peak:Math.min(255,Math.round(peak/32767*255)), bands};
-    };
-    const blocks = chOffsets.map(readBlock);
-    const ch = blocks.map(b=>b.peak);
-    const spectrum = blocks.map(b=>b.bands);
-    const mL = msg.length>=masterLOff+30 ? readBlock(masterLOff) : {peak:0,bands:new Array(15).fill(0)};
-    const mR = msg.length>=masterROff+30 ? readBlock(masterROff) : {peak:0,bands:new Array(15).fill(0)};
-    return{kind:'djm_meter',name,isV10,numCh:chOffsets.length,ch,spectrum,masterL:mL.peak,masterR:mR.peak,masterLBands:mL.bands,masterRBands:mR.bands};
-  }
-  // DJM Channels On-Air (type 0x03, 45B, port 50001)
-  if(type===PDJL.DJM_ONAIR && msg.length>=0x2C){
-    const name2 = msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
-    if(name2.includes('DJM')){
-      // 각 채널은 2바이트 페어로 상태 표현:
-      //   CH1=(0x24,0x25)  CH2=(0x26,0x27)  CH3=(0x28,0x29)  CH4=(0x2A,0x2B)
-      //   각 페어 내 두 바이트는 X-Fader A/B assign 또는 단독 on-air 비트 (DJM 내부 상태)
-      //   페어 OR로 "채널 활성" 판정 → 단일 바이트만 읽으면 CH4 깜빡임 발생(이전 버그)
-
-      // Optional packet-diff diagnostics for DJM 0x03 on-air packets.
-      if(process.env.BRIDGE_DJM03_DEBUG && !parsePDJL._djm03First){
-        parsePDJL._djm03First=true;
-        const hex=Array.from(msg).map((b,i)=>`[0x${i.toString(16).padStart(2,'0')}]=0x${b.toString(16).padStart(2,'0')}`).join(' ');
-        console.log(`[DJM-0x03] FULL DUMP len=${msg.length}: ${hex}`);
-      }
-      if(process.env.BRIDGE_DJM03_DEBUG){
-        if(!parsePDJL._djm03Baseline) parsePDJL._djm03Baseline=Buffer.from(msg);
-        else {
-          const changed=[];
-          for(let i=0x1B;i<Math.min(msg.length,parsePDJL._djm03Baseline.length);i++){
-            if(msg[i]!==parsePDJL._djm03Baseline[i]){
-              changed.push(`0x${i.toString(16)}:${parsePDJL._djm03Baseline[i]}→${msg[i]}`);
-            }
-          }
-          if(changed.length){
-            parsePDJL._djm03Baseline=Buffer.from(msg);
-            console.log(`[DJM-0x03] BYTE CHANGE: ${changed.join(' ')}`);
-          }
-        }
-      }
-
-      // CUE info comes from 0x39 packet (preferred) or TCNet MixerData — not from 0x03
-      const cueCh=[0,0,0,0];
-      const onA=(a,b)=> (msg[a]||msg[b]) ? 1 : 0;
-      return{kind:'djm_onair',name:name2,
-        onAir:[onA(0x24,0x25), onA(0x26,0x27), onA(0x28,0x29), onA(0x2A,0x2B)],
-        cueCh};
-    }
-  }
-  // Type 0x02 = Fader Start (DJM → CDJ, port 50001, ~50B)
-  // Commands: 0x00=start, 0x01=stop+cue, 0x02=maintain
-  if(type===0x02 && msg.length>=42){
-    const name2=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
-    // Fader start: logged once per session via _pdjlDbg above
-      // bytes 42-45 = C1,C2,C3,C4 commands
-    if(msg.length>=46){
-      return{kind:'fader_start',name:name2,ch:[msg[42],msg[43],msg[44],msg[45]]};
-    }
-  }
-  // Type 0x28 = Beat packet (96B on port 50001) — beat timing + position data
-  // 확정 오프셋: 84=pitch(u32BE), 90=bpm(u16BE×100), 92=beatInBar(1-4)
-  if(type===0x28 && msg.length>=96){
-    const pNum = msg[33];
-    if(pNum>=1&&pNum<=6){
-      const pitch = msg.readUInt32BE(84);
-      const bpm16 = msg.readUInt16BE(90);
-      const beat  = msg[92]; // 1-4
-      return{
-        kind:'beat', playerNum:pNum, name,
-        pitch: (pitch-0x100000)/0x100000*100,
-        bpm: (bpm16>0&&bpm16!==0xFFFF)?bpm16/100:0,
-        beatInBar: beat,
-      };
-    }
-  }
-  // CDJ-3000 waveform preview (type 0x56, variable size)
-  // Sub-types at byte 0x33: 0x02=mono preview, 0x03=beat grid, 0x25=color waveform
-  if(type===PDJL.CDJ_WF && msg.length>0x34){
-    const pNum = msg[0x2a]; // player number
-    const sub  = msg[0x33]; // sub-type
-    const seg  = msg.readUInt16BE(0x30); // segment index
-    if(sub===0x25 && msg.length>0x40){
-      // Color waveform: 2 bytes per point starting at 0x34
-      // Byte 1: high nibble = color (0-15), low nibble = extra
-      // Byte 2: height (0-255)
-      const pts=[];
-      for(let i=0x34;i<msg.length-1;i+=2){
-        pts.push({color:(msg[i]>>4)&0xF, height:msg[i+1]});
-      }
-      return{kind:'cdj_wf',playerNum:pNum,name,sub,seg,pts,wfType:'color'};
-    }
-    if(sub===0x02 && msg.length>0x40){
-      // Mono waveform preview: 1 byte per point starting at 0x34
-      const pts=[];
-      for(let i=0x34;i<msg.length;i++){
-        pts.push({height:msg[i]});
-      }
-      return{kind:'cdj_wf',playerNum:pNum,name,sub,seg,pts,wfType:'mono'};
-    }
-    return null; // ignore beat grid (0x03) and others
-  }
-  if(type===PDJL.ANN){
-    // Media Slot Response (type 0x06, length > 0xA8) — contains USB color at 0xA8
-    if(msg.length>0xA8){
-      const pNum=msg.length>0x24?msg[0x24]:0;
-      const color=msg[0xA8];
-      if(color>=0&&color<=8){
-        return{kind:'media_slot',name,playerNum:pNum,mediaColor:color};
-      }
-    }
-    const playerNum = msg.length>0x24 ? msg[0x24] : 0;
-    // 자체 분석: byte[0x21]=device type (0x02=mixer), byte[0x24]=playerNum (>=0x21=DJM)
-    const devType = msg.length>0x21 ? msg[0x21] : 0;
-    const isDjmType = devType===0x02 && playerNum>=0x21;
-    return{kind:'announce',name,playerNum,isDjmType};
-  }
-  // CDJ-3000 Absolute Position (type 0x0b, port 50001, ~60B, ~30Hz pairs)
-  // CDJ-3000 sends PAIRS: 1) real data (byte[33]=player 1-6), 2) garbage (byte[33]>=0x80)
-  // Filter by player number range
-  // Offsets: [38-39] trackLen(s) uint16BE, [40-43] playhead(ms), [44-47] pitch, [56-59] bpm*10
-  // Note: bytes[36-37] are separate fields (not part of trackLength).
-  // Only bytes[38-39] as uint16BE give correct duration across all CDJ-3000 units.
-  // CDJ-3000 Precise Position (type 0x0b, exactly 60B, port 50001)
-  // IMPORTANT: NXS2 also sends type 0x0b with different structure — filter by name field
-  if(type===0x0b && msg.length>=60){
-    const pNum = msg[33];
-    if(pNum>=1 && pNum<=6){
-      // NXS2 sends type 0x0b packets with incompatible structure — reject by name
-      if(name.includes('2000NXS2') || name.includes('NXS2') || name.includes('NXS')) return null;
-      const trackLenSec = msg.readUInt16BE(38);
-      const playheadRaw = msg.readUInt32BE(40);
-      const pitchRaw2 = msg.readInt32BE(44);
-      const bpmRaw10 = msg.readUInt32BE(56);
-      // Sanity check: reject garbage packets
-      // Valid: trackLen < 24h, playhead ≤ trackLen×1000ms, BPM 20-500, pitch ±50%
-      const bpmCheck = bpmRaw10/10;
-      // bpmCheck=0 허용: BPM 정보 없는 트랙(BPM-less)도 정상 처리
-      const sane = trackLenSec > 0 && trackLenSec < 86400
-                && playheadRaw <= trackLenSec * 1000
-                && (bpmCheck === 0 || (bpmCheck > 20 && bpmCheck < 500))
-                && Math.abs(pitchRaw2) < 5000;
-      if(!sane) return null;
-      return{
-        kind:'precise_pos', playerNum:pNum, name,
-        trackLengthSec: trackLenSec,
-        playbackMs: playheadRaw,
-        pitch: pitchRaw2/100,
-        bpmEffective: bpmRaw10/10,
-      };
-    }
-  }
-  // Catch-all: return unknown packet with raw info for DJM protocol analysis
-  if(msg.length>=0x1B){
-    const devName=msg.slice(0x0B,0x1B).toString('ascii').replace(/\0/g,'').trim();
-    if(devName.includes('DJM')){
-      if(type===0x20){
-        // DJM-900NXS2 sends 0x20 in response to 0x57 subscribe — handshake probe
-        const seqCounter = msg.length>0x28 ? msg[0x28] : 0;
-        return{kind:'djm_probe20',name:devName,type,seq:seqCounter,rawLen:msg.length};
-      }
-      if(!parsePDJL._unkDjm)parsePDJL._unkDjm={};
-      const uk=type+'_'+msg.length;
-      if(!parsePDJL._unkDjm[uk]){
-        parsePDJL._unkDjm[uk]=true;
-        console.log(`[DJM-UNK] type=0x${type.toString(16)} len=${msg.length} name=${devName} hex=${msg.slice(0,Math.min(64,msg.length)).toString('hex')}`);
-      }
-      return{kind:'djm_unknown',name:devName,type,rawLen:msg.length};
-    }
-  }
-  return null;
-}
+// parsePDJL → pdjl/parser.js (Phase 4.9)
+const { parsePDJL } = require('./pdjl/parser');
+// dbserver protocol pure helpers → pdjl/dbserver.js (Phase 4.11)
+const _DB = require('./pdjl/dbserver');
 
 // ─────────────────────────────────────────────
 // Default album art — vinyl record JPEG loaded from file
@@ -1378,10 +433,10 @@ class BridgeCore {
     this._startVirtualDbServer();
 
     const nid = TC.NID[1].toString(16)+TC.NID[0].toString(16);
-    console.log(`[v13] mode=${this.isLocalMode?'LOCAL(127.0.0.1)':'NETWORK'} bc=${this.broadcastAddr} localIP=${this.localAddr||'none'}`);
-    console.log(`[v13] NodeID=0x${nid}, NodeType=0x${TC.NTYPE.toString(16)}, lPort=${this.listenerPort}, name=${TC.NNAME}`);
-    console.log(`[v13] Sending: OptIn(1s) + Status(170ms) + TIME(33ms) + DATA(170ms)`);
-    console.log(`[v13] Triple-send: broadcast + localIP(${this.localAddr}) + 127.0.0.1`);
+    console.log(`[TCNet] mode=${this.isLocalMode?'LOCAL(127.0.0.1)':'NETWORK'} bc=${this.broadcastAddr} localIP=${this.localAddr||'none'}`);
+    console.log(`[TCNet] NodeID=0x${nid}, NodeType=0x${TC.NTYPE.toString(16)}, lPort=${this.listenerPort}, name=${TC.NNAME}`);
+    console.log('[TCNet] Sending: OptIn(1s) + Status(170ms) + TIME(33ms) + DATA(170ms)');
+    console.log(`[TCNet] Triple-send: broadcast + localIP(${this.localAddr}) + 127.0.0.1`);
     return this;
   }
 
@@ -1766,14 +821,6 @@ class BridgeCore {
   _sendArtwork(layerIdx, jpegBuf){
     if(!jpegBuf || !this.running) return;
     const packets = mkLowResArtwork(layerIdx, jpegBuf);
-    const targets = [];
-    for(const node of Object.values(this.nodes)){
-      if(Date.now()-node.lastSeen > 15000) continue;
-      if(node.lPort) targets.push(`${node.name||'?'}@${node.ip}:${node.lPort}`);
-    }
-    const isJpeg = jpegBuf[0]===0xFF && jpegBuf[1]===0xD8;
-    const endOk = jpegBuf[jpegBuf.length-2]===0xFF && jpegBuf[jpegBuf.length-1]===0xD9;
-    // [TCNET-ART] muted
     for(const pkt of packets){
       this._sendDataToArenas(pkt);
     }
@@ -1792,7 +839,7 @@ class BridgeCore {
         count++;
       }
     }
-    if(count > 0) console.log(`[TCNET-ART] resending ${count} artwork(s) to new node`);
+    if(count > 0) console.log(`[TCNet-ART] resending ${count} artwork(s) to new node`);
   }
 
   /**
@@ -1850,15 +897,6 @@ class BridgeCore {
 
   _sendStatus(){
     const pkt = mkStatus(this.listenerPort, this.devices, this.layers, this.faders, this.hwMode);
-    // Debug: log layers state once per second (first 10 times)
-    if(!this._stDbg)this._stDbg=0;
-    if(this._stDbg<10 && Date.now()-this.startTime>2000){
-      if(!this._stDbgLast || Date.now()-this._stDbgLast>1000){
-        this._stDbgLast=Date.now();this._stDbg++;
-        const ls=this.layers.map((l,i)=>l?`L${i+1}:st=${l.state},bpm=${l.bpm},tc=${l.timecodeMs}`:'null');
-        // [ST] layers muted
-      }
-    }
     this._send(pkt, TC.P_BC);
     this._sendToArenas(pkt, TC.P_BC);
     this._sendToArenasLPort(pkt);
@@ -1954,7 +992,7 @@ class BridgeCore {
         const now=Date.now();
         if(!this._tcMixerLogAt||now-this._tcMixerLogAt>2000){
           this._tcMixerLogAt=now;
-          try{console.log(`[TCNet MixerData] from=${rinfo.address} masterAudio=${masterAudio} chAudio=[${chAudio}] cueA=[${chCueA}] xfAssign=[${chXfAssign}]`);}catch(_){}
+          try{console.log(`[TCNet] MixerData from=${rinfo.address} masterAudio=${masterAudio} chAudio=[${chAudio}] cueA=[${chCueA}] xfAssign=[${chXfAssign}]`);}catch(_){}
         }
         this.onTCMixerVU?.({masterAudio,masterFader,xfader,chAudio,chFader,chCueA,chCueB,chXfAssign,from:rinfo.address});
       }
@@ -1998,7 +1036,7 @@ class BridgeCore {
       const loSock = dgram.createSocket({type:'udp4', reuseAddr:true});
       this._loRxSocket = loSock;
       loSock.on('message',(msg,rinfo)=>this._handleTCNetMsg(msg, rinfo, 'lo-RX'));
-      loSock.on('error',(e)=>{ console.warn(`[lo-RX] error: ${e.message}`); });
+      loSock.on('error',(e)=>{ console.warn(`[TCNet] loopback RX error: ${e.message}`); });
       loSock.bind(TC.P_BC, '127.0.0.1', ()=>{
         console.log(`[TCNet] loopback RX on 127.0.0.1:${TC.P_BC}`);
       });
@@ -2008,7 +1046,7 @@ class BridgeCore {
         const ipSock = dgram.createSocket({type:'udp4', reuseAddr:true});
         this._ipRxSocket = ipSock;
         ipSock.on('message',(msg,rinfo)=>this._handleTCNetMsg(msg, rinfo, 'ip-RX'));
-        ipSock.on('error',(e)=>{ console.warn(`[ip-RX] error: ${e.message}`); });
+        ipSock.on('error',(e)=>{ console.warn(`[TCNet] IP RX error: ${e.message}`); });
         ipSock.bind(TC.P_BC, this.localAddr, ()=>{
           console.log(`[TCNet] IP RX on ${this.localAddr}:${TC.P_BC}`);
         });
@@ -2038,7 +1076,7 @@ class BridgeCore {
         // Only log first occurrence of each type from each source
         const lk=name+type;
         if(!this._lPortDbg)this._lPortDbg={};
-        if(!this._lPortDbg[lk]){this._lPortDbg[lk]=true;try{console.log(`[lPort] ${name} type=0x${type.toString(16)} from ${rinfo.address}:${rinfo.port}`);}catch(_){}}
+        if(!this._lPortDbg[lk]){this._lPortDbg[lk]=true;try{console.log(`[TCNet] lPort ${name} type=0x${type.toString(16)} from ${rinfo.address}:${rinfo.port}`);}catch(_){}}
 
         if(type===TC.OPTIN){
           const body = msg.slice(TC.H);
@@ -2049,7 +1087,7 @@ class BridgeCore {
           const isNew = !this.nodes[key];
           this.nodes[key] = {name,vendor,device,type:msg[17],ip:rinfo.address,port:rinfo.port,lPort,lastSeen:Date.now()};
           if(isNew){
-            console.log(`[lPort] OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor} device=${device}`);
+            console.log(`[TCNet] lPort OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor} device=${device}`);
             // Re-send artwork to newly connected node (delayed to allow node registration)
             setTimeout(()=>this._resendAllArtwork(), 500);
           }
@@ -2060,7 +1098,7 @@ class BridgeCore {
           const key = name+'@'+rinfo.address;
           if(!this.nodes[key]){
             this.nodes[key] = {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()};
-            console.log(`[lPort] auto-register ${name}@${rinfo.address} lPort=${rinfo.port} (from type=0x${type.toString(16)})`);
+            console.log(`[TCNet] lPort auto-register ${name}@${rinfo.address} lPort=${rinfo.port} (from type=0x${type.toString(16)})`);
             setTimeout(()=>this._resendAllArtwork(), 500);
             this.onNodeDiscovered?.(this.nodes[key]);
           } else {
@@ -2072,7 +1110,7 @@ class BridgeCore {
           const lPort = body.length>=22 ? body.readUInt16LE(20) : rinfo.port;
           const key = name+'@'+rinfo.address;
           if(this.nodes[key]) this.nodes[key].lPort = lPort || rinfo.port;
-          if(!this._lPortDbg['app_'+rinfo.address]){this._lPortDbg['app_'+rinfo.address]=true;console.log(`[lPort] APP from ${name} → ${rinfo.address}:${rinfo.port} lPort=${lPort}`);}
+          if(!this._lPortDbg['app_'+rinfo.address]){this._lPortDbg['app_'+rinfo.address]=true;console.log(`[TCNet] lPort APP from ${name} → ${rinfo.address}:${rinfo.port} lPort=${lPort}`);}
           try{ this.txSocket?.send(mkAppResp(this.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
         }
         if(type===0x14){
@@ -2091,11 +1129,11 @@ class BridgeCore {
         }
       });
       sock.on('error',(e)=>{
-        console.warn(`[lPort] error: ${e.message}`);
+        console.warn(`[TCNet] lPort error: ${e.message}`);
         // Fallback to 127.0.0.1 if bind address unavailable
         if(e.code==='EADDRNOTAVAIL'){
           sock.removeAllListeners('error');
-          sock.on('error',(e2)=>{console.warn(`[lPort] fallback error: ${e2.message}`);reject(e2);});
+          sock.on('error',(e2)=>{console.warn(`[TCNet] lPort fallback error: ${e2.message}`);reject(e2);});
           sock.bind(0, '127.0.0.1', ()=>{
             this.listenerPort = sock.address().port;
             try{this._ownPorts.add(this.listenerPort);}catch(_){}
@@ -2222,6 +1260,8 @@ class BridgeCore {
       }
     } else {
       // [2026-04-19] 인덱스 하드코딩 제거 — 포트 50000 바인드 실패 시에도 안전
+      // Mac: 0.0.0.0:50000 RX 소켓 그대로 사용 (broadcast RX 유지). TX 시 OS 가
+      //      default route 결정 — link-local 통신은 link-local 인터페이스로 자동.
       this._pdjlAnnSock = this._pdjlSocketByPort?.[50000] || this._pdjlSockets?.[0] || null;
       if(!this._pdjlAnnSock){
         const s=dgram.createSocket({type:'udp4',reuseAddr:true});
@@ -2290,7 +1330,6 @@ class BridgeCore {
           if(!liveSession()||!this._pdjlAnnSock) return;
           const p=buildPdjlBridgeHelloPacket(spoofPlayer);
           for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
-          // [PDJL] bridge hello muted
         }, h*HELLO_GAP);
       }
       for(let n=1;n<=CLAIM_N;n++){
@@ -2300,7 +1339,6 @@ class BridgeCore {
           for(const bc of allBCs){
             try{this._pdjlAnnSock.send(cp,0,cp.length,50000,bc);}catch(_){}
           }
-          // [PDJL] bridge claim muted
           if(n===CLAIM_N){
             setTimeout(()=>{
               if(!liveSession()) return;
@@ -2422,7 +1460,7 @@ class BridgeCore {
       }
     };
     // 타이밍 설계: join 완료(≈6.6s) → keepalive 시작 → 추가 3s 뒤 첫 subscribe (경합 방지)
-    // Pioneer 공식 브릿지는 0x57 을 단 1번만 보냄 (pcap 확정, 0424_.pcapng).
+    // Pioneer 공식 브리지는 0x57 을 단 1번만 보냄 (pcap 확정, 0424_.pcapng).
     // 반복 subscribe 는 DJM 상태를 교란할 수 있어 제거. 15초 뒤 0x39/0x58 모두
     // 미수신일 때만 1회 재시도 fallback.
     setTimeout(sendDjmSub, 9700);
@@ -2548,12 +1586,17 @@ class BridgeCore {
 
         if(trackChanged){
           this._tcAcc[li] = { prevBn: p.beatNum, elapsedMs: 0, trackId: p.trackId, dbgCount:0, metaRequested:false, initPos:0 };
-          // [TC] track change muted
           // 새 트랙에 이전 캐시 적용 금지: beat grid / 길이 / 정밀 위치 모두 무효화
           // (dbserver 응답이 오기 전까지 stale 값으로 timecodeMs 계산하면 UI가 점프로 인식)
           if(this._beatGrids) delete this._beatGrids[p.playerNum];
           if(this._bgTrackLen) delete this._bgTrackLen[p.playerNum];
           if(this._precisePos) delete this._precisePos[p.playerNum];
+          if(this._wfTrackLen) delete this._wfTrackLen[p.playerNum];
+          // NXS2 한정: 트랙 변경 시 cuePos/totalLength stale 잔존 명시적 초기화
+          if(p.isNXS2){
+            if(this._cuePosMs) this._cuePosMs[p.playerNum] = 0;
+            if(this.layers[li]) this.layers[li].totalLength = 0;
+          }
           // Clear artwork on track change — push blank JPEG to Arena to replace stale art
           this._virtualArt[li] = BLANK_JPEG;
           if(this.layers[li]){
@@ -2569,10 +1612,16 @@ class BridgeCore {
             // Find source device IP: trackDeviceId tells us which player owns the media.
             const srcDev = this.devices['cdj'+p.trackDeviceId];
             const medSrc = this._mediaSources?.[p.trackDeviceId];
-            const _ip = srcDev?.ip || medSrc?.ip || rinfo?.address;
+            // NXS2 USB direct: trackDeviceId 가 자기 자신(p.playerNum) 일 때 fallback 도 자기 IP 로
+            const selfDev = this.devices['cdj'+p.playerNum];
+            const _ip = srcDev?.ip || medSrc?.ip
+              || (p.trackDeviceId===p.playerNum ? selfDev?.ip : null)
+              || rinfo?.address;
             const _slot=p.slot||3, _tid=p.trackId, _pn=p.playerNum, _tt=p.trackType||1;
-            console.log(`[META] P${_pn} tid=${_tid} trackDeviceId=${p.trackDeviceId} slot=${_slot} tt=${_tt}`
-              +` → ip=${_ip} (src=${srcDev?'cdj'+p.trackDeviceId:medSrc?'mediaSrc '+medSrc.name:'rinfo'})`);
+            const _srcLbl = srcDev ? 'cdj'+p.trackDeviceId
+              : medSrc ? 'mediaSrc '+medSrc.name
+              : (p.trackDeviceId===p.playerNum ? 'self('+p.playerNum+')' : 'rinfo');
+            _dbgLog(`[META] P${_pn} tid=${_tid} trackDevId=${p.trackDeviceId} slot=${_slot} tt=${_tt} → ip=${_ip} (src=${_srcLbl}) NXS2=${!!p.isNXS2}`);
             setTimeout(()=>this.requestMetadata(_ip, _slot, _tid, _pn, true, _tt), this._dbReady?100:3000);
             this._dbReady = true;
           }
@@ -2582,7 +1631,6 @@ class BridgeCore {
           const _ip = srcDev?.ip
             || this._mediaSources?.[p.trackDeviceId]?.ip
             || rinfo?.address;
-          // [TC] metadata retry muted
           this.requestMetadata(_ip, p.slot||3, p.trackId, p.playerNum, false, p.trackType||1);
         }
         // ── Track length (권위 순위) ──
@@ -2705,7 +1753,7 @@ class BridgeCore {
               timecodeMs = Math.round(acc._anchorMs + elapsed * p.pitchMultiplier);
             }
           } else {
-            // Beat-link fallback (no positionFraction: BPM-less track or trackBeats=0)
+            // BPM-less / trackBeats=0 fallback — beat 카운터 + pitch extrapolation
             const bg = this._beatGrids?.[p.playerNum];
             const beatNum = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
             const beatIdx = beatNum - 1;
@@ -2730,15 +1778,21 @@ class BridgeCore {
               timecodeMs = Math.round((beatNum-1) * 60000 / p.bpmTrack);
               acc._anchorMs = timecodeMs; acc._anchorTime = Date.now(); acc.prevBn = beatNum;
             } else {
-              // BPM-less + no beat number: wall-clock interpolation
-              if(p.pitchMultiplier > 0){
+              // BPM-less + no beat number: wall-clock interpolation.
+              // NXS2 한정 강화: pitchMultiplier 가 0 이라도 (paused/0% pitch) playing 상태면
+              // 1.0 fallback 사용. 이전엔 pitchMultiplier=0 이면 stale tc 유지 → 정체.
+              const pm = (p.pitchMultiplier > 0)
+                ? p.pitchMultiplier
+                : (p.isNXS2 && p.isPlaying ? 1.0 : 0);
+              if(pm > 0){
                 if(acc._noBeatAnchorTime == null){
                   acc._noBeatAnchorTime = Date.now();
                   acc._noBeatAnchorMs = (this.layers[li]?.timecodeMs) || 0;
                 }
                 const elapsed = Date.now() - acc._noBeatAnchorTime;
-                timecodeMs = Math.round(acc._noBeatAnchorMs + elapsed * p.pitchMultiplier);
-                if(elapsed > 2000){ acc._noBeatAnchorTime=Date.now(); acc._noBeatAnchorMs=timecodeMs; }
+                timecodeMs = Math.round(acc._noBeatAnchorMs + elapsed * pm);
+                // 재anchor 주기 단축 (2s → 500ms) — NXS2 status 600ms 간격 사이에서도 매끄럽게
+                if(elapsed > 500){ acc._noBeatAnchorTime=Date.now(); acc._noBeatAnchorMs=timecodeMs; }
                 // Loop wrap only in LOOPING state; non-loop tracks clamp at track end
                 if(totalLenMs > 0 && timecodeMs >= totalLenMs){
                   if(p.isLooping){
@@ -2785,16 +1839,25 @@ class BridgeCore {
         const beatChanged  = !prev || prev.beatPhase !== beatPhase;
 
         if(stateChanged || bpmChanged || trackChanged || beatChanged){
+          // NXS2 한정: !hasTrack 인데 prev.totalLength 가 살아있으면 stale 잔존 → 0 강제.
+          // (CDJ-3000 은 0x0b precise_pos 가 별도 길이 정보 보내므로 그대로)
+          const _len = (p.isNXS2 && !p.hasTrack)
+            ? 0
+            : (totalLenMs || prev?.totalLength || 0);
           this.updateLayer(li, {
             state:       p.state,
             timecodeMs,
             bpm:         p.bpm,
             trackId:     p.trackId,
-            totalLength: totalLenMs || prev?.totalLength || 0,
+            totalLength: _len,
             beatPhase,
             deviceName:  p.name,
             _pitch:      p.effectivePitch || p.pitch || 0,
           });
+          // NXS2 + no-track 시 cuePos 도 0 으로 강제 (renderer 가 dk.cp 0 표시)
+          if(p.isNXS2 && !p.hasTrack && this._cuePosMs){
+            this._cuePosMs[p.playerNum] = 0;
+          }
         } else if(prev){
           prev._pitch = p.pitch || 0;
           // Only reset interpolation origin when timecode actually changed (new beat)
@@ -2806,11 +1869,44 @@ class BridgeCore {
         p.ip = rinfo.address;
         p.timecodeMs = timecodeMs;
         p.totalLenMs = totalLenMs; // beat-based ms precision — renderer uses this for dk.dur
+
+        // CUEDOWN 상태 = CDJ 가 현재 큐 포인트에 있음 → cuePosMs 캡쳐.
+        // DJ 가 CUE 버튼으로 새 큐 설정하면 그 위치가 timecodeMs 로 들어옴.
+        if(!this._cuePosMs) this._cuePosMs = {};
+        if(p.state === STATE.CUEDOWN && timecodeMs >= 0){
+          this._cuePosMs[p.playerNum] = timecodeMs;
+        }
+        p.cuePosMs = this._cuePosMs[p.playerNum] || 0;
+
         // NXS2: 패킷에 loop 필드 없음 → positionFraction 역전으로 추론한 loop 경계 주입
         if(p.isNXS2 && acc?._loopStartMs > 0 && acc?._loopEndMs > acc._loopStartMs){
           p.loopStartMs = acc._loopStartMs;
           p.loopEndMs   = acc._loopEndMs;
         }
+
+        // NXS2/CDJ 상세 로그 — 0.5s 간격 + 상태 전환마다. 타임코드 지터/점프/CP 추적용.
+        if(!this._cdjLogState) this._cdjLogState = {};
+        const cs = this._cdjLogState[p.playerNum] || (this._cdjLogState[p.playerNum] = { lastT:0, lastState:-1, lastTc:0, hexDumped:false });
+        const nowL = Date.now();
+        const stChanged = cs.lastState !== p.state;
+        const bigJump = Math.abs(timecodeMs - cs.lastTc) > 1500;
+        // NXS2 첫 패킷 + state change 마다 raw hex 0x80~0xC0 영역 dump (BPM/beat offset 분석용)
+        if(p.isNXS2 && (!cs.hexDumped || stChanged)){
+          cs.hexDumped = true;
+          const head = p._msgHexHead || '';
+          // 0x80 ~ 0xC0 영역 추출 (BPM=0x92, pitch=0x8D, beat=0xA0, trackBeats=0xB4 모두 포함)
+          const region80 = head.slice(0x80*2, Math.min(0xC0*2, head.length));
+          _dbgLog(`[NXS2-RAW] P${p.playerNum} fw=${p.firmware} msgLen=${p._rawMsgLen} bpmRaw16=0x${(p._bpmRaw16||0).toString(16)} beatRaw=0x${(p._beatNumRaw||0).toString(16)} trackBeatsRaw=0x${(p._trackBeatsRaw||0).toString(16)} posFracRaw=0x${(p._posFracRaw||0).toString(16)} 0x80~0xC0=${region80}`);
+        }
+        if(stChanged || bigJump || (nowL - cs.lastT) > 500){
+          const dt = cs.lastT ? (nowL-cs.lastT) : 0;
+          const dTc = timecodeMs - cs.lastTc;
+          const expected = dt>0 ? Math.round(dt * (p.pitchMultiplier||1)) : 0;
+          const drift = dTc - expected;
+          _dbgLog(`[CDJ] P${p.playerNum} ${p.isNXS2?'NXS2':'3000'} fw=${p.firmware} len=${p._rawMsgLen} src=dev${p.trackDeviceId}/slot${p.slot}/tt${p.trackType} tid=${p.trackId} st=${p.p1Name}(0x${p.p1.toString(16)}) tc=${timecodeMs}ms dur=${totalLenMs}ms beat=${p.beatNum}/${p.trackBeats} bib=${p.beatInBar} bpm=${p.bpm}/${p.bpmTrack} pitch=${p.effectivePitch?.toFixed?.(2)}% posFrac=${p.positionFraction?.toFixed?.(4)} cuePos=${p.cuePosMs}ms loop=[${p.loopStartMs||0},${p.loopEndMs||0}] dt=${dt}ms ΔTc=${dTc}ms drift=${drift}ms${stChanged?' [STATE_CHG]':''}${bigJump?' [JUMP]':''}`);
+          cs.lastT = nowL; cs.lastState = p.state; cs.lastTc = timecodeMs;
+        }
+
         this.onCDJStatus?.(li, p);
       }
     }
@@ -2968,7 +2064,6 @@ class BridgeCore {
         if(!this._ppDbg)this._ppDbg={};
         if(!this._ppDbg[p.playerNum]){
           this._ppDbg[p.playerNum]=true;
-          // [PDJL] Precise Position muted
         }
         // precise_pos는 CDJ-3000 전용 — 길이 우선순위:
         //  1) 웨이브폼 디테일 길이 (rekordbox 분석 원본, 150 pts/sec)
@@ -3060,7 +2155,6 @@ class BridgeCore {
         const key = `cdj${pn}`;
         if(!this.devices[key]){
           this.devices[key]={type:'CDJ',playerNum:pn,name:p.name,ip:rinfo.address,lastSeen:Date.now()};
-          // [PDJL] CDJ keepalive muted
           this.onDeviceList?.(this.devices);
           // 자동 모드일 때 CDJ 서브넷 매칭으로 인터페이스 자동 선택
           this._autoSelectPdjlForRemote(rinfo.address);
@@ -3292,11 +2386,14 @@ class BridgeCore {
       });
     });
     this._dbSrv.on('error', e=>{
-      // Port 12523 may be in use by a real CDJ on the network
-      console.warn(`[VDBSRV] port 12523 bind failed: ${e.message} (real CDJ on network?)`);
+      // Port 12523 may be in use by a real CDJ on the network or rekordbox
+      console.warn(`[VDBSRV] port 12523 bind failed: ${e.message} (rekordbox/CDJ already binding?)`);
     });
-    this._dbSrv.listen(12523, '0.0.0.0', ()=>{
-      console.log('[VDBSRV] port discovery listening on 12523');
+    // 같은 머신의 rekordbox dbserver 와 충돌 회피: 0.0.0.0 대신 PDJL 인터페이스 IP 만 바인딩.
+    // pdjlBindAddr 가 'auto' 또는 빈값이면 0.0.0.0 fallback (이 경우 rekordbox 와 충돌 가능 — 인터페이스 명시 권장).
+    const _vdbBindIp = (this.pdjlBindAddr && this.pdjlBindAddr !== 'auto') ? this.pdjlBindAddr : '0.0.0.0';
+    this._dbSrv.listen(12523, _vdbBindIp, ()=>{
+      console.log(`[VDBSRV] port discovery listening on ${_vdbBindIp}:12523`);
     });
 
     // 2) Actual protocol server on REAL_PORT
@@ -3367,45 +2464,13 @@ class BridgeCore {
     this._dbSrvProto.on('error', e=>{
       console.warn(`[VDBSRV] proto port ${REAL_PORT} bind failed: ${e.message}`);
     });
-    this._dbSrvProto.listen(REAL_PORT, '0.0.0.0', ()=>{
+    this._dbSrvProto.listen(REAL_PORT, _vdbBindIp, ()=>{
       console.log(`[VDBSRV] protocol server listening on ${REAL_PORT}`);
     });
   }
 
-  /** Parse a dbserver message to extract txId, type, and UInt32 args.
-   *  Format: magic(5) + txId(5) + type(3) + argc(2) + argTags(5+argc) + args...
-   *  ROLLBACK: was using hardcoded offset 38 for arg1 — only correct for our fixed
-   *  12-byte tag list, but clients here use variable-length tags (argc bytes). */
-  _parseDbRequest(buf){
-    if(buf.length < 15) return null;
-    const txId = buf.readUInt32BE(6);   // [5]=0x11, [6-9]=value
-    const type = buf.readUInt16BE(11);  // [10]=0x10, [11-12]=value
-    const argc = buf[14];              // [13]=0x0F, [14]=value
-    // argTags binary: [15]=0x14, [16-19]=tagListLen, [20..20+tagListLen-1]=tags
-    if(buf.length < 20) return { txId, type, argc, args: [] };
-    const tagListLen = buf.readUInt32BE(16);
-    const argsStart = 20 + tagListLen;
-    // Parse UInt32 args (each: 0x11 tag + 4B BE value = 5 bytes)
-    const args = [];
-    let pos = argsStart;
-    for(let i = 0; i < argc && pos < buf.length; i++){
-      const tag = buf[pos];
-      if(tag === 0x11 && pos + 5 <= buf.length){       // UInt32
-        args.push(buf.readUInt32BE(pos + 1)); pos += 5;
-      } else if(tag === 0x10 && pos + 3 <= buf.length){ // UInt16
-        args.push(buf.readUInt16BE(pos + 1)); pos += 3;
-      } else if(tag === 0x0F && pos + 2 <= buf.length){ // UInt8
-        args.push(buf[pos + 1]); pos += 2;
-      } else if(tag === 0x14 && pos + 5 <= buf.length){ // Binary — skip
-        const blen = buf.readUInt32BE(pos + 1); pos += 5 + blen;
-        args.push(0);
-      } else if(tag === 0x26 && pos + 5 <= buf.length){ // String — skip
-        const slen = buf.readUInt32BE(pos + 1); pos += 5 + slen * 2;
-        args.push(0);
-      } else { break; }
-    }
-    return { txId, type, argc, args };
-  }
+  /** parseDbRequest → pdjl/dbserver.js (Phase 4.11) */
+  _parseDbRequest(buf){ return _DB.parseDbRequest(buf); }
 
   _handleVDbRequest(sock, buf){
     try{
@@ -3497,43 +2562,8 @@ class BridgeCore {
     return null;
   }
 
-  // Build a 0x4101 MenuItem message — used to tell Arena about artworkId
-  // args[3]=label1(str), args[4]=label2(str), args[6]=itemType, args[8]=artworkId
-  _dbBuildMenuItem(txId, label1, label2, artworkId){
-    // argList type codes for 12 args of a MenuItem
-    const TYPE_CODES = [0x06,0x06,0x06,0x26,0x26,0x06,0x06,0x06,0x06,0x06,0x26,0x06];
-    const argList = Buffer.from(TYPE_CODES);
-    const args = [
-      this._dbArg4(1),                                          // [0] item id
-      this._dbArg4(0),                                          // [1] numeric
-      this._dbArg4(0),                                          // [2] color
-      {tag:0x26, data:this._dbStr(label1)},                    // [3] title
-      {tag:0x26, data:this._dbStr(label2||'')},                // [4] artist
-      this._dbArg4(artworkId?1:0),                              // [5] has artwork flag
-      this._dbArg4(0x0004),                                     // [6] itemType = title track
-      this._dbArg4(0),                                          // [7]
-      this._dbArg4(artworkId),                                  // [8] artworkId
-      this._dbArg4(0),                                          // [9]
-      {tag:0x26, data:this._dbStr('')},                        // [10] empty
-      this._dbArg4(0),                                          // [11]
-    ];
-    const parts=[
-      this._dbNum4(0x872349ae),
-      this._dbNum4(txId),
-      this._dbNum2(0x4101),
-      this._dbNum1(args.length),
-      this._dbBinary(argList),
-    ];
-    for(const a of args) parts.push(a.data);
-    return Buffer.concat(parts);
-  }
-
-  _dbBuildArtResponse(txId, jpegBuf){
-    // Real CDJ format: args[0]=size(UInt32), args[1]=binary JPEG
-    const sizeArg = this._dbArg4(jpegBuf.length);
-    const artArg  = { tag: 0x03, data: this._dbBinary(jpegBuf) };
-    return this._dbBuildMsg(txId, 0x4003, [sizeArg, artArg]);
-  }
+  _dbBuildMenuItem(txId, label1, label2, artworkId){ return _DB.dbBuildMenuItem(txId, label1, label2, artworkId); }
+  _dbBuildArtResponse(txId, jpegBuf){ return _DB.dbBuildArtResponse(txId, jpegBuf); }
 
   // ── dbserver metadata client (TCP 12523) ────
   // Protocol implementation
@@ -3553,7 +2583,11 @@ class BridgeCore {
     const ttlMs = force ? 8000 : 30000;
     if(prev && (now - prev.time) < ttlMs) return;
     this._metaReqCache[cacheKey] = { time: now, force: !!force };
-    this._dbserverMetadata(ip, slot, trackId, playerNum, trackType).catch(e=>{
+    _dbgLog(`[META] P${playerNum} fetch ip=${ip} slot=${slot} tt=${trackType} tid=${trackId}`);
+    this._dbserverMetadata(ip, slot, trackId, playerNum, trackType).then(()=>{
+      _dbgLog(`[META] P${playerNum} fetch OK tid=${trackId}`);
+    }).catch(e=>{
+      _dbgLog(`[META] P${playerNum} fetch FAIL tid=${trackId}: ${e.message}`);
       if(this._shouldLogRate(`db_meta_fail_${cacheKey}`, 10000, e.message)){
         console.warn(`[DBSRV] metadata request failed: ${e.message}`);
       }
@@ -3567,7 +2601,6 @@ class BridgeCore {
         const s=dev.state;
         const srcDev = this.devices['cdj'+s.trackDeviceId];
         const ip = srcDev?.ip || dev.ip;
-        // [DBSRV] refresh muted
         this.requestMetadata(ip, s.slot||3, s.trackId, s.playerNum, true, s.trackType||1);
       }
     }
@@ -3622,35 +2655,15 @@ class BridgeCore {
   }
 
   // ── dbserver field builders ────
-  _dbNum1(v){ return Buffer.from([0x0f, v&0xFF]); }
-  _dbNum2(v){ const b=Buffer.alloc(3); b[0]=0x10; b.writeUInt16BE(v,1); return b; }
-  _dbNum4(v){ const b=Buffer.alloc(5); b[0]=0x11; b.writeUInt32BE(v>>>0,1); return b; }
-
-  _dbBuildMsg(txId, type, args){
-    // Each field is wrapped in a FieldType prefix
-    // UInt32=0x11(5B), UInt16=0x10(3B), UInt8=0x0F(2B), Binary=0x14(1+4+data)
-    const argList = Buffer.alloc(12); // 12 type-tag slots
-    for(let i=0;i<args.length&&i<12;i++) argList[i] = args[i].tag;
-    const parts = [
-      this._dbNum4(0x872349ae),           // magic as UInt32 field
-      this._dbNum4(txId),                 // txId as UInt32 field
-      this._dbNum2(type),                 // type as UInt16 field
-      this._dbNum1(args.length),          // argCount as UInt8 field
-      this._dbBinary(argList),            // type tags as Binary field
-    ];
-    for(const a of args) parts.push(a.data);
-    return Buffer.concat(parts);
-  }
-
-  _dbBinary(buf){ const hdr=Buffer.alloc(5); hdr[0]=0x14; hdr.writeUInt32BE(buf.length,1); return Buffer.concat([hdr,buf]); }
-  _dbArg4(v){ return { tag:0x06, data: this._dbNum4(v) }; }
-  // UTF-16BE string field (tag 0x26): 4-byte char count (incl. null) + UTF-16BE chars
-  _dbStr(str){ const cs=(str||'').split('').map(c=>c.charCodeAt(0)); cs.push(0); const d=Buffer.alloc(cs.length*2); cs.forEach((c,i)=>d.writeUInt16BE(c&0xFFFF,i*2)); const h=Buffer.alloc(5); h[0]=0x26; h.writeUInt32BE(cs.length,1); return Buffer.concat([h,d]); }
-
-  _dbRMST(reqPlayer, menu, slot, trackType){
-    const v = ((reqPlayer&0xFF)<<24)|((menu&0xFF)<<16)|((slot&0xFF)<<8)|(trackType&0xFF);
-    return this._dbArg4(v);
-  }
+  // dbserver protocol helpers → pdjl/dbserver.js (Phase 4.11)
+  _dbNum1(v){ return _DB.dbNum1(v); }
+  _dbNum2(v){ return _DB.dbNum2(v); }
+  _dbNum4(v){ return _DB.dbNum4(v); }
+  _dbBinary(buf){ return _DB.dbBinary(buf); }
+  _dbStr(str){ return _DB.dbStr(str); }
+  _dbArg4(v){ return _DB.dbArg4(v); }
+  _dbRMST(reqPlayer, menu, slot, trackType){ return _DB.dbRMST(reqPlayer, menu, slot, trackType); }
+  _dbBuildMsg(txId, type, args){ return _DB.dbBuildMsg(txId, type, args); }
 
   // ── TCP connection + handshake ────
   async _dbConnect(ip, spoofPlayer){
@@ -3675,7 +2688,6 @@ class BridgeCore {
         else rej(new Error(`bad port response len=${d.length} hex=${d.toString('hex')}`));
       });
     });
-    // [DBSRV] dbserver port muted
 
     // Step 2: connect to actual port + greeting
     const sock = new net2.Socket();
@@ -3692,7 +2704,6 @@ class BridgeCore {
     // Wait for greeting echo
     await new Promise((res,rej)=>{
       sock.once('data', d=>{
-        // [DBSRV] greeting response muted
         if(d.length>=5 && d[0]===0x11) res();
         else rej(new Error(`bad greeting: ${d.toString('hex')}`));
       });
@@ -3701,10 +2712,8 @@ class BridgeCore {
 
     // Step 3: SETUP_REQ (type 0x0000, txId 0xfffffffe)
     const setupMsg = this._dbBuildMsg(0xfffffffe, 0x0000, [this._dbArg4(spoofPlayer)]);
-    // [DBSRV] SETUP muted
     sock.write(setupMsg);
     const setupResp = await this._dbReadResponse(sock);
-    // [DBSRV] SETUP response muted
 
     return sock;
   }
@@ -3804,7 +2813,7 @@ class BridgeCore {
         args.push(f);
         pos+=f.size;
       }
-      if(msgType===0x4101||msgType===0x4000||msgType===0x4002){
+      if(msgType===0x4101||msgType===0x4000||msgType===0x4002||msgType===0x4702||msgType===0x4e02){
         items.push({msgType,args});
       }
     }
@@ -3837,8 +2846,6 @@ class BridgeCore {
 
       // Parse menu items
       const items = this._dbParseItems(fullResp);
-      // [DBSRV] render resp muted
-      // [DBSRV] render 0 items muted
       const meta = {};
       for(const item of items){
         if(item.msgType===0x4101){
@@ -3846,8 +2853,6 @@ class BridgeCore {
           const itemType = item.args[6]?.val || 0;
           const label1 = item.args[3]?.val || '';
           const label2 = item.args[5]?.val || '';
-          // Debug: dump first occurrence of each item type
-          // itemType debug muted
           switch(itemType){
             case 0x0004: meta.title=label1; meta.artworkId=item.args[8]?.val||0; break;
             case 0x0007: meta.artist=label1||label2; break;  // try label2 as fallback
@@ -3859,7 +2864,6 @@ class BridgeCore {
           }
         }
       }
-      // [DBSRV] metadata muted
 
       // Store metadata into layer so TCNet DATA packets include it
       const li = playerNum - 1;
@@ -3868,7 +2872,6 @@ class BridgeCore {
         if(meta.artist) this.layers[li].artistName = meta.artist;
         // Invalidate MetaData packet cache so it gets rebuilt with new names
         if(this._metaCache && this._metaCache[li]) this._metaCache[li] = null;
-        // [DBSRV] stored metadata muted
       }
 
       // Emit metadata — include durationMs (precise ms) so renderer can skip integer*1000 conversion
@@ -3923,9 +2926,7 @@ class BridgeCore {
           pts.push({height:wfData[i]&0x1F, color:(wfData[i]>>5)&0x07});
         }
         this.onWaveformPreview?.(playerNum, {seg:0, pts, wfType:'preview'});
-        // [DBSRV] waveform preview muted
       } else {
-        // [DBSRV] waveform no data muted
       }
     }finally{try{sock?.destroy();}catch(_){}}
   }
@@ -3965,9 +2966,7 @@ class BridgeCore {
         this._wfTrackLen = this._wfTrackLen || {};
         this._wfTrackLen[playerNum] = Math.round(pts.length * 1000 / 150);
         this.onWaveformDetail?.(playerNum, {pts, wfType:'detail', trackLenMs:this._wfTrackLen[playerNum]});
-        // [DBSRV] waveform detail muted
       } else {
-        // [DBSRV] waveform detail no data muted
       }
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message);
@@ -4001,7 +3000,6 @@ class BridgeCore {
         }
       }
       if(!anlzData||anlzData.length<20){
-        // [DBSRV] nxs2 waveform no ANLZ muted
         return;
       }
       // Parse ANLZ tag structure — find PWV7 tag
@@ -4026,27 +3024,31 @@ class BridgeCore {
               });
             }
             this.onWaveformDetail?.(playerNum, {pts, wfType:'nxs2_3band'});
-            // [DBSRV] NXS2 PWV7 waveform muted
             return;
           }
         }
         if(tTL===0)break;
         pos+=tTL;
       }
-      // [DBSRV] nxs2 waveform PWV7 not found muted
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} nxs2 waveform failed:`,e.message);
     }finally{try{sock?.destroy();}catch(_){}}
   }
 
   async _dbserverCuePoints(ip, slot, trackId, playerNum, trackType){
-    // Try NXS2 PCO2 first (has loop end positions + RGB colors), fall back to menu 0x2104
+    // 우선순위: EXT(0x2b04, 색상+코멘트) → STD(0x2104, 36바이트 stride) → ANLZ(0x2c04 폴백).
+    // RMST menu 필드는 DATA 카테고리 = 0x08 (cue/beat/wf 데이터 fetch 공통).
     let cues = null;
-    try{ cues = await this._dbserverCuePointsNxs2(ip, slot, trackId, playerNum, trackType); }
-    catch(e){ console.warn(`[DBSRV] cue NXS2 P${playerNum} err:`, e.message); }
+    try{ cues = await this._dbserverCuePointsExt(ip, slot, trackId, playerNum, trackType); }
+    catch(e){ console.warn(`[DBSRV] cue EXT P${playerNum} err:`, e.message); }
     if(!cues||cues.length===0){
-      try{ cues = await this._dbserverCuePointsMenu(ip, slot, trackId, playerNum, trackType); }
-      catch(e){ console.warn(`[DBSRV] cue MENU P${playerNum} err:`, e.message); }
+      try{ cues = await this._dbserverCuePointsStd(ip, slot, trackId, playerNum, trackType); }
+      catch(e){ console.warn(`[DBSRV] cue STD P${playerNum} err:`, e.message); }
+    }
+    if(!cues||cues.length===0){
+      // 마지막 폴백 — 0x2c04 ANLZ tag (구형 NXS 일부에서만 작동)
+      try{ cues = await this._dbserverCuePointsNxs2(ip, slot, trackId, playerNum, trackType); }
+      catch(e){ console.warn(`[DBSRV] cue NXS2 P${playerNum} err:`, e.message); }
     }
     if(cues&&cues.length>0){
       // PCO2/PCOB 모두 timeMs 는 ms 단위 — 변환 불필요.
@@ -4055,40 +3057,141 @@ class BridgeCore {
       const mem=cues.filter(c=>c.type==='memory').length;
       const lp=cues.filter(c=>c.type==='loop').length;
       const sample=cues.slice(0,3).map(c=>`${c.type[0]}@${c.timeMs}`).join(',');
-      console.log(`[DBSRV] cue P${playerNum} tid=${trackId} slot=${slot} → hot=${hot} mem=${mem} loop=${lp} total=${cues.length} [${sample}...]`);
     } else {
-      console.log(`[DBSRV] cue P${playerNum} tid=${trackId} slot=${slot} tt=${trackType} → EMPTY (both PCO2 and menu returned 0)`);
     }
   }
 
-  // PCO2 — NXS2 extended cue list via ANLZ tag request (0x2c04)
-  // Provides loop end positions, RGB colors, and comment text
+  // dbserver CUE_LIST_EXT_REQ (0x2b04) — variable-size entries with color + comment.
+  // Response 0x4e02 carries args[3] = binary blob, args[4] = entry count.
+  // Per entry (LITTLE-ENDIAN reads):
+  //   +0  u32  entry_size  (advance to next entry)
+  //   +4  u8   hot_cue_number  (0 = memory, 1~8 = hot A~H)
+  //   +6  u8   type_flag       (2 = loop, else memory point)
+  //   +12 u32  time_ms        ★ extended 는 이미 ms 단위 (변환 불필요)
+  //   +16 u32  loop_end_ms    ★ ms 단위
+  //   +34 u8   color_id        (memory points only)
+  //   +72 u16  comment_size    (UTF-16LE chars; only if entry_size > 0x49)
+  //   +74      comment UTF-16LE
+  //   +0x4E + commentSize  u8  color_code
+  //   +0x4F + commentSize  u8x3  R, G, B
+  async _dbserverCuePointsExt(ip, slot, trackId, playerNum, trackType){
+    const spoofPlayer = 5;
+    let sock;
+    try{
+      sock = await this._dbConnect(ip, spoofPlayer);
+      // CUE_LIST_EXT_REQ — RMST(menu=DATA=0x08, slot) + trackId + 0 (3 args).
+      const rmst = this._dbRMST(spoofPlayer, 0x08, slot, trackType||1);
+      const req = this._dbBuildMsg(1, 0x2b04, [
+        rmst, this._dbArg4(trackId), this._dbArg4(0),
+      ]);
+      sock.write(req);
+      const resp = await this._dbReadFullResponse(sock);
+      const items = this._dbParseItems(resp);
+      // 응답 메시지(0x4e02) 의 args[3] = 바이너리 블롭, args[4] = entry count
+      const cueMsg = items.find(it=>it.msgType===0x4e02);
+      if(!cueMsg||!cueMsg.args||!cueMsg.args[3]||cueMsg.args[3].type!=='blob'){
+        return null;
+      }
+      const blob = cueMsg.args[3].val;
+      const totalCount = cueMsg.args[4]?.val || 0;
+      if(!blob||blob.length<8||totalCount<=0) return null;
+      const cues = [];
+      let p = 0;
+      let safety = 0;
+      while(p+8<=blob.length && safety<256){
+        safety++;
+        const entrySize = blob.readUInt32LE(p);
+        if(entrySize<8 || p+entrySize>blob.length) break;
+        const hotCue   = blob[p+4]||0;
+        const typeFlag = blob[p+6]||0;
+        const timeMs   = blob.readUInt32LE(p+12);
+        const loopEnd  = blob.readUInt32LE(p+16);
+        let colorId=0, colorR=0, colorG=0, colorB=0, comment='';
+        if(entrySize>=0x23) colorId = blob[p+0x22]||0;
+        if(entrySize>0x49){
+          const commentSize = blob.readUInt16LE(p+0x48);
+          if(commentSize>0 && p+0x4A+commentSize*2<=p+entrySize){
+            // UTF-16LE char count = commentSize? (Java 원본은 byte count 일 수도 — 안전을 위해
+            // commentSize byte 로 가정하고 끝까지 0x00 만나면 stop)
+            for(let j=0;j<commentSize-1 && p+0x4A+j+1<p+entrySize;j+=2){
+              const ch=blob.readUInt16LE(p+0x4A+j);
+              if(ch===0)break;
+              comment+=String.fromCharCode(ch);
+            }
+            const cOff = p + 0x4E + commentSize;
+            if(cOff+3 < p+entrySize){
+              colorR = blob[cOff+1]||0;
+              colorG = blob[cOff+2]||0;
+              colorB = blob[cOff+3]||0;
+            }
+          }
+        }
+        let type;
+        if(hotCue>0) type='hot';
+        else if(typeFlag===2) type='loop';
+        else type='memory';
+        cues.push({
+          name:comment, timeMs, hotCueNum:hotCue, colorId, type,
+          loopEndMs: type==='loop' ? loopEnd : 0,
+          colorR, colorG, colorB,
+        });
+        p += entrySize;
+      }
+      cues.sort((a,b)=>a.timeMs-b.timeMs);
+      return cues.length>0 ? cues : null;
+    }catch(e){
+      console.warn(`[DBSRV] P${playerNum} cue ext failed:`,e.message);
+      return null;
+    }finally{try{sock?.destroy();}catch(_){}}
+  }
+
+  // (구 ANLZ-magic 스캔 방식 — dbserver 응답에는 PCO2 magic 이 그대로 안 담겨 있어
+  // 원래부터 동작하지 않았음. 표준 36바이트 stride 기반 fallback 으로 교체.)
   async _dbserverCuePointsNxs2(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
-      // PCO2 magic = "PCO2" as big-endian uint32 = 0x50434F32
-      const rmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
-      const req = this._dbBuildMsg(1, 0x2c04, [
-        rmst, this._dbArg4(trackId), this._dbArg4(0),
-        this._dbArg4(0x50434F32) // "PCO2" tag magic
-      ]);
-      sock.write(req);
-      const resp = await this._dbReadFullResponse(sock);
-      // Find binary field (tag 0x14) containing raw ANLZ tag data
-      let anlzData=null;
-      for(let i=0;i<resp.length-5;i++){
-        if(resp[i]===0x14){
-          const len=resp.readUInt32BE(i+1);
-          if(len>20&&len<500000&&i+5+len<=resp.length){
-            anlzData=resp.slice(i+5,i+5+len);
-            break;
+      // 진단 결과 (0.9.3.37 로그): 응답 0x4f02 / arg[2]=0 → 빈 응답.
+      // 다중 조합 시도 — slot 변형 + PCO2/PCOB magic + EXT marker 변형.
+      // 첫 번째 binary blob 받는 조합 선택.
+      let txCounter = 1;
+      let anlzData = null;
+      const attempts = [
+        // [slot, magic, extMarker, label]
+        [slot,    0x50434F32, 0x45585400, 'PCO2 + EXT(BE)'],
+        [slot,    0x50434F32, 0x00545845, 'PCO2 + EXT(LE)'],
+        [slot,    0x50434F32, 0x00000000, 'PCO2 + 0'],
+        [slot,    0x50434F42, 0x00000000, 'PCOB + 0'],
+        [slot,    0x50434F42, 0x45585400, 'PCOB + EXT(BE)'],
+        ...(slot!==4 ? [
+          [4, 0x50434F32, 0x45585400, 'slot4 PCO2+EXT'],
+          [4, 0x50434F42, 0x00000000, 'slot4 PCOB+0'],
+        ] : []),
+      ];
+      for(const [trySlot, magic, extM, label] of attempts){
+        const rmst = this._dbRMST(spoofPlayer, 0x01, trySlot, trackType||1);
+        const req = this._dbBuildMsg(txCounter++, 0x2c04, [
+          rmst, this._dbArg4(trackId),
+          this._dbArg4(magic), this._dbArg4(extM),
+        ]);
+        sock.write(req);
+        const resp = await this._dbReadFullResponse(sock);
+        let blobsFound = 0;
+        for(let i=0;i<resp.length-5;i++){
+          if(resp[i]===0x14){
+            const len=resp.readUInt32BE(i+1);
+            if(len>20&&len<500000&&i+5+len<=resp.length){
+              blobsFound++;
+              if(!anlzData) anlzData=resp.slice(i+5,i+5+len);
+            }
           }
+        }
+        if(anlzData && anlzData.length>=20){
+          break;
         }
       }
       if(!anlzData||anlzData.length<20){
-        // [DBSRV] PCO2 no ANLZ muted
         return null;
       }
       // ANLZ blob 선형 스캔으로 모든 PCO2 섹션 수집 (hot cue 섹션 + memory cue
@@ -4099,7 +3202,7 @@ class BridgeCore {
         // "PCO2" 시그니처 탐색
         if(anlzData[i]!==0x50||anlzData[i+1]!==0x43||anlzData[i+2]!==0x4F||anlzData[i+3]!==0x32) continue;
         const lenHeader=anlzData.readUInt32BE(i+4);
-        const numCues=anlzData.readUInt16BE(i+16);   // STC: offset 16 (섹션 시작 기준)
+        const numCues=anlzData.readUInt16BE(i+16);   // PCO2 섹션 헤더 +16 = numCues
         if(numCues===0||numCues>200) continue;
         let entryOff=i+lenHeader;
         for(let c=0;c<numCues;c++){
@@ -4125,13 +3228,19 @@ class BridgeCore {
           const ctype =anlzData[e+0x10];
           const timeMs=anlzData.readUInt32BE(e+0x14);
           const loopMs=anlzData.readUInt32BE(e+0x18);
-          if(ctype===0){ entryOff+=entryLen; continue; }  // STC: skip ctype=0
-          let type='memory';
+          if(ctype===0){ entryOff+=entryLen; continue; }  // type=0 은 invalid/placeholder entry
+          // type 결정: hotCue 가 있으면 무조건 'hot' (CDJ 표시 우선순위와 동일).
+          // 그 다음 ctype===2 만 'loop' (loopMs 는 hot/memory 에서 garbage 일 수 있어 type 판정에 안 씀).
+          // 이전 로직은 loopMs!==0 이면 무조건 'loop' 로 덮어써서 hot/memory 가 모두 loop 로 분류됨 →
+          // 루프 영역만 보이고 큐 마커 미표시. 사용자 "루프는 잘 됨" 단서로 발견.
+          let type;
           if(hotCue>0) type='hot';
-          if(ctype===2||(loopMs!==0&&loopMs!==0xFFFFFFFF)) type='loop';
+          else if(ctype===2) type='loop';
+          else type='memory';
+          const validLoop = type==='loop' && loopMs!==0 && loopMs!==0xFFFFFFFF;
           const cue={
             name:'', timeMs, hotCueNum:hotCue, colorId:anlzData[e+0x1C],
-            type, loopEndMs:type==='loop'?loopMs:0,
+            type, loopEndMs:validLoop?loopMs:0,
             colorR:30, colorG:200, colorB:60,
           };
           // Comment + RGB
@@ -4157,7 +3266,10 @@ class BridgeCore {
           entryOff+=entryLen;
         }
       }
-      if(cues.length>0){ cues.sort((a,b)=>a.timeMs-b.timeMs); return cues; }
+      if(cues.length>0){
+        cues.sort((a,b)=>a.timeMs-b.timeMs);
+        return cues;
+      }
       // PCO2 tag not found — try PCOB fallback within same response
       pos=0;
       while(pos<anlzData.length-12){
@@ -4177,25 +3289,26 @@ class BridgeCore {
             const ctype=anlzData[ePos+0x1C];
             const timeMs=anlzData.readUInt32BE(ePos+0x20);
             const loopMs=anlzData.readUInt32BE(ePos+0x24);
-            let type='memory';
+            // PCP2 와 동일: hot 우선 → ctype=2 만 loop → 나머지 memory.
+            let type;
             if(hotCue>0) type='hot';
-            if(ctype===2||loopMs>0) type='loop';
+            else if(ctype===2) type='loop';
+            else type='memory';
+            const validLoop=type==='loop'&&loopMs>0&&loopMs!==0xFFFFFFFF;
             cues.push({
               name:'', timeMs, hotCueNum:hotCue, colorId:0, type,
-              loopEndMs:type==='loop'?loopMs:0,
+              loopEndMs:validLoop?loopMs:0,
               colorR:type==='memory'?200:type==='loop'?255:30,
               colorG:type==='memory'?30:type==='loop'?136:200,
               colorB:type==='memory'?30:type==='loop'?0:60,
             });
             ePos+=eTL;
           }
-          // [DBSRV] PCOB fallback muted
           return cues;
         }
         if(tTL===0)break;
         pos+=tTL;
       }
-      // [DBSRV] PCO2/PCOB tag not found muted
       return null;
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} PCO2 cue points failed:`,e.message);
@@ -4203,42 +3316,63 @@ class BridgeCore {
     }finally{try{sock?.destroy();}catch(_){}}
   }
 
-  // Fallback: menu-based cue point request (0x2104)
-  async _dbserverCuePointsMenu(ip, slot, trackId, playerNum, trackType){
+  // dbserver CUE_LIST_REQ (0x2104) — Nexus 표준 36바이트 stride 엔트리.
+  // 응답 0x4702. args[3] = 바이너리 블롭. 색상/주석 없음.
+  // 엔트리 (LITTLE-ENDIAN, 고정 36 bytes per entry):
+  //   +0  u8  loop flag    (non-zero = loop, 0 = memory/hot)
+  //   +1  u8  cue flag     (non-zero = active entry)
+  //   +2  u8  hot_cue #    (0 = memory/loop, 1~8 = hot A~H)
+  //   +12 u32 time         ★ HALF-FRAME 단위 (1/150 초). ms 변환 = value * 1000 / 150.
+  //   +16 u32 loop_end     ★ HALF-FRAME 단위.
+  //   skip if cueFlag==0 && hotCueNumber==0
+  // (이전 버전이 모든 큐를 트랙 좌측 ~15% 에 모이게 한 진짜 원인:
+  //  half-frame 값을 ms 로 직접 사용 → 1 half-frame ≈ 0.15ms 이므로 위치가 6.67배 압축됐음.)
+  async _dbserverCuePointsStd(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
     let sock;
     try{
       sock = await this._dbConnect(ip, spoofPlayer);
-      const rmst = this._dbRMST(spoofPlayer, 0x01, slot, trackType||1);
+      // CUE_LIST_REQ — RMST(menu=DATA=0x08, slot) + trackId (2 args).
+      const rmst = this._dbRMST(spoofPlayer, 0x08, slot, trackType||1);
       const req = this._dbBuildMsg(1, 0x2104, [
-        rmst, this._dbArg4(0), this._dbArg4(trackId), this._dbArg4(0)
+        rmst, this._dbArg4(trackId),
       ]);
       sock.write(req);
-      const menuAvail = await this._dbReadResponse(sock);
-      const renderReq = this._dbBuildMsg(2, 0x3000, [
-        rmst, this._dbArg4(0), this._dbArg4(64),
-        this._dbArg4(0), this._dbArg4(64), this._dbArg4(0)
-      ]);
-      sock.write(renderReq);
-      const fullResp = await this._dbReadFullResponse(sock);
-      const items = this._dbParseItems(fullResp);
-      const cues = [];
-      for(const item of items){
-        if(item.msgType===0x4101){
-          const itemType = item.args[6]?.val || 0;
-          if(itemType===0x000e){
-            const name = item.args[3]?.val || '';
-            const timeMs = item.args[1]?.val || 0;
-            const hotCueNum = item.args[4]?.val || 0;
-            const colorId = item.args[5]?.val || 0;
-            cues.push({name, timeMs, hotCueNum, colorId, type: hotCueNum>0?'hot':'memory',
-              loopEndMs:0, colorR:0, colorG:0, colorB:0});
-          }
-        }
+      const resp = await this._dbReadFullResponse(sock);
+      const items = this._dbParseItems(resp);
+      const cueMsg = items.find(it=>it.msgType===0x4702);
+      if(!cueMsg||!cueMsg.args||!cueMsg.args[3]||cueMsg.args[3].type!=='blob'){
+        return null;
       }
+      const blob = cueMsg.args[3].val;
+      if(!blob||blob.length<36) return null;
+      const stride = 36;
+      const cues = [];
+      // half-frame → ms: value * 1000 / 150. 정확히 20/3 배 (= 6.6667).
+      const hfToMs = (hf)=>Math.round(hf * 1000 / 150);
+      for(let off=0; off+stride<=blob.length; off+=stride){
+        const loopFlag    = blob[off]||0;
+        const cueFlag     = blob[off+1]||0;
+        const hotCue      = blob[off+2]||0;
+        if(cueFlag===0 && hotCue===0) continue; // inactive slot
+        const timeMs      = hfToMs(blob.readUInt32LE(off+12));
+        const loopEndMs   = hfToMs(blob.readUInt32LE(off+16));
+        let type;
+        if(hotCue>0) type='hot';
+        else if(loopFlag!==0) type='loop';
+        else type='memory';
+        cues.push({
+          name:'', timeMs, hotCueNum:hotCue, colorId:0, type,
+          loopEndMs: type==='loop' ? loopEndMs : 0,
+          colorR: type==='memory'?200:type==='loop'?255:30,
+          colorG: type==='memory'?30:type==='loop'?136:200,
+          colorB: type==='memory'?30:type==='loop'?0:60,
+        });
+      }
+      cues.sort((a,b)=>a.timeMs-b.timeMs);
       return cues.length>0 ? cues : null;
     }catch(e){
-      console.warn(`[DBSRV] P${playerNum} menu cue points failed:`,e.message);
+      console.warn(`[DBSRV] P${playerNum} cue std failed:`,e.message);
       return null;
     }finally{try{sock?.destroy();}catch(_){}}
   }
@@ -4296,12 +3430,9 @@ class BridgeCore {
             this._bgTrackLen[playerNum] = Math.round(lastB.timeMs + 60000/estBpm);
           }
           this.onBeatGrid?.(playerNum, {beats, baseBpm});
-          // [DBSRV] beat grid muted
         } else {
-          // [DBSRV] beat grid no entries muted
         }
       } else {
-        // [DBSRV] beat grid no data muted
       }
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} beat grid failed:`,e.message);
@@ -4334,7 +3465,6 @@ class BridgeCore {
         }
       }
       if(!anlzData || anlzData.length<40){
-        // [DBSRV] song structure no ANLZ muted
         return;
       }
       // ANLZ 태그 리스트 순회 → PSSI 섹션 위치 찾기
@@ -4349,7 +3479,6 @@ class BridgeCore {
         pos+=tTL;
       }
       if(pssiStart<0){
-        // [DBSRV] song structure PSSI absent muted
         return;
       }
       const body = anlzData.slice(pssiStart, pssiEnd);
@@ -4362,11 +3491,10 @@ class BridgeCore {
       // 18:  u2 entry_count
       // 20:  u2 raw_mood           (>20 이면 XOR 난독화 적용)
       // 22:  u2 end_beat
-      // 24:  u2 bank               (하이레벨 밴크 기호)
+      // 24:  u2 bank               (하이레벨 뱅크 기호)
       // 26:  u2 padding
       // 28:  entries[ ] 24B each
       if(body.length<32){
-        // [DBSRV] song structure body too short muted
         return;
       }
       const hiMood = body.readUInt16BE(16);
@@ -4375,11 +3503,9 @@ class BridgeCore {
       const endBeat = body.readUInt16BE(22);
       const entriesStart = 28;
       if(entryCount<=0 || entryCount>300){
-        // [DBSRV] song structure invalid count muted
         return;
       }
       if(entriesStart + entryCount*24 > body.length){
-        // [DBSRV] song structure body cut muted
         return;
       }
       // XOR 난독화 (raw_mood > 20 일 때)
@@ -4427,7 +3553,6 @@ class BridgeCore {
         this._songStructures = this._songStructures || {};
         this._songStructures[playerNum] = { phrases:valid, endMs, mood:hiMood };
         this.onSongStructure?.(playerNum, { phrases:valid, endMs, mood:hiMood });
-        // [DBSRV] song structure phrases muted
       }
     }catch(e){
       console.warn(`[DBSRV] P${playerNum} song structure failed:`,e.message);
@@ -4476,7 +3601,6 @@ class BridgeCore {
       const artReq = this._dbBuildMsg(1, 0x2003, [artRmst, this._dbArg4(artworkId)]);
       sock.write(artReq);
       const artResp = await this._dbReadFullResponse(sock);
-      // [DBSRV] artwork resp muted
       // Find JPEG or PNG
       let imgStart = artResp.indexOf(Buffer.from([0xFF,0xD8]));
       let imgEnd = imgStart>=0 ? artResp.lastIndexOf(Buffer.from([0xFF,0xD9])) : -1;
@@ -4490,11 +3614,9 @@ class BridgeCore {
         const b64 = `data:${mime};base64,` + img.toString('base64');
         this._artCache[cacheKey] = b64;
         this.onAlbumArt?.(playerNum, b64);
-        // [DBSRV] artwork muted
         // Store in virtual dbserver — Arena fetches via ProDJ Link dbserver protocol
         this.setVirtualArt(playerNum-1, img);
       } else {
-        // [DBSRV] artwork no image muted
       }
     }finally{try{sock?.destroy();}catch(_){}}
   }
