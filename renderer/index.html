@@ -105,7 +105,9 @@
 body{background:var(--bg);color:var(--tx);font-family:var(--sn);-webkit-app-region:drag;user-select:none;overflow:hidden;font-weight:400}
 button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .font-mono{font-family:var(--mn)}.font-label{font-family:var(--lb)}
-.hdr{height:52px;padding:0 20px 0 80px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);flex-shrink:0;z-index:50}
+/* Mac: traffic lights 공간 확보 (좌측 80px). Win/Linux: 좌측 padding 제거 → 로고 좌단 정렬 */
+.hdr{height:44px;padding:0 16px 0 14px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);flex-shrink:0;z-index:50}
+body[data-platform="darwin"] .hdr{padding-left:80px}
 .hdr .btn,.hdr select,.hdr input,.hdr span[id]{-webkit-app-region:no-drag}
 .logo{display:flex;align-items:center;gap:10px}
 .li{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--key2),var(--key));display:flex;align-items:center;justify-content:center;font:800 11px var(--mn);color:#1a1a3d}
@@ -124,6 +126,9 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .sbi-spacer{flex:1}
 .content-area{flex:1;min-width:0;overflow:hidden;position:relative}
 .pg{padding:16px 20px 56px;overflow-y:auto;height:100%;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;-webkit-app-region:no-drag}
+/* 페이지 상단 여백 일관성: 첫 자식의 top margin/padding 정규화 */
+.pg > *:first-child{margin-top:0!important}
+.pg > .mx-wrap,.pg > .mx-wrap > *:first-child{margin-top:0!important;padding-top:0}
 .pg::-webkit-scrollbar{width:5px}.pg::-webkit-scrollbar-track{background:transparent}.pg::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}.pg::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
 /* Global thin scrollbars — Windows 에서 기본 16px 시스템 스크롤바가 보이는 것 방지 */
 *::-webkit-scrollbar{width:6px;height:6px}
@@ -175,7 +180,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 .dtc{font:300 31px var(--font-timecode,var(--seg));color:var(--tx4);letter-spacing:.02em;transition:color .2s;white-space:nowrap;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 .dk[data-st="play"] .dtc,.dk[data-st="scratch"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
-.dwov{height:14px;margin:0 0 3px;background:var(--waveform-bg,var(--bg-lowest));border:1px solid var(--waveform-border,rgba(135,135,255,.18));border-radius:3px;overflow:hidden;cursor:crosshair;position:relative}
+.dwov{height:14px;margin:0 0 6px;background:var(--waveform-bg,var(--bg-lowest));border:1px solid var(--waveform-border,rgba(135,135,255,.18));border-radius:3px;overflow:hidden;cursor:crosshair;position:relative}
 .dwov canvas{width:100%;height:100%;display:block}
 /* waveform analysis progress bar (shown while buildRGBWaveform runs) */
 .dwov-prog{position:absolute;bottom:0;left:0;height:2px;width:0;background:rgba(96,165,250,.7);border-radius:1px;pointer-events:none;transition:width .1s linear}
@@ -368,6 +373,12 @@ body[data-layout="card"] .dvu-fader .dvu-hbar{cursor:ew-resize}
 .dk.dov .ddzi{border-color:var(--blu);color:var(--blu)}
 .add-deck-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border:1.5px dashed var(--bdr2);border-radius:12px;cursor:pointer;color:var(--tx3);font:600 11px var(--sn);background:0;transition:all .18s;width:100%}
 .add-deck-btn:hover{border-color:var(--key);color:var(--key);background:rgba(135,135,255,.03)}
+/* Tower 모드: addDeckBtn 은 vtRow 안 마지막 자식 (JS 가 이동). 덱 폭에 맞춤, + 아이콘 크게 */
+body[data-layout="tower"] #vtRow > #addDeckBtn{flex:0 0 auto;width:270px;min-width:270px;align-self:stretch;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;font-size:0;letter-spacing:0}
+body[data-layout="tower"] #vtRow > #addDeckBtn > span:first-child{font-size:48px;line-height:1;color:var(--tx3)}
+body[data-layout="tower"] #vtRow > #addDeckBtn > span:first-child svg{width:48px;height:48px}
+body[data-layout="tower"] #vtRow > #addDeckBtn > span:last-child{display:none}
+body[data-layout="tower"] #vtRow > #addDeckBtn:hover > span:first-child{color:var(--key)}
 .sgr{background:var(--bg2);border:none;border-radius:10px;padding:4px 16px;margin-bottom:12px}
 .srw{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(60,60,80,.1)}.srw:last-child{border-bottom:none}
 .srl{font:400 11px var(--sn);color:var(--tx2)}.srv{font:400 11px var(--mn);color:var(--tx)}
@@ -394,6 +405,10 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .dkart{width:52px;height:52px;border-radius:5px;flex-shrink:0;overflow:hidden;background:var(--bg-lowest);border:1px solid var(--bdr);cursor:pointer;position:relative;transition:filter .15s}
 .dkart:hover{filter:brightness(.6)}
 .dkart::after{content:'⏏';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;background:rgba(0,0,0,0);border-radius:7px;transition:opacity .15s,background .15s;pointer-events:none;opacity:0}
+/* HW 덱: eject 아이콘 비활성화 (트랙은 CDJ 측에서 관리) */
+.dk[data-type="hw"] .dkart::after,.dk[data-type="hw"] .c-artwork::after{display:none}
+.dk[data-type="hw"] .dkart,.dk[data-type="hw"] .c-artwork{cursor:default}
+.dk[data-type="hw"] .dkart:hover,.dk[data-type="hw"] .c-artwork:hover{filter:none}
 .dkart:hover::after{background:rgba(0,0,0,.5);opacity:1}
 .dkart img{width:100%;height:100%;object-fit:cover;display:block}
 .noart-icon{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--tx4);font-size:18px}
@@ -613,6 +628,9 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-aux-toggle.warn.on{border-color:rgba(255,80,80,.55);background:rgba(255,80,80,.12);color:#ff6d6d}
 .mx-aux-pills{display:flex;gap:4px;flex-wrap:wrap}
 .mx-aux-pill{display:inline-flex;align-items:center;justify-content:center;min-width:44px;padding:5px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.02);font:800 8px var(--mn);letter-spacing:.1em;color:var(--tx4);white-space:nowrap}
+/* Master/좌측 컬럼 (좁은 폭) 안에선 pills 줄바꿈 금지 + 균등 분배 */
+.mx-master-col .mx-aux-pills,.mx-left-col .mx-aux-pills{flex-wrap:nowrap;gap:3px;width:100%}
+.mx-master-col .mx-aux-pill,.mx-left-col .mx-aux-pill{flex:1 1 0;min-width:0;padding:4px 4px;font-size:7.5px;letter-spacing:.04em}
 .mx-aux-pill.on{border-color:rgba(135,135,255,.45);background:rgba(135,135,255,.16);color:#d8d8ff}
 .mx-aux-pill.hot.on{border-color:rgba(255,140,60,.45);background:rgba(255,140,60,.14);color:#ffb176}
 .mx-aux-pill.pur.on{border-color:rgba(150,100,200,.48);background:rgba(150,100,200,.16);color:#deb6ff}
@@ -634,6 +652,55 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-log-toggle{font:600 8px var(--mn);color:var(--tx3);cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;padding:2px 0}
 .mx-log-toggle:hover{color:var(--tx2)}
 .mx-log{max-height:180px;overflow-y:auto;background:rgba(12,14,18,.8);border:1px solid var(--bdr);border-radius:6px;padding:6px 8px;font:400 9px/1.5 var(--mn);color:var(--tx3);white-space:pre;tab-size:2}
+
+/* ═══ MIXER V2 (3-COL LAYOUT) — V10/NXS2 unified ════════════════ */
+.mx-console-v2{background:linear-gradient(180deg,rgba(18,20,25,.92),rgba(12,14,18,.96));border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;display:flex;align-items:stretch;gap:0}
+.mx-left-col{width:140px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(135,135,255,.04),rgba(20,22,26,.25));border:none;border-right:2px solid rgba(135,135,255,.18);padding:0;margin-right:6px}
+.mx-middle{display:flex;flex-direction:column;width:auto;flex-shrink:0}
+.mx-master-col{width:150px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(255,165,0,.04),rgba(20,22,26,.25));border:none;border-left:2px solid rgba(255,165,0,.2);padding:0;margin-left:6px}
+.mx-section{padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;align-items:center;gap:4px}
+.mx-section:last-child{border-bottom:none}
+.mx-section.is-v10[hidden]{display:none}
+.mx-section-lbl{font:800 9px var(--lb);color:var(--tx2);text-align:center;letter-spacing:.14em;width:100%}
+.mx-section-lbl.master{font-size:11px;color:var(--tx);padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.08)}
+.mx-bpm{font:700 16px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums;text-align:center;letter-spacing:-.01em;line-height:1}
+.mx-bpm-lbl{font:600 6.5px var(--mn);color:var(--tx3);letter-spacing:.18em}
+.mx-knob-row{display:flex;flex-direction:column;align-items:center;gap:2px}
+.mx-stack-2knob{display:flex;gap:10px;justify-content:center;width:100%}
+.mx-iso-row{display:flex;gap:6px;justify-content:center;width:100%}
+/* BEAT FX 컴팩트 — 적당한 여백 유지 */
+.mx-bfx-compact{gap:6px!important;padding:8px 10px!important}
+.mx-bfx-compact .mx-aux-readout{font-size:12px;margin-bottom:2px}
+.mx-bfx-compact .mx-bfx-row{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%}
+.mx-bfx-compact .mx-aux-mini{font-size:7.5px;letter-spacing:.08em}
+.mx-bfx-compact .mx-aux-toggle{min-width:48px;padding:4px 8px;font-size:8.5px}
+.mx-bfx-compact .mx-aux-knob-face{width:28px;height:28px}
+.mx-bfx-compact .mx-aux-kval{font-size:8px}
+/* 채널 strip (개수만큼 폭 자동) */
+.mx-console-v2 .mx-body{display:flex;gap:0;align-items:flex-start}
+.mx-console-v2 .mx-ch{width:84px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06);padding:4px 6px 0;gap:4px;align-items:center;position:relative;max-width:none;min-width:0}
+.mx-console-v2 .mx-ch:last-of-type{border-right:none}
+/* per-CH FILTER (V10) */
+.mx-ch-filter{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:6px 0;border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04);background:rgba(255,255,255,.015);margin-top:2px}
+.mx-ch-filter-lbl{font:700 7px var(--mn);color:var(--tx2);letter-spacing:.12em;opacity:.75}
+.mx-ch-filter-pend{font:600 6px var(--mn);color:var(--pur);letter-spacing:.08em;opacity:.7}
+/* 페이더 dash 마크 (라벨 없이) */
+.mx-console-v2 .mx-fdr-mark{position:absolute;left:-2px;right:-2px;height:1px}
+.mx-console-v2 .mx-fdr-mark::before{content:'';position:absolute;left:0;width:6px;height:1px;background:rgba(255,255,255,.22)}
+.mx-console-v2 .mx-fdr-mark::after{content:'';position:absolute;right:0;width:6px;height:1px;background:rgba(255,255,255,.22)}
+.mx-console-v2 .mx-fdr-mark-lbl{display:none}
+/* X-Fader 행 — 채널 폭 가운데, 박스 적당히 큼 */
+.mx-xfader-row{display:flex;align-items:center;justify-content:center;width:100%;margin:0;padding:10px 0 4px;background:transparent;border-top:1px solid rgba(255,255,255,.05);height:60px}
+.mx-console-v2 .mx-xfader{display:flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;background:transparent;border:none;width:50%;min-width:220px;max-width:280px;height:100%;max-width:280px}
+.mx-console-v2 .mx-xf-lbl{font:700 8px var(--lb);color:var(--tx3);letter-spacing:.12em}
+.mx-console-v2 .mx-xf-track{height:5px}
+.mx-console-v2 .mx-xf-knob{width:22px;height:22px;border-width:2px}
+/* 마스터 column 내부 요소 사이즈 조정 */
+.mx-master-col .mx-master-knob-wrap{position:relative;width:54px;height:54px;margin:2px 0}
+.mx-master-col .mx-clip{order:-1}/* CLIP 위로 */
+.mx-master-col .mx-cue-btn{min-width:48px;padding:3px 8px;font:800 8px var(--mn);letter-spacing:.08em}
+/* mx-empty 가운데 정렬 */
+.mx-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;color:var(--tx4);min-height:200px}
 
 /* ═══════════════════════════════════════════════════════════════ */
 /* ═════════ COMPONENT BASE (c-*) — 테마 독립, 토큰으로 제어 ═════ */
@@ -850,27 +917,37 @@ body[data-layout="row"] .rw-head .dk-num{font:800 20px var(--lb);color:var(--tx)
 body[data-layout="row"] .rw-title-inline{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px;padding:0 10px;overflow:hidden}
 body[data-layout="row"] .rw-title-inline > span[id^="dta"]{font:500 12px var(--sn);color:var(--tx3);flex-shrink:0;max-width:40%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body[data-layout="row"] .rw-title-inline > span[id^="dtn"]{font:600 13px var(--sn);color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-body[data-layout="row"] .rw-body{display:grid;grid-template-columns:180px minmax(0,1fr) var(--vu-w,40px) 36px max-content;grid-template-rows:180px;gap:10px;align-items:stretch}
-/* Virtual 덱 (EQ 없음): EQ 열 제거, tail 이 그 자리까지 확장 (tail 4열째로 이동) */
-body[data-layout="row"] .rw-body.no-eq{grid-template-columns:180px minmax(0,1fr) var(--vu-w,40px) max-content;gap:10px}
+/* Row 덱 높이 180→135px (SMPTE 분리 + tail 빈여백 제거). 6열: art|wf|VU|EQ|tail|smpte */
+body[data-layout="row"] .rw-body{display:grid;grid-template-columns:135px minmax(0,1fr) var(--vu-w,40px) 36px max-content auto;grid-template-rows:135px;gap:10px;align-items:stretch}
+/* Virtual 덱 (EQ 없음): EQ 열 제거, tail 4열, smpte 5열 */
+body[data-layout="row"] .rw-body.no-eq{grid-template-columns:135px minmax(0,1fr) var(--vu-w,40px) max-content auto;gap:10px}
 body[data-layout="row"] .rw-body.no-eq .rw-tail{grid-column:4}
-body[data-layout="row"] .rw-art-wrap{grid-column:1;width:180px;height:180px}
+body[data-layout="row"] .rw-body.no-eq .rw-smpte-col{grid-column:5}
+body[data-layout="row"] .rw-art-wrap{grid-column:1;width:135px;height:135px}
 body[data-layout="row"] .rw-art-wrap .dkart{width:100%;height:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--bdr)}
 body[data-layout="row"] .rw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block}
 body[data-layout="row"] .rw-wf-wrap{grid-column:2;display:flex;flex-direction:column;gap:4px;min-width:0}
-body[data-layout="row"] .rw-wf-wrap .dwov{height:28px;border-radius:4px;margin:0}
+/* Row 오버뷰 28px + 하단 4px 마진 / 디테일은 flex:1 로 자동 채움 */
+body[data-layout="row"] .rw-wf-wrap .dwov{height:28px;border-radius:4px;margin:0 0 4px 0}
 body[data-layout="row"] .rw-wf-wrap .dwz-row{flex:1;min-height:0}
 body[data-layout="row"] .rw-wf-wrap .dwz{height:100%;border-radius:4px;margin:0}
-body[data-layout="row"] .rw-body .dvu-strip{grid-column:3;width:100%;height:180px;flex-direction:row;border-radius:4px;padding:3px 2px;gap:2px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1)}
-body[data-layout="row"] .rw-body .dvu-strip .dvu-ch{flex-direction:column;gap:3px;align-items:center;flex:1;min-width:0}
-body[data-layout="row"] .rw-body .dvu-strip .dvu-hbar{width:10px;flex:1;height:auto;min-height:0;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden}
+/* Row VU strip — L/R/F 균등 폭 + 좌우 padding 동일 (좌우 미세 차 제거) */
+body[data-layout="row"] .rw-body .dvu-strip{grid-column:3;width:100%;height:135px;flex-direction:row;border-radius:4px;padding:3px;gap:3px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1)}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-ch{flex-direction:column;gap:3px;align-items:center;flex:1 1 0;min-width:0}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-hbar{width:100%;flex:1;height:auto;min-height:0;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-hfill{position:absolute;bottom:0;left:0;right:0;top:auto;width:auto;height:var(--vu-level,0)}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-lbl{font:700 7px var(--mn);color:var(--tx4);letter-spacing:.04em;line-height:1;flex-shrink:0}
-body[data-layout="row"] .rw-body .dvu-strip.dvu-multi .dvu-hbar{width:8px}
-body[data-layout="row"] .rw-body .dvu-strip .dvu-fader{flex:0 0 12px}
-body[data-layout="row"] .rw-body .dvu-strip .dvu-fader .dvu-hbar{width:10px}
-body[data-layout="row"] .rw-body .deq-strip{grid-column:4;width:48px;height:180px;flex-direction:column;padding:6px 2px;gap:10px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.12);border-radius:4px}
-body[data-layout="row"] .rw-tail{grid-column:5;display:flex;flex-direction:column;align-items:flex-end;gap:3px;height:180px;min-width:0}
+body[data-layout="row"] .rw-body .dvu-strip.dvu-multi .dvu-hbar{width:100%}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-fader{flex:1 1 0;min-width:0}
+body[data-layout="row"] .rw-body .dvu-strip .dvu-fader .dvu-hbar{width:100%}
+body[data-layout="row"] .rw-body .deq-strip{grid-column:4;width:48px;height:135px;flex-direction:column;padding:6px 2px;gap:10px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.12);border-radius:4px}
+body[data-layout="row"] .rw-tail{grid-column:5;display:flex;flex-direction:column;align-items:flex-end;gap:4px;height:135px;min-width:0}
+/* SMPTE 열 — 세로 스택 M/A/B (135px 풀 높이) + tail 와 세로 구분선 */
+body[data-layout="row"] .rw-smpte-col{grid-column:6;display:flex;flex-direction:column;gap:5px;height:135px;justify-content:flex-start;min-width:54px;padding-left:8px;border-left:1px solid var(--bdr2)}
+body[data-layout="row"] .rw-smpte-col .rw-smpte-lbl{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.18em;line-height:1;flex:0 0 auto}
+body[data-layout="row"] .rw-smpte-col .rw-smpte-master{width:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:1.2 1 0;border-radius:4px;font-size:11px;letter-spacing:.06em;min-height:0}
+body[data-layout="row"] .rw-smpte-col .rw-smpte-ab-stack{display:flex;flex-direction:column;gap:5px;flex:2 1 0;min-height:0}
+body[data-layout="row"] .rw-smpte-col .rw-smpte-ab-stack .dkbtn{flex:1 1 0;border-radius:4px;font-size:11px;min-height:0;width:100%;height:auto}
 body[data-layout="row"] .rw-tail .dtc{font:300 34px var(--font-timecode);line-height:1;color:var(--color-timecode);-webkit-font-smoothing:antialiased;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:.002em;text-align:right;align-self:stretch}
 body[data-layout="row"] .rw-tail .rw-bpm-row{display:flex;align-items:center;justify-content:flex-end;gap:5px;min-height:25px;width:100%}
 body[data-layout="row"] .rw-tail .rw-bpm-row .dk-bpm-cur{font-size:17px;height:28px;padding:3px 10px}
@@ -886,7 +963,7 @@ body[data-layout="row"] .rw-ddz{padding:40px;text-align:center}
 
 /* ═════════ TOWER 레이아웃 — 200px 세로 컬럼, 가로 스크롤 ═════════ */
 body[data-layout="tower"] .deck-row{flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding-bottom:8px;align-items:flex-start;max-width:100%}
-body[data-layout="tower"] .dk.tw-dk{width:270px;min-width:270px;flex-shrink:0;padding:10px 10px 9px;display:flex;flex-direction:column;gap:7px;border-radius:6px}
+body[data-layout="tower"] .dk.tw-dk{width:270px;min-width:270px;flex-shrink:0;padding:10px 10px 9px;display:flex;flex-direction:column;gap:9px;border-radius:6px}
 body[data-layout="tower"] .tw-head{display:flex;align-items:center;gap:8px;padding:2px 0 6px;border-bottom:1px solid var(--bdr);min-height:26px}
 body[data-layout="tower"] .tw-head-top{display:flex;align-items:center;gap:6px;height:22px;flex:0 0 auto}
 body[data-layout="tower"] .tw-head-top .dk-player-lbl{font:600 8px var(--sn);color:var(--tx3);letter-spacing:.22em;text-transform:uppercase}
@@ -908,26 +985,28 @@ body[data-layout="tower"] .tw-title span[id^="dta"]:empty::before{content:'\00a0
 body[data-layout="tower"] .tw-title span[id^="dtn"]{font:700 12px var(--sn)!important;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;min-height:16px;display:block;width:100%;max-width:100%;text-align:center!important;padding:0;margin:0}
 body[data-layout="tower"] .tw-title .dk-title-sep{display:none!important}
 body[data-layout="tower"] .tw-wf{display:flex;flex-direction:column;gap:4px}
-/* CDJ-3000 스타일: overview 높이 ↑ (하단 반파 + 상단 마커 밴드) */
-body[data-layout="tower"] .tw-wf .dwov{height:34px;border-radius:3px;margin:0}
-body[data-layout="tower"] .tw-wf .dwz-row{height:82px}
+/* CDJ-3000 스타일: overview 높이 ↑ (하단 반파 + 상단 마커 밴드) — 디테일 +24% */
+body[data-layout="tower"] .tw-wf .dwov{height:38px;border-radius:3px;margin:0 0 4px 0}
+body[data-layout="tower"] .tw-wf .dwz-row{height:102px}
 body[data-layout="tower"] .tw-wf .dwz{height:100%;border-radius:3px;margin:0}
 body[data-layout="tower"] .tw-tc{text-align:center}
-body[data-layout="tower"] .tw-tc .dtc{font:300 32px var(--font-timecode);color:var(--color-timecode);-webkit-font-smoothing:antialiased;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.001em}
-body[data-layout="tower"] .tw-bpm{display:flex;flex-direction:column;gap:5px;align-items:center}
-body[data-layout="tower"] .tw-bpm-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:5px;align-items:center;justify-content:center;width:100%}
+/* 타임코드 +4pt (32→36px), BPM 행 폰트 +1~2pt */
+body[data-layout="tower"] .tw-tc .dtc{font:300 36px var(--font-timecode);color:var(--color-timecode);-webkit-font-smoothing:antialiased;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.001em}
+body[data-layout="tower"] .tw-bpm{display:flex;flex-direction:column;gap:8px;align-items:center}
+body[data-layout="tower"] .tw-bpm-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:6px;align-items:center;justify-content:center;width:100%}
 body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]{flex-wrap:nowrap!important;gap:4px!important}
-body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]>span:first-child{font-size:12px!important}
-body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]>span:nth-child(2){font-size:9px!important}
+body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]>span:first-child{font-size:14px!important}
+body[data-layout="tower"] .tw-bpm-row [id^="wfbpm"]>span:nth-child(2){font-size:11px!important}
 body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling,
 body[data-layout="tower"] .tw-title span[id^="dta"].scrolling{text-align:left;overflow:hidden;text-overflow:clip}
 body[data-layout="tower"] .tw-title span[id^="dtn"].scrolling .mq-inner,
 body[data-layout="tower"] .tw-title span[id^="dta"].scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
-body[data-layout="tower"] .tw-bpm .dk-bpm-cur{font-size:15px;height:25px;padding:2px 9px}
-body[data-layout="tower"] .tw-bpm .dphs{display:flex;gap:3px;width:100%;max-width:100%;height:12px}
+body[data-layout="tower"] .tw-bpm .dk-bpm-cur{font-size:17px;height:28px;padding:3px 10px}
+body[data-layout="tower"] .tw-bpm .dk-key-box{font-size:14px;height:28px;padding:3px 8px}
+body[data-layout="tower"] .tw-bpm .dphs{display:flex;gap:3px;width:100%;max-width:100%;height:14px;margin-top:2px}
 body[data-layout="tower"] .tw-bpm .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
 body[data-layout="tower"] .tw-bpm .dphs-fill{position:absolute;inset:0;background:var(--key);opacity:0;transition:opacity .06s}
-body[data-layout="tower"] .tw-dk .dvu-strip{flex-direction:row;width:100%;height:auto;padding:5px 6px;gap:5px;background:rgba(255,107,44,.045);border:1px solid rgba(255,107,44,.2);border-radius:3px}
+body[data-layout="tower"] .tw-dk .dvu-strip{flex-direction:row;width:100%;height:auto;padding:6px 7px;gap:6px;background:rgba(255,107,44,.045);border:1px solid rgba(255,107,44,.2);border-radius:3px}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-ch{flex-direction:row;gap:5px;align-items:center;flex:1;min-width:0}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hbar{flex:1;height:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,107,44,.18);position:relative;overflow:hidden;width:auto;min-height:0}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:var(--vu-level,0);height:100%}
@@ -943,63 +1022,111 @@ body[data-layout="tower"] .tw-ctl-lbl{font:700 7px var(--mn);color:var(--tx3);le
 body[data-layout="tower"] .tw-ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;height:30px;width:100%}
 body[data-layout="tower"] .tw-ctl-row .dkbtn,body[data-layout="tower"] .tw-ctl-row .dksm-btn{height:100%;border-radius:3px;font-size:9px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:0}
 
-/* ═════════ CARD 레이아웃 — 앨범 히어로, 최대 2열, 세로 스크롤 ═════════ */
-/* auto-fill + minmax(280, 440): 덱 폭 280~440 고정 범위 → 1개 덱이어도 440 이하 */
-body[data-layout="card"] .deck-row{display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, min(440px, 100%)));gap:12px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px;justify-content:start}
-body[data-layout="card"] .dk.cd-dk{display:flex;flex-direction:column;gap:0;padding:0;border-radius:10px;overflow:hidden;min-width:0}
-body[data-layout="card"] .cd-hero{position:relative;height:185px;overflow:hidden;background:var(--bg-lowest)}
-body[data-layout="card"] .cd-hero .dkart{position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:0;aspect-ratio:auto}
-body[data-layout="card"] .cd-hero .dkart img{width:100%;height:100%;object-fit:cover;display:block}
-body[data-layout="card"] .cd-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,transparent 30%,transparent 60%,rgba(12,14,18,.96) 100%);pointer-events:none;z-index:2}
-body[data-layout="card"] .cd-top{position:absolute;top:0;left:0;right:0;padding:8px 12px;display:flex;align-items:center;gap:8px;z-index:3;height:40px}
-body[data-layout="card"] .cd-top .dk-player-lbl{font:500 8px var(--sn);color:rgba(255,255,255,.65);letter-spacing:.22em;text-transform:uppercase}
-body[data-layout="card"] .cd-top .dk-num{font:700 22px var(--mn);color:#fff;line-height:1}
-body[data-layout="card"] .cd-top .dbadge{background:rgba(0,0,0,.38);border-color:rgba(255,255,255,.22);color:#fff}
-body[data-layout="card"] .cd-top .dhwl{color:#fff!important}
-body[data-layout="card"] .cd-info{position:absolute;bottom:10px;left:12px;right:12px;z-index:3;color:#fff}
-body[data-layout="card"] .cd-info .cd-artist{font:500 11px var(--sn);color:rgba(255,255,255,.7);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-body[data-layout="card"] .cd-info .cd-track{font:600 16px var(--sn);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;position:relative}
-body[data-layout="card"] .cd-info .cd-track.scrolling{text-overflow:clip}
-body[data-layout="card"] .cd-info .cd-track.scrolling .mq-inner{display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite}
-body[data-layout="card"] .cd-bpm-row{display:flex;flex-direction:row;flex-wrap:nowrap;gap:6px;align-items:center;justify-content:flex-end}
-body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]{flex-wrap:nowrap!important}
-body[data-layout="card"] .cd-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:rgba(26,27,33,.95)}
-body[data-layout="card"] .cd-wf{display:flex;flex-direction:column;gap:4px}
-body[data-layout="card"] .cd-wf .dwov{height:20px;border-radius:3px;margin:0}
-body[data-layout="card"] .cd-wf .dwz-row{height:54px}
-body[data-layout="card"] .cd-wf .dwz{height:100%;border-radius:4px;margin:0}
-body[data-layout="card"] .cd-tc-row{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:14px;min-width:0}
-body[data-layout="card"] .cd-tc-row .dtc{font:300 clamp(28px,6vw,33px) var(--font-timecode);color:var(--color-timecode);-webkit-font-smoothing:antialiased;line-height:.98;font-variant-numeric:tabular-nums;letter-spacing:.001em;min-width:0;flex:0 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:clip}
-body[data-layout="card"] .cd-tc-row .cd-bpm-col{flex:0 0 178px}
-body[data-layout="card"] .cd-bpm-col{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px;min-width:0;height:42px}
-body[data-layout="card"] .cd-bpm-row{justify-content:flex-end;min-width:0;max-width:100%;overflow:visible;gap:4px!important}
-body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]>span:first-child{font-size:12px!important}
-body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]>span:nth-child(2){font-size:8px!important}
-body[data-layout="card"] .cd-bpm-row .dk-bpm-cur{font-size:14px;height:23px;padding:2px 8px}
-body[data-layout="card"] .cd-bpm-row .dk-key-box{font-size:13px;height:23px;padding:2px 6px}
-body[data-layout="card"] .cd-bpm-col .dphs{display:flex;gap:3px;width:100%;height:10px;min-width:0;align-self:stretch}
-body[data-layout="card"] .cd-bpm-col .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
-body[data-layout="card"] .cd-bpm-col .dphs-fill{position:absolute;inset:0;background:var(--key);opacity:0;transition:opacity .06s}
-body[data-layout="card"] .cd-mix-row{display:flex;gap:8px;align-items:center;min-height:38px}
-body[data-layout="card"] .cd-mix-row .dvu-strip{flex:1 1 auto;flex-direction:row;padding:5px 8px;gap:8px;background:rgba(255,107,44,.045);border:1px solid rgba(255,107,44,.2);border-radius:4px;width:100%;max-width:100%;height:auto;margin:0}
-body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-ch{flex:1 1 0;flex-direction:row;gap:5px;align-items:center;min-width:0}
-body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hbar{flex:1 1 auto;height:8px;width:auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,107,44,.18);position:relative;overflow:hidden;min-height:0}
-body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:var(--vu-level,0);height:100%}
-body[data-layout="card"] .cd-mix-row .dvu-strip .dvu-lbl{width:12px;text-align:center;font-size:7px;flex-shrink:0}
-body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi{display:grid;grid-template-columns:repeat(var(--vu-count,2),minmax(0,1fr)) 30px;gap:4px;padding:5px 6px}
-body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi .dvu-ch{gap:3px}
-body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi .dvu-lbl{width:10px;font-size:6px;letter-spacing:-.04em}
-body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi .dvu-fader{grid-column:calc(var(--vu-count,2) + 1);min-width:28px}
-body[data-layout="card"] .cd-mix-row .dvu-strip.dvu-multi .dvu-fader .dvu-lbl{width:8px}
-body[data-layout="card"] .cd-mix-row .deq-strip{flex-direction:row;padding:7px 12px;gap:10px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.12);border-radius:4px;width:auto;height:auto}
-body[data-layout="card"] .cd-ctl-sec{display:flex;flex-direction:column;gap:3px}
-body[data-layout="card"] .cd-ctl-lbl{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.18em;padding-left:2px;line-height:1}
-body[data-layout="card"] .cd-ctl-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));justify-content:stretch;gap:4px;height:28px;width:100%}
-body[data-layout="card"] .cd-ctl-row .dkbtn,body[data-layout="card"] .cd-ctl-row .dksm-btn{height:100%;border-radius:4px;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:0}
-body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
+/* ═════════════════════════════════════════════════════════════════════════
+   SIMPLE LAYOUT (data-layout="card") — 처음부터 다시 작성 (2026-04-26 v3)
+   원칙:
+   1) 모든 룰에 !important 적용 — 상속/공통 .dk 룰 완전히 압도
+   2) 단일 책임: 한 selector = 한 의도. 중복 스타일 제거
+   3) 명시적 spacing: padding/gap 모두 4px multiple
+   4) 앨범아트 = 56px square, 좌상단 고정. 우측 콘텐츠 = 56px 매치
+   5) 트랙 제목(15px, 위) ≫ 아티스트(11px, 아래)
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* 그리드 — 최대 2열, 폭 늘어남 */
+body[data-layout="card"] .deck-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important;overflow-y:auto!important;overflow-x:hidden!important;max-height:calc(100vh - 160px)!important;padding-right:4px!important}
+@media (max-width: 760px){
+  body[data-layout="card"] .deck-row{grid-template-columns:1fr!important}
+}
+
+/* 덱 카드 컨테이너 — 라운딩 최소화 (사용자 요청: "라운딩 빼줘") */
+body[data-layout="card"] .dk.cd-dk{display:flex!important;flex-direction:column!important;gap:12px!important;padding:14px!important;border:1px solid var(--bdr)!important;border-radius:0!important;background:var(--bg-lowest)!important;min-width:0!important;overflow:hidden!important;box-sizing:border-box!important}
+
+/* HERO: 정확히 56px 높이 (앨범아트와 동일).
+   row1=20px(PLAYER), row2=36px(트랙+아티스트, justify-content:space-between 으로
+   트랙은 상단, 아티스트는 하단 → 아티스트 baseline = 앨범아트 하단). */
+body[data-layout="card"] .cd-hero{display:grid!important;grid-template-columns:56px minmax(0,1fr)!important;grid-template-rows:20px 36px!important;column-gap:12px!important;row-gap:0!important;align-items:stretch!important;margin:0!important;padding:0!important;height:56px!important;min-height:56px!important;max-height:56px!important;background:transparent!important;overflow:visible!important;position:relative!important}
+body[data-layout="card"] .cd-hero::after{display:none!important;content:none!important}
+
+/* 앨범아트 — 56×56 정사각, 라운딩 없음 (사용자 요청) */
+body[data-layout="card"] .cd-hero .dkart{grid-column:1!important;grid-row:1/3!important;width:56px!important;height:56px!important;min-width:56px!important;max-width:56px!important;min-height:56px!important;max-height:56px!important;border:1px solid var(--bdr)!important;border-radius:0!important;overflow:hidden!important;background:var(--bg2)!important;flex-shrink:0!important;aspect-ratio:1!important;position:relative!important;inset:auto!important;align-self:start!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-hero .dkart img{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;margin:0!important;padding:0!important;border-radius:0!important}
+
+/* PLAYER 라인 (row 1) */
+body[data-layout="card"] .cd-top{grid-column:2!important;grid-row:1!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important;height:20px!important;min-height:20px!important;max-height:20px!important;min-width:0!important;padding:0!important;margin:0!important;position:relative!important;inset:auto!important;overflow:hidden!important;z-index:auto!important;align-self:stretch!important}
+
+/* 트랙/아티스트 (row 2) — height 36px 로 row 채우고 space-between 으로 위/아래 분배.
+   트랙은 상단, 아티스트는 하단 = 앨범아트 하단 baseline 일치. */
+body[data-layout="card"] .cd-info{grid-column:2!important;grid-row:2!important;display:flex!important;flex-direction:column!important;justify-content:space-between!important;align-items:stretch!important;align-self:stretch!important;gap:0!important;min-width:0!important;height:36px!important;padding:0!important;margin:0!important;position:relative!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;color:inherit!important;z-index:auto!important}
+
+/* cd-top 항목들 */
+body[data-layout="card"] .cd-top .dk-player-lbl{font:500 8.5px var(--mn)!important;color:var(--tx3)!important;letter-spacing:.16em!important;text-transform:uppercase!important;line-height:1!important;flex-shrink:0!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-top .dk-num{font:700 14px var(--lb)!important;color:var(--tx)!important;line-height:1!important;flex-shrink:0!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-top .dbadge{background:transparent!important;border:1px solid var(--bdr)!important;color:var(--tx3)!important;font-size:7.5px!important;padding:2px 5px!important;line-height:1!important;flex-shrink:0!important;border-radius:0!important}
+body[data-layout="card"] .cd-top .dhwl{color:var(--tx3)!important;font:500 8.5px var(--mn)!important;flex-shrink:1!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;letter-spacing:.04em!important}
+body[data-layout="card"] .cd-top .dksm{margin-left:auto!important;flex-shrink:0!important;display:inline-flex!important;gap:3px!important}
+body[data-layout="card"] .cd-top .dksm-btn{padding:2px 5px!important;font-size:7px!important;min-width:30px!important;line-height:1!important;border-radius:0!important}
+body[data-layout="card"] .cd-top .dhtb{flex-shrink:0!important;padding:0!important;background:transparent!important;border:none!important}
+
+/* cd-info — 트랙(위) + 아티스트(아래). HTML 순서가 artist→track 이라 order 로 뒤집음 */
+body[data-layout="card"] .cd-info .cd-track{font:600 15px var(--sn)!important;line-height:1.2!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:var(--tx)!important;position:relative!important;order:1!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-info .cd-artist{font:400 11px var(--sn)!important;color:var(--tx3)!important;line-height:1.3!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;order:2!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-info .cd-track.scrolling{text-overflow:clip!important}
+body[data-layout="card"] .cd-info .cd-track.scrolling .mq-inner{display:inline-block!important;animation:marquee-scroll var(--scroll-dur,8s) linear infinite!important}
+
+/* 빈 덱 hero — 동일 높이 유지 */
+body[data-layout="card"] .cd-hero-empty{padding:0!important;min-height:56px!important}
+
+/* 본문 — 웨이브폼 / 타임코드 / transport / SMPTE / time */
+body[data-layout="card"] .cd-body{padding:0!important;display:flex!important;flex-direction:column!important;gap:10px!important;background:transparent!important;margin:0!important}
+
+/* 오버뷰 웨이브폼 — 큐포인트 표시 공간 확보 위해 60px */
+body[data-layout="card"] .cd-wf{display:flex!important;flex-direction:column!important;gap:0!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-wf .dwov{height:60px!important;border-radius:0!important;margin:0!important}
+/* 줌 웨이브폼 비활성 (Simple 컨셉) */
+body[data-layout="card"] .cd-wf .dwz-row,body[data-layout="card"] .cd-wf .dwz{display:none!important}
+
+/* 타임코드 + BPM/Key + 페이저 */
+body[data-layout="card"] .cd-tc-row{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;min-width:0!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-tc-row .dtc{font:300 26px var(--font-timecode)!important;color:var(--color-timecode)!important;-webkit-font-smoothing:antialiased!important;line-height:1!important;font-variant-numeric:tabular-nums!important;letter-spacing:.002em!important;flex:0 1 auto!important;text-align:left!important;white-space:nowrap!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-bpm-col{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:6px!important;min-width:140px!important;max-width:240px!important;height:auto!important;flex-shrink:0!important;flex-grow:0!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-bpm-row{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;justify-content:flex-end!important;flex-wrap:nowrap!important}
+body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]{flex-wrap:nowrap!important;gap:4px!important}
+body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]>span:first-child{font-size:14px!important}
+body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]>span:nth-child(2){font-size:8.5px!important}
+body[data-layout="card"] .cd-bpm-row .dk-bpm-cur{font-size:14px!important;height:24px!important;padding:2px 9px!important;line-height:1!important;display:inline-flex!important;align-items:center!important}
+body[data-layout="card"] .cd-bpm-row .dk-key-box{font-size:12px!important;height:24px!important;padding:2px 7px!important;line-height:1!important;display:inline-flex!important;align-items:center!important}
+
+/* 비트 페이저 — BPM col 풀폭, 더 두껍게 */
+/* 글로벌 .dphs 가 grid(2x2) 인데 카드에서 horizontal flex 4-segment 으로 강제. 모든 grid 속성 unset. */
+body[data-layout="card"] .cd-bpm-col .dphs,
+body[data-layout="card"] .cd-bpm-col [class~="dphs"]{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:3px!important;width:100%!important;min-width:0!important;height:10px!important;align-self:stretch!important;margin:0!important;padding:0!important;grid-template-columns:unset!important;grid-template-rows:unset!important;grid-auto-flow:unset!important;grid-auto-rows:unset!important;grid-auto-columns:unset!important;justify-content:flex-start!important;align-items:stretch!important}
+body[data-layout="card"] .cd-bpm-col .dphs-seg{flex:1 1 0!important;min-width:0!important;border:1px solid var(--tx4)!important;background:transparent!important;position:relative!important;overflow:hidden!important;border-radius:0!important}
+/* opacity 는 JS 가 매 비트마다 변경 (활성 세그먼트만 1.0). !important 붙이면 JS 가 못 바꿔서 페이저 멈춤. */
+body[data-layout="card"] .cd-bpm-col .dphs-fill{position:absolute!important;inset:0!important;background:var(--key)!important;transition:opacity .06s!important}
+
+/* VU/EQ 비활성 */
+body[data-layout="card"] .cd-mix-row{display:none!important}
+
+/* Transport + SMPTE 섹션 */
+body[data-layout="card"] .cd-ctl-sec{display:flex!important;flex-direction:column!important;gap:0!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-ctl-lbl{display:none!important}
+body[data-layout="card"] .cd-ctl-row{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;height:28px!important;width:100%!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-ctl-row .dkbtn,body[data-layout="card"] .cd-ctl-row .dksm-btn{height:100%!important;border-radius:0!important;font-size:10.5px!important;letter-spacing:.04em!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important;min-height:0!important;padding:0!important;line-height:1!important}
+
+/* 시간 텍스트 — 작은 보조 라인 */
+body[data-layout="card"] .dk-tc-time{font:400 10px var(--mn)!important;color:var(--tx4)!important;text-align:right!important;margin:0!important;padding:2px 0 0 0!important;font-variant-numeric:tabular-nums!important}
+
+/* 빈 덱 placeholder */
+body[data-layout="card"] .cd-ddz{padding:32px 16px!important;text-align:center!important;border:1px dashed var(--bdr2)!important;border-radius:0!important;margin:0!important}
+body[data-layout="card"] .cd-ddz .ddzi{font-size:28px!important;color:var(--tx3)!important;margin-bottom:8px!important;line-height:1!important}
 
 </style>
+<script src="./i18n.js"></script>
 <script src="./waveform-gl.js"></script>
+<script src="./waveform-analysis.js"></script>
+<script src="./license-panel.js"></script>
+<script src="./mixer-panel.js"></script>
+<script src="./settings-panel.js"></script>
 </head><body>
 
 <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
@@ -1054,7 +1181,7 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
   <button class="sbi" data-t="history" title="HISTORY"><span class="sbi-ic material-symbols-outlined">history</span><span class="sbi-lb">HIST</span></button>
   <button class="sbi" data-t="pdjl" title="PRO DJ LINK"><span class="sbi-ic material-symbols-outlined">device_hub</span><span class="sbi-lb">PDJL</span></button>
   <button class="sbi" data-t="tcnet" title="TCNet"><span class="sbi-ic material-symbols-outlined">lan</span><span class="sbi-lb">TCNET</span></button>
-  <button class="sbi" data-t="artnet" title="Art-Net"><span class="sbi-ic material-symbols-outlined">router</span><span class="sbi-lb">ARTNET</span></button>
+  <button class="sbi" data-t="artnet" title="Art-Net (disabled)" style="display:none"><span class="sbi-ic material-symbols-outlined">router</span><span class="sbi-lb">ARTNET</span></button>
   <button class="sbi" data-t="ablink" title="Ableton Link"><span class="sbi-ic material-symbols-outlined">graphic_eq</span><span class="sbi-lb">LINK</span></button>
   <div class="sbi-spacer"></div>
   <button class="sbi" data-t="settings" title="SETTINGS"><span class="sbi-ic material-symbols-outlined">settings</span><span class="sbi-lb">SET</span></button>
@@ -1073,25 +1200,23 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
   </div>
   <div class="out-layers" id="outLayers" style="display:none"></div>
   <div class="mode-bar">
-    <div class="mode-label">DECK MODE</div>
+    <div class="mode-label" data-i18n="lbl_deck_mode">DECK MODE</div>
     <div class="mode-btns">
-      <button class="mode-btn" id="modeVt" onclick="switchMode('virtual')">VIRTUAL</button>
-      <button class="mode-btn ac" id="modeHW" onclick="switchMode('hw')">HARDWARE</button>
+      <button class="mode-btn" id="modeVt" onclick="switchMode('virtual')" data-i18n="mode_virtual">VIRTUAL</button>
+      <button class="mode-btn ac" id="modeHW" onclick="switchMode('hw')" data-i18n="mode_hardware">HARDWARE</button>
     </div>
-    <span class="mode-hint" id="modeHint">CDJ 연결 시 자동 감지됩니다</span>
+    <span class="mode-hint" id="modeHint"></span>
     <span class="mode-hint" id="djmHint" style="display:none;color:var(--grn)"></span>
   </div>
   <div class="deck-area">
     <div id="hwSection" style="display:none">
-      <div class="sl">INPUT LAYERS — CDJ / HW</div>
       <div class="deck-row" id="hwRow"></div>
     </div>
     <div id="vtSection">
-      <div class="sl" id="vtLabel">INPUT LAYERS — VIRTUAL</div>
       <div class="deck-row" id="vtRow"></div>
       <button class="add-deck-btn" id="addDeckBtn" style="margin-top:8px">
         <span style="font-size:18px;line-height:1;display:inline-flex;align-items:center"><svg class="gi gi-plus"><use href="#i-plus"/></svg></span>
-        <span>Virtual 덱 추가 <span style="color:var(--tx3);font-size:9px">(최대 6개)</span></span>
+        <span><span data-i18n="add_deck">Virtual 덱 추가</span> <span style="color:var(--tx3);font-size:9px" data-i18n="add_deck_max">(최대 6개)</span></span>
       </button>
     </div>
   </div>
@@ -1146,137 +1271,145 @@ body[data-layout="card"] .cd-ddz{padding:40px;text-align:center}
     </div>
     <div class="mx-empty" id="mxEmpty">
       <span class="material-symbols-outlined">settings_input_hdmi</span>
-      <span class="mx-empty-tx">DJM 믹서가 연결되지 않았습니다</span>
+      <span class="mx-empty-tx" data-i18n="lbl_djm_disconnected">DJM 믹서가 연결되지 않았습니다</span>
       <span class="mx-empty-sub">Pro DJ Link 네트워크에 DJM을 연결하면<br>실시간 믹서 데이터가 표시됩니다</span>
     </div>
     <div id="mxContent" style="display:none">
-      <!-- Primary mixer: channels + master + monitor column (unified physical mixer style) -->
-      <div class="mx-console">
-      <div class="mx-primary">
-        <div class="mx-body" id="mxBody"></div>
-        <div class="mx-right-col">
-          <div class="mx-aux-group monitor">
-            <span class="mx-aux-gtitle">MONITOR</span>
-            <div class="mx-aux-grid2">
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBalKnobHost"></div><span class="mx-aux-klabel">BALANCE</span><span class="mx-aux-kval" id="mxBalVal">C</span></div>
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBoothKnobHost"></div><span class="mx-aux-klabel">BOOTH</span><span class="mx-aux-kval" id="mxBoothVal">0</span></div>
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpMixKnobHost"></div><span class="mx-aux-klabel">HP MIX</span><span class="mx-aux-kval" id="mxHpMixVal">0</span></div>
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpLevelKnobHost"></div><span class="mx-aux-klabel">HP LEVEL</span><span class="mx-aux-kval" id="mxHpVal">0</span></div>
+      <!-- 3-COL: LEFT (MIC/HP/COLOR) | MIDDLE (channels + xfader) | RIGHT (master + aux) -->
+      <div class="mx-console-v2">
+        <!-- LEFT COLUMN -->
+        <div class="mx-left-col">
+          <div class="mx-section">
+            <span class="mx-section-lbl">MIC EQ</span>
+            <div class="mx-stack-2knob">
+              <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxMicHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxMicHiVal">0</span></div>
+              <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxMicLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxMicLoVal">0</span></div>
             </div>
-            <span class="mx-aux-toggle ylw mx-aux-full" id="mxCueMasterAux">MASTER CUE</span>
           </div>
-          <div class="mx-aux-group booth-eq" id="mxBoothEqGroup">
-            <span class="mx-aux-gtitle">BOOTH EQ</span>
-            <div class="mx-aux-grid2">
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBthHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxBthHiVal">0</span></div>
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBthLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxBthLoVal">0</span></div>
+          <div class="mx-section is-v10" id="mxMmxSection">
+            <span class="mx-section-lbl">MASTER MIX</span>
+            <span class="mx-aux-toggle pur" id="mxMmxOn">ON</span>
+            <div class="mx-stack-2knob" style="font:600 7px var(--mn);color:var(--tx3)">
+              <span>SIZE <b id="mxMmxSize" class="mx-aux-readout dim">0</b></span>
+              <span>TIME <b id="mxMmxTime" class="mx-aux-readout dim">0</b></span>
+            </div>
+            <div class="mx-stack-2knob" style="font:600 7px var(--mn);color:var(--tx3)">
+              <span>TONE <b id="mxMmxTone" class="mx-aux-readout dim">0</b></span>
+              <span>LVL <b id="mxMmxLvl" class="mx-aux-readout dim">0</b></span>
+            </div>
+          </div>
+          <div class="mx-section">
+            <span class="mx-section-lbl">HEADPHONES A</span>
+            <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxHpMixKnobHost"></div><span class="mx-aux-klabel">HP MIX</span><span class="mx-aux-kval" id="mxHpMixVal">0</span></div>
+            <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxHpLevelKnobHost"></div><span class="mx-aux-klabel">HP LEVEL</span><span class="mx-aux-kval" id="mxHpVal">0</span></div>
+            <span class="mx-aux-toggle ylw mx-aux-full" id="mxCueMasterAux">CUE</span>
+          </div>
+          <div class="mx-section is-v10" id="mxHpBGroup">
+            <span class="mx-section-lbl">HEADPHONES B</span>
+            <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxHpMixBKnobHost"></div><span class="mx-aux-klabel">HP MIX</span><span class="mx-aux-kval" id="mxHpMixB">0</span></div>
+            <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxHpLevelBKnobHost"></div><span class="mx-aux-klabel">HP LEVEL</span><span class="mx-aux-kval" id="mxHpValB">0</span></div>
+            <span class="mx-aux-toggle ylw mx-aux-full" id="mxHpLinkB">CUE LINK</span>
+          </div>
+          <div class="mx-section">
+            <span class="mx-section-lbl">COLOR FX</span>
+            <span class="mx-aux-readout" id="mxCfxSel">OFF</span>
+            <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxCfxKnobHost"></div><span class="mx-aux-klabel">PARAMETER</span><span class="mx-aux-kval" id="mxCfxVal">0</span></div>
+          </div>
+          <div class="mx-section">
+            <span class="mx-section-lbl">CURVE</span>
+            <span class="mx-aux-gsub">CHANNEL EQ</span>
+            <div class="mx-aux-pills"><span class="mx-aux-pill" id="mxEqIso">ISO</span><span class="mx-aux-pill" id="mxEqStd">STD</span><span class="mx-aux-pill hot" id="mxEqHot">HOT</span></div>
+            <span class="mx-aux-gsub">FADER</span>
+            <div class="mx-aux-pills"><span class="mx-aux-pill" id="mxFdrLong">LONG</span><span class="mx-aux-pill" id="mxFdrStd">STD</span><span class="mx-aux-pill hot" id="mxFdrSharp">SHARP</span></div>
+          </div>
+        </div>
+
+        <!-- MIDDLE COLUMN: channels + X-Fader -->
+        <div class="mx-middle">
+          <div class="mx-body" id="mxBody"></div>
+          <div class="mx-xfader-row">
+            <div class="mx-xfader">
+              <span class="mx-xf-lbl">X-FADER</span>
+              <span class="mx-xf-a">A</span>
+              <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
+              <span class="mx-xf-b">B</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: MASTER + aux -->
+        <div class="mx-master-col">
+          <div class="mx-section">
+            <span class="mx-section-lbl master">MASTER</span>
+            <span class="mx-clip" id="mxClip">CLIP</span>
+            <div class="mx-master-vu-dots" id="mxMasterVus">
+              <div class="mx-master-dot-col"><span class="mx-vu-lbl">L</span>
+                <div class="mx-master-dot" id="mxMDotL0"></div><div class="mx-master-dot" id="mxMDotL1"></div><div class="mx-master-dot" id="mxMDotL2"></div><div class="mx-master-dot" id="mxMDotL3"></div><div class="mx-master-dot" id="mxMDotL4"></div><div class="mx-master-dot" id="mxMDotL5"></div><div class="mx-master-dot" id="mxMDotL6"></div><div class="mx-master-dot" id="mxMDotL7"></div><div class="mx-master-dot" id="mxMDotL8"></div><div class="mx-master-dot" id="mxMDotL9"></div><div class="mx-master-dot" id="mxMDotL10"></div><div class="mx-master-dot" id="mxMDotL11"></div>
+              </div>
+              <div class="mx-master-dot-col"><span class="mx-vu-lbl">R</span>
+                <div class="mx-master-dot" id="mxMDotR0"></div><div class="mx-master-dot" id="mxMDotR1"></div><div class="mx-master-dot" id="mxMDotR2"></div><div class="mx-master-dot" id="mxMDotR3"></div><div class="mx-master-dot" id="mxMDotR4"></div><div class="mx-master-dot" id="mxMDotR5"></div><div class="mx-master-dot" id="mxMDotR6"></div><div class="mx-master-dot" id="mxMDotR7"></div><div class="mx-master-dot" id="mxMDotR8"></div><div class="mx-master-dot" id="mxMDotR9"></div><div class="mx-master-dot" id="mxMDotR10"></div><div class="mx-master-dot" id="mxMDotR11"></div>
+              </div>
+            </div>
+            <span class="mx-aux-mini" style="font-size:7px;letter-spacing:.18em">LEVEL</span>
+            <div class="mx-master-knob-wrap">
+              <div class="mx-aux-knob-face" id="mxMVolHost"></div>
+              <span class="mx-master-sc sc-inf">-∞</span>
+              <span class="mx-master-sc sc-0db">0dB</span>
+              <span class="mx-master-sc sc-5db">+5dB</span>
+            </div>
+            <span class="mx-cue-btn" id="mxCueMaster">CUE</span>
+          </div>
+          <div class="mx-section">
+            <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxBalKnobHost"></div><span class="mx-aux-klabel">BALANCE</span><span class="mx-aux-kval" id="mxBalVal">C</span></div>
+          </div>
+          <div class="mx-section">
+            <span class="mx-bpm-lbl">BPM</span>
+            <span class="mx-bpm" id="mxMasterBpm">—</span>
+          </div>
+          <div class="mx-section">
+            <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxBoothKnobHost"></div><span class="mx-aux-klabel">BOOTH MONITOR</span><span class="mx-aux-kval" id="mxBoothVal">0</span></div>
+          </div>
+          <div class="mx-section is-v10" id="mxBoothEqGroup">
+            <span class="mx-section-lbl">BOOTH EQ</span>
+            <div class="mx-stack-2knob">
+              <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxBthHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxBthHiVal">0</span></div>
+              <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxBthLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxBthLoVal">0</span></div>
             </div>
             <span class="mx-aux-toggle mx-aux-full" id="mxBthEqBtn">EQ ON</span>
           </div>
-          <div class="mx-aux-group hp-b" id="mxHpBGroup">
-            <span class="mx-aux-gtitle">HEADPHONES B</span>
-            <div class="mx-aux-grid2">
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpMixBKnobHost"></div><span class="mx-aux-klabel">HP MIX B</span><span class="mx-aux-kval" id="mxHpMixB">0</span></div>
-              <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxHpLevelBKnobHost"></div><span class="mx-aux-klabel">HP LEVEL B</span><span class="mx-aux-kval" id="mxHpValB">0</span></div>
-            </div>
-            <span class="mx-aux-toggle ylw mx-aux-full" id="mxHpLinkB">CUE LINK</span>
-          </div>
-        </div>
-        <!-- FX column — 마스터/모니터 우측에 붙음 (세로 스택, 가로 공간 차지) -->
-        <div class="mx-fx-col">
-        <div class="mx-aux-group curves">
-          <span class="mx-aux-gtitle">CURVE</span>
-          <div class="mx-aux-stack">
-            <span class="mx-aux-gsub">CHANNEL EQ</span>
-            <div class="mx-aux-pills">
-              <span class="mx-aux-pill" id="mxEqIso">ISO</span>
-              <span class="mx-aux-pill" id="mxEqStd">STD</span>
-              <span class="mx-aux-pill hot" id="mxEqHot">HOT</span>
+          <div class="mx-section is-v10" id="mxIsoSection">
+            <span class="mx-section-lbl">ISOLATOR</span>
+            <span class="mx-aux-toggle pur" id="mxIsoOn">ON</span>
+            <div class="mx-iso-row">
+              <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxIsoHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxIsoHiVal">0</span></div>
+              <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxIsoMidKnobHost"></div><span class="mx-aux-klabel">MID</span><span class="mx-aux-kval" id="mxIsoMidVal">0</span></div>
+              <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxIsoLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxIsoLoVal">0</span></div>
             </div>
           </div>
-          <div class="mx-aux-stack">
-            <span class="mx-aux-gsub">FADER</span>
-            <div class="mx-aux-pills">
-              <span class="mx-aux-pill" id="mxFdrLong">LONG</span>
-              <span class="mx-aux-pill" id="mxFdrStd">STD</span>
-              <span class="mx-aux-pill hot" id="mxFdrSharp">SHARP</span>
-            </div>
-          </div>
-        </div>
-        <div class="mx-aux-group beatfx">
-          <span class="mx-aux-gtitle">BEAT FX</span>
-          <div class="mx-aux-spread">
-            <div class="mx-aux-stack">
-              <span class="mx-aux-readout" id="mxBfxSel">DELAY</span>
+          <!-- BEAT FX (compact) — selector 위, ON+Knob 한 행, FREQ pills 한 행 -->
+          <!-- mxBfxAssign / mxSndRtn 은 NXS2 에 없는 데이터 → 기본 숨김 (V10 등에서만 표시 예정) -->
+          <div class="mx-section mx-bfx-compact">
+            <span class="mx-section-lbl">BEAT FX</span>
+            <span class="mx-aux-readout" id="mxBfxSel">DELAY</span>
+            <div class="mx-bfx-row mx-bfx-meta" style="display:none">
               <span class="mx-aux-mini" id="mxBfxAssign">MASTER</span>
               <span class="mx-aux-mini" id="mxSndRtn">SND/RTN 0</span>
             </div>
-            <span class="mx-aux-toggle pur" id="mxBfxOn">ON</span>
-            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxBfxLvlKnobHost"></div><span class="mx-aux-klabel">LEVEL/DEPTH</span><span class="mx-aux-kval" id="mxBfxLvlVal">0</span></div>
-          </div>
-          <div class="mx-aux-stack">
-            <span class="mx-aux-gsub">FREQ</span>
-            <div class="mx-aux-pills">
-              <span id="mxFxFLo" class="mx-aux-pill">LO</span>
-              <span id="mxFxFMid" class="mx-aux-pill">MID</span>
-              <span id="mxFxFHi" class="mx-aux-pill">HI</span>
+            <div class="mx-bfx-row">
+              <span class="mx-aux-toggle pur" id="mxBfxOn">ON</span>
+              <div class="mx-knob-row" style="flex-direction:row;gap:4px;align-items:center"><div class="mx-aux-knob-face" id="mxBfxLvlKnobHost"></div><span class="mx-aux-kval" id="mxBfxLvlVal">0</span></div>
             </div>
+            <div class="mx-aux-pills"><span id="mxFxFLo" class="mx-aux-pill">LO</span><span id="mxFxFMid" class="mx-aux-pill">MID</span><span id="mxFxFHi" class="mx-aux-pill">HI</span></div>
           </div>
-        </div>
-        <div class="mx-aux-group colorfx">
-          <span class="mx-aux-gtitle">SOUND COLOR FX</span>
-          <span class="mx-aux-readout" id="mxCfxSel">OFF</span>
-          <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxCfxKnobHost"></div><span class="mx-aux-klabel">PARAMETER</span><span class="mx-aux-kval" id="mxCfxVal">0</span></div>
-        </div>
-        <div class="mx-aux-group mic">
-          <span class="mx-aux-gtitle">MIC EQ</span>
-          <div class="mx-aux-grid2">
-            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxMicHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxMicHiVal">0</span></div>
-            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxMicLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxMicLoVal">0</span></div>
-          </div>
-        </div>
-        </div><!-- /.mx-fx-col -->
-      </div><!-- /.mx-primary -->
-
-      <!-- X-Fader (primary 밑 가로 전체) -->
-      <div class="mx-xfader">
-        <span class="mx-xf-lbl">X-FADER</span>
-        <span class="mx-xf-a">A</span>
-        <div class="mx-xf-track"><div class="mx-xf-knob" id="mxXfKnob" style="left:50%"></div></div>
-        <span class="mx-xf-b">B</span>
-      </div>
-
-      <!-- V10 extras — only shown for DJM-V10 -->
-      <div id="mxAuxV10" class="mx-fx-row" style="display:none">
-        <div class="mx-aux-group is-v10 filter">
-          <span class="mx-aux-gtitle">FILTER</span>
-          <div class="mx-aux-pills">
-            <span id="mxFltLPF" class="mx-aux-pill pur">LPF</span>
-            <span id="mxFltHPF" class="mx-aux-pill pur">HPF</span>
-          </div>
-          <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxFltResoKnobHost"></div><span class="mx-aux-klabel">RESONANCE</span><span class="mx-aux-kval" id="mxFltResoVal">0</span></div>
-        </div>
-        <div class="mx-aux-group is-v10 iso">
-          <span class="mx-aux-gtitle">ISOLATOR</span>
-          <span class="mx-aux-toggle pur" id="mxIsoOn">ON</span>
-          <div class="mx-aux-grid3">
-            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxIsoHiKnobHost"></div><span class="mx-aux-klabel">HI</span><span class="mx-aux-kval" id="mxIsoHiVal">0</span></div>
-            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxIsoMidKnobHost"></div><span class="mx-aux-klabel">MID</span><span class="mx-aux-kval" id="mxIsoMidVal">0</span></div>
-            <div class="mx-aux-knob"><div class="mx-aux-knob-face" id="mxIsoLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxIsoLoVal">0</span></div>
-          </div>
-        </div>
-        <div class="mx-aux-group is-v10 master-mix">
-          <span class="mx-aux-gtitle">MASTER MIX</span>
-          <span class="mx-aux-toggle pur" id="mxMmxOn">ON</span>
-          <div class="mx-aux-grid2">
-            <span class="mx-aux-mini">SIZE <span class="mx-aux-readout dim" id="mxMmxSize">0</span></span>
-            <span class="mx-aux-mini">TIME <span class="mx-aux-readout dim" id="mxMmxTime">0</span></span>
-            <span class="mx-aux-mini">TONE <span class="mx-aux-readout dim" id="mxMmxTone">0</span></span>
-            <span class="mx-aux-mini">LVL <span class="mx-aux-readout dim" id="mxMmxLvl">0</span></span>
+          <!-- V10 FILTER (RESONANCE — per-channel FILTER 자체는 채널 strip 내부) -->
+          <div class="mx-section is-v10" id="mxFltSection">
+            <span class="mx-section-lbl">FILTER</span>
+            <div class="mx-aux-pills"><span id="mxFltLPF" class="mx-aux-pill pur">LPF</span><span id="mxFltHPF" class="mx-aux-pill pur">HPF</span></div>
+            <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxFltResoKnobHost"></div><span class="mx-aux-klabel">RESONANCE</span><span class="mx-aux-kval" id="mxFltResoVal">0</span></div>
           </div>
         </div>
       </div>
-      </div><!-- /mx-console -->
+
       <div style="display:flex;gap:6px;align-items:center">
         <div class="mx-log-toggle" id="mxLogToggle" onclick="_djmLogOpen=!_djmLogOpen;document.getElementById('mxLogPanel').style.display=_djmLogOpen?'':'none';this.querySelector('span').style.transform=_djmLogOpen?'rotate(90deg)':'rotate(0deg)'" style="flex:1"><span style="display:inline-flex;align-items:center;transition:transform .15s"><svg class="gi gi-chv"><use href="#i-chevron-right"/></svg></span> DJM PACKET LOG</div>
       </div>
@@ -1339,20 +1472,7 @@ const _BEAT_FX_NAMES=['DELAY','ECHO','PING PONG','SPIRAL','REVERB','TRANS','FILT
 const _COLOR_FX_NAMES={0:'SPACE',1:'DUB ECHO',2:'SWEEP',3:'NOISE',4:'CRUSH',5:'FILTER',255:'OFF'};
 const _BEAT_FX_ASSIGN_NAMES={0:'MIC',1:'CH1',2:'CH2',3:'CH3',7:'CH4',6:'XF-A',8:'XF-B',9:'MASTER'};
 let _djmLog=[], _djmLogMax=40, _djmLogOpen=false;
-// DJM mixer profiles — model-specific UI configuration
-// eq[] = display labels, ids[] = knob ID keys (matched in eqMap below)
-// EQ data from 0x39 packet: index 0=Hi(+1), 1=Mid(+4), 2=Lo(+3), 3=Color/Filter(+6)
-const _DJM_PROFILES={
-  'V10':     {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW','CLR'], ids:['T','H','HM','LM','L','C'], comp:true},
-  'V10-LF':  {ch:6, eq:['TRIM','HI','HI MID','LOW MID','LOW','CLR'], ids:['T','H','HM','LM','L','C'], comp:true},
-  'A9':      {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
-  '900NXS2': {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
-  '900NXS':  {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
-  '750MK2':  {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
-  '450':     {ch:2, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
-  '250MK2':  {ch:2, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
-  'default': {ch:4, eq:['TRIM','HI','MID','LOW','CLR'], ids:['T','H','M','L','C']},
-};
+// _DJM_PROFILES → renderer/mixer-panel.js 로 이동 (Phase 2.4 modularization)
 let _djmProfile=_DJM_PROFILES['default'], _djmModelKey='default';
 // 설정 — 인터페이스 포함
 const _CFG_DEF={nm:'Bridge%%',fps:'30',aoId:'',aoChPair:0,tcnetIface:'',pdjlIface:'',tcnetMode:'auto',
@@ -1377,10 +1497,39 @@ try{const _s=localStorage.getItem('bridge_cfg');if(_s){const _p=JSON.parse(_s);O
 if(!cfg.layout||cfg.layout==='default'){cfg.layout='tower';try{localStorage.setItem('bridge_cfg',JSON.stringify(cfg));}catch(_){}}
 // Apply layout theme to body (data-layout attribute drives all theme-scoped CSS)
 try{document.body.dataset.layout=cfg.layout;}catch(_){}
+try{document.body.dataset.platform=window.bridge?.platform||'';}catch(_){}
+// i18n 변경 시 동적 컴포넌트 재렌더 (덱/믹서/설정 마크업 안의 t() 호출 결과 갱신)
+window.addEventListener('i18n-changed',()=>{
+  try{ if(typeof renderDecks==='function') renderDecks(); }catch(_){}
+  try{ if(curTab==='mixer'&&typeof updateMixer==='function') updateMixer(); }catch(_){}
+  try{ if(curTab==='settings'&&typeof renderSettings==='function') renderSettings(); }catch(_){}
+});
 function _wfReadLS(k,def){try{const v=localStorage.getItem(k);return v==null?def:v;}catch(_){return def;}}
 function _wfWriteLS(k,v){try{localStorage.setItem(k,String(v));}catch(_){}}
 let wfSharpness=Math.max(0,Math.min(1,Number(_wfReadLS('wf_sharpness','0'))||0));
-let wfTheme=(v=>v==='rgb'?'rgb':'3band')(_wfReadLS('wf_theme','3band'));
+// 기본 RGB — 윈도우 마지막 빌드 동작 (가공된 RGB pulse). 3band 도 옵션 유지.
+// (mono 는 일시 제거 — 정리되지 않은 저장값도 자동으로 rgb 로 마이그레이션)
+let wfTheme=(v=>v==='3band'?'3band':'rgb')(_wfReadLS('wf_theme','rgb'));
+// 비트 그리드 스타일 (오버뷰 + 디테일 마진 영역)
+//   none / phrase / balanced(추천) / detailed / phrase-band / hybrid
+let wfBeatStyle=(v=>['none','phrase','balanced','detailed','phrase-band','hybrid'].includes(v)?v:'balanced')
+  (_wfReadLS('wf_beat_style','balanced'));
+// 큐 마커 디자인 — pill / diamond / bardot / flag / stripe / chip(현재 개선)
+let wfCueStyle=(v=>['pill','diamond','bardot','flag','stripe','chip'].includes(v)?v:'chip')
+  (_wfReadLS('wf_cue_style','chip'));
+// CDJ-3000 8색 핫큐 팔레트 — hotCueNum 1..8 → A..H
+const HOTCUE_COLORS = [
+  null,         // index 0 unused (hotCueNum 1-based)
+  '#ff5b5b',    // A
+  '#ff9d3b',    // B
+  '#ffd23b',    // C
+  '#6bd97c',    // D
+  '#41b3d9',    // E
+  '#6c8cf7',    // F
+  '#c47bf2',    // G
+  '#f57da8',    // H
+];
+function _hotCueColor(n){ return HOTCUE_COLORS[n] || HOTCUE_COLORS[((n-1)%8)+1] || '#00e676'; }
 const VIRTUAL_WF_\u{52}ATE=120;
 const RGB_WF_FINE_\u{52}ATE=240;
 const HW_WF_\u{52}ATE=150;
@@ -1425,6 +1574,112 @@ function _wfDataMode(d){
   return 1;
 }
 function _wfThemeMode(){return wfTheme==='rgb'?1:0;}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Cue 마커 통합 렌더러 — 6 스타일 (pill/diamond/bardot/flag/stripe/chip).
+   상단 마진(0~topM) 영역에 그림. cx=X 좌표, color=fill, isMemory=true 면 흰/회색,
+   hotCueNum=1..8 (chip 스타일에서 라벨 A..H), fontPx=chip 텍스트 폰트 크기.
+   ───────────────────────────────────────────────────────────────────── */
+function _drawCueMarker(ctx, style, cx, topM, H2, color, isMemory, hotCueNum, fontPx){
+  const W = Math.max(8, topM-2);   // marker 영역 높이 한계
+  ctx.save();
+  if(style==='pill'){
+    // 9×14 capsule (top 1px), inner highlight + shadow
+    const w=9, h=Math.min(14, topM-1);
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.fillRect(cx-w/2+0.5, 1.5, w, h-0.5);  // shadow offset 0.5
+    ctx.fillStyle=color;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(cx-w/2, 1, w, h, 3.5) : ctx.rect(cx-w/2, 1, w, h);
+    ctx.fill();
+    // inner top highlight
+    ctx.fillStyle='rgba(255,255,255,0.22)';
+    ctx.fillRect(cx-w/2+1, 1.5, w-2, 1.5);
+  }
+  else if(style==='diamond'){
+    const sz=5;
+    ctx.fillStyle=color;
+    ctx.translate(cx, 5+sz/2);
+    ctx.rotate(Math.PI/4);
+    ctx.fillRect(-sz, -sz, sz*2, sz*2);
+    ctx.strokeStyle='rgba(0,0,0,0.5)';
+    ctx.lineWidth=1;
+    ctx.strokeRect(-sz, -sz, sz*2, sz*2);
+  }
+  else if(style==='bardot'){
+    // full-height bar (55% opacity) + dot at top
+    ctx.fillStyle=color;
+    ctx.globalAlpha=0.55;
+    ctx.fillRect(cx-0.75, 0, 1.5, H2);
+    ctx.globalAlpha=1;
+    // dot
+    ctx.beginPath();
+    ctx.arc(cx, 4, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.6)';
+    ctx.lineWidth=1.5;
+    ctx.stroke();
+  }
+  else if(style==='flag'){
+    // pentagon house pointing down (12×14)
+    const w=10, h=Math.min(14, topM-1);
+    ctx.fillStyle=color;
+    ctx.beginPath();
+    ctx.moveTo(cx-w/2, 1);
+    ctx.lineTo(cx+w/2, 1);
+    ctx.lineTo(cx+w/2, 1+h*0.6);
+    ctx.lineTo(cx, 1+h);
+    ctx.lineTo(cx-w/2, 1+h*0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.5)';
+    ctx.lineWidth=0.7;
+    ctx.stroke();
+  }
+  else if(style==='stripe'){
+    const h=Math.min(16, topM-1);
+    ctx.fillStyle=color;
+    ctx.fillRect(cx-1.5, 1, 3, h);
+    // subtle glow
+    ctx.shadowColor=color;
+    ctx.shadowBlur=4;
+    ctx.fillRect(cx-1.5, 1, 3, h);
+    ctx.shadowBlur=0;
+  }
+  else if(style==='chip' || !style){
+    // numbered chip — anti-aliased letter, 14px height, shadow + highlight
+    const ch = Math.min(14, Math.max(10, topM-2));
+    const cw = isMemory ? 6 : Math.max(11, ch-1);
+    // shadow
+    ctx.fillStyle='rgba(0,0,0,0.55)';
+    if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(cx-cw/2+0.5, 2.5, cw, ch, 2); ctx.fill(); }
+    else ctx.fillRect(cx-cw/2+0.5, 2.5, cw, ch);
+    // body
+    ctx.fillStyle=color;
+    if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(cx-cw/2, 2, cw, ch, 2); ctx.fill(); }
+    else ctx.fillRect(cx-cw/2, 2, cw, ch);
+    // top highlight
+    ctx.fillStyle='rgba(255,255,255,0.25)';
+    ctx.fillRect(cx-cw/2+1, 2.5, cw-2, 1);
+    // letter (hot only)
+    if(!isMemory && hotCueNum>0){
+      const label = hotCueNum<=26 ? String.fromCharCode(64+hotCueNum) : String(hotCueNum);
+      const fp = Math.max(8, Math.round(ch*0.72));
+      ctx.font = `700 ${fp}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+      ctx.textBaseline='middle';
+      ctx.textAlign='center';
+      ctx.fillStyle='rgba(0,0,0,0.95)';
+      ctx.fillText(label, cx, 2+ch/2+0.5);
+    } else if(isMemory){
+      // memory glyph: small diamond
+      ctx.fillStyle='rgba(0,0,0,0.65)';
+      ctx.translate(cx, 2+ch/2);
+      ctx.rotate(Math.PI/4);
+      ctx.fillRect(-2, -2, 4, 4);
+    }
+  }
+  ctx.restore();
+}
 function _wfEnsureRgbFine(d,slot){
   if(!d||d.type==='hw'||d.rgbWfFine||d._rgbWfFinePromise||!d._audioBlob)return d?.rgbWfFine||d?._rgbWfFinePromise||null;
   const token=d._rgbWfFineToken||0;
@@ -2052,161 +2307,7 @@ async function _findAIFFId3(file){
 
 // onChunk(doneCount, partialWf) is progressive by design, but UI paint is throttled
 // separately so waveform generation spreads load instead of spiking the main thread.
-async function buildRGBWaveform(blob, onChunk, targetDurMs, targetRate=VIRTUAL_WF_\u{52}ATE, shapeMode='mono'){
-  try{
-    const _ac=new(window.AudioContext||window.webkitAudioContext)();
-    const ab=await blob.arrayBuffer();
-    const buf=await _ac.decodeAudioData(ab);
-    _ac.close();
-    const chans=Array.from({length:Math.max(1,buf.numberOfChannels)},(_,i)=>buf.getChannelData(i));
-    const sr=buf.sampleRate;
-    // Renderer detail waveform target rate. Prefer media metadata duration so MP3 decoder
-    // padding does not stretch the visual timeline against the audio playhead.
-    const analysisDur=Math.max(0.001,(targetDurMs&&targetDurMs>0)?targetDurMs/1000:buf.duration);
-    const pts=Math.min(8_000_000,Math.max(6000,Math.floor(analysisDur*targetRate)));
-    const step=Math.max(1,Math.floor(buf.length/pts));
-    // 4th-order Linkwitz-Riley split via cascaded Butterworth biquads (-24dB/oct)
-    // Crossovers: 90Hz / 1600Hz / 8000Hz (4-band waveform)
-    // PEAK values per band (not RMS) — matches Mixxx's AnalyzerWaveform approach
-    function _mkBQ(fc,sr2,Q){
-      const w=2*Math.PI*fc/sr2,sn=Math.sin(w),cs=Math.cos(w),al=sn/(2*Q),a0=1+al;
-      return{b0:((1-cs)/2)/a0,b1:(1-cs)/a0,b2:((1-cs)/2)/a0,a1:(-2*cs)/a0,a2:(1-al)/a0,w1:0,w2:0};
-    }
-    function _mkHP(fc,sr2,Q){
-      const w=2*Math.PI*fc/sr2,sn=Math.sin(w),cs=Math.cos(w),al=sn/(2*Q),a0=1+al;
-      return{b0:((1+cs)/2)/a0,b1:-(1+cs)/a0,b2:((1+cs)/2)/a0,a1:(-2*cs)/a0,a2:(1-al)/a0,w1:0,w2:0};
-    }
-    function _bq(f,x){const y=f.b0*x+f.w1;f.w1=f.b1*x-f.a1*y+f.w2;f.w2=f.b2*x-f.a2*y;return y;}
-    const _Q1=0.5412,_Q2=1.3066;
-    const lowCut=90,midCut=1600;
-    const _lp250a=_mkBQ(lowCut,sr,_Q1),_lp250b=_mkBQ(lowCut,sr,_Q2);
-    const _hp250a=_mkHP(lowCut,sr,_Q1),_hp250b=_mkHP(lowCut,sr,_Q2);
-    const _lp2000a_mid=_mkBQ(midCut,sr,_Q1),_lp2000b_mid=_mkBQ(midCut,sr,_Q2);
-    const _hp2000a=_mkHP(midCut,sr,_Q1),_hp2000b=_mkHP(midCut,sr,_Q2);
-    const airCut=Math.min(8000,sr*0.45);
-    const _lp6000a_hi=_mkBQ(airCut,sr,_Q1),_lp6000b_hi=_mkBQ(airCut,sr,_Q2);
-    const _hp6000a=_mkHP(airCut,sr,_Q1),_hp6000b=_mkHP(airCut,sr,_Q2);
-    // Stacked 3-band layout (8 bytes/bin):
-    //   [0] low_env  [1] mid_env  [2] hi_env   [3] air_env
-    //   [4] full_mn  [5] full_mx  [6] band_env [7] rms_raw
-    // Band values are unsigned smoothed envelopes; full_mn/full_mx are signed contour.
-    const wf=new Uint8Array(pts*8);
-    wf._packed=true;
-    wf._rate=targetRate;
-    wf._durationMs=analysisDur*1000;
-    wf._stacked=true;
-    const CHUNK=Math.max(160,Math.floor(pts/40));
-    const YIELD_MS=2;
-    const chCount=chans.length;
-    const stereoShape=shapeMode==='stereoShape'&&chCount>1;
-    const enc=v=>Math.max(0,Math.min(255,Math.round((Math.max(-1,Math.min(1,v))+1)*127.5)));
-    const encU=v=>Math.max(0,Math.min(255,Math.round(Math.max(0,Math.min(1,v))*255)));
-    // Pass 1: compute raw per-band energy envelopes + track GLOBAL peak across all bands.
-    // Global normalize (not per-band) preserves real band-energy ratio — bass stays dominant,
-    // treble stays small, matching rekordbox's visual hierarchy.
-    const raw=new Float32Array(pts*8);
-    let pkGlobal=1e-6;
-    let hpTransientPrev=0;
-    for(let i=0;i<pts;i++){
-      const s0=i*step;
-      let loPk=0,miPk=0,hiPk=0,airPk=0,trPk=0,fullMn=0,fullMx=0,topPk=0,botPk=0,sumSq=0,loSq=0,miSq=0,hiSq=0,airSq=0;
-      for(let j=0;j<step;j++){
-        let s=0;
-        for(let c=0;c<chCount;c++)s+=chans[c][s0+j]||0;
-        s/=chCount;
-        const midSideMid=stereoShape?((chans[0][s0+j]||0)+(chans[1][s0+j]||0))*0.5:null;
-        s=midSideMid==null?s:midSideMid;
-        const topS=stereoShape?(chans[0][s0+j]||0):s;
-        const botS=stereoShape?(chans[1][s0+j]||0):s;
-        sumSq+=s*s;
-        const bass=_bq(_lp250b,_bq(_lp250a,s));
-        const hp250=_bq(_hp250b,_bq(_hp250a,s));
-        const mid=_bq(_lp2000b_mid,_bq(_lp2000a_mid,hp250));
-        const hp2000=_bq(_hp2000b,_bq(_hp2000a,hp250));
-        const hi=_bq(_lp6000b_hi,_bq(_lp6000a_hi,hp2000));
-        const air=_bq(_hp6000b,_bq(_hp6000a,hp2000));
-        const hpMid=hp2000;
-        const snap=Math.abs(hpMid-hpTransientPrev);hpTransientPrev=hpMid;
-        if(!Number.isFinite(bass)||!Number.isFinite(mid)||!Number.isFinite(hi)||!Number.isFinite(air))continue;
-        loSq+=bass*bass; miSq+=mid*mid; hiSq+=hi*hi; airSq+=air*air;
-        if(Math.abs(bass)>loPk)loPk=Math.abs(bass);
-        if(Math.abs(mid)>miPk)miPk=Math.abs(mid);
-        if(Math.abs(hi)>hiPk)hiPk=Math.abs(hi);
-        if(Math.abs(air)>airPk)airPk=Math.abs(air);
-        if(snap>trPk)trPk=snap;
-        if(s<fullMn)fullMn=s; if(s>fullMx)fullMx=s;
-        const topA=Math.abs(topS),botA=Math.abs(botS);
-        if(topA>topPk)topPk=topA;
-        if(botA>botPk)botPk=botA;
-      }
-      const loRms=Math.sqrt(loSq/step), miRms=Math.sqrt(miSq/step), hiRms=Math.sqrt(hiSq/step), airRms=Math.sqrt(airSq/step);
-      const ro=i*8;
-      raw[ro]=Math.max(loPk,loRms*1.22);
-      raw[ro+1]=Math.max(miPk,miRms*1.32);
-      raw[ro+2]=Math.max(hiPk,hiRms*0.92,trPk*0.42);
-      raw[ro+3]=Math.max(airPk,airRms*0.86,trPk*0.26);
-      raw[ro+4]=stereoShape?-botPk:fullMn;
-      raw[ro+5]=stereoShape?topPk:fullMx;
-      raw[ro+6]=Math.sqrt((loSq+miSq+hiSq+airSq)/step);
-      raw[ro+7]=Math.sqrt(sumSq/step);
-      const pkBin=Math.max(raw[ro],raw[ro+1],raw[ro+2],raw[ro+3],-fullMn,fullMx);
-      if(Number.isFinite(pkBin)&&pkBin>pkGlobal)pkGlobal=pkBin;
-      if(onChunk&&(i+1)%CHUNK===0)await new Promise(r=>setTimeout(r,YIELD_MS));
-    }
-    // Pass 2: normalize, compress, smooth as temporal envelopes, encode.
-    // This avoids drawing filtered oscillation directly, which looks FFT-like after band split.
-    const invG=1/pkGlobal;
-    const envCurve=v=>Math.pow(Math.min(1,Math.max(0,v)),0.86);
-    const signedCurve=v=>{const a=Math.min(1,Math.abs(v)); const t=Math.pow(a,0.58); return v<0?-t:t;};
-    function smoothEnv(src, attack, release){
-      const out=new Float32Array(src.length);
-      let v=0;
-      for(let i=0;i<src.length;i++){
-        const x=src[i];
-        const k=x>v?attack:release;
-        v+=(x-v)*k;
-        out[i]=v;
-      }
-      return out;
-    }
-    const loSrc=new Float32Array(pts),miSrc=new Float32Array(pts),hiSrc=new Float32Array(pts),airSrc=new Float32Array(pts),bandSrc=new Float32Array(pts),rmsSrc=new Float32Array(pts);
-    for(let i=0;i<pts;i++){
-      const ro=i*8;
-      loSrc[i]=envCurve(raw[ro]*invG);
-      miSrc[i]=envCurve(raw[ro+1]*invG);
-      hiSrc[i]=envCurve(raw[ro+2]*invG);
-      airSrc[i]=envCurve(raw[ro+3]*invG);
-      bandSrc[i]=envCurve(raw[ro+6]*invG);
-      rmsSrc[i]=envCurve(raw[ro+7]*invG);
-    }
-    const loEnv=smoothEnv(loSrc,0.88,0.025);
-    const miEnv=smoothEnv(miSrc,0.88,0.040);
-    const hiEnv=smoothEnv(hiSrc,0.88,0.045);
-    const airEnv=smoothEnv(airSrc,0.82,0.055);
-    const bandEnv=smoothEnv(bandSrc,0.84,0.080);
-    for(let i=0;i<pts;i++){
-      const ro=i*8, o=i*8;
-      wf[o] = encU(loEnv[i]);
-      wf[o+1] = encU(miEnv[i]);
-      wf[o+2] = encU(hiEnv[i]);
-      wf[o+3] = encU(airEnv[i]);
-      wf[o+4] = enc(signedCurve(raw[ro+4]*invG));
-      wf[o+5] = enc(signedCurve(raw[ro+5]*invG));
-      wf[o+6] = encU(bandEnv[i]);
-      wf[o+7] = encU(rmsSrc[i]);
-      if(onChunk&&(i+1)%CHUNK===0){
-        const partial=wf.subarray(0,(i+1)*8);
-        partial._packed=true;
-        partial._rate=targetRate;
-        partial._durationMs=analysisDur*1000*((i+1)/pts);
-        partial._stacked=true;
-        onChunk(i+1,partial);
-        await new Promise(r=>setTimeout(r,YIELD_MS));
-      }
-    }
-    return wf;
-  }catch(e){console.warn('[rgbWf]',e);return null;}
-}
+// buildRGBWaveform → renderer/waveform-analysis.js (Phase 2.5)
 
 // CDJ-3000 color waveform: nibble → RGB
 // Color encoding from CDJ extended status packets
@@ -2356,10 +2457,14 @@ function _ensureZoomScrollingCache(d, prop, key, W, H, viewL, viewR, msPerPx, dr
 
 function _drawZoomScrollingCache(ctx, cache, viewL, msPerPx, W, H){
   if(!cache?.canvas)return;
-  const sx=Math.max(0,Math.round((viewL-cache.startMs)/msPerPx));
-  const sw=Math.min(W,cache.canvas.width-sx);
+  // 서브픽셀 블릿: source X 는 floor 정수, 잔여 fractional 만큼 dest X 를 음수로 밀어
+  // GL 웨이브폼(서브픽셀 정밀)과 오버레이의 상대 흔들림 제거.
+  const sxF=(viewL-cache.startMs)/msPerPx;
+  const sx=Math.max(0,Math.floor(sxF));
+  const fract=sxF-sx;
+  const sw=Math.min(W+1,cache.canvas.width-sx);
   if(sw<=0)return;
-  ctx.drawImage(cache.canvas,sx,0,sw,H,0,0,sw,H);
+  ctx.drawImage(cache.canvas,sx,0,sw,H,-fract,0,sw,H);
 }
 
 // Draw active loop on zoom waveform.
@@ -2369,8 +2474,9 @@ function _drawZoomScrollingCache(ctx, cache, viewL, msPerPx, W, H){
 function _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX){
   const drawRange=(startMs,endMs,active)=>{
     if(!(endMs>startMs))return;
-    const cpx=Math.round((startMs-posMs)/msPerPx+cX);
-    const epx=Math.round((endMs  -posMs)/msPerPx+cX);
+    // 서브픽셀 좌표 (Math.round 제거) — GL 웨이브폼과 동일 정밀도로 경계바 흐름.
+    const cpx=(startMs-posMs)/msPerPx+cX;
+    const epx=(endMs  -posMs)/msPerPx+cX;
     if(epx<=0||cpx>=W)return;
     const lx=Math.max(0,cpx),rx=Math.min(W,epx);
     // ShowKontrol 스타일: 노란색 배경 fill + 상/하단 띠 + 경계 bar
@@ -2439,18 +2545,55 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
   }
   const topY=phraseActive?phraseH:0; // 핫큐/비트그리드 시작 Y
 
-  if(d.bpm>0&&d.dur>0){
-    const drawBeatAt=(bMs,isBar)=>{
-      const fpx=(bMs-viewL)/msPerPx; // float
-      if(fpx<1||fpx>=W-1)return;
-      if(isBar){
-        // 다운비트: 두꺼운 빨간 라인(3px) + 상하 큰 단자(7px)
-        ctx.fillStyle='rgba(255,0,0,.35)';ctx.fillRect(fpx-1.5,topY,3,H-topY);
-        ctx.fillStyle='rgba(255,40,40,.9)';ctx.fillRect(fpx-2,topY,4,7);ctx.fillRect(fpx-2,H-7,4,7);
-      }else{
-        ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(fpx-.5,topY,1,H-topY);
-        ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(fpx-1,topY,3,3);ctx.fillRect(fpx-1,H-3,3,3);
+  if(d.bpm>0&&d.dur>0&&wfBeatStyle!=='none'){
+    // 비트 그리드 스타일 적용 — 마진 전용 (위 topY+margH / 아래 H-margH). 풀 라인은 phrase 강조 시만.
+    const margH = 9;
+    const topMargBot = topY + margH;          // 위쪽 마진 끝
+    const botMargTop = H - margH;             // 아래쪽 마진 시작
+    const drawTickAt = (fpx, mode) => {
+      if(fpx<1||fpx>=W-1) return;
+      let col, h, w;
+      if(mode==='regular'){ col='rgba(255,255,255,0.42)'; h=2; w=1; }
+      else if(mode==='regular-faint'){ col='rgba(255,255,255,0.32)'; h=2; w=1; }
+      else if(mode==='downbeat'){ col='rgba(255,168,80,0.78)'; h=5; w=1.5; }
+      else if(mode==='phrase'){
+        // halo + main
+        ctx.fillStyle='rgba(95,200,218,0.35)';
+        ctx.fillRect(fpx-1.5, topY, 3, margH);
+        ctx.fillRect(fpx-1.5, H-margH, 3, margH);
+        col='#5fc8da'; h=margH; w=2;
       }
+      else if(mode==='phrase-full'){ col='rgba(95,200,218,0.18)'; h=H-topY; w=1; }
+      else return;
+      ctx.fillStyle = col;
+      if(mode==='phrase-full'){
+        ctx.fillRect(fpx-w/2, topY, w, h);
+      } else {
+        // top margin
+        ctx.fillRect(fpx-w/2, topY, w, h);
+        // bottom margin
+        ctx.fillRect(fpx-w/2, H-h, w, h);
+      }
+    };
+    let beatIdx = 0;
+    const drawBeatAt=(bMs, isBar, idx)=>{
+      const fpx=(bMs-viewL)/msPerPx;
+      const isPhrase = idx%16===0 && idx>0;
+      let mode=null;
+      if(wfBeatStyle==='phrase'){ if(isPhrase) mode='phrase'; }
+      else if(wfBeatStyle==='balanced'){
+        if(isPhrase) mode='phrase';
+        else if(isBar) mode='downbeat';
+        else mode='regular-faint';
+      }
+      else if(wfBeatStyle==='detailed'){ if(isPhrase) mode='phrase'; else if(isBar) mode='downbeat'; else mode='regular'; }
+      else if(wfBeatStyle==='phrase-band'){
+        if(isPhrase){ drawTickAt(fpx, 'phrase-full'); mode='phrase'; }
+      }
+      else if(wfBeatStyle==='hybrid'){
+        if(isPhrase) mode='phrase'; else if(isBar) mode='downbeat'; else if(idx%2===0) mode='regular';
+      }
+      if(mode) drawTickAt(fpx, mode);
     };
     if(d._beatGrid&&d._beatGrid.length>0){
       const bg=d._beatGrid;
@@ -2458,7 +2601,7 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
       while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<viewL)lo=mid2+1;else hi=mid2;}
       for(let i=Math.max(0,lo-1);i<bg.length;i++){
         const bt=bg[i];if(bt.timeMs>viewR)break;
-        drawBeatAt(bt.timeMs,bt.beatInBar===1);
+        drawBeatAt(bt.timeMs, bt.beatInBar===1, i);
       }
     }else{
       const beatMs=60000/(d.baseBpm||d.bpm);
@@ -2467,29 +2610,28 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
       for(let b=firstB;b<=lastB;b++){
         const bMs=anchor+b*beatMs;
         const barNum=((b%4)+4)%4+1;
-        drawBeatAt(bMs,barNum===1);
+        drawBeatAt(bMs, barNum===1, b);
       }
     }
   }
   _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX);
 
   // 큐 캐시 키에 topY 포함 → 프레이즈바 활성 상태 변경 시 캐시 재생성
-  const cueKey=`${_getZoomCueStateKey(d)}#${W}x${H}#${msPerPx}#t${topY}`;
+  const cueKey=`${_getZoomCueStateKey(d)}#${W}x${H}#${msPerPx}#t${topY}#cs${wfCueStyle}#bs${wfBeatStyle}`;
   const cueTopY=topY; // 클로저 캡처
   const cueCache=_ensureZoomScrollingCache(d,'_zoomCueCache',cueKey,W,H,viewL,viewR,msPerPx,(octx,cw,ch,startMs)=>{
-    // 통일 컬러 (overview 와 동일): hot=초록, memory=빨강, loop=주황.
+    // hot cue 색상 — CDJ-3000 8색 팔레트 (hotCueNum 기반)
     function _cueCol(cue){
-      if(cue.type==='hot')return '#00e676';
-      if(cue.type==='memory')return '#ff1744';
-      if(cue.type==='loop')return '#ff8800';
+      if(cue.type==='hot') return _hotCueColor(cue.hotCueNum||1);
+      if(cue.type==='memory') return '#d6dde6';
+      if(cue.type==='loop')   return '#ff8800';
       return '#fff';
     }
-    // 레이아웃: 상단 마진 = hot cue + memory cue, 하단 마진 = CP (current cue).
-    const hotTopY=cueTopY;
-    const hotLabelW=9, hotLabelH=9;
-    const memMarkerH=6;
+    // 레이아웃: 상단 마진 = hot/memory cue (wfCueStyle 적용), 하단 마진 = CP
+    const hotTopY = cueTopY;
+    const markerTopM = Math.max(14, cueTopY + 14); // chip 등 마커 영역 높이 (14px)
     if(d.cuePoints&&d.dur>0){
-      octx.font='bold 8px "DM Mono",monospace';
+      const fontPx = 9;
       for(const cue of d.cuePoints){
         const cpx=Math.round((cue.timeMs-startMs)/msPerPx);
         const col=_cueCol(cue);
@@ -2501,33 +2643,21 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
             octx.fillRect(lx,cueTopY,rx-lx,ch-cueTopY);
           }
         }
-        if(cpx<-16||cpx>=cw+16)continue;
-        // 세로 가이드 얇게
-        octx.fillStyle=col.startsWith('rgb')?col:col+'88';
-        octx.globalAlpha=.45; octx.fillRect(cpx-.5,cueTopY,1,ch-cueTopY); octx.globalAlpha=1;
-        if(cue.type==='hot'){
-          // 핫큐: 상단 마진 초록 박스 + 검정 라벨
-          octx.fillStyle=col;
-          octx.fillRect(cpx,hotTopY,hotLabelW,hotLabelH);
-          if(cue.hotCueNum>0){
-            const lbl=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
-            octx.fillStyle='#000';
-            octx.fillText(lbl,cpx+1.5,hotTopY+hotLabelH-1.5);
-          }
-        }else if(cue.type==='loop'){
-          octx.fillStyle=col;
-          octx.fillRect(cpx-1,hotTopY,2,6); octx.fillRect(cpx-1,hotTopY,5,2);
+        if(cpx<-16||cpx>=cw+16) continue;
+        if(cue.type==='hot' || cue.type==='memory'){
+          // wfCueStyle 적용 (chip / pill / diamond / bardot / flag / stripe)
+          _drawCueMarker(octx, wfCueStyle, cpx, markerTopM, ch, col, cue.type==='memory', cue.hotCueNum, fontPx);
+        } else if(cue.type==='loop'){
+          octx.fillStyle = col;
+          octx.fillRect(cpx-1, hotTopY, 2, 6);
+          octx.fillRect(cpx-1, hotTopY, 5, 2);
           if(cue.loopEndMs>0){
             const epx=Math.round((cue.loopEndMs-startMs)/msPerPx);
-            if(epx>0&&epx<cw){
-              octx.fillRect(epx-1,hotTopY,2,6); octx.fillRect(epx-4,hotTopY,5,2);
+            if(epx>0 && epx<cw){
+              octx.fillRect(epx-1, hotTopY, 2, 6);
+              octx.fillRect(epx-4, hotTopY, 5, 2);
             }
           }
-        }else{
-          // 메모리큐: 상단 마진 빨강 삼각형 (▼ 아래 방향)
-          octx.fillStyle=col;octx.beginPath();
-          octx.moveTo(cpx-3,hotTopY);octx.lineTo(cpx+3,hotTopY);octx.lineTo(cpx,hotTopY+memMarkerH);
-          octx.closePath();octx.fill();
         }
       }
     }
@@ -2544,6 +2674,23 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
     }
   });
   _drawZoomScrollingCache(ctx,cueCache,viewL,msPerPx,W,H);
+
+  // chip 스타일 한정 — 캐시 외부에서 매 프레임 float 좌표로 letter 추가 렌더 (서브픽셀 sharp).
+  // 다른 스타일은 letter 없으므로 skip.
+  if(wfCueStyle==='chip' && d.cuePoints && d.dur>0){
+    ctx.font='700 8px system-ui,-apple-system,sans-serif';
+    ctx.textBaseline='middle';
+    ctx.textAlign='center';
+    ctx.fillStyle='rgba(0,0,0,0.95)';
+    const ch = Math.min(14, Math.max(10, (Math.max(14, topY+14))-2));
+    for(const cue of d.cuePoints){
+      if(cue.type!=='hot'||!(cue.hotCueNum>0)) continue;
+      const cpx=(cue.timeMs-viewL)/msPerPx;
+      if(cpx<-16||cpx>=W+16) continue;
+      const lbl=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
+      ctx.fillText(lbl, cpx, 2+ch/2+0.5);
+    }
+  }
 
   // 플레이헤드 — 글로우 없이 단일 1px 선
   ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
@@ -2651,22 +2798,62 @@ function drawOverview(slot,prog){
   if(W2<2||H2<2)return;
   if(d.ovgl) olCtx.clearRect(0,0,W2,H2); // clear overlay for WebGL mode
 
-  // 통일 컬러 — 사용자 요청대로:
-  //   hot cue   = 초록  (#00e676)
-  //   memory    = 빨강  (#ff1744)
-  //   current (CP) = 노랑 (#ffd600)
-  //   loop      = 주황  (#ff8800) (루프 오버레이는 노랑 별도 처리)
+  // 큐 색상 — hot 은 hotCueNum 별 8색 (CDJ-3000 매칭), memory/CP/loop 는 고정.
   function _ovCueCol(cue){
-    if(cue.type==='hot')return '#00e676';
-    if(cue.type==='memory')return '#ff1744';
-    if(cue.type==='loop')return '#ff8800';
+    if(cue.type==='hot') return _hotCueColor(cue.hotCueNum||1);
+    if(cue.type==='memory') return '#d6dde6';
+    if(cue.type==='loop')   return '#ff8800';
     return '#fff';
   }
-  // 캔버스 좌표 (y=0 top). WebGL shader 는 하단 10% + 상단 15% 마진이지만
-  // user 요청에 맞춰 2D 오버레이는: 상단 마진 (y=0..topM) = hot+memory,
-  // 하단 마진 (y=botM..H2) = CP (start cue).
-  const topM = Math.max(10, Math.round(H2 * 0.15));
-  const botM = H2 - Math.max(6, Math.round(H2 * 0.10));
+  // 캔버스 좌표 (y=0 top). 오버뷰는 반파(상단 0~topM 마진, 파형은 topM~botM, CP는 하단 botM~H2).
+  const topM = Math.max(10, Math.round(H2 * 0.20));
+  // 하단 마진(비트 그리드 전용 영역) - 캔버스 높이에 따라 8~12px 클램프, Tower(38px)는 11px 확보.
+  const _ovBandH = Math.max(8, Math.min(12, Math.round(H2 * 0.29)));
+  const botM = H2 - _ovBandH;
+
+  // ── 비트 그리드 (오버뷰 = 하단 마진 전용, 반파 특성) ──
+  if(wfBeatStyle!=='none' && d._beatGrid && d._beatGrid.length>0 && _ovDur>0){
+    const bg = d._beatGrid;
+    const totalBeats = bg.length;
+    const bandTop = botM, bandH = _ovBandH;
+    olCtx.save();
+    // 하단 마진 영역에 어두운 strip → 웨이브폼과 시각적 분리
+    olCtx.fillStyle='rgba(0,0,0,0.55)';
+    olCtx.fillRect(0, bandTop, W2, bandH);
+    for(let i=0;i<totalBeats;i++){
+      const t = bg[i].timeMs;
+      if(t<0||t>=_ovDur) continue;
+      const x = Math.round(t/_ovDur*W2);
+      if(x<0||x>=W2) continue;
+      const isPhrase = (i % 16 === 0) && i>0;
+      const isDownbeat = (i % 4 === 0) && !isPhrase;
+      let mode=null;
+      if(wfBeatStyle==='phrase'){ if(isPhrase) mode='phrase'; }
+      else if(wfBeatStyle==='balanced'){
+        if(isPhrase) mode='phrase';
+        else if(isDownbeat) mode='downbeat';
+        else mode='regular-faint';
+      }
+      else if(wfBeatStyle==='detailed'){ if(isPhrase) mode='phrase'; else if(isDownbeat) mode='downbeat'; else mode='regular'; }
+      else if(wfBeatStyle==='phrase-band'){
+        if(isPhrase){ olCtx.fillStyle='rgba(95,200,218,0.18)'; olCtx.fillRect(x-0.5,0,1,H2); mode='phrase'; }
+      }
+      else if(wfBeatStyle==='hybrid'){ if(isPhrase) mode='phrase'; else if(isDownbeat) mode='downbeat'; else if(i%2===0) mode='regular'; }
+      if(!mode) continue;
+      let col, h, w;
+      if(mode==='regular'){ col='rgba(255,255,255,0.42)'; h=2; w=1; }
+      else if(mode==='regular-faint'){ col='rgba(255,255,255,0.32)'; h=2; w=1; }
+      else if(mode==='downbeat'){ col='rgba(255,168,80,0.78)'; h=Math.min(bandH,5); w=1.5; }
+      else { /* phrase: 풀 마진 + 시안 글로우 halo */
+        olCtx.fillStyle='rgba(95,200,218,0.35)';
+        olCtx.fillRect(x-1.5, bandTop, 3, bandH);
+        col='#5fc8da'; h=bandH; w=2;
+      }
+      olCtx.fillStyle=col;
+      olCtx.fillRect(x-w/2, bandTop+(bandH-h), w, h);
+    }
+    olCtx.restore();
+  }
 
   // 루프 오버레이 (노랑) - 전체 높이
   if(_ovDur>0&&d._loopStartMs>0&&d._loopEndMs>d._loopStartMs){
@@ -2679,45 +2866,43 @@ function drawOverview(slot,prog){
       olCtx.fillRect(sx,0,1.5,H2);olCtx.fillRect(ex-1,0,1.5,H2);
     }
   }
-  if(d.cuePoints&&_ovDur>0){
-    olCtx.font='bold 7px "DM Mono",monospace';
+  // 큐 위치는 트랙 실제 길이(d.dur, ms) 기준이 정확. 웨이브폼 sample 기반 _ovDur 와
+  // d.dur 가 어긋나면 큐가 트랙 앞에 몰리거나 화면 밖으로 밀림. d.dur 우선 사용.
+  const _cueDur = (d.dur>0) ? d.dur : _ovDur;
+  if(d.cuePoints&&_cueDur>0){
+    // 마커 크기 — 캔버스 높이에 비례하지만 1.5× 에서 캡 (Simple 의 52px 에서도 과대 방지)
+    const mscl = Math.max(1, Math.min(1.5, H2/30));
+    const fontPx = Math.max(7, Math.round(7*mscl*0.95));
+    olCtx.font=`bold ${fontPx}px "DM Mono",monospace`;
     for(const cue of d.cuePoints){
-      const cx=Math.round(cue.timeMs/_ovDur*W2);
+      const cx=Math.round(cue.timeMs/_cueDur*W2);
       if(cx<0||cx>=W2)continue;
       const col=_ovCueCol(cue);
       if(cue.type==='loop'&&cue.loopEndMs>0){
-        const ex=Math.round(cue.loopEndMs/_ovDur*W2);
+        const ex=Math.round(cue.loopEndMs/_cueDur*W2);
         if(ex>cx){
           const isActive=d._isLooping&&d.pos>=cue.timeMs-50&&d.pos<=cue.loopEndMs+50;
           olCtx.fillStyle=isActive?'rgba(255,220,0,.22)':'rgba(255,200,0,.12)';
           olCtx.fillRect(cx,0,ex-cx,H2);
         }
       }
-      if(cue.type==='hot'){
-        // 핫큐: 초록 박스 + 검정 라벨 — 상단 마진에
-        const boxW=7, boxH=Math.max(6,topM-2);
-        olCtx.fillStyle=col;olCtx.fillRect(cx,0,Math.min(boxW,W2-cx),boxH);
-        if(cue.hotCueNum>0){
-          const label=cue.hotCueNum<=26?String.fromCharCode(64+cue.hotCueNum):String(cue.hotCueNum);
-          olCtx.fillStyle='#000';olCtx.fillText(label,cx+1.5,boxH-1);
-        }
-      }else if(cue.type==='memory'){
-        // 메모리큐: 빨강 삼각형 — 상단 마진에 (위로 향한 apex ▼)
-        olCtx.fillStyle=col;
-        olCtx.beginPath();
-        olCtx.moveTo(cx-2.5,0);olCtx.lineTo(cx+2.5,0);olCtx.lineTo(cx,4);
-        olCtx.closePath();olCtx.fill();
+      if(cue.type==='hot' || cue.type==='memory'){
+        _drawCueMarker(olCtx, wfCueStyle, cx, topM, H2, col, cue.type==='memory', cue.hotCueNum, fontPx);
       }else if(cue.type==='loop'){
-        olCtx.fillStyle=col;olCtx.fillRect(cx,0,1.5,topM);
+        olCtx.fillStyle=col;olCtx.fillRect(cx,0,Math.max(1.5,1.5*mscl),topM);
       }
     }
   }
-  if(d.cp>0&&_ovDur>0){
-    // 현재 큐(CP = start cue) — 노랑 삼각형, 하단 마진에
-    const cx=Math.round(d.cp*1000/_ovDur*W2);
+  // CP 앵커 (start cue) — 항상 보이도록 d.cp=0 이어도 트랙 앞에 노랑 삼각형 표시.
+  // d.cp 단위: virtual=초 (au.currentTime), HW=초로 통일 (없으면 0)
+  if(_cueDur>0){
+    const cscl = Math.max(1, Math.min(1.5, H2/30));
+    const tw=2.5*cscl, th=Math.max(4,Math.round((H2-botM)*0.7));
+    const cpMs = (d.cp>0) ? d.cp*1000 : 0;
+    const cx=Math.round(cpMs/_cueDur*W2);
     olCtx.fillStyle='rgba(255,214,0,.95)';
     olCtx.beginPath();
-    olCtx.moveTo(cx-3,H2);olCtx.lineTo(cx+3,H2);olCtx.lineTo(cx,H2-5);
+    olCtx.moveTo(cx-tw,H2);olCtx.lineTo(cx+tw,H2);olCtx.lineTo(cx,H2-th);
     olCtx.closePath();olCtx.fill();
   }
   // 플레이헤드: 세로 1px 전체
@@ -2937,7 +3122,7 @@ function switchMode(mode){
     if(E&&run)for(let i=0;i<4;i++)window.bridge.setHWMode(i,true);
     document.getElementById('modeVt').classList.remove('ac');
     document.getElementById('modeHW').classList.add('ac');
-    document.getElementById('modeHint').textContent='CDJ 연결 시 자동 감지됩니다';
+    document.getElementById('modeHint').textContent='';
   }else{
     // Clear HW decks & disable HW mode
     if(E&&run)for(let i=0;i<4;i++)window.bridge.setHWMode(i,false);
@@ -2947,7 +3132,7 @@ function switchMode(mode){
     });
     document.getElementById('modeHW').classList.remove('ac');
     document.getElementById('modeVt').classList.add('ac');
-    document.getElementById('modeHint').textContent='+ 버튼으로 덱 추가 후 파일 로드';
+    document.getElementById('modeHint').textContent='';
   }
   renderDecks();
 }
@@ -3012,6 +3197,15 @@ function renderDecks(){
     vtS.forEach(bindDeck);
     // DOM 재빌드 후 멀티채널 VU strip 복원 (렌더링이 기본 2ch L/R로 초기화하므로)
     vtS.forEach(s=>{const d=DECKS[s];if(d&&d.audioChs>2)_buildVuStrip(s,d.audioChs);});
+    // Tower 모드: addDeckBtn 을 vtRow 마지막 자식으로 이동 (덱 우측 + 함께 가로 스크롤)
+    {
+      const addBtn=document.getElementById('addDeckBtn');
+      if(addBtn){
+        const layoutNow=document.body.dataset.layout||'';
+        if(layoutNow==='tower'){vtRow.appendChild(addBtn);}
+        else if(addBtn.parentElement===vtRow){vtSec.appendChild(addBtn);}
+      }
+    }
   }else{
     vtSec.style.display='none';
     vtRow.innerHTML='';
@@ -3027,7 +3221,7 @@ function renderDecks(){
   }
 
   document.getElementById('addDeckBtn').style.display=(!isHWMode&&slots.length<MAX_DECKS)?'':'none';
-  document.getElementById('vtLabel').textContent=vtS.length?'VIRTUAL DECKS':'VIRTUAL DECKS — 아래 + 버튼으로 덱을 추가하세요';
+  const _vtLbl=document.getElementById('vtLabel');if(_vtLbl)_vtLbl.textContent=vtS.length?'':'';
 
   // DJM 연결 상태를 mode-bar에 표시
   const djmDevs=pdjlDevices.filter(d=>d.type==='DJM');
@@ -3076,7 +3270,7 @@ function deckHTMLDefault(slot){
   if(!d.ld && !isHW){
     return`<div class="dk" id="dk${slot}" data-st="empty" data-type="virtual">
       <div class="dtop"><div class="dhd"><div class="dhd-l"><span class="did" id="did${slot}" style="color:var(--tx3)">PLAYER <span class="did-n">${slot+1}</span></span><span class="dbadge bm">EMPTY</span></div><div class="dhd-r"><div class="dht"><button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button></div></div></div></div>
-      <div class="ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">드래그 또는 클릭하여 열기</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG · M4A</div></div>
+      <div class="ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">${(window.t?window.t('lbl_click_to_open','클릭하여 열기'):'클릭하여 열기')}</div><div style="font:400 9px var(--mn);color:var(--tx4)">MP3 · WAV · FLAC · AIFF · AAC · OGG · M4A</div></div>
     </div>`;
   }
 
@@ -3101,8 +3295,8 @@ function deckHTMLDefault(slot){
     </div>
   </div>
   <div class="dk-title-row">
-    <span id="dta${slot}" style="font:500 13px var(--sn);color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0">${isLoaded?(d.ar||''):''}</span>
-    <span class="dk-title-sep" id="dtsep${slot}" ${(isLoaded&&d.ar)?'':'style="display:none"'}>—</span>
+    <span id="dta${slot}" style="font:500 13px var(--sn);color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0">${(isLoaded&&d.ar)?d.ar:'—'}</span>
+    <span class="dk-title-sep" id="dtsep${slot}">—</span>
     <span class="dktn-t" id="dtn${slot}" style="font:500 13px var(--sn);color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">${isLoaded?(d.tn||'—'):'—'}</span>
   </div>`;
 
@@ -3234,7 +3428,7 @@ function deckHTMLRow(slot){
         <div class="rw-title-inline"><span style="color:var(--tx4)">빈 덱</span></div>
         <button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
       </div>
-      <div class="ddz rw-ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">드래그 또는 클릭하여 열기</div></div>
+      <div class="ddz rw-ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">${(window.t?window.t('lbl_click_to_open','클릭하여 열기'):'클릭하여 열기')}</div></div>
     </div>`;
   }
   return`<div class="dk rw-dk" id="dk${slot}" data-st="stop" data-type="${isHW?'hw':'virtual'}">
@@ -3249,8 +3443,8 @@ function deckHTMLRow(slot){
         <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:1px 5px;font-size:7px;min-width:42px">MASTER</span>
       </div>
       <div class="rw-title-inline">
-        <span id="dta${slot}">${isLoaded?(d.ar||''):''}</span>
-        <span class="dk-title-sep" id="dtsep${slot}" ${(isLoaded&&d.ar)?'':'style="display:none"'}>—</span>
+        <span id="dta${slot}">${(isLoaded&&d.ar)?d.ar:'—'}</span>
+        <span class="dk-title-sep" id="dtsep${slot}">—</span>
         <span id="dtn${slot}">${isLoaded?(d.tn||'—'):'—'}</span>
       </div>
       <span class="dhwl" id="dhwl${slot}" style="font:500 9px var(--mn);color:var(--tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+d.model:''):''}</span>
@@ -3279,15 +3473,15 @@ function deckHTMLRow(slot){
             <button class="dkbtn dkstop" ${stopAc}><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
           </div>
         </div>
-        <div class="rw-ctl-sec">
-          <div class="rw-ctl-lbl">SMPTE</div>
-          <div class="rw-ctl-row">
-            <span class="dksm-btn dksm-master${d.mtcMaster?' on':''}" id="dmst${slot}" data-a="mtc-master" data-i="${slot}" style="display:flex;align-items:center;justify-content:center;cursor:pointer">MASTER</span>
-            <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
-            <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
-          </div>
-        </div>
         <div class="dk-tc-time" id="dtime${slot}" style="font:500 10px var(--mn);color:var(--tx3);font-variant-numeric:tabular-nums">${isLoaded?'0:00.000 / --:--.---':'--:--.--- / --:--.---'}</div>
+      </div>
+      <div class="rw-smpte-col">
+        <div class="rw-smpte-lbl">SMPTE</div>
+        <span class="dksm-btn dksm-master rw-smpte-master${d.mtcMaster?' on':''}" id="dmst${slot}" data-a="mtc-master" data-i="${slot}">MASTER</span>
+        <div class="rw-smpte-ab-stack">
+          <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
+          <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
+        </div>
       </div>
     </div>
   </div>`;
@@ -3333,7 +3527,7 @@ function deckHTMLTower(slot){
         <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:3px 6px;font-size:8px;min-width:42px">MASTER</span>
       </div>
       <div class="tw-title">
-        <span id="dta${slot}">${isLoaded?(d.ar||''):''}</span>
+        <span id="dta${slot}">${(isLoaded&&d.ar)?d.ar:'—'}</span>
         <span class="dk-title-sep" id="dtsep${slot}" style="display:none">—</span>
         <span id="dtn${slot}">${isLoaded?(d.tn||'—'):'—'}</span>
       </div>
@@ -3385,7 +3579,7 @@ function deckHTMLCard(slot){
           <button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
         </div>
       </div>
-      <div class="ddz cd-ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">드래그 또는 클릭하여 열기</div></div>
+      <div class="ddz cd-ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">${(window.t?window.t('lbl_click_to_open','클릭하여 열기'):'클릭하여 열기')}</div></div>
     </div>`;
   }
   return`<div class="dk cd-dk" id="dk${slot}" data-st="stop" data-type="${isHW?'hw':'virtual'}">
@@ -3405,7 +3599,7 @@ function deckHTMLCard(slot){
         ${isHW?'':`<button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>`}
       </div>
       <div class="cd-info">
-        <div class="cd-artist" id="dta${slot}">${isLoaded?(d.ar||''):''}</div>
+        <div class="cd-artist" id="dta${slot}">${(isLoaded&&d.ar)?d.ar:'—'}</div>
         <span class="dk-title-sep" id="dtsep${slot}" style="display:none">—</span>
         <div class="cd-track" id="dtn${slot}">${isLoaded?(d.tn||'—'):'—'}</div>
       </div>
@@ -3522,11 +3716,22 @@ function bindDeck(slot){
     inp.onchange=()=>{const f=inp.files[0];if(f)loadFile(slot,f);};
     inp.click();
   });}
-  // Overview canvas: click → seek
-  document.getElementById('dwov'+slot)?.addEventListener('click',e=>{
-    const r=e.target.closest('.dwov');if(!r)return;
-    const rc=r.getBoundingClientRect();doSeek(slot,Math.max(0,Math.min(1,(e.clientX-rc.left)/rc.width)));
-  });
+  // Overview canvas: click + drag → seek (mousedown 후 mousemove 동안 계속 시킹)
+  const _dwovEl=document.getElementById('dwov'+slot);
+  if(_dwovEl){
+    let _wovDragging=false;
+    const _wovSeek=(e)=>{
+      const rc=_dwovEl.getBoundingClientRect();
+      doSeek(slot,Math.max(0,Math.min(1,(e.clientX-rc.left)/rc.width)));
+    };
+    _dwovEl.addEventListener('mousedown',e=>{
+      e.preventDefault(); _wovDragging=true; _wovSeek(e);
+      const onMove=(ev)=>{ if(_wovDragging) _wovSeek(ev); };
+      const onUp=()=>{ _wovDragging=false; window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
+      window.addEventListener('mousemove',onMove);
+      window.addEventListener('mouseup',onUp);
+    });
+  }
   // Zoom canvas: vinyl scratch simulation
   // Physics: drag speed → playbackRate, stationary platter → silence, release → accelerate to 1.0
   const wzDiv=document.getElementById('dwz'+slot);
@@ -3985,7 +4190,7 @@ function loadFile(slot,f){
       }
       // Update metadata in-place — avoids DOM rebuild and canvas context reset
       const _tn=document.getElementById('dtn'+slot);if(_tn)_tn.textContent=d.tn||'—';
-      const _ta=document.getElementById('dta'+slot);if(_ta)_ta.textContent=d.ar||'';
+      const _ta=document.getElementById('dta'+slot);if(_ta)_ta.textContent=d.ar||'—';
       const _art=document.getElementById('dart'+slot);
       if(_art&&d.artUrl){
         const _existImg=_art.querySelector('img');
@@ -4760,8 +4965,14 @@ function tick(){
       el.classList.add('scrolling');
     };
     ensureMarquee(document.getElementById('dtn'+slot), d.tn||'—');
-    ensureMarquee(document.getElementById('dta'+slot), d.ar||'');
-    const dtsepEl=document.getElementById('dtsep'+slot);if(dtsepEl)dtsepEl.style.display=d.ar?'':'none';
+    ensureMarquee(document.getElementById('dta'+slot), d.ar||'—');
+    // dtsep 은 Tower/Row 의 inline 'artist — title' 레이아웃에서만 의미가 있음.
+    // Card(Simple) 는 vertical stack 이라 항상 hide. 다른 layout 은 항상 show.
+    const dtsepEl=document.getElementById('dtsep'+slot);
+    if(dtsepEl){
+      const isCard=document.body.dataset.layout==='card';
+      dtsepEl.style.display=isCard?'none':'';
+    }
     // Waveform key + BPM — 2-line display in TC info section
     const wfkEl=document.getElementById('wfkey'+slot);
     if(wfkEl){
@@ -5145,8 +5356,8 @@ setInterval(async()=>{
   }catch(_){}
 },2000);
 
-// ════ Mixer panel — real-time DJM data visualization ══════════
-let _mxPeaks=[0,0,0,0], _mxBuilt=false;
+// ════ Mixer panel — DJM 데이터 시각화는 renderer/mixer-panel.js 로 이동 (Phase 2.4) ══
+// (_mxPeaks / _mxBuilt / _mx*함수 / updateMixer 모두 mixer-panel.js)
 let _mixerDirty=true, _lastMixerPaint=0;
 const _MIXER_TICK_MS=1000/60;
 const _hwWfRenderTimers={};
@@ -5191,356 +5402,8 @@ function _scheduleHwWaveformRefresh(slot,delay=260){
   },delay);
 }
 
-// SVG knob generator: arc from -135° to +135° (270° total sweep)
-function _mxKnobSVG(id,sz){
-  const r=sz/2-3,cx=sz/2,cy=sz/2;
-  return`<svg id="${id}" viewBox="0 0 ${sz} ${sz}" width="${sz}" height="${sz}">
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="2.5"/>
-    <path id="${id}arc" fill="none" stroke="rgba(135,135,255,.5)" stroke-width="2.5" stroke-linecap="round" d="M${cx},${cy}"/>
-    <line id="${id}tick" x1="${cx}" y1="${cy-r+2}" x2="${cx}" y2="${cy-r+6}" stroke="rgba(255,255,255,.85)" stroke-width="1.5" stroke-linecap="round" transform="rotate(0,${cx},${cy})"/>
-  </svg>`;
-}
-function _mxKnobUpdate(id,norm,sz,isLevel=false){
-  // norm: -1 to +1 (0=center/12 o'clock)
-  const r=sz/2-3,cx=sz/2,cy=sz/2;
-  const deg=norm*135; // degrees CW from 12 o'clock (-135=7:30, 0=12:00, +135=4:30)
-  const tickEl=document.getElementById(id+'tick');
-  if(tickEl)tickEl.setAttribute('transform',`rotate(${deg},${cx},${cy})`);
-  const arcEl=document.getElementById(id+'arc');
-  if(!arcEl)return;
-  const pt=(a)=>{const r2=a*Math.PI/180;return[cx+r*Math.sin(r2),cy-r*Math.cos(r2)];};
-  if(isLevel){
-    // Level/Volume knob: arc from 7 o'clock (−∞, -135°) sweeping CW to current position
-    const span=deg-(-135); // 0 to 270°
-    if(span<2){arcEl.setAttribute('d','');return;}
-    const [sx,sy]=pt(-135);
-    const [nx,ny]=pt(deg);
-    const large=span>180?1:0;
-    arcEl.setAttribute('d',`M${sx.toFixed(2)},${sy.toFixed(2)} A${r},${r} 0 ${large} 1 ${nx.toFixed(2)},${ny.toFixed(2)}`);
-    arcEl.setAttribute('stroke','rgba(180,180,180,.55)');
-  } else {
-    // EQ knob: arc between 12 o'clock (center detent) and current — boost=blue, cut=red
-    const absDeg=Math.abs(deg);
-    if(absDeg<2){arcEl.setAttribute('d','');return;}
-    const [ox,oy]=pt(0);
-    const [nx,ny]=pt(deg);
-    const d=norm>=0
-      ?`M${ox.toFixed(2)},${oy.toFixed(2)} A${r},${r} 0 0 1 ${nx.toFixed(2)},${ny.toFixed(2)}`
-      :`M${nx.toFixed(2)},${ny.toFixed(2)} A${r},${r} 0 0 1 ${ox.toFixed(2)},${oy.toFixed(2)}`;
-    arcEl.setAttribute('d',d);
-    arcEl.setAttribute('stroke',norm>0.05?'rgba(135,135,255,.7)':norm<-0.05?'rgba(255,100,100,.6)':'rgba(200,200,200,.4)');
-  }
-}
-function _mxMountKnob(hostId,id,sz){
-  const host=document.getElementById(hostId);
-  if(!host||host.dataset.knobMounted==='1')return;
-  host.innerHTML=_mxKnobSVG(id,sz);
-  host.dataset.knobMounted='1';
-}
-function _mxEnsureAuxKnobs(){
-  const AUX_SZ=44;
-  [
-    ['mxBalKnobHost','mxBalKnob'],['mxBoothKnobHost','mxBoothKnob'],
-    ['mxHpMixKnobHost','mxHpMixKnob'],['mxHpLevelKnobHost','mxHpLevelKnob'],
-    ['mxBfxLvlKnobHost','mxBfxLvlKnob'],['mxCfxKnobHost','mxCfxKnob'],
-    ['mxMicHiKnobHost','mxMicHiKnob'],['mxMicLoKnobHost','mxMicLoKnob'],
-    ['mxBthHiKnobHost','mxBthHiKnob'],['mxBthLoKnobHost','mxBthLoKnob'],
-    ['mxHpMixBKnobHost','mxHpMixBKnob'],['mxHpLevelBKnobHost','mxHpLevelBKnob'],
-    ['mxFltResoKnobHost','mxFltResoKnob'],['mxIsoHiKnobHost','mxIsoHiKnob'],
-    ['mxIsoMidKnobHost','mxIsoMidKnob'],['mxIsoLoKnobHost','mxIsoLoKnob'],
-  ].forEach(([host,id])=>_mxMountKnob(host,id,AUX_SZ));
-}
-function _mxSetAuxToggle(id,on,extraCls=''){
-  const el=document.getElementById(id);
-  if(!el)return;
-  el.className=`mx-aux-toggle${extraCls?` ${extraCls}`:''}${on?' on':''}`;
-}
-function _mxSetAuxPill(id,on,extraCls=''){
-  const el=document.getElementById(id);
-  if(!el)return;
-  el.className=`mx-aux-pill${extraCls?` ${extraCls}`:''}${on?' on':''}`;
-}
-
-function _mxDetectProfile(djmDevs){
-  for(const d of djmDevs){
-    const n=d.name||'';
-    for(const [key,prof] of Object.entries(_DJM_PROFILES)){
-      if(key==='default')continue;
-      if(n.toUpperCase().includes(key.toUpperCase()))return{key,prof};
-    }
-  }
-  return{key:'default',prof:_DJM_PROFILES['default']};
-}
-function _mxBuildBody(){
-  const body=document.getElementById('mxBody');if(!body)return;
-  const KSZ=36, prof=_djmProfile;
-  const nCh=prof.ch;
-  const marks=[{v:192,p:75},{v:128,p:50},{v:64,p:25},{v:0,p:0}];
-  const markHtml=marks.map(m=>`<div class="mx-fdr-mark" style="bottom:${m.p}%"><span class="mx-fdr-mark-lbl">${m.v}</span></div>`).join('');
-  const vuBoxes=(i)=>Array.from({length:12},(_,j)=>`<div class="mx-vu-box" id="mxVu${i}_${j}"></div>`).join('');
-  let html='';
-  for(let i=0;i<nCh;i++){
-    // Build EQ knobs from profile (all centered, single column)
-    let knobsHtml='';
-    prof.eq.forEach((lbl,ki)=>{
-      knobsHtml+=`<div class="mx-knob">${_mxKnobSVG('mx'+prof.ids[ki]+i,KSZ)}<span class="mx-knob-lbl">${lbl}</span></div>`;
-    });
-    html+=`<div class="mx-ch" id="mxCh${i}">
-      <div class="mx-ch-hdr"><span class="mx-ch-lbl">CH${i+1}</span><span class="mx-ch-air">ON AIR</span></div>
-      <div class="mx-knobs">${knobsHtml}</div>
-      <div class="mx-cue"><span class="mx-cue-btn" id="mxCue${i}">CUE</span></div>
-      <div class="mx-fdr-area">
-        <div class="mx-fdr-col"><div class="mx-fdr-track"></div><div class="mx-fdr-cap" id="mxFdrCap${i}" style="bottom:0"></div><div class="mx-fdr-marks">${markHtml}</div></div>
-        <div class="mx-vu-col"><span class="mx-vu-lbl">VU</span><div class="mx-vu-boxes">${vuBoxes(i)}</div></div>
-      </div>
-      <span class="mx-ab mx-ab-thru" id="mxAb${i}">THRU</span>
-    </div>`;
-  }
-  // Master section: MASTER → LED VU (12 dots L/R) → LEVEL label → knob with -∞/0dB/+5dB → CLIP → CUE → BPM
-  const MSZ=56;
-  const vuDots=(side)=>{
-    let h='';for(let j=0;j<12;j++)h+=`<div class="mx-master-dot" id="mxMDot${side}${j}"></div>`;
-    return`<div class="mx-master-dot-col"><span class="mx-vu-lbl">${side}</span>${h}</div>`;
-  };
-  html+=`<div class="mx-master">
-    <span class="mx-master-lbl">MASTER</span>
-    <div class="mx-master-vu-dots">${vuDots('L')}${vuDots('R')}</div>
-    <span class="mx-master-sub">LEVEL</span>
-    <div class="mx-master-knob-wrap">
-      <div class="mx-knob">${_mxKnobSVG('mxMVol',MSZ)}</div>
-      <span class="mx-master-sc sc-inf">-∞</span>
-      <span class="mx-master-sc sc-0db">0dB</span>
-      <span class="mx-master-sc sc-5db">+5dB</span>
-    </div>
-    <span class="mx-clip" id="mxClip">CLIP</span>
-    <div class="mx-cue"><span class="mx-cue-btn" id="mxCueMaster">CUE</span></div>
-    <div style="text-align:center;margin-top:2px"><span class="mx-knob-lbl">BPM</span><div style="font:700 14px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums" id="mxMasterBpm">—</div></div>
-  </div>`;
-  body.innerHTML=html;
-  _mxBuilt=true;
-}
-
-function updateMixer(){
-  if(curTab!=='mixer')return;
-  // Detect DJM model and apply profile
-  const djmDevs=pdjlDevices.filter(d=>d.type==='DJM');
-  const det=_mxDetectProfile(djmDevs);
-  if(det.key!==_djmModelKey){_djmModelKey=det.key;_djmProfile=det.prof;_djmChCount=det.prof.ch;_mxBuilt=false;}
-  if(!_mxBuilt)_mxBuildBody();
-  _mxEnsureAuxKnobs();
-  const mxModel=document.getElementById('mxModel');
-  const mxOffline=document.getElementById('mxOffline');
-  const connected=djmDevs.length>0;
-  if(mxModel)mxModel.textContent=connected?djmDevs.map(d=>d.name).join(', '):'DJM 미연결';
-  if(mxOffline)mxOffline.style.display=connected?'none':'';
-  const mxEmpty=document.getElementById('mxEmpty');
-  const mxContent=document.getElementById('mxContent');
-  if(mxEmpty)mxEmpty.style.display=connected?'none':'';
-  if(mxContent){if(connected)mxContent.classList.add('mx-content-on');else{mxContent.classList.remove('mx-content-on');mxContent.style.display='none';}}
-  if(!connected)return;
-  const KSZ=36, prof=_djmProfile, nCh=prof.ch;
-  for(let i=0;i<nCh;i++){
-    const air=!!onAirCh[i];
-    const rawMeter=_djmChVu[i]||0;
-    const meterBands=Array.isArray(_djmSpectrum?.[i])?_djmSpectrum[i]:null;
-    const meter=meterBands?_vuDisplayFromBands(meterBands,2.15,0.72):_vuDisplayFrom255(rawMeter,2.05,0.7);
-    // ON AIR
-    const chEl=document.getElementById('mxCh'+i);
-    if(chEl)chEl.classList.toggle('on-air',air);
-    // EQ knobs: eqBands 기본값(128=12시)에서 0x39 수신 시 실제 값으로 덮어씀
-    // hasReal 게이트 제거 — 기본 상태에서 자연스레 중립 표시됨
-    {
-      const eq=eqBands[i]||[128,128,128,128];
-      // Index map — confirmed via live user test (2026-04-17):
-      // eq[0]=TRIM(+1), eq[1]=HI(+4), eq[2]=MID(+3), eq[3]=LOW(+6), eq[4]=COLOR(+7)
-      const eqMap={T:0, H:1, M:2, L:3, C:4, HM:1, LM:2};
-      if(prof.ids.length>=6)Object.assign(eqMap,{T:0,H:1,HM:2,LM:3,L:4,C:null}); // V10 5-band
-      // T=TRIM, C=COLOR: level knob (-∞ to max, arc from 7 o'clock to current)
-      // H/M/L/HM/LM: EQ boost/cut knob (center=12 o'clock, arc shows deviation)
-      const _levelIds=new Set(['T','C']);
-      prof.ids.forEach(id=>{
-        const bi=eqMap[id];
-        const norm=bi!=null?(((eq[bi]??128)-128)/128):0;
-        _mxKnobUpdate('mx'+id+i,norm,KSZ,_levelIds.has(id));
-      });
-    }
-    // Fader cap position: faders[] 직접 사용 (on-air 폴백 제거, type 0x39 전 기본값 255)
-    const fv=(faders[i]||0)/255;
-    const fPct=fv*100;
-    const cap=document.getElementById('mxFdrCap'+i);
-    if(cap)cap.style.bottom='calc('+fPct+'% - 5px)';
-    // VU meter
-    const lit=Math.round(meter*12);
-    for(let j=0;j<12;j++){
-      const seg=document.getElementById(`mxVu${i}_${j}`);
-      if(!seg)continue;
-      const cls=j>=11?'lit-r':j>=8?'lit-y':'lit-g';
-      seg.className='mx-vu-box'+(j<lit?' '+cls:'');
-    }
-    if(!_mxPeaks[i])_mxPeaks[i]=0;
-    if(meter>_mxPeaks[i])_mxPeaks[i]=meter;
-    else _mxPeaks[i]=Math.max(meter,_mxPeaks[i]*0.97);
-    // CUE button state from headphone CUE flags
-    const cueBtn=document.getElementById('mxCue'+i);
-    if(cueBtn)cueBtn.classList.toggle('on',!!(_djmHpCue&(1<<i)));
-  }
-  // Crossfader position — _djmXfader 기본값 128 이므로 데이터 없을 때 자연스레 중앙
-  const xfKnob=document.getElementById('mxXfKnob');
-  if(xfKnob)xfKnob.style.left=(_djmXfader/255*100)+'%';
-  // Master VU — prefer dedicated stereo peaks from DJM 0x58.
-  // Fallback order: TCNet masterAudio (mono) -> mixed channel estimate.
-  const hasStereoMasterVu=(_djmMasterVuL>0||_djmMasterVuR>0)||(_djmMasterLBands?.length>0)||(_djmMasterRBands?.length>0);
-  const hasMonoMasterVu=_djmMasterVu>0;
-  const monoMasterVuNorm=_vuDisplayFrom255(_djmMasterVu,2.0,0.7);
-  const mL=hasStereoMasterVu?(_djmMasterLBands?_vuDisplayFromBands(_djmMasterLBands,2.2,0.72):_vuDisplayFrom255(_djmMasterVuL,2.1,0.7)):(hasMonoMasterVu?monoMasterVuNorm:_vuDisplayFrom255(Math.round(((_djmChVu[0]||0)*0.6)+((_djmChVu[2]||0)*0.4)),2.0,0.7));
-  const mR=hasStereoMasterVu?(_djmMasterRBands?_vuDisplayFromBands(_djmMasterRBands,2.2,0.72):_vuDisplayFrom255(_djmMasterVuR,2.1,0.7)):(hasMonoMasterVu?monoMasterVuNorm:_vuDisplayFrom255(Math.round(((_djmChVu[1]||0)*0.6)+((_djmChVu[3]||0)*0.4)),2.0,0.7));
-  let clipping=false;
-  ['L','R'].forEach((side,si)=>{
-    const lv=si===0?mL:mR;
-    const lit=Math.round(lv*12);
-    if(lv>0.97)clipping=true;
-    for(let j=0;j<12;j++){
-      const dot=document.getElementById('mxMDot'+side+j);
-      if(!dot)continue;
-      const cls=j>=11?'lit-r':j>=8?'lit-y':'lit-g';
-      dot.className='mx-master-dot'+(j<lit?' '+cls:'');
-    }
-  });
-  // CLIP indicator
-  const clipEl=document.getElementById('mxClip');
-  if(clipEl)clipEl.classList.toggle('on',clipping);
-  // Master volume knob: 0=−∞ (fully CCW, -1), 255=+5dB (fully CW, +1)
-  // _djmMasterLvl 기본값 128 → (128/127.5)-1 ≈ 0 = 중립, 실 값 도착 시 업데이트
-  const MSZ=56;
-  const mVolNorm=(((_djmMasterLvl||0)/127.5)-1);
-  _mxKnobUpdate('mxMVol',Math.max(-1,Math.min(1,mVolNorm)),MSZ,true);
-  // A/B crossfader assign badges — from TCNet MixerData chXfAssign (0=THRU,1=A,2=B)
-  for(let i=0;i<nCh;i++){
-    const abEl=document.getElementById('mxAb'+i);
-    if(abEl){
-      const asgn=_djmChXfAssign[i]||0;
-      abEl.textContent=asgn===1?'A':asgn===2?'B':'THRU';
-      abEl.className='mx-ab '+(asgn===1?'mx-ab-a':asgn===2?'mx-ab-b':'mx-ab-thru');
-    }
-    // CUE button highlight
-    const cueEl=document.getElementById('mxCue'+i);
-    if(cueEl)cueEl.classList.toggle('on',!!(_djmChCueA[i]||_djmChCueB[i]));
-  }
-  const activeDk=Object.values(DECKS).find(d=>d.type==='hw'&&d.pl&&d.bpm>0);
-  const mxBpm=document.getElementById('mxMasterBpm');
-  if(mxBpm)mxBpm.textContent=activeDk?activeDk.bpm.toFixed(2):'—';
-  const AUX_SZ=44;
-  // AUX panel: monitor / curves / beat fx / color fx / mic / optional ext
-  const _masterCueOn=!!(_djmMasterCue||_djmMasterCueB||_djmHpCueLink||_djmHpCueLinkB);
-  const _mcueBtn=document.getElementById('mxCueMaster');
-  if(_mcueBtn)_mcueBtn.classList.toggle('on',_masterCueOn);
-  _mxSetAuxToggle('mxCueMasterAux',_masterCueOn,'ylw');
-  const _bv=document.getElementById('mxBalVal');
-  _mxKnobUpdate('mxBalKnob',Math.max(-1,Math.min(1,((_djmMasterBal||128)-128)/128)),AUX_SZ,false);
-  if(_bv){
-    const bd=_djmMasterBal-128;
-    _bv.textContent=bd===0?'C':(bd<0?'L'+(-bd):'R'+bd);
-  }
-  const _bbv=document.getElementById('mxBoothVal');
-  _mxKnobUpdate('mxBoothKnob',Math.max(-1,Math.min(1,((_djmBoothLvl||0)/127.5)-1)),AUX_SZ,true);
-  if(_bbv)_bbv.textContent=String(_djmBoothLvl);
-  const _hmv=document.getElementById('mxHpMixVal');
-  _mxKnobUpdate('mxHpMixKnob',Math.max(-1,Math.min(1,((_djmHpMixing||128)-128)/128)),AUX_SZ,false);
-  if(_hmv){
-    const hd=_djmHpMixing-128;
-    _hmv.textContent=hd===0?'C':(hd<0?hd:'+'+hd);
-  }
-  const _hv=document.getElementById('mxHpVal');
-  _mxKnobUpdate('mxHpLevelKnob',Math.max(-1,Math.min(1,((_djmHpLevel||0)/127.5)-1)),AUX_SZ,true);
-  if(_hv)_hv.textContent=String(_djmHpLevel);
-  _mxSetAuxPill('mxEqIso',_djmEqCurve===0);
-  _mxSetAuxPill('mxEqStd',_djmEqCurve!==0&&_djmEqCurve!==2);
-  _mxSetAuxPill('mxEqHot',_djmEqCurve===2,'hot');
-  _mxSetAuxPill('mxFdrLong',_djmFaderCurve===0);
-  _mxSetAuxPill('mxFdrStd',_djmFaderCurve!==0&&_djmFaderCurve!==2);
-  _mxSetAuxPill('mxFdrSharp',_djmFaderCurve===2,'hot');
-  // ── 확장 AUX: Beat FX / Color FX / Mic / Booth EQ / HP B ──
-  const _bfxSel=document.getElementById('mxBfxSel');
-  if(_bfxSel)_bfxSel.textContent=_BEAT_FX_NAMES[_djmBeatFxSel]||'—';
-  _mxKnobUpdate('mxBfxLvlKnob',Math.max(-1,Math.min(1,((_djmBeatFxLevel||0)/127.5)-1)),AUX_SZ,true);
-  const _bfxLvlVal=document.getElementById('mxBfxLvlVal');
-  if(_bfxLvlVal)_bfxLvlVal.textContent=String(_djmBeatFxLevel);
-  _mxSetAuxToggle('mxBfxOn',!!_djmBeatFxOn,'pur');
-  const _bfxAsn=document.getElementById('mxBfxAssign');
-  if(_bfxAsn)_bfxAsn.textContent=_BEAT_FX_ASSIGN_NAMES[_djmBeatFxAssign]||('?'+_djmBeatFxAssign);
-  _mxSetAuxPill('mxFxFLo',_djmFxFreqLo);
-  _mxSetAuxPill('mxFxFMid',_djmFxFreqMid);
-  _mxSetAuxPill('mxFxFHi',_djmFxFreqHi);
-  const _sr=document.getElementById('mxSndRtn');
-  if(_sr)_sr.textContent='SND/RTN '+_djmSendReturn;
-  const _cfxSel=document.getElementById('mxCfxSel');
-  if(_cfxSel){_cfxSel.textContent=_COLOR_FX_NAMES[_djmColorFxSel]||('#'+_djmColorFxSel);_cfxSel.style.opacity=_djmColorFxSel===255?0.4:1;}
-  _mxKnobUpdate('mxCfxKnob',Math.max(-1,Math.min(1,((_djmColorFxParam||128)-128)/128)),AUX_SZ,false);
-  const _cfxVal=document.getElementById('mxCfxVal');
-  if(_cfxVal){const cd=_djmColorFxParam-128;_cfxVal.textContent=cd===0?'0':(cd<0?cd:'+'+cd);}
-  _mxKnobUpdate('mxMicHiKnob',Math.max(-1,Math.min(1,((_djmMicEqHi||128)-128)/128)),AUX_SZ,false);
-  _mxKnobUpdate('mxMicLoKnob',Math.max(-1,Math.min(1,((_djmMicEqLo||128)-128)/128)),AUX_SZ,false);
-  const _micHiVal=document.getElementById('mxMicHiVal');
-  const _micLoVal=document.getElementById('mxMicLoVal');
-  if(_micHiVal){const v=_djmMicEqHi-128;_micHiVal.textContent=v===0?'0':(v<0?v:'+'+v);}
-  if(_micLoVal){const v=_djmMicEqLo-128;_micLoVal.textContent=v===0?'0':(v<0?v:'+'+v);}
-  const _hasBoothEq=_djmIsV10||_djmModelKey==='A9';
-  const _boothEqGroup=document.getElementById('mxBoothEqGroup');
-  if(_boothEqGroup)_boothEqGroup.style.display=_hasBoothEq?'':'none';
-  _mxKnobUpdate('mxBthHiKnob',Math.max(-1,Math.min(1,((_djmBoothEqHi||128)-128)/128)),AUX_SZ,false);
-  _mxKnobUpdate('mxBthLoKnob',Math.max(-1,Math.min(1,((_djmBoothEqLo||128)-128)/128)),AUX_SZ,false);
-  const _bthHiVal=document.getElementById('mxBthHiVal');
-  const _bthLoVal=document.getElementById('mxBthLoVal');
-  if(_bthHiVal){const v=_djmBoothEqHi-128;_bthHiVal.textContent=v===0?'0':(v<0?v:'+'+v);}
-  if(_bthLoVal){const v=_djmBoothEqLo-128;_bthLoVal.textContent=v===0?'0':(v<0?v:'+'+v);}
-  _mxSetAuxToggle('mxBthEqBtn',!!_djmBoothEqBtn);
-  const _hasHpB=_djmIsV10||_djmModelKey==='A9';
-  const _hpBGroup=document.getElementById('mxHpBGroup');
-  if(_hpBGroup)_hpBGroup.style.display=_hasHpB?'':'none';
-  _mxKnobUpdate('mxHpLevelBKnob',Math.max(-1,Math.min(1,((_djmHpLevelB||0)/127.5)-1)),AUX_SZ,true);
-  _mxKnobUpdate('mxHpMixBKnob',Math.max(-1,Math.min(1,((_djmHpMixingB||128)-128)/128)),AUX_SZ,false);
-  const _hpValB=document.getElementById('mxHpValB');
-  if(_hpValB)_hpValB.textContent=String(_djmHpLevelB);
-  const _hpMixB=document.getElementById('mxHpMixB');
-  if(_hpMixB){
-    const v=_djmHpMixingB-128;
-    _hpMixB.textContent=v===0?'C':(v<0?v:'+'+v);
-  }
-  _mxSetAuxToggle('mxHpLinkB',!!_djmHpCueLinkB,'ylw');
-  // ── V10 전용 row ──
-  const _v10Row=document.getElementById('mxAuxV10');
-  if(_v10Row)_v10Row.style.display=_djmIsV10?'grid':'none';
-  if(_djmIsV10){
-    _mxSetAuxPill('mxFltLPF',_djmFilterLPF,'pur');
-    _mxSetAuxPill('mxFltHPF',_djmFilterHPF,'pur');
-    _mxKnobUpdate('mxFltResoKnob',Math.max(-1,Math.min(1,((_djmFilterReso||128)-128)/128)),AUX_SZ,false);
-    const _flr=document.getElementById('mxFltResoVal');
-    if(_flr){
-      const v=_djmFilterReso-128;
-      _flr.textContent=v===0?'0':(v<0?v:'+'+v);
-    }
-    _mxSetAuxToggle('mxIsoOn',!!_djmIsolatorOn,'pur');
-    _mxKnobUpdate('mxIsoHiKnob',Math.max(-1,Math.min(1,((_djmIsolatorHi||128)-128)/128)),AUX_SZ,false);
-    _mxKnobUpdate('mxIsoMidKnob',Math.max(-1,Math.min(1,((_djmIsolatorMid||128)-128)/128)),AUX_SZ,false);
-    _mxKnobUpdate('mxIsoLoKnob',Math.max(-1,Math.min(1,((_djmIsolatorLo||128)-128)/128)),AUX_SZ,false);
-    [['mxIsoHiVal',_djmIsolatorHi],['mxIsoMidVal',_djmIsolatorMid],['mxIsoLoVal',_djmIsolatorLo]].forEach(([id,val])=>{
-      const el=document.getElementById(id);
-      if(!el)return;
-      const v=val-128;
-      el.textContent=v===0?'0':(v<0?v:'+'+v);
-    });
-    _mxSetAuxToggle('mxMmxOn',!!_djmMasterMixOn,'pur');
-    const _ms=document.getElementById('mxMmxSize');if(_ms)_ms.textContent=_djmMasterMixSize;
-    const _mt=document.getElementById('mxMmxTime');if(_mt)_mt.textContent=_djmMasterMixTime;
-    const _mtn=document.getElementById('mxMmxTone');if(_mtn)_mtn.textContent=_djmMasterMixTone;
-    const _ml=document.getElementById('mxMmxLvl');if(_ml)_ml.textContent=_djmMasterMixLevel;
-  }
-  // DJM packet log panel rendering
-  if(_djmLogOpen&&_djmLog.length){
-    const logEl=document.getElementById('mxLogPanel');
-    if(logEl){logEl.textContent=_djmLog.slice(-40).join('\n');logEl.scrollTop=logEl.scrollHeight;}
-  }
-}
+// _mxKnobSVG/_mxKnobUpdate/_mxMountKnob/_mxEnsureAuxKnobs/_mxSetAuxToggle/_mxSetAuxPill
+// _mxDetectProfile/_mxBuildBody/updateMixer → renderer/mixer-panel.js (Phase 2.4)
 
 // ════ Tab rendering ══════════════════════════════════
 function renderPDJL(){
@@ -5577,250 +5440,8 @@ function renderTcnet(){
     <div class="pgr">${[{l:'TIME 0xFE',v:pk,c:'var(--grn)'},{l:'DATA 0xC8',v:pk,c:'var(--pur)'},{l:'OPTIN 0x02',v:up,c:'var(--blu)'},{l:'STATUS 0x05',v:Math.floor(up/2),c:'var(--ylw)'}].map(p=>`<div class="pgc"><div style="font:500 9px var(--sn);color:var(--tx3);margin-bottom:3px">${p.l}</div><div style="font:600 14px var(--mn);color:${p.c};font-variant-numeric:tabular-nums">${p.v.toLocaleString()}</div></div>`).join('')}</div>`;
 }
 
-function renderSettings(){
-  const el=document.getElementById('pgSettings');
-  const devOpts=audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg.aoId===d.deviceId?'selected':''}>${d.label||'Output '+d.deviceId.slice(0,8)}</option>`).join('');
-  // network interface options
-  const ifaceOpts=(ifaces,field)=>{
-    const sel=cfg[field]||'';
-    const loopSel=sel==='127.0.0.1'?'selected':'';
-    const loopOpt=`<option value="127.0.0.1" ${loopSel}>lo0 (localhost 127.0.0.1) — Arena 같은 맥</option>`;
-    const netOpts=ifaces.filter(i=>!i.internal).map(i=>{
-      const label=i.hwPort||i.name;
-      const suffix=i.address.startsWith('169.254')?'  (링크로컬 CDJ)':'';
-      return`<option value="${i.address}" ${sel===i.address?'selected':''}>${i.name} — ${i.address} (${label})${suffix}</option>`;
-    }).join('');
-    return `<option value="">자동 감지</option>${loopOpt}${netOpts}`;
-  };
-
-  el.innerHTML=`
-    <div class="sl">덱 레이아웃</div>
-    <div class="sgr">
-      <div class="srw"><span class="srl">레이아웃 테마</span><select class="ss" id="layoutSel">
-        <option value="tower" ${cfg.layout==='tower'?'selected':''}>Tower — 세로 콘솔 스트립 (가로 스크롤)</option>
-        <option value="card" ${cfg.layout==='card'?'selected':''}>Card — 앨범 아트 히어로 (최대 2열)</option>
-        <option value="row" ${cfg.layout==='row'?'selected':''}>Row — 1 덱 1 행 풀폭 (세로 스크롤)</option>
-      </select></div>
-    </div>
-    <div class="sl">웨이브폼 설정</div>
-    <div class="sgr">
-      <div class="srw"><span class="srl">Theme</span><select class="ss" id="wfThemeSel"><option value="3band" ${wfTheme==='3band'?'selected':''}>3 Band</option><option value="rgb" ${wfTheme==='rgb'?'selected':''}>RGB</option></select></div>
-      <div class="srw"><span class="srl">Sharpness</span><div style="display:flex;align-items:center;gap:6px"><input type="range" id="wfSharpnessSl" min="0" max="1" step="0.05" value="${wfSharpness}" title="0=sharp 1=legacy 3-tap smoothing" style="width:120px"><span id="wfSharpnessLbl" style="font:400 10px var(--mn);color:var(--tx3);width:32px;text-align:right">${wfSharpness.toFixed(2)}</span></div></div>
-      <div class="srw"><span class="srl">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
-    </div>
-    <div class="sl">TCNet 설정</div>
-    <div class="sgr">
-      <div class="srw"><span class="srl">Node Name <span style="font:400 9px var(--mn);color:var(--tx4)">(%%=자동번호, 최대8자)</span></span><input type="text" value="${cfg.nm}" data-cfg="nm" placeholder="Bridge%%" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:110px;text-align:right" maxlength="9"></div>
-      <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
-      <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
-    </div>
-    <div class="sl">Pro DJ Link 설정</div>
-    <div class="sgr">
-      <div class="srw"><span class="srl">Pro DJ Link 인터페이스</span><select class="ss" data-cfg="pdjlIface">${ifaceOpts(allIfaces,'pdjlIface')}</select></div>
-      <div class="srw"><span class="srl">인터페이스 목록</span><button class="mode-btn" id="btnIfaceRefresh" style="height:24px;padding:0 10px">새로고침</button></div>
-    </div>
-    <div class="sl">오디오 출력</div>
-    <div class="sgr">
-      <div class="srw"><span class="srl">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div>
-      <div class="srw"><span class="srl">출력 채널</span><div style="display:flex;align-items:center;gap:6px"><select class="ss" data-cfg="aoChPair" style="max-width:120px" disabled><option>감지 중…</option></select><span id="aoChAutoLbl" style="font:400 9px var(--mn);color:var(--grn);display:none">AUTO</span></div></div>
-    </div>
-    <div class="al alw" style="margin-top:8px">
-      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
-      <div style="font:400 10px var(--sn);color:var(--ylw)">
-        <b>두 NIC 환경:</b> TCNet 인터페이스 = 공유기 LAN (192.168.x.x), Pro DJ Link 인터페이스 = CDJ 이더넷 (169.254.x.x).<br>
-        인터페이스·모드 변경은 실시간 적용됩니다.
-      </div>
-    </div>
-    <div class="sl mt">SMPTE 타임코드 출력</div>
-    <div class="sgr">
-      <div class="srw"><span class="srl">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">레이턴시 보정</span><div style="display:flex;align-items:center;gap:6px"><input type="number" step="1" min="-5000" max="5000" value="${cfg.tcOffsetMs|0}" data-cfg="tcOffsetMs" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:90px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">ms (LTC/MTC/Art-Net 공통, + 면 TC 앞섬)</span></div></div>
-      ${['A','B','M'].map(lyr=>`<div class="srw"><span class="srl">LTC — Layer ${lyr}</span><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select class="ss" data-cfg="tcLtc${lyr}" style="max-width:180px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg[`tcLtc${lyr}`]===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select><select class="ss" data-cfg="tcLtc${lyr}Ch" style="width:72px" disabled><option>감지 중…</option></select></div></div>`).join('')}
-      <div class="srw"><span class="srl">MTC MIDI 출력</span><select class="ss" id="midiOutSel" style="max-width:200px"><option value="">—</option></select></div>
-    </div>
-    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
-      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
-      <div style="font:400 10px var(--sn);color:var(--ylw)">LTC는 음원과 다른 장치로 출력해야 합니다. 덱 카드의 [TC] 버튼으로 모드를 선택하세요.</div>
-    </div>
-    <div class="sl mt">정보</div>
-    <div class="sgr">
-      <div class="srw"><span class="srl">Version</span><span class="srv">0.12.0</span></div>
-    </div>`;
-
-  el.querySelectorAll('[data-cfg]').forEach(inp=>{
-    inp.addEventListener('change',e=>{
-      const k=inp.dataset.cfg;
-      if(k==='ao'){
-        cfg.aoId=e.target.value;
-        // Invalidate cache and re-probe for new device
-        delete _devChCache[e.target.value||'__default__'];
-        const aoChSel=el.querySelector('[data-cfg="aoChPair"]');
-        if(aoChSel){aoChSel.disabled=true;aoChSel.innerHTML='<option>감지 중…</option>';}
-        _probeDevChannels(e.target.value).then(max=>{
-          if(aoChSel){
-            const cur=parseInt(cfg.aoChPair)||0;
-            _fillChSelPair(aoChSel,max,cur<Math.floor(max/2)?cur:0);
-            cfg.aoChPair=parseInt(aoChSel.value)||0;
-            aoChSel.disabled=false;
-          }
-          _rebuildAuRouting();_saveCfg();
-        });
-        return;
-      }
-      else if(k==='aoChPair'){cfg.aoChPair=parseInt(e.target.value)||0;_rebuildAuRouting();}
-      else if(k==='tcao'){cfg.tcLtcAoId=e.target.value;}
-      else if(k==='tcFps'){cfg.tcFps=e.target.value;}
-      else if(/^tcLtc[ABM]$/.test(k)){
-        const layer=k.slice(-1);
-        delete _devChCache[e.target.value||'__default__'];
-        const ltcChSel=el.querySelector(`[data-cfg="tcLtc${layer}Ch"]`);
-        if(ltcChSel){ltcChSel.disabled=true;ltcChSel.innerHTML='<option>감지 중…</option>';}
-        _probeDevChannels(e.target.value).then(max=>{
-          if(ltcChSel){
-            const cur=parseInt(cfg[`tcLtc${layer}Ch`])||0;
-            _fillChSelMono(ltcChSel,max,cur<max?cur:0);
-            cfg[`tcLtc${layer}Ch`]=parseInt(ltcChSel.value)||0;
-            ltcChSel.disabled=false;
-          }
-          _ltcSetDevice(layer,e.target.value,cfg[`tcLtc${layer}Ch`]);
-          _saveCfg();
-        });
-        return;
-      }
-      else if(/^tcLtc[ABM]Ch$/.test(k)){
-        const layer=k.slice(5,6); // 'A','B','M'
-        _ltcSetDevice(layer,cfg[`tcLtc${layer}`],parseInt(e.target.value)||0);
-      }
-      else if(k==='tcArtnetIp'||k==='tcArtnetPort'){cfg[k]=e.target.value;_saveCfg();_artnetRestartIfEnabled();return;}
-      else if(k==='anIface'){cfg[k]=e.target.value;_saveCfg();_artnetRestartIfEnabled();return;}
-      else if(k==='anDmxUniverse'){cfg[k]=parseInt(e.target.value)||0;_saveCfg();return;}
-      else if(k==='anDmxSource'){cfg[k]=e.target.value;_saveCfg();if(cfg.anDmxSource==='off')window.bridge.artnetClearDmx?.();return;}
-      else if(k==='tcOffsetMs'){
-        const v=parseInt(e.target.value);
-        cfg.tcOffsetMs = Number.isFinite(v) ? Math.max(-5000,Math.min(5000,v)) : 0;
-        _saveCfg();
-        // offset 변경 시 Art-Net 엔진에 즉시 resync 요청 (다음 tick 이 새 offset 반영)
-        if(_artEnabled) _artForceResync();
-        return;
-      }
-      else if(k==='anUnicastIp'){cfg[k]=e.target.value.trim();_saveCfg();_artnetRestartIfEnabled();return;}
-      else if(k==='anDmxHz'){
-        const v=parseInt(e.target.value);
-        cfg.anDmxHz=Number.isFinite(v)?Math.max(10,Math.min(50,v)):40;
-        _saveCfg();window.bridge.artnetSetDmxHz?.(cfg.anDmxHz);return;
-      }
-      else if(k==='linkSource'){cfg[k]=e.target.value;_saveCfg();const row=document.getElementById('linkDeckRow');if(row)row.style.display=(cfg[k]==='deck')?'':'none';return;}
-      else if(k==='linkDeckIdx'){cfg[k]=parseInt(e.target.value)||0;_saveCfg();return;}
-      else if(k==='tcFps'){cfg.tcFps=e.target.value;_saveCfg();window.bridge.artnetSetFps?.(cfg.tcFps);return;}
-      else if(k==='tcnetIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindTCNet(e.target.value||null);return;}
-      else if(k==='pdjlIface'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.rebindPDJL(e.target.value||null);return;}
-      else if(k==='tcnetMode'){cfg[k]=e.target.value;_saveCfg();if(E&&run)window.bridge.setTCNetMode(e.target.value||'auto');return;}
-      else cfg[k]=e.target.value;
-      _saveCfg();
-    });
-  });
-  // Probe audio devices and fill channel selectors (async — updates after render)
-  _probeAndFillChSels(el);
-  // Waveform settings
-  const wfThemeSel=el.querySelector('#wfThemeSel');
-  if(wfThemeSel){wfThemeSel.value=wfTheme;wfThemeSel.onchange=e=>{wfTheme=e.target.value==='rgb'?'rgb':'3band';_wfPersistAndApply();};}
-  const wfSharpnessSl=el.querySelector('#wfSharpnessSl');
-  if(wfSharpnessSl){wfSharpnessSl.value=String(wfSharpness);wfSharpnessSl.oninput=e=>{wfSharpness=Math.max(0,Math.min(1,Number(e.target.value)||0));const l=el.querySelector('#wfSharpnessLbl');if(l)l.textContent=wfSharpness.toFixed(2);_wfPersistAndApply();};}
-  const wfCenterSel=el.querySelector('#wfCenterSel');
-  if(wfCenterSel){wfCenterSel.value=cfg.wfCenter||'left';wfCenterSel.onchange=e=>{cfg.wfCenter=e.target.value;_saveCfg();};}
-  // Layout 테마 — body data-layout 속성과 cfg.layout 동기화 + renderDecks 재호출
-  const layoutSel=el.querySelector('#layoutSel');
-  if(layoutSel){layoutSel.value=cfg.layout||'default';layoutSel.onchange=e=>{
-    cfg.layout=e.target.value;_saveCfg();
-    document.body.dataset.layout=cfg.layout;
-    try{renderDecks();}catch(_){}
-    // Force marquee re-measure on next tick — layout change can make titles newly overflow/underflow
-    document.querySelectorAll('[id^="dtn"]').forEach(el=>{delete el.dataset.mqChecked;el.classList.remove('scrolling');});
-  };}
-  // MIDI output device list
-  const midiSel=el.querySelector('#midiOutSel');
-  if(midiSel&&_midiAccess){
-    midiSel.innerHTML='<option value="">—</option>';
-    for(const [id,o] of _midiAccess.outputs){
-      const opt=document.createElement('option');
-      opt.value=id;opt.textContent=o.name;
-      if(cfg.tcMidiOutId===id)opt.selected=true;
-      midiSel.appendChild(opt);
-    }
-    midiSel.onchange=e=>{cfg.tcMidiOutId=e.target.value;_mtcSelectOutput(e.target.value);};
-  } else if(midiSel){
-    _mtcInit().then(()=>{if(_midiAccess)renderSettings();});
-  }
-  // sync selected values
-  el.querySelector('[data-cfg="tcnetIface"]').value=cfg.tcnetIface||'';
-  el.querySelector('[data-cfg="pdjlIface"]').value=cfg.pdjlIface||'';
-  el.querySelector('[data-cfg="tcnetMode"]').value=cfg.tcnetMode||'auto';
-  const btnIfaceRefresh=el.querySelector('#btnIfaceRefresh');
-  if(btnIfaceRefresh)btnIfaceRefresh.onclick=async()=>{
-    if(!E)return;
-    const r=await window.bridge.refreshInterfaces?.();
-    allIfaces=r?.interfaces||await window.bridge.getInterfaces()||[];
-    const ips=new Set(allIfaces.map(i=>i.address));ips.add('127.0.0.1');
-    let changed=false;
-    if(cfg.tcnetIface&&!ips.has(cfg.tcnetIface)){cfg.tcnetIface='';changed=true;}
-    if(cfg.pdjlIface&&!ips.has(cfg.pdjlIface)){cfg.pdjlIface='';changed=true;}
-    if(changed)_saveCfg();
-    renderSettings();
-  };
-  // Art-Net controls
-  const chkAn=el.querySelector('#chkAnEnabled');
-  if(chkAn)chkAn.onchange=async e=>{
-    cfg.anEnabled=e.target.checked;_saveCfg();
-    if(cfg.anEnabled){
-      const r=await _artnetStart();
-      _artEnabled=!!r?.ok;
-      _updateArtnetUi(_artEnabled);
-      if(!r?.ok){e.target.checked=false;cfg.anEnabled=false;_saveCfg();alert('Art-Net 엔진 시작 실패: '+(r?.err||'unknown'));}
-    } else {
-      await window.bridge.artnetStop?.();
-      _artEnabled=false;_updateArtnetUi(false);
-    }
-  };
-  const chkDmx=el.querySelector('#chkAnDmxEn');
-  if(chkDmx)chkDmx.onchange=e=>{
-    cfg.anDmxEnabled=e.target.checked;_saveCfg();
-    if(!cfg.anDmxEnabled)window.bridge.artnetClearDmx?.();
-  };
-  // Art-Net 확장 체크박스 핸들러
-  const chkAnUni=el.querySelector('#chkAnUnicast');
-  if(chkAnUni)chkAnUni.onchange=e=>{
-    cfg.anUnicast=e.target.checked;_saveCfg();
-    const ipIn=el.querySelector('[data-cfg="anUnicastIp"]');
-    if(ipIn) ipIn.disabled=!cfg.anUnicast;
-    window.bridge.artnetSetUnicast?.(cfg.anUnicast,cfg.anUnicastIp||'');
-  };
-  const chkAnPoll=el.querySelector('#chkAnPoll');
-  if(chkAnPoll)chkAnPoll.onchange=e=>{
-    cfg.anPollReply=e.target.checked;_saveCfg();
-    window.bridge.artnetSetPollReply?.(cfg.anPollReply);
-    _artnetRestartIfEnabled(); // PollReply 는 listener 리바인드 필요
-  };
-  const chkAnSync=el.querySelector('#chkAnSync');
-  if(chkAnSync)chkAnSync.onchange=e=>{
-    cfg.anSync=e.target.checked;_saveCfg();
-    window.bridge.artnetSetSync?.(cfg.anSync);
-  };
-  // Ableton Link 체크박스
-  const chkLink=el.querySelector('#chkLinkEnabled');
-  if(chkLink)chkLink.onchange=async e=>{
-    cfg.linkEnabled=e.target.checked;_saveCfg();
-    const st=await window.bridge.linkSetEnabled?.(cfg.linkEnabled);
-    _updateLinkUi(st);
-    if(cfg.linkEnabled && st && !st.available){
-      alert('abletonlink 네이티브 모듈이 설치되어 있지 않습니다.\n'
-          + '터미널에서 다음을 실행하세요:\n\n'
-          + '  npm i abletonlink\n'
-          + '  npx electron-rebuild\n\n'
-          + '그 후 BRIDGE+ 를 재시작하세요.');
-    }
-  };
-}
+// License 함수들은 renderer/license-panel.js 로 이동 (window.BridgeLicensePanel)
+// renderSettings → renderer/settings-panel.js (Phase 2.3)
 // ═══ Art-Net 전용 페이지 렌더러 ═══════════════════════════════════
 function renderArtnet(){
   const el=document.getElementById('pgArtnet');
@@ -5854,13 +5475,7 @@ function renderArtnet(){
       <div class="srw"><span class="srl">DMX 소스</span><select class="ss" data-cfg="anDmxSource">${[['off','Off'],['fader','DJM 페이더 (ch1-6)'],['vu','DJM VU (ch1-6)'],['all','DJM 전체 (fader+VU+xf+master)']].map(([v,l])=>`<option value="${v}" ${cfg.anDmxSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">송신 상태</span><span id="anStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">정지</span></div>
     </div>
-    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
-      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span>
-      <div style="font:400 10px var(--sn);color:var(--tx2)">
-        <b>Art-Net 4 엔진:</b> 드리프트 보정 2ms tick · forceResync on seek/cue · 자동증분 encoder · OpDmx 512ch.<br>
-        <b>확장:</b> ArtPollReply 자동응답 + Unicast + ArtSync + 10~50Hz DMX. 유니캐스트 IP가 비어있으면 브로드캐스트로 fallback.
-      </div>
-    </div>`;
+    `;
   // ─── 값 바인딩
   el.querySelectorAll('[data-cfg]').forEach(inp=>{
     inp.addEventListener('change',e=>{
@@ -5964,13 +5579,7 @@ function renderAblink(){
         <span id="linkAlignHint" style="font:400 10px var(--mn);color:var(--tx4);align-self:center"></span>
       </div></div>
     </div>
-    <div class="al alw" style="margin-top:6px;margin-bottom:4px">
-      <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
-      <div style="font:400 10px var(--sn);color:var(--tx2)">
-        <b>단방향 브리지:</b> 선택된 소스의 BPM을 Link 세션에 공급. BPM 소스='선택 덱' + 버츄얼 덱이면 페이저도 자동 정렬 (0.15 beat 드리프트 초과 시 보정). 하드웨어 덱은 master 플래그가 있어 '마스터 덱 정렬' 버튼으로 정렬.<br>
-        <b>네이티브 모듈:</b> <code style="background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px">npm i abletonlink && npx electron-rebuild</code> 후 재시작.
-      </div>
-    </div>`;
+    `;
   // ─── 비트 닷 생성 (4개, 원 주변 90도 간격 · 12시부터 시계방향)
   const g=el.querySelector('#linkBeatDots');
   for(let i=0;i<4;i++){
@@ -6494,7 +6103,13 @@ if(E){
       }
       // totalLenMs는 bridge-core에서 ppLenMs 기반(CDJ 화면과 일치)으로 계산됨
       if(status.totalLenMs > 0) dk.dur = status.totalLenMs;
-      if(status.bpmEffective>0) dk.bpm=Math.round(status.bpmEffective*100)/100;
+      // 0/no-BPM 트랙도 0 으로 reset (stale 유지 방지)
+      dk.bpm = (status.bpmEffective>0 && status.bpmEffective<500) ? Math.round(status.bpmEffective*100)/100 : 0;
+      // CDJ-3000 도 CUE 버튼 눌러 설정한 큐 포인트 반영
+      if(status.cuePosMs!=null && status.cuePosMs>=0){
+        const cpSec = status.cuePosMs / 1000;
+        if(Math.abs((dk.cp||0) - cpSec) > 0.05) dk.cp = cpSec;
+      }
       return;
     }
     ensureHWDeck(status.playerNum);
@@ -6525,7 +6140,7 @@ if(E){
         if(_artEl)_artEl.innerHTML='<img src="assets/default-art.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
         // Update title/artist DOM
         const _tnEl=document.getElementById('dtn'+layerIndex);if(_tnEl)_tnEl.textContent='—';
-        const _taEl=document.getElementById('dta'+layerIndex);if(_taEl)_taEl.textContent='';
+        const _taEl=document.getElementById('dta'+layerIndex);if(_taEl)_taEl.textContent='—';
       }
     } else {
       dk._tidChangeCount=0;
@@ -6575,16 +6190,27 @@ if(E){
     if(status.totalLenMs > 0 && !dk._hasPrecisePos){
       dk.dur = status.totalLenMs;
     }
+    // 현재 큐 포인트 (CUE 버튼 눌러 설정한 위치) — bridge-core 가 CUEDOWN 상태에서 캡쳐.
+    // dk.cp 는 초 단위 (overview 노랑 삼각형 앵커가 사용).
+    if(status.cuePosMs!=null && status.cuePosMs>=0){
+      const cpSec = status.cuePosMs / 1000;
+      if(Math.abs((dk.cp||0) - cpSec) > 0.05) dk.cp = cpSec;
+    }
     // NXS2 debug: log state/timecode for non-precise decks
     if(!dk._hasPrecisePos){
       if(!dk._nxDbg)dk._nxDbg=0;
       if(dk._nxDbg++<10||dk._nxDbg%300===0)
         console.log(`[NX2-UI] P${status.playerNum} st=${status.state} pl=${dk.pl} tc=${status.timecodeMs} pos=${dk.pos} pm=${status.pitchMultiplier?.toFixed(3)} bpm=${status.bpm||status.bpmEffective}`);
     }
-    if(status.bpmEffective&&status.bpmEffective<500)dk.bpm=Math.round(status.bpmEffective*100)/100;
-    else if(status.bpm&&status.bpm<500)dk.bpm=Math.round(status.bpm*100)/100;
-    // Use calculated baseBpm only if metadata hasn't provided authoritative value
-    if(status.bpmTrack&&!dk._metaBaseBpm)dk.baseBpm=Math.round(status.bpmTrack*100)/100;
+    // BPM 갱신 — 0/없음 도 명시적으로 0 으로 reset (이전 truthy 조건은 stale 유지 버그).
+    // packet 의 0x92 가 0xFFFF (no BPM track) 면 parser 가 0 보냄 → UI 도 0 으로 초기화.
+    const _be = (status.bpmEffective>0 && status.bpmEffective<500) ? status.bpmEffective
+              : (status.bpm>0 && status.bpm<500) ? status.bpm
+              : 0;
+    dk.bpm = _be ? Math.round(_be*100)/100 : 0;
+    if(!dk._metaBaseBpm){
+      dk.baseBpm = (status.bpmTrack>0 && status.bpmTrack<500) ? Math.round(status.bpmTrack*100)/100 : 0;
+    }
     if(status.key)dk.key=_toCamelot(status.key);
     if(status.trackName)dk.tn=status.trackName;
     if(status.artistName)dk.ar=status.artistName;
@@ -6695,7 +6321,6 @@ if(E){
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk)return;
     dk.cuePoints=d.cues;
-    console.log(`[UI] P${d.playerNum} cues: ${d.cues.length} (${d.cues.map(c=>c.type==='hot'?'H'+c.hotCueNum:'M').join(',')})`);
   });
   // Beat grid from dbserver (0x2204)
   window.bridge.onBeatGrid?.(d=>{
@@ -6764,8 +6389,8 @@ if(E){
     }
     // Incremental DOM update — no full rebuild needed for meta changes
     const _tnEl=document.getElementById('dtn'+li);if(_tnEl)_tnEl.textContent=dk.tn||'—';
-    const _taEl=document.getElementById('dta'+li);if(_taEl)_taEl.textContent=dk.ar||'';
-    const _sepEl=document.getElementById('dtsep'+li);if(_sepEl)_sepEl.style.display=dk.ar?'':'none';
+    const _taEl=document.getElementById('dta'+li);if(_taEl)_taEl.textContent=dk.ar||'—';
+    const _sepEl=document.getElementById('dtsep'+li);if(_sepEl)_sepEl.style.display='';
   });
   window.bridge.onDJMStatus?.(d=>{
     _markMixerDirty();
