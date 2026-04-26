@@ -480,7 +480,7 @@ function showSplash(msg,sub){
     .bar::after{content:'';position:absolute;top:0;bottom:0;width:30%;background:linear-gradient(90deg,#8787ff,#ff6b2c);border-radius:2px;animation:sld 1.4s ease-in-out infinite}
     @keyframes sld{0%{left:-30%}100%{left:100%}}
   </style></head><body>
-    <div class="brand"><div class="logo">B+</div><div class="wm">BRIDGE+<small>PRO DJ LINK</small></div></div>
+    <div class="brand"><div class="logo">B+</div><div class="wm">BRIDGE+<small>DJ NETWORK BRIDGE</small></div></div>
     <div class="msg">${msg}</div>
     <div class="sub">${sub}</div>
     <div class="bar"></div>
