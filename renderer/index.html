@@ -3188,12 +3188,19 @@ function renderDecks(){
 
   const vtSec=document.getElementById('vtSection');
   const vtRow=document.getElementById('vtRow');
+  // addDeckBtn 은 tower 모드에서 vtRow 자식이 될 수 있음 — DOM 재빌드 전에 vtSec 으로 분리해두지 않으면 destroy 됨.
+  {
+    const _addBtn=document.getElementById('addDeckBtn');
+    if(_addBtn&&_addBtn.parentElement===vtRow){vtSec.appendChild(_addBtn);}
+  }
   if(!isHWMode){
     vtSec.style.display='';
     vtRow.className='deck-row'+(isCompact?' compact':'');
     // Destroy GL contexts before DOM rebuild to avoid WebGL context limit (16)
     vtS.forEach(s=>{const d=DECKS[s];if(d?.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}if(d?.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}});
-    vtRow.innerHTML=vtS.map(s=>deckHTML(s)).join('');
+    const _vtHtml=vtS.map(s=>deckHTML(s)).join('');
+    vtRow.replaceChildren();
+    if(_vtHtml) vtRow.insertAdjacentHTML('beforeend', _vtHtml);
     vtS.forEach(bindDeck);
     // DOM 재빌드 후 멀티채널 VU strip 복원 (렌더링이 기본 2ch L/R로 초기화하므로)
     vtS.forEach(s=>{const d=DECKS[s];if(d&&d.audioChs>2)_buildVuStrip(s,d.audioChs);});
@@ -3203,12 +3210,11 @@ function renderDecks(){
       if(addBtn){
         const layoutNow=document.body.dataset.layout||'';
         if(layoutNow==='tower'){vtRow.appendChild(addBtn);}
-        else if(addBtn.parentElement===vtRow){vtSec.appendChild(addBtn);}
       }
     }
   }else{
     vtSec.style.display='none';
-    vtRow.innerHTML='';
+    vtRow.replaceChildren();
   }
   // HW 덱도 동일하게 멀티채널 VU 복원
   if(isHWMode&&hwS.length){
@@ -3220,7 +3226,7 @@ function renderDecks(){
     if(exEl)exEl.classList.add('dk-wide');
   }
 
-  document.getElementById('addDeckBtn').style.display=(!isHWMode&&slots.length<MAX_DECKS)?'':'none';
+  {const _addBtn=document.getElementById('addDeckBtn');if(_addBtn)_addBtn.style.display=(!isHWMode&&slots.length<MAX_DECKS)?'':'none';}
   const _vtLbl=document.getElementById('vtLabel');if(_vtLbl)_vtLbl.textContent=vtS.length?'':'';
 
   // DJM 연결 상태를 mode-bar에 표시
