@@ -962,11 +962,55 @@ test('tcnet-handler: handleTCNetMsg export 단일 함수', () => {
   const mod = require(path.join(__dirname, '..', 'bridge', 'tcnet-handler'));
   assert.strictEqual(typeof mod.handleTCNetMsg, 'function');
   // self-defense 가드 보존 — magic 'TCN' / Node ID / BRIDGE prefix / own port
+  // (Phase perf: BRIDGE 검사가 string toUpperCase 에서 byte-level CI 로 변경됨)
   const src = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'tcnet-handler.js'), 'utf8');
   assert.match(src, /msg\[4\]!==0x54\|\|msg\[5\]!==0x43\|\|msg\[6\]!==0x4E/);
   assert.match(src, /msg\[0\]===TC\.NID\[0\] && msg\[1\]===TC\.NID\[1\]/);
-  assert.match(src, /name\.toUpperCase\(\)\.startsWith\('BRIDGE'\)/);
+  assert.match(src, /_startsWithBridgeCI\(msg, 8\)/);
   assert.match(src, /core\._ownPorts && core\._ownPorts\.has\(rinfo\.port\)/);
+});
+
+test('PERF: tcnet-handler — body slice 제거 + scratch 재사용', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'tcnet-handler.js'), 'utf8');
+  // 0xC8 MixerData 핸들러에 inline slice 가 사라짐
+  assert.ok(!/if\(type===TC\.DATA && msg\.length>=TC\.H\+2\)\{[\s\S]*?msg\.slice\(TC\.H\)/.test(src),
+    'MixerData branch 에 msg.slice(TC.H) 가 남음');
+  // scratch 재사용 — _getMixerScratch helper
+  assert.match(src, /_getMixerScratch\(core\)/);
+  assert.match(src, /sc\.chAudio\[ch\]\s*=/);
+  // BRIDGE byte-level prefix check (uppercase 회피)
+  assert.match(src, /_BRIDGE_LOWER = \[0x62, 0x72, 0x69, 0x64, 0x67, 0x65\]/);
+  // name 추출 helper 가 통과 패킷에 대해서만 호출됨
+  assert.match(src, /\/\/ PERF: name 추출은 위 빠른 reject 후에/);
+});
+
+test('PERF: handleTCNetMsg MixerData 호출에서 array push 가 발생하지 않음', () => {
+  // simulate: MixerData 패킷 2회 호출 시 reused array 가 동일 instance.
+  const { handleTCNetMsg } = require(path.join(__dirname, '..', 'bridge', 'tcnet-handler'));
+  // 가짜 TC 상수 + msg 빌드
+  const TC = { H:24, NID:[0xff,0xff], OPTIN:0x02, APP:0x07, DATA:0xc8, DT_MIXER:0x96 };
+  const msg = Buffer.alloc(TC.H + 246);
+  msg[4]=0x54; msg[5]=0x43; msg[6]=0x4E;
+  msg[0]=0x00; msg[1]=0x00;  // NID 다름
+  msg[7]=TC.DATA;            // type
+  msg[8]=0x41; msg[9]=0x52; msg[10]=0x45; msg[11]=0x4E; msg[12]=0x41; // 'ARENA'
+  msg[TC.H]=TC.DT_MIXER;     // dataType
+  let captured = null;
+  const fakeCore = {
+    nodes:{}, layers:[], faders:[], _ownPorts:new Set(), localAddr:'192.168.1.1',
+    onTCMixerVU: (d)=>{ captured = d; },
+  };
+  handleTCNetMsg(fakeCore, { TC, mkDataMeta:()=>{}, mkDataMetrics:()=>{}, mkAppResp:()=>{} },
+    msg, { address:'192.168.1.50', port:50001 }, 'TEST');
+  assert.ok(captured, 'first VU emit happened');
+  const firstChAudio = captured.chAudio;
+  // 두 번째 호출
+  captured = null;
+  handleTCNetMsg(fakeCore, { TC, mkDataMeta:()=>{}, mkDataMetrics:()=>{}, mkAppResp:()=>{} },
+    msg, { address:'192.168.1.50', port:50001 }, 'TEST');
+  assert.ok(captured, 'second VU emit happened');
+  // 같은 instance 가 재사용됨 — 매 호출마다 새 array 할당이 아니어야 함
+  assert.strictEqual(captured.chAudio, firstChAudio, 'chAudio 배열이 재사용되지 않음');
 });
 
 test('bridge-core: _handleTCNetMsg 는 wrapper (Phase 5.5)', () => {

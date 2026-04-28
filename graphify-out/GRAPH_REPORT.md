@@ -1,11 +1,11 @@
 # Graph Report - /Users/zes2021/Documents/claude_projects/bridge-clone  (2026-04-29)
 
 ## Corpus Check
-- 60 files · ~351,500 words
+- 60 files · ~352,095 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 970 nodes · 1443 edges · 68 communities detected
+- 973 nodes · 1449 edges · 68 communities detected
 - Extraction: 82% EXTRACTED · 18% INFERRED · 0% AMBIGUOUS · INFERRED: 265 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
@@ -124,7 +124,7 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.05
-Nodes (46): _findByNameUnix(), _findByNameWin(), _findByPortUnix(), _findByPortWin(), isProtected(), _killUnix(), _killWin(), _pidNameUnix() (+38 more)
+Nodes (47): _findByNameUnix(), _findByNameWin(), _findByPortUnix(), _findByPortWin(), isProtected(), _killUnix(), _killWin(), _pidNameUnix() (+39 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.03
@@ -132,7 +132,7 @@ Nodes (23): gcPlayers(), getActualPitch(), getFaderPitch(), getVuPeak(), getVuPe
 
 ### Community 2 - "Community 2"
 Cohesion: 0.06
-Nodes (14): BridgeCore, parseDbRequest(), detectBroadcastFor(), getAllInterfaces(), _getHWPortMap(), pdjlBroadcastTargets(), _runNetSetup(), findVirtualArt() (+6 more)
+Nodes (13): BridgeCore, detectBroadcastFor(), getAllInterfaces(), _getHWPortMap(), pdjlBroadcastTargets(), _runNetSetup(), findVirtualArt(), handleVDbRequest() (+5 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
@@ -167,16 +167,16 @@ Cohesion: 0.12
 Nodes (20): clamp01(), dot(), mix(), monoColor(), rgbTraceColor(), sat(), bandHeights(), clamp() (+12 more)
 
 ### Community 11 - "Community 11"
+Cohesion: 0.17
+Nodes (19): buildHdr(), mkAppResp(), mkDataMeta(), mkDataMetrics(), mkLowResArtwork(), mkMetadataResp(), mkMixerData(), mkNotification() (+11 more)
+
+### Community 12 - "Community 12"
 Cohesion: 0.1
 Nodes (25): AFTER card (리파인된), Artist meta: Daft Punk · HOMEWORK (11px), BEFORE card (before state), BPM block 128.00 · pitch +3.23% · 8A key, CDJ-3000 device tag, Header: F · CARD · 히어로 아트 360px, Header actions: 패딩 통일 · pnum 확대 · 타이틀 위치 swap, Hero artwork — orange gradient 360px (+17 more)
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
 Cohesion: 0.09
 Nodes (23): confidence_score=0.86, Deck card — PLAYER 01 CDJ-3000X orange hero, Deck1 vertical channel fader (FADER 100), Deck1 header: PLAYER 01 · CDJ-3000X · PLAY/SYNC/MASTER/ON AIR badges, Deck1 channel strip knobs: TRIM / HI / MID / LOW / COLOR, Deck1 meta row: REM 04:10 · CUE 0:32.1 · LOOP — · SLIP OFF, Deck1 timecode 01:24:18 · BPM 128.00 · +0.0% · 128.00 orig · SA, Deck1 track title: Children Of The Night — Daft Punk · Homework (Remastered) (+15 more)
-
-### Community 13 - "Community 13"
-Cohesion: 0.19
-Nodes (16): buildHdr(), mkAppResp(), mkDataMeta(), mkDataMetrics(), mkLowResArtwork(), mkMetadataResp(), mkMixerData(), mkNotification() (+8 more)
 
 ### Community 14 - "Community 14"
 Cohesion: 0.1
@@ -449,9 +449,9 @@ Nodes (1): Default Album Art (Vinyl Record Placeholder)
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `push()` connect `Community 0` to `Community 2`, `Community 34`, `Community 5`, `Community 7`, `Community 8`, `Community 13`, `Community 28`, `Community 29`?**
-  _High betweenness centrality (0.106) - this node is a cross-community bridge._
-- **Why does `BridgeCore` connect `Community 2` to `Community 0`, `Community 13`, `Community 5`?**
+- **Why does `push()` connect `Community 0` to `Community 2`, `Community 34`, `Community 5`, `Community 7`, `Community 8`, `Community 11`, `Community 28`, `Community 29`?**
+  _High betweenness centrality (0.108) - this node is a cross-community bridge._
+- **Why does `BridgeCore` connect `Community 2` to `Community 0`, `Community 11`, `Community 5`?**
   _High betweenness centrality (0.070) - this node is a cross-community bridge._
 - **Why does `DbServerPool` connect `Community 0` to `Community 1`?**
   _High betweenness centrality (0.061) - this node is a cross-community bridge._

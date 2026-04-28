@@ -11,6 +11,45 @@
 const TCNET_MAX_NODES = 32;
 const TCNET_NODE_TTL_MS = 30000;
 
+// PERF: hot path 최적화 — case-insensitive 'BRIDGE' prefix check 를
+//   uppercase 문자열 생성 없이 byte 비교로 (60+/sec UDP).
+//   ('B'|0x20)='b' = 0x62, 'R'=0x72, 'I'=0x69, 'D'=0x64, 'G'=0x67, 'E'=0x65.
+const _BRIDGE_LOWER = [0x62, 0x72, 0x69, 0x64, 0x67, 0x65];
+function _startsWithBridgeCI(msg, offset){
+  if(msg.length < offset + 6) return false;
+  for(let i=0;i<6;i++){
+    if((msg[offset+i] | 0x20) !== _BRIDGE_LOWER[i]) return false;
+  }
+  return true;
+}
+
+// PERF: 이름 8바이트 추출 — slice→toString→replace→trim 4회 allocation 회피.
+//   NUL 또는 공백까지만 ASCII 로 직접 디코드.
+function _readName8(msg, offset){
+  let end = offset + 8;
+  for(let i=offset;i<end;i++){
+    const c = msg[i];
+    if(c === 0 || c === 0x20){ end = i; break; }
+  }
+  return msg.toString('ascii', offset, end);
+}
+
+// PERF: MixerData VU 배열 6개를 매 패킷마다 새로 할당하지 않도록
+//   per-core scratch 으로 재사용. core._mixerVuScratch 가 없으면 lazy init.
+function _getMixerScratch(core){
+  let s = core._mixerVuScratch;
+  if(!s){
+    s = core._mixerVuScratch = {
+      chAudio: new Array(6).fill(0),
+      chFader: new Array(6).fill(0),
+      chCueA:  new Array(6).fill(0),
+      chCueB:  new Array(6).fill(0),
+      chXfAssign: new Array(6).fill(0),
+    };
+  }
+  return s;
+}
+
 // 신규 노드 등록 직전 cap/TTL 강제 — bridge-core 의 _startListenerPortRx 에서도 재사용.
 function registerTCNetNode(core, key, entry){
   const nodes = core.nodes;
@@ -51,12 +90,13 @@ function handleTCNetMsg(core, deps, msg, rinfo, label){
   // 1차 방어: Node ID 일치 → 자기 자신이 보낸 패킷 (NNAME 변경에도 견고)
   if(msg[0]===TC.NID[0] && msg[1]===TC.NID[1]) return;
   const type = msg[7];
-  const name = msg.slice(8,16).toString('ascii').replace(/\0/g,'').trim();
-  // 2차 방어: 이름 prefix (역호환 + 다른 Bridge 인스턴스 방지)
-  if(name.toUpperCase().startsWith('BRIDGE')) return;
+  // 2차 방어: 'BRIDGE' prefix CI byte check — name 문자열 생성 없이 reject.
+  if(_startsWithBridgeCI(msg, 8)) return;
   // 3차 방어: 송신 포트가 우리 소켓이면 loop
   if(core._ownPorts && core._ownPorts.has(rinfo.port) &&
      (rinfo.address===core.localAddr || rinfo.address==='127.0.0.1')) return;
+  // PERF: name 추출은 위 빠른 reject 후에 — 통과한 패킷에 대해서만 한 번.
+  const name = _readName8(msg, 8);
 
   if(type===TC.OPTIN){
     const body = msg.slice(TC.H);
@@ -69,7 +109,8 @@ function handleTCNetMsg(core, deps, msg, rinfo, label){
     core.onNodeDiscovered?.(core.nodes[key]);
   }
   // Auto-register non-Bridge nodes that send any TCNet packet (Arena may skip OptIn)
-  if(type!==TC.OPTIN && !name.toUpperCase().startsWith('BRIDGE')){
+  // BRIDGE prefix 는 진입부에서 이미 reject — 추가 체크 불필요.
+  if(type!==TC.OPTIN){
     const key = name+'@'+rinfo.address;
     if(!core.nodes[key]){
       const isNew = registerTCNetNode(core, key, {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()});
@@ -84,8 +125,8 @@ function handleTCNetMsg(core, deps, msg, rinfo, label){
   if(type===TC.APP){
     if(!core._lPortDbg)core._lPortDbg={};
     if(!core._lPortDbg['txapp_'+rinfo.address]){core._lPortDbg['txapp_'+rinfo.address]=true;console.log(`[${label}] APP from ${name} → ${rinfo.address}:${rinfo.port}`);}
-    const body = msg.slice(TC.H);
-    const lPort = body.length>=22 ? body.readUInt16LE(20) : rinfo.port;
+    // PERF: body slice 회피 — msg 직접 read.
+    const lPort = msg.length>=TC.H+22 ? msg.readUInt16LE(TC.H+20) : rinfo.port;
     const key = name+'@'+rinfo.address;
     if(core.nodes[key]) core.nodes[key].lPort = lPort || rinfo.port;
     try{ core.txSocket?.send(mkAppResp(core.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
@@ -93,9 +134,9 @@ function handleTCNetMsg(core, deps, msg, rinfo, label){
   // 0x14 MetadataRequest — Arena asks for track metadata on a layer
   // body: [dataType, layer(1-based)]; reply with requested Data payload.
   if(type===0x14){
-    const body = msg.slice(TC.H);
-    const reqType = body.length>=1 ? body[0] : 0;
-    const layerReq = body.length>=2 ? body[1] : 0;  // 1-based
+    // PERF: body slice 회피 — msg 직접 read.
+    const reqType = msg.length>=TC.H+1 ? msg[TC.H] : 0;
+    const layerReq = msg.length>=TC.H+2 ? msg[TC.H+1] : 0;  // 1-based
     const li = layerReq - 1;
     const layerData = (li >= 0 && li < core.layers.length) ? core.layers[li] : null;
     const faderVal = core.faders ? (core.faders[li] || 0) : 0;
@@ -111,31 +152,33 @@ function handleTCNetMsg(core, deps, msg, rinfo, label){
   // 0xC8 Data Packet — parse incoming MixerData (DataType 150) for VU meters
   // Audio Level = real-time channel VU (0-255, pulses with music)
   if(type===TC.DATA && msg.length>=TC.H+2){
-    const body = msg.slice(TC.H);
-    const dataType = body[0];
-    if(dataType===TC.DT_MIXER && body.length>=246){
+    // PERF: body slice 회피 — msg 직접 offset 읽기.
+    const dataType = msg[TC.H];
+    if(dataType===TC.DT_MIXER && msg.length>=TC.H+246){
       // Master Audio Level: body+37 (byte 61), Master Fader: body+38 (byte 62)
-      const masterAudio = body[37];
-      const masterFader = body[38];
+      const masterAudio = msg[TC.H+37];
+      const masterFader = msg[TC.H+38];
       // Cross Fader: body+75 (byte 99)
-      const xfader = body[75];
-      // Per-channel blocks: body offset = 101 + ch*24 (byte 125 + ch*24), 6 channels max
-      const chAudio=[],chFader=[],chCueA=[],chCueB=[],chXfAssign=[];
+      const xfader = msg[TC.H+75];
+      // PERF: per-core scratch 배열 재사용 — push() 매 패킷 할당 회피.
+      const sc = _getMixerScratch(core);
+      // Per-channel blocks: msg offset = TC.H + 101 + ch*24, 6 channels max
       for(let ch=0;ch<6;ch++){
-        const off=101+ch*24;
-        chAudio.push(off+1<body.length?body[off+1]:0);
-        chFader.push(off+2<body.length?body[off+2]:0);
-        chCueA.push(off+11<body.length?body[off+11]:0);
-        chCueB.push(off+12<body.length?body[off+12]:0);
-        chXfAssign.push(off+13<body.length?body[off+13]:0);
+        const off=TC.H+101+ch*24;
+        sc.chAudio[ch]    = off+1<msg.length?msg[off+1]:0;
+        sc.chFader[ch]    = off+2<msg.length?msg[off+2]:0;
+        sc.chCueA[ch]     = off+11<msg.length?msg[off+11]:0;
+        sc.chCueB[ch]     = off+12<msg.length?msg[off+12]:0;
+        sc.chXfAssign[ch] = off+13<msg.length?msg[off+13]:0;
       }
       // Throttled log: once every 2s
       const now=Date.now();
       if(!core._tcMixerLogAt||now-core._tcMixerLogAt>2000){
         core._tcMixerLogAt=now;
-        try{console.log(`[TCNet] MixerData from=${rinfo.address} masterAudio=${masterAudio} chAudio=[${chAudio}] cueA=[${chCueA}] xfAssign=[${chXfAssign}]`);}catch(_){}
+        try{console.log(`[TCNet] MixerData from=${rinfo.address} masterAudio=${masterAudio} chAudio=[${sc.chAudio}] cueA=[${sc.chCueA}] xfAssign=[${sc.chXfAssign}]`);}catch(_){}
       }
-      core.onTCMixerVU?.({masterAudio,masterFader,xfader,chAudio,chFader,chCueA,chCueB,chXfAssign,from:rinfo.address});
+      // 호출자가 array 를 mutate 하지 않는다는 가정 — bridge-core 의 onTCMixerVU 는 read-only 사용.
+      core.onTCMixerVU?.({masterAudio,masterFader,xfader,chAudio:sc.chAudio,chFader:sc.chFader,chCueA:sc.chCueA,chCueB:sc.chCueB,chXfAssign:sc.chXfAssign,from:rinfo.address});
     }
   }
 }
