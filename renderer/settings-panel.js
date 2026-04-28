@@ -355,7 +355,7 @@ function renderSettings(){
       const r=await _artnetStart();
       _artEnabled=!!r?.ok;
       _updateArtnetUi(_artEnabled);
-      if(!r?.ok){e.target.checked=false;cfg.anEnabled=false;_saveCfg();alert('Art-Net 엔진 시작 실패: '+(r?.err||'unknown'));}
+      if(!r?.ok){e.target.checked=false;cfg.anEnabled=false;_saveCfg();alert((window.t?window.t('alert_artnet_fail','Art-Net 엔진 시작 실패'):'Art-Net 엔진 시작 실패')+': '+(r?.err||'unknown'));}
     } else {
       await window.bridge.artnetStop?.();
       _artEnabled=false;_updateArtnetUi(false);
@@ -392,11 +392,12 @@ function renderSettings(){
     const st=await window.bridge.linkSetEnabled?.(cfg.linkEnabled);
     _updateLinkUi(st);
     if(cfg.linkEnabled && st && !st.available){
-      alert('abletonlink 네이티브 모듈이 설치되어 있지 않습니다.\n'
-          + '터미널에서 다음을 실행하세요:\n\n'
+      const _t=(k,fb)=>window.t?window.t(k,fb):fb;
+      alert(_t('alert_link_missing','abletonlink 네이티브 모듈이 설치되어 있지 않습니다.')+'\n'
+          + _t('alert_link_run','터미널에서 다음을 실행하세요:')+'\n\n'
           + '  npm i abletonlink\n'
           + '  npx electron-rebuild\n\n'
-          + '그 후 BRIDGE+ 를 재시작하세요.');
+          + _t('alert_link_restart','그 후 BRIDGE+ 를 재시작하세요.'));
     }
   };
   // 새로 렌더된 settings panel HTML 의 data-i18n 라벨 번역 적용.
