@@ -35,3 +35,7 @@ out/
 # Playwright MCP cache & ad-hoc screenshots
 .playwright-mcp/
 atelier-*.png
+
+# Graphify cache (regenerable from source — ~386 files)
+graphify-out/cache/
+.graphify_python

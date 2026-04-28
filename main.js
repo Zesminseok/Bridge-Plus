@@ -14,9 +14,8 @@ app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.foc
 const path=require('path'),os=require('os'),fs=require('fs'),crypto=require('crypto');
 const{spawn}=require('child_process');
 const dgram=require('dgram');
-const{BridgeCore,getAllInterfaces}=require('./bridge-core');
+const{BridgeCore,getAllInterfaces,interfaceSignature}=require('./bridge-core');
 const licenseService=require('./license-service');
-function interfaceSignature(ifaces){return (ifaces||[]).map(i=>`${i.name}|${i.address}|${i.netmask}`).sort().join(';');}
 
 // ═══ FFmpeg multi-channel audio decode ═══════════════════════════════
 // FFmpeg + temp 파일 + audio decode IPC → main/audio-decode.js (Phase 3.6)
@@ -556,149 +555,41 @@ function push(){
   },100);
 }
 
-ipcMain.handle('bridge:start',async(_,opts)=>{
-  try{
-    if(bridge?.running){
-      bridge.stop();
-      // wait for socket release before rebinding (macOS port reuse)
-      await new Promise(r=>setTimeout(r,300));
-    }
-    bridge=new BridgeCore(opts||{});
-    _ifaceSig=interfaceSignature(getAllInterfaces());
-    const _send=(ch,d)=>{try{if(win&&!win.isDestroyed())win.webContents.send(ch,d);}catch(_){}};
-    bridge.onNodeDiscovered=n=>_send('tcnet:node',n);
-    bridge.onCDJStatus=(li,s)=>_send('bridge:cdj',{layerIndex:li,status:s});
-    bridge.onDJMStatus=f=>_send('bridge:djm',{
-      // core
-      name:f.name, isV10:f.isV10, numCh:f.numCh,
-      faders:f.channel||f, onAir:f.onAir, eq:f.eq, hasRealFaders:f.hasRealFaders,
-      cueBtn:f.cueBtn, cueBtnB:f.cueBtnB, xfAssign:f.xfAssign, chExtra:f.chExtra,
-      xfader:f.xfader, masterLvl:f.masterLvl, masterCue:f.masterCue, masterCueB:f.masterCueB,
-      masterBalance:f.masterBalance, eqCurve:f.eqCurve, faderCurve:f.faderCurve, xfCurve:f.xfCurve,
-      // Isolator (A9/V10)
-      isolatorOn:f.isolatorOn, isolatorHi:f.isolatorHi, isolatorMid:f.isolatorMid, isolatorLo:f.isolatorLo,
-      // Booth (+EQ A9/V10)
-      boothLvl:f.boothLvl, boothEqHi:f.boothEqHi, boothEqLo:f.boothEqLo, boothEqBtn:f.boothEqBtn,
-      // HP A/B
-      hpCueCh:f.hpCueCh, hpCueLink:f.hpCueLink, hpCueLinkB:f.hpCueLinkB,
-      hpMixing:f.hpMixing, hpMixingB:f.hpMixingB, hpLevel:f.hpLevel, hpLevelB:f.hpLevelB,
-      // Beat FX
-      fxFreqLo:f.fxFreqLo, fxFreqMid:f.fxFreqMid, fxFreqHi:f.fxFreqHi,
-      beatFxSel:f.beatFxSel, beatFxAssign:f.beatFxAssign, beatFxLevel:f.beatFxLevel, beatFxOn:f.beatFxOn,
-      multiIoSel:f.multiIoSel, sendReturn:f.sendReturn,
-      // Mic
-      micEqHi:f.micEqHi, micEqLo:f.micEqLo,
-      // Filter (V10)
-      filterLPF:f.filterLPF, filterHPF:f.filterHPF, filterReso:f.filterReso,
-      // Color FX + Send Ext
-      colorFxSel:f.colorFxSel, sendExt1:f.sendExt1, sendExt2:f.sendExt2, colorFxParam:f.colorFxParam,
-      // Master Mix (V10)
-      masterMixOn:f.masterMixOn, masterMixSize:f.masterMixSize,
-      masterMixTime:f.masterMixTime, masterMixTone:f.masterMixTone, masterMixLevel:f.masterMixLevel,
-      // diagnostics
-      pktType:f.pktType, pktLen:f.pktLen, rawHex:f.rawHex
-    });
-    let _djmMeterLastTs=0;
-    bridge.onDJMMeter=d=>{
-      const now=Date.now();
-      if(now-_djmMeterLastTs<33) return; // ~30Hz cap to renderer (source ~50Hz)
-      _djmMeterLastTs=now;
-      _send('bridge:djmmeter',d);
-    };
-    bridge.onTCMixerVU=d=>_send('bridge:tcmixervu',d);
-    bridge.onDeviceList=devs=>{
-      // stale(>10s) 기기 필터링 — UI에 유령 장치/쓰레기값 남지 않도록
-      const now=Date.now();
-      const active=Object.values(devs||{}).filter(d=>d&&(now-(d.lastSeen||0))<10000&&d.name!=='BRIDGE+'&&d.ip!=='127.0.0.1');
-      _send('pdjl:devices',active);
-    };
-    bridge.onWaveformPreview=(pn,wf)=>_send('bridge:wfpreview',{playerNum:pn,...wf});
-    bridge.onWaveformDetail=(pn,wf)=>_send('bridge:wfdetail',{playerNum:pn,...wf});
-    bridge.onCuePoints=(pn,cues)=>_send('bridge:cuepoints',{playerNum:pn,cues});
-    bridge.onBeatGrid=(pn,bg)=>_send('bridge:beatgrid',{playerNum:pn,...bg});
-    bridge.onSongStructure=(pn,ss)=>_send('bridge:songstruct',{playerNum:pn,...ss});
-    bridge.onAlbumArt=(pn,b64)=>_send('bridge:albumart',{playerNum:pn,art:b64});
-    bridge.onTrackMetadata=(pn,meta)=>_send('bridge:trackmeta',{playerNum:pn,...meta});
-    await bridge.start();push();
-    // Re-request metadata for already-loaded tracks — retry at 3s, 8s, 20s
-    setTimeout(()=>bridge?.refreshAllMetadata(), 3000);
-    return{ok:true,pdjlPort:bridge.getPDJLPort(),broadcastAddr:bridge.broadcastAddr,nodeName:bridge.nodeName||'BRIDGE+'};
-  }catch(e){return{ok:false,err:e.message};}
+// Bridge start/stop IPC → main/ipc-bridge-start.js (Phase 3.12)
+require('./main/ipc-bridge-start').registerBridgeStartIpc(ipcMain, {
+  setBridge: (b) => { bridge = b; },
+  getBridge: () => bridge,
+  setIfaceSig: (s) => { _ifaceSig = s; },
+  getIv: () => iv,
+  clearIv: () => clearInterval(iv),
+  getWin: () => win,
+  BridgeCore,
+  getAllInterfaces,
+  interfaceSignature,
+  push,
 });
-ipcMain.handle('bridge:stop',async()=>{bridge?.stop();clearInterval(iv);return{ok:true};});
-ipcMain.handle('bridge:cpuUsage',()=>{
-  const metrics=app.getAppMetrics();
-  let cpu=0;
-  metrics.forEach(m=>{cpu+=m.cpu.percentCPUUsage;});
-  const mem=process.memoryUsage();
-  return{cpu:Math.round(cpu*10)/10, memMB:Math.round(mem.rss/1048576)};
+// Bridge simple IPC → main/ipc-bridge-simple.js (Phase 3.10)
+require('./main/ipc-bridge-simple').registerBridgeSimpleIpc(ipcMain, ()=>bridge);
+// Interface / artTimeCode IPC → main/ipc-bridge-iface.js (Phase 3.11)
+require('./main/ipc-bridge-iface').registerBridgeIfaceIpc(ipcMain, {
+  getBridge: () => bridge,
+  sendInterfaces,
+  sendArtTimeCode,
 });
-ipcMain.handle('bridge:updateLayer',(_,{i,data})=>{bridge?.updateLayer(i,data);return{ok:true};});
-ipcMain.on('bridge:setFader',(_,{i,val})=>{if(bridge&&bridge.faders)bridge.faders[i]=Math.max(0,Math.min(255,val));});
-ipcMain.handle('bridge:removeLayer',(_,{i})=>{bridge?.removeLayer(i);return{ok:true};});
-ipcMain.handle('bridge:registerVirtualDeck',(_,{slot,model})=>{bridge?.registerVirtualDeck(slot,model);return{ok:true};});
-ipcMain.handle('bridge:unregisterVirtualDeck',(_,{slot})=>{bridge?.unregisterVirtualDeck(slot);return{ok:true};});
-ipcMain.handle('bridge:setHWMode',(_,{i,en})=>{bridge?.setHWMode(i,en);return{ok:true};});
-ipcMain.handle('bridge:refreshMeta',()=>{bridge?.refreshAllMetadata();return{ok:true};});
-ipcMain.handle('bridge:getInterfaces',()=>sendInterfaces('manual'));
-ipcMain.handle('bridge:refreshInterfaces',async()=>{
-  const ifaces=sendInterfaces('manual-refresh');
-  try{await bridge?.handleInterfacesChanged(ifaces);}catch(e){return{ok:false,err:e.message,interfaces:ifaces};}
-  return{ok:true,interfaces:ifaces};
-});
-ipcMain.handle('bridge:artTimeCode',(_,{ip,port,hh,mm,ss,ff,type})=>{sendArtTimeCode(ip,port,hh,mm,ss,ff,type);return{ok:true};});
 // Art-Net IPC → main/ipc-artnet.js (Phase 3.7)
 require('./main/ipc-artnet').registerArtnetIpc(ipcMain, artnet);
-// ─── Ableton Link IPC ───────────────────────────────────────────
-ipcMain.handle('link:setEnabled',(_,{enabled})=>{link.setEnabled(enabled);return link.getStatus();});
-ipcMain.on('link:setTempo',(_,{bpm})=>{link.setTempo(bpm);});
-ipcMain.handle('link:getStatus',()=>link.getStatus());
-ipcMain.handle('link:alignBeat',(_,{beat})=>{const ok=link.alignBeat(beat);return {ok,status:link.getStatus()};});
+// Ableton Link IPC → main/ipc-link.js (Phase 3.8)
+require('./main/ipc-link').registerLinkIpc(ipcMain, link);
 // License IPC — main/ipc-license.js 모듈로 위임
 require('./main/ipc-license').registerLicenseIpc(ipcMain, licenseService);
-ipcMain.handle('bridge:requestArtwork',(_,{ip,slot,artworkId,playerNum})=>{bridge?.requestArtwork(ip,slot,artworkId,playerNum);return{ok:true};});
-ipcMain.handle('bridge:setVirtualArt',(_,{slot,jpegBase64})=>{
-  if(bridge){bridge.setVirtualArt(slot,jpegBase64?Buffer.from(jpegBase64,'base64'):null);}
-  return{ok:true};
-});
-// Live rebind — interface/mode changes without restart
-ipcMain.handle('bridge:rebindTCNet',async(_,{addr})=>{
-  try{await bridge?.rebindTCNet(addr);return{ok:true};}catch(e){return{ok:false,err:e.message};}
-});
-ipcMain.handle('bridge:rebindPDJL',async(_,{addr})=>{
-  try{await bridge?.rebindPDJL(addr);return{ok:true};}catch(e){return{ok:false,err:e.message};}
-});
-ipcMain.handle('bridge:setTCNetMode',(_,{mode})=>{
-  bridge?.setTCNetMode(mode);return{ok:true};
-});
 
-// 좀비 BRIDGE+ / TCNet 포트 점유 정리 (자기 자신 제외)
-const _cleanupSvc = require('./main/cleanup');
-ipcMain.handle('bridge:cleanupZombies', async ()=>{
-  try{ return { ok:true, ...(await _cleanupSvc.runCleanup()) }; }
-  catch(e){ return { ok:false, error:e.message }; }
-});
-
-// 앱 버전 — package.json semver + .build-number 카운터 합쳐서 X.Y.Z.BB 반환
-ipcMain.handle('app:getVersion', ()=>{
-  try{
-    const fs = require('fs');
-    const path = require('path');
-    const pkgPath = path.join(__dirname, 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    let bb = '00';
-    try{
-      const state = JSON.parse(fs.readFileSync(path.join(__dirname, '.build-number'), 'utf8'));
-      if(state.version === pkg.version && typeof state.build === 'number'){
-        bb = String(state.build).padStart(2, '0');
-      }
-    }catch(_){}
-    return `${pkg.version}.${bb}`;
-  }catch(_){ return '0.0.0'; }
-});
 
 // Audio decode IPC → main/audio-decode.js (Phase 3.6)
 audioDecode.registerAudioDecodeIpc(ipcMain, { getWin: ()=>win });
+
+// App-level / cleanup IPC → main/ipc-app.js (Phase 3.9)
+const _cleanupSvc = require('./main/cleanup');
+require('./main/ipc-app').registerAppIpc(ipcMain, { app, appRoot: __dirname, cleanupSvc: _cleanupSvc });
 
 app.whenReady().then(()=>{_registerBridgeAudioProtocol();createWindow();});
 let _cleaned=false,_quitting=false;

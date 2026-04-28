@@ -182,8 +182,24 @@ body[data-platform="darwin"] .hdr{padding-left:80px}
 /* Overview: slim full-track waveform bar */
 .dwov{height:14px;margin:0 0 6px;background:var(--waveform-bg,var(--bg-lowest));border:1px solid var(--waveform-border,rgba(135,135,255,.18));border-radius:3px;overflow:hidden;cursor:crosshair;position:relative}
 .dwov canvas{width:100%;height:100%;display:block}
-/* waveform analysis progress bar (shown while buildRGBWaveform runs) */
-.dwov-prog{position:absolute;bottom:0;left:0;height:2px;width:0;background:rgba(96,165,250,.7);border-radius:1px;pointer-events:none;transition:width .1s linear}
+/* waveform analysis progress bar — buildRGBWaveform 1pass 진행 표시.
+   가로 바 (전체 높이) + 진행 비율만큼 우측 분석 안 된 영역 위로 shimmer 띠 + 퍼센트 텍스트.
+   width=0 이면 자동 hide (transition 으로 부드럽게 사라짐). */
+.dwov-prog{position:absolute;top:0;left:0;height:100%;width:0;pointer-events:none;
+  background:linear-gradient(90deg, transparent 0%, rgba(96,165,250,.18) 80%, rgba(96,165,250,.45) 100%);
+  border-right:1.5px solid rgba(120,200,255,.85);
+  box-shadow:2px 0 6px rgba(96,165,250,.5);
+  transition:width .15s linear;
+  display:flex;align-items:center;justify-content:flex-end}
+.dwov-prog::after{
+  content:attr(data-pct);
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  font:600 9px var(--mn,monospace);letter-spacing:.08em;
+  color:rgba(220,235,255,.95);text-shadow:0 0 4px rgba(0,0,0,.7);
+  white-space:nowrap;
+}
+@keyframes dwov-prog-pulse{0%,100%{opacity:.7}50%{opacity:1}}
+.dwov-prog{animation:dwov-prog-pulse 1.2s ease-in-out infinite}
 /* Zoom: scrolling RGB waveform + beat grid */
 .dwz{height:64px;margin:0 0 4px;background:var(--waveform-bg,var(--bg-lowest));border-radius:6px;overflow:hidden;cursor:grab;position:relative;border:1px solid var(--waveform-border,var(--bdr))}
 .dwz:active{cursor:grabbing}
@@ -575,8 +591,23 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-master-sc.sc-0db{top:-2px;right:-2px;color:var(--tx2)}
 .mx-master-sc.sc-5db{bottom:2px;right:-6px}
 /* CLIP indicator */
-.mx-clip{min-width:86px;padding:9px 12px;border-radius:3px;font:800 10px var(--mn);letter-spacing:.08em;text-align:center;border:1.5px solid rgba(255,60,60,.15);color:rgba(255,60,60,.25);background:transparent;transition:all .15s}
-.mx-clip.on{border-color:rgba(255,60,60,.7);color:#ff4444;background:rgba(255,60,60,.1);animation:clip-flash .3s ease-in-out}
+/* CLIP LED — 텍스트 크기 살짝 크게 + 빨간 LED 점등 효과 */
+.mx-clip{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:36px;padding:1px 6px;border-radius:2px;
+  font:800 9px var(--mn);letter-spacing:.12em;
+  border:1px solid rgba(255,60,60,.2);
+  color:rgba(255,60,60,.3);
+  background:rgba(255,60,60,.04);
+  transition:all .12s;
+  pointer-events:none;
+}
+.mx-clip.on{
+  border-color:#ff3030;color:#fff;
+  background:#ff2020;
+  box-shadow:0 0 8px rgba(255,60,60,.85), inset 0 0 3px rgba(255,255,255,.3);
+  animation:clip-flash .3s ease-in-out;
+}
 @keyframes clip-flash{0%,100%{opacity:1}50%{opacity:.5}}
 /* 모든 섹션을 단일 가로 행으로 통합 (아래로 쌓지 않음) */
 .mx-primary{display:flex;gap:0;align-items:stretch;min-height:0;overflow-x:auto}
@@ -675,6 +706,19 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 .mx-bfx-compact .mx-aux-mini{font-size:7.5px;letter-spacing:.08em}
 .mx-bfx-compact .mx-aux-toggle{min-width:48px;padding:4px 8px;font-size:8.5px}
 .mx-bfx-compact .mx-aux-knob-face{width:28px;height:28px}
+/* Beat FX knob 크기↑ + ON LED 동그랗게 (믹서 LED 모양) */
+.mx-bfx-compact .mx-bfx-knob-big{width:54px!important;height:54px!important}
+.mx-bfx-compact .mx-bfx-on-led{
+  width:34px;height:34px;
+  min-width:34px!important;
+  border-radius:50%!important;
+  padding:0!important;
+  font-size:8px;letter-spacing:.04em;
+  display:flex;align-items:center;justify-content:center;
+}
+.mx-bfx-compact .mx-bfx-on-led.on{
+  box-shadow:0 0 10px rgba(150,100,200,.65), inset 0 0 4px rgba(255,255,255,.2);
+}
 .mx-bfx-compact .mx-aux-kval{font-size:8px}
 /* 채널 strip (개수만큼 폭 자동) */
 .mx-console-v2 .mx-body{display:flex;gap:0;align-items:flex-start}
@@ -1125,10 +1169,12 @@ body[data-layout="card"] .cd-ddz .ddzi{font-size:28px!important;color:var(--tx3)
 /* ═════════════════════════════════════════════════════════════ */
 body[data-layout="observatory"]{
   --obs-void:#04060a;--obs-plate:#0a0d12;--obs-plate-2:#11151c;
-  --obs-amber:#f6a516;--obs-amber-2:#d68a09;--obs-amber-dim:#6e4806;--obs-amber-faint:#2c1d04;
-  --obs-green:#6df08c;--obs-green-dim:#2e7c44;
+  --obs-amber:#f6a516;--obs-amber-2:#d68a09;
+  /* 가독성: dim 은 텍스트용으로 한 단계 밝게, faint 는 보더라인 전용으로 유지 */
+  --obs-amber-dim:#b87a0c;--obs-amber-dim-2:#9c6505;--obs-amber-faint:#3d2806;
+  --obs-green:#6df08c;--obs-green-dim:#5fa173;
   --obs-red:#ff5b3b;--obs-cyan:#4fd0e0;
-  --obs-ink-low:#45556a;--obs-ink-mid:#7c8fa8;
+  --obs-ink-low:#56657a;--obs-ink-mid:#8ca0b8;
   background:var(--obs-void)!important;
 }
 body[data-layout="observatory"] .pg{background:var(--obs-void)}
@@ -1176,23 +1222,39 @@ body[data-layout="observatory"] .dk.obs-dk:nth-last-child(-n+2){border-bottom:no
 body[data-layout="observatory"] .dk.obs-dk[data-st="play"]{border-color:var(--obs-amber-faint)!important;background:var(--obs-plate)!important}
 body[data-layout="observatory"] .dk.obs-dk[data-st="cue"]{border-color:var(--obs-amber-faint)!important;background:var(--obs-plate)!important}
 
-/* HEADER */
+/* HEADER — 우측 padding 12px 로 외곽 마진 통일 (state pill 이 가장자리에 너무 붙던 문제) */
 body[data-layout="observatory"] .obs-hdr{
   display:grid;
-  grid-template-columns:auto 1fr auto auto auto;
-  gap:12px;align-items:center;
-  padding:8px 14px;
+  grid-template-columns:30px 1fr min-content min-content 60px;
+  gap:10px;align-items:center;
+  padding:8px 12px 8px 14px;
   border-bottom:1px solid var(--obs-amber-faint);
 }
+/* state pill 컨테이너 — 60px 고정 박스 (외각선 항상 보이게). 내부 pill 가운데 정렬. */
+body[data-layout="observatory"] .obs-state-cell{
+  display:flex;align-items:center;justify-content:center;
+  width:60px;flex:0 0 60px;
+  height:28px;
+  border:1px solid var(--obs-amber-dim);
+  background:var(--obs-void);
+  box-sizing:border-box;
+}
+/* pill 자체는 wrapper 안에서 border 안 보이게 (wrapper 박스가 외곽선 역할) */
+body[data-layout="observatory"] .obs-state-cell .obs-state.dbadge.bm{
+  border:none!important;background:transparent!important;
+  width:auto!important;min-width:auto!important;max-width:none!important;
+  padding:2px 4px!important;
+}
 body[data-layout="observatory"] .obs-num{
-  font-family:'VT323',monospace;
-  font-size:30px;line-height:.8;color:var(--obs-amber);
+  font-family:'JetBrains Mono','SF Mono',monospace;
+  font-weight:700;
+  font-size:24px;line-height:1;color:var(--obs-amber);
   width:30px;text-align:center;
-  -webkit-font-smoothing:none;
+  -webkit-font-smoothing:antialiased;
 }
 body[data-layout="observatory"] .obs-id{display:flex;flex-direction:column;gap:2px;min-width:0}
-body[data-layout="observatory"] .obs-name{font-size:11px;letter-spacing:.22em;color:var(--obs-amber);font-weight:500}
-body[data-layout="observatory"] .obs-model{font-size:9px;letter-spacing:.18em;color:var(--obs-amber-dim)}
+body[data-layout="observatory"] .obs-name{font-size:11px;letter-spacing:.22em;color:var(--obs-amber);font-weight:600}
+body[data-layout="observatory"] .obs-model{font-size:9px;letter-spacing:.18em;color:var(--obs-amber-2);font-weight:500}
 body[data-layout="observatory"] .obs-flags{display:flex;gap:5px}
 body[data-layout="observatory"] .obs-flags .obs-flag,
 body[data-layout="observatory"] .obs-flags .dksm-btn{
@@ -1233,35 +1295,41 @@ body[data-layout="observatory"] .obs-mini .col::after{
   background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(0,0,0,.5) 5px 6px);
 }
 
-/* STATE pill */
+/* STATE pill — 60px 완전 고정. !important 로 .dbadge 전역 padding 덮어 fix. */
 body[data-layout="observatory"] .obs-state.dbadge.bm{
-  font-family:'JetBrains Mono',monospace;
-  font-weight:700;font-size:12px;letter-spacing:.28em;
+  font-family:'JetBrains Mono',monospace!important;
+  font-weight:700!important;font-size:10px!important;letter-spacing:.08em!important;
   color:var(--obs-amber);
-  padding:4px 10px 5px;
+  padding:4px 0 5px!important;
   border:1px solid var(--obs-amber-dim);
   background:var(--obs-void);
-  border-radius:0;
+  border-radius:0!important;
   text-transform:uppercase;
+  display:inline-flex!important;align-items:center;justify-content:center;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;overflow:hidden;
+  width:60px!important;min-width:60px!important;max-width:60px!important;
+  flex:0 0 60px!important;
+  box-sizing:border-box!important;
 }
 body[data-layout="observatory"] .dk.obs-dk[data-st="play"] .obs-state{color:var(--obs-green);border-color:var(--obs-green)}
 body[data-layout="observatory"] .dk.obs-dk[data-st="cue"] .obs-state{color:var(--obs-amber);border-color:var(--obs-amber)}
 body[data-layout="observatory"] .dk.obs-dk[data-st="loop"] .obs-state{color:var(--obs-cyan);border-color:var(--obs-cyan)}
 body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-state{color:var(--obs-ink-low);border-color:var(--obs-ink-low)}
 
-/* BODY */
+/* BODY — meta(좌 84px, art 꽉 채움) | center(가변, 웨이브폼 폭↑) | right(180px) */
 body[data-layout="observatory"] .obs-body{
   display:grid;
-  grid-template-columns:90px 1fr 158px;
+  grid-template-columns:84px 1fr 180px;
   flex:1;min-height:0;
 }
 body[data-layout="observatory"] .obs-meta{
   border-right:1px solid var(--obs-amber-faint);
   display:flex;flex-direction:column;
-  padding:10px;gap:8px;
+  padding:8px 4px 8px 8px;gap:6px;
 }
 body[data-layout="observatory"] .obs-meta .dkart{
-  width:70px;height:70px;
+  width:72px;height:72px;
   border:1px solid var(--obs-amber-dim)!important;
   background:var(--obs-void)!important;
   border-radius:0!important;
@@ -1274,26 +1342,30 @@ body[data-layout="observatory"] .obs-meta .dkart img{
   filter:brightness(.7) saturate(.8);
 }
 body[data-layout="observatory"] .obs-meta-list{
-  display:flex;flex-direction:column;gap:4px;
+  display:flex;flex-direction:column;gap:6px;
   font-size:9px;letter-spacing:.06em;color:var(--obs-amber-2);
 }
-body[data-layout="observatory"] .obs-meta-list .row{display:grid;grid-template-columns:28px 1fr;gap:4px}
-body[data-layout="observatory"] .obs-meta-list .row .k{color:var(--obs-amber-dim)}
-body[data-layout="observatory"] .obs-meta-list .row .v{color:var(--obs-amber);font-weight:500}
+body[data-layout="observatory"] .obs-meta-list .row{display:grid;grid-template-columns:26px 1fr;gap:4px;align-items:start}
+body[data-layout="observatory"] .obs-meta-list .row .k{color:var(--obs-amber-dim);font-weight:500;line-height:1.4}
+body[data-layout="observatory"] .obs-meta-list .row .v{
+  color:var(--obs-amber);font-weight:600;font-variant-numeric:tabular-nums;
+  display:flex;flex-direction:column;gap:1px;line-height:1.25;min-width:0;
+}
+body[data-layout="observatory"] .obs-meta-list .row .v>span{display:block;line-height:1.25;font-size:9.5px}
 
-/* CENTER */
+/* CENTER — 패딩 축소로 웨이브폼 폭 확장 */
 body[data-layout="observatory"] .obs-center{
-  padding:10px 12px;
-  display:flex;flex-direction:column;gap:7px;
+  padding:8px 8px 8px 6px;
+  display:flex;flex-direction:column;gap:6px;
   min-width:0;
 }
 body[data-layout="observatory"] .obs-title-line{
-  display:grid;grid-template-columns:1fr auto;gap:12px;
+  display:grid;grid-template-columns:1fr auto;gap:10px;
   align-items:stretch;
   border-bottom:1px dashed var(--obs-amber-faint);
-  padding-bottom:6px;
+  padding-bottom:5px;
 }
-body[data-layout="observatory"] .obs-title-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+body[data-layout="observatory"] .obs-title-text{display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden}
 body[data-layout="observatory"] .obs-track,
 body[data-layout="observatory"] [id^="dtn"].obs-track{
   font-size:13px!important;font-weight:700!important;
@@ -1301,14 +1373,21 @@ body[data-layout="observatory"] [id^="dtn"].obs-track{
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   font-family:'JetBrains Mono',monospace!important;
   text-transform:uppercase;
+  position:relative;display:block;
 }
 body[data-layout="observatory"] .obs-artist,
 body[data-layout="observatory"] [id^="dta"].obs-artist{
   font-size:10px!important;color:var(--obs-amber-2)!important;
   letter-spacing:.08em!important;font-family:'JetBrains Mono',monospace!important;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  position:relative;display:block;
 }
 body[data-layout="observatory"] .obs-artist::before{content:'> ';color:var(--obs-green-dim)}
+/* 마퀴 스크롤 — 다른 테마와 동일 패턴 */
+body[data-layout="observatory"] [id^="dtn"].obs-track.scrolling .mq-inner,
+body[data-layout="observatory"] [id^="dta"].obs-artist.scrolling .mq-inner{
+  display:inline-block;animation:marquee-scroll var(--scroll-dur,8s) linear infinite;
+}
 
 /* KEY 배지 (라벨 없음, 36×36 정사각) */
 body[data-layout="observatory"] .obs-kbadge{
@@ -1318,108 +1397,171 @@ body[data-layout="observatory"] .obs-kbadge{
   background:var(--obs-void);
 }
 body[data-layout="observatory"] .obs-kbadge .dk-key-box{
-  font-family:'VT323',monospace!important;
-  font-size:18px!important;line-height:1!important;
+  font-family:'JetBrains Mono','SF Mono',monospace!important;
+  font-size:14px!important;font-weight:700!important;line-height:1!important;
   color:var(--obs-green)!important;
   background:transparent!important;border:none!important;
   padding:0!important;height:auto!important;
-  -webkit-font-smoothing:none;letter-spacing:0!important;
+  -webkit-font-smoothing:antialiased;letter-spacing:.02em!important;
 }
 
-/* WAVEFORM */
-body[data-layout="observatory"] .obs-wf{display:flex;flex-direction:column;gap:4px}
+/* WAVEFORM — obs-center 안에서 남는 세로 공간 모두 차지하도록 flex:1.
+   detail (dwz) 가 가변 (남는 공간), overview 는 고정 50px. 덱 높이 클수록 detail 커짐. */
+body[data-layout="observatory"] .obs-wf{
+  display:flex;flex-direction:column;gap:4px;
+  flex:1 1 auto;min-height:0;
+}
 body[data-layout="observatory"] .obs-wf .dwov{
-  height:22px!important;
+  height:50px!important;flex:0 0 50px!important;
   border:1px solid var(--obs-amber-dim)!important;
   background:var(--obs-void)!important;
   border-radius:0!important;margin:0!important;
+}
+body[data-layout="observatory"] .obs-wf .dwz-row{
+  flex:1 1 0!important;min-height:80px;
+  display:flex;
 }
 body[data-layout="observatory"] .obs-wf .dwz{
-  height:56px!important;
+  flex:1 1 auto!important;width:100%;height:auto!important;
   border:1px solid var(--obs-amber-dim)!important;
   background:var(--obs-void)!important;
   border-radius:0!important;margin:0!important;
 }
+/* 가상덱 빈 슬롯 — 음원 로드 zone (obs-wf 위치 그대로 차지, dashed 보더 + amber tint) */
+body[data-layout="observatory"] .obs-ddz{
+  flex:1 1 auto;min-height:80px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  border:1px dashed var(--obs-amber-dim)!important;
+  background:var(--obs-void)!important;color:var(--obs-amber-dim);
+  cursor:pointer;border-radius:0!important;padding:18px 12px;
+  transition:border-color .15s,color .15s,background .15s;
+}
+body[data-layout="observatory"] .obs-ddz:hover{
+  border-color:var(--obs-amber)!important;color:var(--obs-amber);
+  background:var(--obs-plate-2)!important;
+}
+body[data-layout="observatory"] .obs-ddz .ddzi{
+  width:28px;height:28px;border:1.5px dashed currentColor;border-radius:0;
+  display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;
+}
+body[data-layout="observatory"] .obs-ddz-lbl{
+  font:600 11px var(--sn);letter-spacing:.22em;color:var(--obs-amber);
+}
+body[data-layout="observatory"] .obs-ddz-sub{
+  font:400 9px var(--mn);letter-spacing:.14em;color:var(--obs-amber-dim);
+}
+body[data-layout="observatory"] .dk.dov .obs-ddz{
+  border-color:var(--obs-amber)!important;background:var(--obs-plate)!important;
+}
+/* 덱 삭제 버튼 — obs-flags 안 작은 amber outlined "x" */
+body[data-layout="observatory"] .obs-cdl{
+  background:transparent;border:1px solid var(--obs-amber-dim)!important;
+  color:var(--obs-amber-dim);padding:2px 5px;border-radius:0!important;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;
+}
+body[data-layout="observatory"] .obs-cdl:hover{
+  border-color:var(--obs-red)!important;color:var(--obs-red);
+  background:rgba(255,91,59,0.08);
+}
+body[data-layout="observatory"] .obs-cdl svg{width:11px;height:11px;display:block}
 
-/* RIGHT — TIME hero / divider / BPM 블록 */
+/* RIGHT — TC + BPM + 페이저 + SMPTE. cqi container query 제거 (첫 paint race 가
+   UI freeze 일으킴). 고정 폰트로 안정성 우선. */
 body[data-layout="observatory"] .obs-right{
   border-left:1px solid var(--obs-amber-faint);
-  padding:10px 12px;
-  display:flex;flex-direction:column;gap:9px;
+  padding:8px 12px;
+  display:flex;flex-direction:column;gap:7px;
   min-width:0;
 }
-body[data-layout="observatory"] .obs-tc-stack{display:flex;flex-direction:column;gap:1px}
+body[data-layout="observatory"] .obs-tc-stack{display:flex;flex-direction:column;gap:1px;overflow:visible}
+/* 타임코드 — container query 로 obs-right 폭에 자동 스케일 (cqi=container의 inline 폭 1%).
+   "00:00:00:00" = 11chars × ~0.6em = 6.6em → 폭 160px 기준 font-size 24px 가 fit.
+   현재 14.5cqi @ 180px = 26.1px. 폭 변경 시 자동 비례 조정. */
 body[data-layout="observatory"] .obs-tc-now,
 body[data-layout="observatory"] .obs-tc-stack .dtc{
-  font-family:'VT323',monospace!important;
-  font-size:32px!important;
-  line-height:.85!important;
+  font-family:'JetBrains Mono','SF Mono',monospace!important;
+  font-size:25px!important;
+  font-weight:700!important;
+  line-height:1!important;
   color:var(--obs-amber)!important;
-  -webkit-font-smoothing:none;letter-spacing:0!important;
+  -webkit-font-smoothing:antialiased;letter-spacing:-.05em!important;
+  font-variant-numeric:tabular-nums!important;
   text-align:left!important;
   white-space:nowrap;
+  overflow:hidden;
+  max-width:100%;
 }
 body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-tc-now{color:var(--obs-ink-low)!important}
 body[data-layout="observatory"] .obs-tc-rem{
-  font-size:10px;color:var(--obs-amber-2);letter-spacing:.1em;
+  font-family:'JetBrains Mono','SF Mono',monospace;
+  font-weight:500;
+  font-size:10px;
+  color:var(--obs-amber-2);letter-spacing:.04em;
   margin-top:2px;white-space:nowrap;
+  font-variant-numeric:tabular-nums;
 }
 body[data-layout="observatory"] .obs-tc-rem .neg{color:var(--obs-red)}
 body[data-layout="observatory"] .obs-tc-rem .total{color:var(--obs-amber-dim)}
+body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-tc-rem .neg,
+body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-tc-rem .total{color:var(--obs-ink-low)}
 
 body[data-layout="observatory"] .obs-divider{
   height:1px;background:var(--obs-amber-faint);margin:1px 0;
 }
 
-/* BPM 블록 — 좌: BPM 스택(라벨 없음), 우: PITCH 박스. wfbpm 재배치 via CSS Grid */
+/* BPM 블록 — 좌 2줄(base BPM 위, pitch% 아래) + 우 큰 현재 BPM (소수점 1자리) */
 body[data-layout="observatory"] [id^="wfbpm"]{
   display:grid!important;
   grid-template-columns:1fr auto!important;
   grid-template-rows:auto auto!important;
-  gap:1px 8px!important;
+  gap:2px 10px!important;
   align-items:center!important;
   flex-wrap:unset!important;
-  justify-content:flex-start!important;
+  justify-content:stretch!important;
 }
-/* span:first-child = base BPM */
+/* base BPM = span:first-child (좌측 윗줄) */
 body[data-layout="observatory"] [id^="wfbpm"]>span:first-child{
-  grid-column:1!important;grid-row:2!important;
-  font-family:'JetBrains Mono',monospace!important;
+  grid-column:1!important;grid-row:1!important;
+  font-family:'JetBrains Mono','SF Mono',monospace!important;
   font-size:13px!important;color:var(--obs-amber-2)!important;
-  font-weight:500!important;line-height:1!important;
+  font-weight:600!important;line-height:1!important;
   font-variant-numeric:tabular-nums!important;
   text-shadow:none!important;
+  align-self:end!important;
 }
-/* span:nth-child(2) = pitch% */
+/* pitch% = span:nth-child(2) (좌측 아랫줄) */
 body[data-layout="observatory"] [id^="wfbpm"]>span:nth-child(2){
-  grid-column:2!important;grid-row:1 / span 2!important;
-  border:1px solid var(--obs-amber-faint)!important;
-  padding:6px 10px!important;
-  font-family:'JetBrains Mono',monospace!important;
-  font-size:13px!important;color:var(--obs-amber)!important;
+  grid-column:1!important;grid-row:2!important;
+  font-family:'JetBrains Mono','SF Mono',monospace!important;
+  font-size:11px!important;color:var(--obs-amber-dim)!important;
   font-weight:500!important;line-height:1!important;
   letter-spacing:.04em!important;
-  display:flex!important;align-items:center!important;justify-content:center!important;
-  min-width:56px!important;
-  background:var(--obs-void)!important;
+  font-variant-numeric:tabular-nums!important;
   text-shadow:none!important;
+  background:transparent!important;border:none!important;padding:0!important;
+  align-self:start!important;
 }
-/* .dk-bpm-cur = effective BPM */
+/* .dk-bpm-cur = 현재 BPM (우측, 크게, 2줄 span) */
 body[data-layout="observatory"] [id^="wfbpm"] .dk-bpm-cur{
-  grid-column:1!important;grid-row:1!important;
-  font-family:'VT323',monospace!important;
-  font-size:18px!important;
+  grid-column:2!important;grid-row:1 / span 2!important;
+  font-family:'JetBrains Mono','SF Mono',monospace!important;
+  font-size:30px!important;font-weight:700!important;
   color:var(--obs-amber)!important;
   background:transparent!important;border:none!important;
   padding:0!important;height:auto!important;line-height:1!important;
-  -webkit-font-smoothing:none;letter-spacing:0!important;
-  display:flex!important;align-items:baseline!important;gap:3px!important;
+  -webkit-font-smoothing:antialiased;letter-spacing:.01em!important;
+  display:inline-flex!important;align-items:baseline!important;gap:2px!important;
+  font-variant-numeric:tabular-nums!important;
+  align-self:center!important;justify-self:end!important;
 }
+/* "BPM" 레이블 (현재 BPM 옆) */
 body[data-layout="observatory"] [id^="wfbpm"] .dk-bpm-cur>span{
-  font-family:'JetBrains Mono',monospace!important;
-  font-size:8px!important;color:var(--obs-amber-dim)!important;
-  margin-left:2px!important;
-  -webkit-font-smoothing:antialiased;letter-spacing:.18em!important;
+  font-family:'JetBrains Mono','SF Mono',monospace!important;
+  font-size:8px!important;font-weight:500!important;
+  color:var(--obs-amber-dim)!important;
+  margin-left:3px!important;
+  -webkit-font-smoothing:antialiased;letter-spacing:.16em!important;
 }
 
 /* Phrase strip */
@@ -1446,6 +1588,39 @@ body[data-layout="observatory"] .obs-right .dphs .dphs-seg:nth-child(1) .dphs-fi
   background:var(--obs-amber)!important;
 }
 
+/* SMPTE / MASTER / A B 행 — BPM/phaser 아래, 폭 축소 */
+body[data-layout="observatory"] .obs-smpte-row{
+  display:flex;flex-direction:column;gap:3px;
+}
+body[data-layout="observatory"] .obs-smpte-lbl{
+  font:600 8px 'JetBrains Mono','SF Mono',monospace;
+  color:var(--obs-amber-dim);letter-spacing:.22em;line-height:1;
+}
+body[data-layout="observatory"] .obs-smpte-master{
+  width:100%!important;
+  text-align:center;display:flex;align-items:center;justify-content:center;
+  font:700 10px 'JetBrains Mono','SF Mono',monospace!important;
+  letter-spacing:.14em!important;
+  padding:4px 0!important;
+  border:1px solid var(--obs-amber-dim)!important;
+  color:var(--obs-amber-dim)!important;
+  background:var(--obs-void)!important;
+  cursor:pointer;border-radius:0!important;
+}
+body[data-layout="observatory"] .obs-smpte-master.on{
+  background:var(--obs-green)!important;color:var(--obs-void)!important;
+  border-color:var(--obs-green)!important;
+}
+body[data-layout="observatory"] .obs-smpte-ab{
+  display:flex;gap:3px;
+}
+body[data-layout="observatory"] .obs-smpte-ab-btn{
+  flex:1 1 0;height:auto;padding:4px 0!important;
+  font:700 10px 'JetBrains Mono','SF Mono',monospace!important;
+  letter-spacing:.08em;border-radius:0!important;
+  background:var(--obs-void)!important;
+}
+
 /* Empty deck dimming */
 body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-meta,
 body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-center,
@@ -1463,11 +1638,16 @@ body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
 
 </style>
 <script src="./i18n.js"></script>
+<script src="./id3-parser.js"></script>
+<script src="./bpm-analysis.js"></script>
+<script src="./waveform-color.js"></script>
+<script src="./waveform-strip.js"></script>
 <script src="./waveform-gl.js"></script>
 <script src="./waveform-analysis.js"></script>
 <script src="./license-panel.js"></script>
 <script src="./mixer-panel.js"></script>
 <script src="./settings-panel.js"></script>
+<script src="./history-panel.js"></script>
 </head><body>
 
 <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
@@ -1682,7 +1862,8 @@ body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
         <div class="mx-master-col">
           <div class="mx-section">
             <span class="mx-section-lbl master">MASTER</span>
-            <span class="mx-clip" id="mxClip">CLIP</span>
+            <!-- 클리핑 LED — Master 라벨 아래 별도 행 (이전 absolute 가 라벨과 겹쳤음) -->
+            <span class="mx-clip" id="mxClip" style="display:block;margin:2px auto 4px;width:fit-content">CLIP</span>
             <div class="mx-master-vu-dots" id="mxMasterVus">
               <div class="mx-master-dot-col"><span class="mx-vu-lbl">L</span>
                 <div class="mx-master-dot" id="mxMDotL0"></div><div class="mx-master-dot" id="mxMDotL1"></div><div class="mx-master-dot" id="mxMDotL2"></div><div class="mx-master-dot" id="mxMDotL3"></div><div class="mx-master-dot" id="mxMDotL4"></div><div class="mx-master-dot" id="mxMDotL5"></div><div class="mx-master-dot" id="mxMDotL6"></div><div class="mx-master-dot" id="mxMDotL7"></div><div class="mx-master-dot" id="mxMDotL8"></div><div class="mx-master-dot" id="mxMDotL9"></div><div class="mx-master-dot" id="mxMDotL10"></div><div class="mx-master-dot" id="mxMDotL11"></div>
@@ -1727,18 +1908,17 @@ body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
               <div class="mx-knob-row"><div class="mx-aux-knob-face" id="mxIsoLoKnobHost"></div><span class="mx-aux-klabel">LOW</span><span class="mx-aux-kval" id="mxIsoLoVal">0</span></div>
             </div>
           </div>
-          <!-- BEAT FX (compact) — selector 위, ON+Knob 한 행, FREQ pills 한 행 -->
-          <!-- mxBfxAssign / mxSndRtn 은 NXS2 에 없는 데이터 → 기본 숨김 (V10 등에서만 표시 예정) -->
+          <!-- BEAT FX (compact) — selector + assign 채널 / ON LED + 큰 노브 / FREQ pills -->
           <div class="mx-section mx-bfx-compact">
             <span class="mx-section-lbl">BEAT FX</span>
             <span class="mx-aux-readout" id="mxBfxSel">DELAY</span>
-            <div class="mx-bfx-row mx-bfx-meta" style="display:none">
+            <div class="mx-bfx-row mx-bfx-meta">
               <span class="mx-aux-mini" id="mxBfxAssign">MASTER</span>
               <span class="mx-aux-mini" id="mxSndRtn">SND/RTN 0</span>
             </div>
-            <div class="mx-bfx-row">
-              <span class="mx-aux-toggle pur" id="mxBfxOn">ON</span>
-              <div class="mx-knob-row" style="flex-direction:row;gap:4px;align-items:center"><div class="mx-aux-knob-face" id="mxBfxLvlKnobHost"></div><span class="mx-aux-kval" id="mxBfxLvlVal">0</span></div>
+            <div class="mx-bfx-row" style="justify-content:center;gap:14px">
+              <span class="mx-aux-toggle pur mx-bfx-on-led" id="mxBfxOn">ON</span>
+              <div class="mx-aux-knob-face mx-bfx-knob-big" id="mxBfxLvlKnobHost"></div>
             </div>
             <div class="mx-aux-pills"><span id="mxFxFLo" class="mx-aux-pill">LO</span><span id="mxFxFMid" class="mx-aux-pill">MID</span><span id="mxFxFHi" class="mx-aux-pill">HI</span></div>
           </div>
@@ -1850,11 +2030,42 @@ function _wfWriteLS(k,v){try{localStorage.setItem(k,String(v));}catch(_){}}
 let wfSharpness=Math.max(0,Math.min(1,Number(_wfReadLS('wf_sharpness','0'))||0));
 // 기본 RGB — 윈도우 마지막 빌드 동작 (가공된 RGB pulse). 3band 도 옵션 유지.
 // (mono 는 일시 제거 — 정리되지 않은 저장값도 자동으로 rgb 로 마이그레이션)
-let wfTheme=(v=>v==='3band'?'3band':'rgb')(_wfReadLS('wf_theme','rgb'));
-// 비트 그리드 스타일 (오버뷰 + 디테일 마진 영역)
+// Waveform 테마 — 3band(전통 Pioneer) / rgb(연속 RGB 합성) / mono(오렌지 단색)
+let wfTheme=(v=>(v==='3band'||v==='mono'||v==='rgb')?v:'rgb')(_wfReadLS('wf_theme','rgb'));
+// Theme 별 worker 분석 preset — 각 theme 이 자체 frequency cutoffs/release/smooth 사용.
+// Worker default 와 일치 시 옵션 미전송 (3band 가 worker 기본값). RGB/mono 는 별도 cutoffs.
+const WF_THEME_PRESETS = {
+  '3band': {
+    cutoffs: { loTop: 500,  midTop: 1750, hiTop: 9800,  airTop: 22000 },
+    releases: { lo: 0.023, mi: 0.061, hi: 0.179, air: 0.464 },
+    smooth: { lo: 1, mi: 3, hi: 5, air: 1 },
+  },
+  'rgb': {
+    cutoffs: { loTop: 285,  midTop: 1900, hiTop: 7500,  airTop: 16900 },
+    releases: { lo: 0.293, mi: 0.286, hi: 0.292, air: 0.291 },
+    smooth: { lo: 1, mi: 1, hi: 1, air: 1 },
+  },
+  'mono': {
+    // Mono 는 3band 와 동일 frequency 분석 (별도 튜너 없음).
+    cutoffs: { loTop: 500,  midTop: 1750, hiTop: 9800,  airTop: 22000 },
+    releases: { lo: 0.023, mi: 0.061, hi: 0.179, air: 0.464 },
+    smooth: { lo: 1, mi: 3, hi: 5, air: 1 },
+  },
+};
+function _wfThemePreset(theme){ return WF_THEME_PRESETS[theme] || WF_THEME_PRESETS['rgb']; }
+// 비트 그리드 스타일 — 오버뷰/디테일 별도 설정.
 //   none / phrase / balanced(추천) / detailed / phrase-band / hybrid
-let wfBeatStyle=(v=>['none','phrase','balanced','detailed','phrase-band','hybrid'].includes(v)?v:'balanced')
-  (_wfReadLS('wf_beat_style','balanced'));
+//   기존 단일 키 wf_beat_style 가 있으면 두 새 키의 기본값으로 마이그레이트 (BC).
+const _BEAT_STYLES=['none','phrase','balanced','detailed','phrase-band','hybrid'];
+const _wfBeatStyleLegacy=_wfReadLS('wf_beat_style','balanced');
+let wfBeatStyleOverview=(v=>_BEAT_STYLES.includes(v)?v:'balanced')
+  (_wfReadLS('wf_beat_style_overview',_wfBeatStyleLegacy));
+let wfBeatStyleDetail=(v=>_BEAT_STYLES.includes(v)?v:'balanced')
+  (_wfReadLS('wf_beat_style_detail',_wfBeatStyleLegacy));
+// Phrase 표시 스타일 — none/margin/label(rekordbox PSSI mood)/cycle(색 cycling)
+const _PHRASE_STYLES=['none','margin','label','cycle'];
+let wfPhraseStyle=(v=>_PHRASE_STYLES.includes(v)?v:'margin')
+  (_wfReadLS('wf_phrase_style','margin'));
 // 큐 마커 디자인 — pill / diamond / bardot / flag / stripe / chip(현재 개선)
 let wfCueStyle=(v=>['pill','diamond','bardot','flag','stripe','chip'].includes(v)?v:'chip')
   (_wfReadLS('wf_cue_style','chip'));
@@ -1872,9 +2083,14 @@ const HOTCUE_COLORS = [
 ];
 function _hotCueColor(n){ return HOTCUE_COLORS[n] || HOTCUE_COLORS[((n-1)%8)+1] || '#00e676'; }
 const VIRTUAL_WF_\u{52}ATE=120;
-const RGB_WF_FINE_\u{52}ATE=240;
+// 가상 덱 fine waveform — PCM-like sine wave 표현 위해 1200 sample/sec (이전 240 의 5배).
+// 각 sample 이 averages 36 PCM 샘플 (44.1kHz 기준) — peak min/max 디테일 충분.
+// 메모리: 4분 트랙 × 1200 = 288K sample × 8byte = 2.3MB / deck. 적정.
+const RGB_WF_FINE_\u{52}ATE=1200;
 const HW_WF_\u{52}ATE=150;
-const _DECK_UI_TICK_MS=1000/60;
+// 웨이브폼만 outer rAF tick (최대 120fps 모니터에서 120fps) — 다른 deck UI 는 30fps 로 강등.
+// 매 tick BPM/marquee/title innerHTML 부담 → 30fps 로 충분 + 240 ops/sec → 120 ops/sec 절감.
+const _DECK_UI_TICK_MS=1000/30;
 const _DECK_VU_TICK_MS=1000/30;
 function _wfIsPacked(arr){return arr instanceof Uint8Array&&arr._packed;}
 function wfBinCount(wf){return (wf&&wf._packed)?(wf.length/8):(wf?wf.length:0);}
@@ -1882,7 +2098,12 @@ function _wfLen(arr){return Math.floor(wfBinCount(arr));}
 function _wfRateForDeck(d){return (d?.type==='hw')?HW_WF_\u{52}ATE:VIRTUAL_WF_\u{52}ATE;}
 function _wfRateForData(d,arr){return (arr&&arr._rate>0)?arr._rate:_wfRateForDeck(d);}
 function _wfDurMsForDeck(d,arr){if(arr&&arr._durationMs>0)return arr._durationMs;const n=_wfLen(arr),rate=_wfRateForData(d,arr);return n>0?(n/rate*1000):0;}
-function _wfRenderDataForDeck(d){return d?.type==='hw'?(d?.rgbWfDetail||d?.rgbWf):(d?.rgbWfFine||d?.rgbWfDetail||d?.rgbWf);}
+function _wfRenderDataForDeck(d){
+  if(d?.type==='hw') return d?.rgbWfDetail||d?.rgbWf;
+  // Virtual deck: 1pass rgbWf 만 사용 (rgbWfFine 2pass 비활성). strip cache 8192 column 캡 안 + PCM oscilloscope
+  // 픽셀 peak-pool 로 충분 — 시각 차이 무시 가능, CPU/메모리 절감.
+  return d?.rgbWf||d?.rgbWfDetail;
+}
 function getBin(arr,i){
   if(!arr)return null;
   if(_wfIsPacked(arr)){
@@ -1914,7 +2135,7 @@ function _wfDataMode(d){
   if(d?.type==='hw')return (d.wfCapability==='pwv7'||d._pwv7)?3:4;
   return 1;
 }
-function _wfThemeMode(){return wfTheme==='rgb'?1:0;}
+function _wfThemeMode(){return wfTheme==='rgb'?1:(wfTheme==='mono'?2:0);}
 
 /* ─────────────────────────────────────────────────────────────────────
    Cue 마커 통합 렌더러 — 6 스타일 (pill/diamond/bardot/flag/stripe/chip).
@@ -2021,37 +2242,88 @@ function _drawCueMarker(ctx, style, cx, topM, H2, color, isMemory, hotCueNum, fo
   }
   ctx.restore();
 }
-function _wfEnsureRgbFine(d,slot){
-  if(!d||d.type==='hw'||d.rgbWfFine||d._rgbWfFinePromise||!d._audioBlob)return d?.rgbWfFine||d?._rgbWfFinePromise||null;
-  const token=d._rgbWfFineToken||0;
-  d._rgbWfFinePromise=buildRGBWaveform(d._audioBlob,null,d.dur,RGB_WF_FINE_\u{52}ATE,'stereoShape').then(fine=>{
-    d._rgbWfFinePromise=null;
-    if(!fine||d._rgbWfFineToken!==token)return null;
-    d.rgbWfFine=fine;
-    d._wfCache=null;d._ovCache=null;d._zmCache=null;
-    const wfD=_wfRenderDataForDeck(d);
-    if(d.wgl&&wfD)d.wgl.setData(wfD,_wfDurMsForDeck(d,wfD)||1);
-    if(d.ovgl&&wfD)d.ovgl.setData(wfD);
-    const prog=d.dur>0&&d.pos>0?d.pos/d.dur:0;
-    try{drawOverview(slot,prog);drawZoomWaveform(slot,prog);}catch(_){}
-    return fine;
-  }).catch(e=>{d._rgbWfFinePromise=null;console.warn('[rgbWfFine]',e);return null;});
-  return d._rgbWfFinePromise;
+// Virtual deck PCM 파이프라인 — Web Worker 기반 (메인 스레드 0% blocking, 다른 코어에서 실행).
+// 1) decodeAudioData (메인, 브라우저 내부 워커 활용) → AudioBuffer
+// 2) 채널 Float32Array transfer → pcm-worker
+// 3) Worker: mono mix + 22kHz peak-preserving 다운샘플 → PCM 자체 보관 (deckId 키)
+// 4) Worker: 캐시 빌드 시 OffscreenCanvas 에 그리고 ImageBitmap transfer → 메인 drawImage
+// 5) 메인은 메타데이터만 보유 (sampleRate/durationMs/totalSamples), samples 는 worker 보관
+let _pcmWorker = null;
+let _pcmJobCounter = 0;
+const _pcmJobs = new Map();
+function _getPcmWorker(){
+  if(_pcmWorker) return _pcmWorker;
+  try{
+    _pcmWorker = new Worker('pcm-worker.js');
+  }catch(err){
+    console.warn('[pcm-worker] init failed:', err?.message||err);
+    _pcmWorker = null;
+    return null;
+  }
+  _pcmWorker.addEventListener('message', (e)=>{
+    const msg = e.data;
+    const job = _pcmJobs.get(msg.jobId);
+    if(!job) return;
+    _pcmJobs.delete(msg.jobId);
+    const d = job.deck;
+    if(!d) return;
+    if(msg.type === 'pcm'){
+      // Stale token (트랙 변경) — 결과 폐기
+      if(d._loadToken !== job.token){
+        d._pcmPromise = null;
+        return;
+      }
+      // ds samples 가 worker 에서 transfer 되어 main 소유. 라이브 렌더 매 프레임 사용.
+      d._pcm = {samples: msg.samples, sampleRate: msg.sampleRate, durationMs: msg.durationMs};
+      d._pcmPromise = null;
+      d._wfDirty = true;
+    } else if(msg.type === 'error'){
+      console.warn('[pcm-worker]', msg.error);
+      if(job.kind === 'pcm') d._pcmPromise = null;
+    }
+  });
+  _pcmWorker.addEventListener('error', (e)=>console.warn('[pcm-worker] fatal', e?.message||e));
+  return _pcmWorker;
 }
-function _scheduleRgbFineBuild(d,slot,delay=2000){
-  if(!d||d.type==='hw')return null;
-  clearTimeout(d._rgbFineTimer);
-  if(d.pl||d.scratch)return null;
-  d._rgbFineTimer=setTimeout(()=>{
-    d._rgbFineTimer=null;
-    if(d.pl||d.scratch)return;
-    _wfEnsureRgbFine(d,slot);
-  },delay);
-  return d._rgbFineTimer;
+async function _decodePcmFor(d, slot){
+  if(!d||d.type==='hw'||d._pcm||d._pcmPromise||!d._audioBlob)return;
+  const w = _getPcmWorker();
+  if(!w) return;
+  const token = d._loadToken||0;
+  d._pcmPromise = {pending:true};
+  try{
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    const ab = await d._audioBlob.arrayBuffer();
+    const buf = await ac.decodeAudioData(ab);
+    ac.close();
+    if(d._loadToken !== token){d._pcmPromise = null; return;}
+    if(buf.duration > 600){console.warn('[PCM] track > 10min, skip'); d._pcmPromise = null; return;}
+    const nch = buf.numberOfChannels;
+    // 채널 데이터 복사 후 transfer (AudioBuffer 의 view 는 transfer 불가)
+    const channels = [];
+    for(let c=0;c<nch;c++) channels.push(new Float32Array(buf.getChannelData(c)));
+    const transferList = channels.map(ch => ch.buffer);
+    const jobId = ++_pcmJobCounter;
+    const deckId = `s${slot}_${token}`;
+    _pcmJobs.set(jobId, {deck:d, kind:'pcm', token, deckId});
+    w.postMessage({
+      type:'downsample', jobId, deckId,
+      channels, sampleRate: buf.sampleRate,
+      durationMs: buf.duration*1000, targetRate: 22050
+    }, transferList);
+    // _pcmPromise 는 worker 응답 처리 시 null 로 해제됨
+  }catch(e){
+    console.warn('[PCM] decode failed:', e.message);
+    d._pcmPromise = null;
+  }
 }
+// rgbWfFine (2pass 1200Hz 분석) 은 비활성 — 1pass rgbWf 만 사용. 시각 차이 무시 가능.
+// 트랙당 1.7MB 메모리 + 1-3s worker CPU + strip rebuild + PCM 재디코드 비용 절감.
 function _paintPartialWaveform(slot,d){
   if(!d||!d.rgbWf||_wfLen(d.rgbWf)<=2)return;
   d._wfCache=null;d._ovCache=null;d._zmCache=null;
+  // Strip cache 는 명시적으로 clear 하지 않음 — buildKey() data fingerprint 변화로 자동 감지,
+  // _wfBuildStripIfNeeded throttle (800ms) 가 HW stream / partial chunk 빈도 조절.
   const wfD=_wfRenderDataForDeck(d);
   if(d.wgl&&wfD)d.wgl.setData(wfD,_wfDurMsForDeck(d,wfD)||1);
   if(d.ovgl&&wfD)d.ovgl.setData(wfD);
@@ -2077,9 +2349,13 @@ function _queuePartialWaveformPaint(slot,d,minInterval=120){
   else kick();
 }
 function _wfInvalidateAndRedraw(){
+  // PCM samples 는 테마/sharpness 변경과 무관 → 보존 (재디코드 비용 회피, 빠른 테마 전환)
   Object.values(DECKS).forEach(d=>{
     if(!d)return;
-    d._wfCache=null;d._ovCache=null;d._zmCache=null;
+    d._wfCache=null;d._ovCache=null;d._zmCache=null;d._wglWinCache=null;d._wglDataCached=null;
+    d._wfDirty=true;
+    // Strip 캐시 무효화 — 테마 변경 시 새 색으로 재렌더 필요.
+    _wfClearStrip(d);
     if(d.wgl){d.wgl._dirty=true;d.wgl._lastDrawKey='';}
     if(d.ovgl){
       d.ovgl._dirty=true;d.ovgl._lastDrawKey='';
@@ -2095,8 +2371,56 @@ function _wfInvalidateAndRedraw(){
 function _wfPersistAndApply(){
   _wfWriteLS('wf_sharpness',wfSharpness);
   _wfWriteLS('wf_theme',wfTheme);
-  getUsedSlots().forEach(s=>_scheduleRgbFineBuild(DECKS[s],s,2500));
+  // Theme 변경 시 — deck 마다 cache lookup. Hit 면 즉시 swap, miss 면 background 재분석.
+  // 각 theme 이 자체 frequency cutoffs 로 분석된 wf 를 별도 보관 → RGB/3band frequency 진정한 분리.
+  _wfRebuildForCurrentTheme();
   _wfInvalidateAndRedraw();
+}
+
+function _wfRebuildForCurrentTheme(){
+  const preset = _wfThemePreset(wfTheme);
+  for (const slot of Object.keys(DECKS)) {
+    const d = DECKS[slot];
+    if (!d) continue;
+    d._wfByTheme = d._wfByTheme || {};
+    if (d._wfByTheme[wfTheme]) {
+      // Cache hit — 즉시 swap.
+      d.rgbWf = d._wfByTheme[wfTheme];
+      d._wfCache = null;
+      buildWaveformCache(slot);
+      const wfD = _wfRenderDataForDeck(d);
+      if (wfD) {
+        if (d.wgl) d.wgl.setData(wfD, _wfDurMsForDeck(d, wfD) || 1);
+        if (d.ovgl) d.ovgl.setData(wfD);
+      }
+      continue;
+    }
+    // Cache miss — audioBlob 있으면 background 재분석 (트랙 로드 시 같은 path 재사용).
+    if (!d._wfAudioBlob || d.type === 'hw') continue;
+    const analysisToken = d._loadToken || 0;
+    const themeAtStart = wfTheme;
+    buildRGBWaveform(d._wfAudioBlob, (done, partial) => {
+      if (d._loadToken !== analysisToken || wfTheme !== themeAtStart) return;
+      d.rgbWf = partial;
+      d.rgbWfPts = Math.max(d.rgbWfPts || 0, _wfLen(partial));
+      if (partial && _wfLen(partial) > 2) _queuePartialWaveformPaint(slot, d, 120);
+    }, d.dur, undefined, undefined, preset).then(wf => {
+      if (d._loadToken !== analysisToken || wfTheme !== themeAtStart) return;
+      if (wf) {
+        d._wfByTheme[themeAtStart] = wf;
+        d.rgbWf = wf;
+        d._wfCache = null;
+        buildWaveformCache(slot);
+        const wfD = _wfRenderDataForDeck(d);
+        if (wfD) {
+          if (d.wgl) d.wgl.setData(wfD, _wfDurMsForDeck(d, wfD) || 1);
+          if (d.ovgl) d.ovgl.setData(wfD);
+          drawOverview(slot, 0);
+          drawZoomWaveform(slot, 0);
+        }
+      }
+    });
+  }
 }
 // OUTPUT LAYERS collapse state — default: collapsed (open only if user explicitly opened)
 ;(function(){const open=localStorage.getItem('outLayersOpen')==='1';
@@ -2147,14 +2471,28 @@ function _get2DCtxCss(cv){
   return ctx;
 }
 
+// Zoom 상태 영속화 — 모든 덱 공통으로 마지막 zoomMs 저장 (트랙 로드/덱 생성 시 복원).
+// 0.5s ~ 30min 범위 clamp (zoom-in 최소 / zoom-out cap).
+function _loadZoomMs(){
+  try{
+    const v = parseInt(localStorage.getItem('wf_zoom_ms')||'',10);
+    if(Number.isFinite(v) && v >= 500 && v <= 1800000) return v;
+  }catch(_){}
+  return 8000;
+}
+function _persistZoomMs(ms){
+  try{ localStorage.setItem('wf_zoom_ms', String(ms|0)); }catch(_){}
+}
+
 function createDeck(slot,type='virtual'){
   return{slot,type,ld:false,pl:false,cu:false,au:null,tn:'',ar:'',bpm:0,dur:0,pos:0,cp:0,cuw:false,
-    wf:null,wfCtx:null,rgbWf:null,rgbWfFine:null,wovCtx:null,wzCtx:null,
+    wf:null,wfCtx:null,rgbWf:null,wovCtx:null,wzCtx:null,
     _wfCache:null,_wfCacheH:0,_wfCacheKey:'',
     wfCapability:null,
     key:'',vu:0,vuSrc:null,vuAn:null,vuBuf:null,artUrl:null,hwVu:0,beatInBar:1,
-    zoomMs:8000,vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,mtcMaster:false,
-    audioChs:2,_tempPath:null,_vuMerge:null,_vuAllAns:null,_vuAllBufs:null,_applyNchFn:null};
+    zoomMs:_loadZoomMs(),vuL:0,vuR:0,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,mtcMaster:false,
+    audioChs:2,_tempPath:null,_vuMerge:null,_vuAllAns:null,_vuAllBufs:null,_applyNchFn:null,
+    trackDevId:0,usbSlot:0,trackType:0,bitrateKbps:0,fileExt:''};
 }
 
 async function getAudioDevs(){try{audioDevs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput');}catch(e){audioDevs=[];}}
@@ -2353,20 +2691,27 @@ function _updateArtnetUi(running){
 }
 // DMX builder: aggregates DJM state → Uint8Array, ships to engine at ~40Hz
 // (engine resends the buffer via OpDmx at its own rate)
+// 버퍼 재사용 — 매 25ms 새 Uint8Array 할당으로 인한 GC pressure 절감.
+const _ART_DMX_BUF6 = new Uint8Array(6);
+const _ART_DMX_BUF16 = new Uint8Array(16);
+let _artDmxClearedFlag = false;
 function _artDmxRefresh(){
   if(!_artEnabled||!cfg.anDmxEnabled||cfg.anDmxSource==='off'){
-    window.bridge.artnetClearDmx?.();return;
+    // 비활성 IPC 1회만 호출 — 매 25ms × 무한 반복 IPC 절감.
+    if(!_artDmxClearedFlag){ _artDmxClearedFlag = true; window.bridge.artnetClearDmx?.(); }
+    return;
   }
+  _artDmxClearedFlag = false;
   const clamp=(v)=>Math.max(0,Math.min(255,v|0));
   let buf;
   if(cfg.anDmxSource==='fader'){
-    buf=new Uint8Array(6);
+    buf = _ART_DMX_BUF6;
     for(let i=0;i<6;i++)buf[i]=clamp(faders[i]??255);
   } else if(cfg.anDmxSource==='vu'){
-    buf=new Uint8Array(6);
+    buf = _ART_DMX_BUF6;
     for(let i=0;i<6;i++)buf[i]=clamp(_djmChVu[i]||0);
   } else { // 'all' — fader 1-6, VU 7-12, xf 13, master 14, booth 15, hpLvl 16
-    buf=new Uint8Array(16);
+    buf = _ART_DMX_BUF16;
     for(let i=0;i<6;i++)buf[i]=clamp(faders[i]??255);
     for(let i=0;i<6;i++)buf[6+i]=clamp(_djmChVu[i]||0);
     buf[12]=clamp(_djmXfader||0);
@@ -2629,22 +2974,7 @@ function _aiffToWav(ab){
 }
 
 // Scan AIFF chunks for an ID3 tag (may appear after large SSND chunk)
-async function _findAIFFId3(file){
-  const hdr=new DataView(await file.slice(0,12).arrayBuffer());
-  if(hdr.getUint32(0,false)!==0x464F524D)return -1;
-  const ft=String.fromCharCode(hdr.getUint8(8),hdr.getUint8(9),hdr.getUint8(10),hdr.getUint8(11));
-  if(ft!=='AIFF'&&ft!=='AIFC')return -1;
-  let pos=12;
-  while(pos+8<=file.size){
-    const h=new DataView(await file.slice(pos,pos+8).arrayBuffer());
-    const id=String.fromCharCode(h.getUint8(0),h.getUint8(1),h.getUint8(2),h.getUint8(3));
-    const sz=h.getUint32(4,false);
-    if(!id.trim()||sz>file.size)break;
-    if(id==='ID3 '||id==='id3 ')return pos+8;
-    pos+=8+sz+(sz&1);if(sz===0)break;
-  }
-  return -1;
-}
+// _findAIFFId3 → renderer/id3-parser.js (Phase 4.13).
 
 // onChunk(doneCount, partialWf) is progressive by design, but UI paint is throttled
 // separately so waveform generation spreads load instead of spiking the main thread.
@@ -2759,6 +3089,73 @@ function buildWaveformCache(slot){
   console.log(`[WFC] slot${slot} gradient cache: ${pts}×${H}px`);
 }
 
+// ═══ Waveform Strip (Phase 2 비트맵 + GPU 패닝) ═══
+// 풀-트랙 비트맵을 한 번 CPU 렌더 → detail/overview 양쪽 GL 텍스처 업로드.
+// 매 프래그먼트 envelope/색 계산 제거 → 빠른 스크롤 지글거림 원천 제거 + GPU 부담 감소.
+// 데이터/테마/높이 변경 시 캐시 키 mismatch → 자동 리빌드.
+// Strip cache 전용 데이터 선택: rgbWf 우선 (1pass 120Hz 도 8192 column 캡 안에 충분).
+// Strip cache 빌드용 데이터: HW 는 detail 우선, virtual 은 1pass rgbWf.
+// → 2pass 도착 시마다 strip 재빌드 (CPU 페인트 + GPU upload) 회피.
+function _wfRenderDataForStrip(d){
+  if(d?.type==='hw') return d?.rgbWfDetail||d?.rgbWf;
+  return d?.rgbWf||d?.rgbWfDetail;
+}
+function _wfBuildStripIfNeeded(d, slot){
+  if(!d || !window.WFStrip) return false;
+  const wfD = _wfRenderDataForStrip(d);
+  const n = wfD ? _wfLen(wfD) : 0;
+  if(n < 2) return false;
+  const wzc = document.getElementById('wzc'+slot);
+  // 비트맵 H 는 detail canvas 와 동일 (셰이더 v=y/H 직접 매핑).
+  const H = wzc && wzc.height ? wzc.height : 120;
+  const theme = (typeof _wfThemeMode === 'function') ? _wfThemeMode() : 0;
+  const isHw = d.type === 'hw';
+  const isPwv7 = !!d._pwv7;
+  const key = WFStrip.buildKey(wfD, theme, H, isHw, isPwv7);
+  const dur = _wfDurMsForDeck(d, wfD) || 1;
+  // partial 1pass — 트랙 전체 길이 대비 분석된 비율. d.dur 우선 (실제 트랙 길이),
+  // 미설정 시 1.0 (HW 처럼 partial 개념 없는 경우).
+  const totalDur = (d.dur > 0) ? d.dur : dur;
+  const partialFrac = (totalDur > 0 && dur > 0) ? Math.max(0.05, Math.min(1, dur / totalDur)) : 1.0;
+  // 캐시 hit: 이미 빌드됨 → GL 텍스처만 재확인 후 'available' 으로 보고.
+  if(d._stripKey === key && d._stripBitmap){
+    if(d.wgl && d.wgl.setStrip && !d.wgl.hasStrip()) d.wgl.setStrip(d._stripBitmap, dur, key);
+    // partialFrac 도 매번 갱신 (분석 진행 → frac 증가) — overview 가 정확한 진행 비율 표시.
+    if(d.ovgl && d.ovgl.setStrip) d.ovgl.setStrip(d._stripBitmap, partialFrac, key);
+    return true;
+  }
+  // Throttle — HW 실시간 stream 대비. 800ms 안에 이미 시도했으면 skip (band-shader fallback 로 처리).
+  // _wfClearStrip 가 _stripLastTryAt 도 reset 하므로 테마 변경 후 첫 호출은 통과.
+  const now = performance.now();
+  if(d._stripLastTryAt && (now - d._stripLastTryAt) < 800) return false;
+  d._stripLastTryAt = now;
+  const t0 = now;
+  let bm;
+  try {
+    bm = WFStrip.buildStrip({ wfData: wfD, theme, height: H, isHw, isPwv7 });
+  } catch(e) {
+    console.warn('[strip] build failed', e);
+    return false;
+  }
+  if(!bm) return false;
+  d._stripBitmap = bm;
+  d._stripKey = key;
+  if(d.wgl && d.wgl.setStrip) d.wgl.setStrip(bm, dur, key);
+  if(d.ovgl && d.ovgl.setStrip) d.ovgl.setStrip(bm, partialFrac, key);
+  console.log(`[strip] slot${slot} ${bm.width}x${bm.height} theme=${theme} hw=${isHw?1:0} ${(performance.now()-t0).toFixed(1)}ms`);
+  return true;
+}
+
+function _wfClearStrip(d){
+  if(!d) return;
+  d._stripBitmap = null;
+  d._stripKey = '';
+  // throttle reset — 다음 lazy build 호출은 즉시 통과 (테마 변경/fine-data ready 즉시 반영용).
+  d._stripLastTryAt = 0;
+  if(d.wgl && d.wgl.clearStrip) d.wgl.clearStrip();
+  if(d.ovgl && d.ovgl.clearStrip) d.ovgl.clearStrip();
+}
+
 function _getZoomCueStateKey(d){
   const cues=(d.cuePoints||[]).map(c=>[
     c.type||'',
@@ -2850,6 +3247,9 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
   const d=DECKS[slot];if(!d)return;
   const viewL=posMs-cX*msPerPx,viewR=posMs+(W-cX)*msPerPx;
   if(clearFirst)ctx.clearRect(0,0,W,H);
+  // 수평 센터라인 — 웨이브폼 위에 항상 1px (트랙 길이/위치 시각 가이드)
+  ctx.fillStyle='rgba(255,255,255,0.10)';
+  ctx.fillRect(0, Math.floor(H/2), W, 1);
 
   // 비트그리드 직접 렌더링 (캐시 제거)
   // 이유: padPx 벗어나는 순간마다 캐시가 재생성되면서 Math.round 픽셀 양자화가
@@ -2886,16 +3286,16 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
   }
   const topY=phraseActive?phraseH:0; // 핫큐/비트그리드 시작 Y
 
-  if(d.bpm>0&&d.dur>0&&wfBeatStyle!=='none'){
-    // 비트 그리드 스타일 적용 — 마진 전용 (위 topY+margH / 아래 H-margH). 풀 라인은 phrase 강조 시만.
+  if(d.bpm>0&&d.dur>0&&wfBeatStyleDetail!=='none'){
+    // 비트 그리드 (디테일/줌) — 마진 전용 (위 topY+margH / 아래 H-margH). 풀 라인은 phrase 강조 시만.
     const margH = 9;
     const topMargBot = topY + margH;          // 위쪽 마진 끝
     const botMargTop = H - margH;             // 아래쪽 마진 시작
     const drawTickAt = (fpx, mode) => {
       if(fpx<1||fpx>=W-1) return;
       let col, h, w;
-      if(mode==='regular'){ col='rgba(255,255,255,0.42)'; h=2; w=1; }
-      else if(mode==='regular-faint'){ col='rgba(255,255,255,0.32)'; h=2; w=1; }
+      if(mode==='regular'){ col='rgba(255,255,255,0.42)'; h=5; w=1; }
+      else if(mode==='regular-faint'){ col='rgba(255,255,255,0.32)'; h=5; w=1; }
       else if(mode==='downbeat'){ col='rgba(255,168,80,0.78)'; h=5; w=1.5; }
       else if(mode==='phrase'){
         // halo + main
@@ -2921,17 +3321,17 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
       const fpx=(bMs-viewL)/msPerPx;
       const isPhrase = idx%16===0 && idx>0;
       let mode=null;
-      if(wfBeatStyle==='phrase'){ if(isPhrase) mode='phrase'; }
-      else if(wfBeatStyle==='balanced'){
+      if(wfBeatStyleDetail==='phrase'){ if(isPhrase) mode='phrase'; }
+      else if(wfBeatStyleDetail==='balanced'){
         if(isPhrase) mode='phrase';
         else if(isBar) mode='downbeat';
         else mode='regular-faint';
       }
-      else if(wfBeatStyle==='detailed'){ if(isPhrase) mode='phrase'; else if(isBar) mode='downbeat'; else mode='regular'; }
-      else if(wfBeatStyle==='phrase-band'){
+      else if(wfBeatStyleDetail==='detailed'){ if(isPhrase) mode='phrase'; else if(isBar) mode='downbeat'; else mode='regular'; }
+      else if(wfBeatStyleDetail==='phrase-band'){
         if(isPhrase){ drawTickAt(fpx, 'phrase-full'); mode='phrase'; }
       }
-      else if(wfBeatStyle==='hybrid'){
+      else if(wfBeatStyleDetail==='hybrid'){
         if(isPhrase) mode='phrase'; else if(isBar) mode='downbeat'; else if(idx%2===0) mode='regular';
       }
       if(mode) drawTickAt(fpx, mode);
@@ -2958,7 +3358,7 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
   _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX);
 
   // 큐 캐시 키에 topY 포함 → 프레이즈바 활성 상태 변경 시 캐시 재생성
-  const cueKey=`${_getZoomCueStateKey(d)}#${W}x${H}#${msPerPx}#t${topY}#cs${wfCueStyle}#bs${wfBeatStyle}`;
+  const cueKey=`${_getZoomCueStateKey(d)}#${W}x${H}#${msPerPx}#t${topY}#cs${wfCueStyle}#bs${wfBeatStyleDetail}`;
   const cueTopY=topY; // 클로저 캡처
   const cueCache=_ensureZoomScrollingCache(d,'_zoomCueCache',cueKey,W,H,viewL,viewR,msPerPx,(octx,cw,ch,startMs)=>{
     // hot cue 색상 — CDJ-3000 8색 팔레트 (hotCueNum 기반)
@@ -3033,8 +3433,13 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
     }
   }
 
-  // 플레이헤드 — 글로우 없이 단일 1px 선
-  ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(cX-.5,0,1,H);
+  // 플레이헤드 — rekordbox 처럼 빨강 + 살짝 glow.
+  // 웨이브폼은 sLow=midY*0.82 (위/아래 9% 마진) — 플레이헤드는 약간 더 길게 (위/아래 4% 마진)
+  // 비트그리드 영역 (위 7~9px ≈ 7%) 은 보호.
+  const phY=Math.round(H*0.04);
+  const phH=Math.round(H*0.92);
+  ctx.fillStyle='rgba(255,255,255,.25)';ctx.fillRect(cX-1.5,phY,3,phH); // soft halo
+  ctx.fillStyle='#ff3030';ctx.fillRect(cX-.5,phY,1.5,phH); // 빨강 단선
 
   if(d._barBeat){
     ctx.font='bold 10px "DM Mono",monospace';
@@ -3055,7 +3460,7 @@ function drawOverview(slot,prog){
   const pos=(_ovDur>0)?Math.max(0,Math.min(1,_posMsOv/_ovDur)):Math.max(0,Math.min(1,prog||0));
   // 웨이브폼 데이터 없어도 오버뷰 중앙선 + 커서 그려서 트랙 길이 감 유지
   if(!_wfDataOv){
-    const wov=document.getElementById('wov'+slot);
+    const wov=(d._els && d._els.wov && d._els.wov.isConnected) ? d._els.wov : document.getElementById('wov'+slot);
     if(wov && wov.getContext){
       const ctx=wov.getContext('2d');
       const W=wov.width, H=wov.height;
@@ -3064,23 +3469,31 @@ function drawOverview(slot,prog){
       ctx.fillRect(0, Math.floor(H/2)-0.5, W, 1);
       if(d.dur>0){
         const cpx=Math.round(pos*W);
-        ctx.fillStyle='rgba(255,255,255,.55)';
+        ctx.fillStyle='#ff3030';
         ctx.fillRect(Math.max(0,cpx-1), 0, 2, H);
       }
     }
     return;
   }
   if(d.ovgl&&_wfDataOv){
-    // Auto-upload texture if missing — mirrors drawZoomWaveform's self-healing pattern
-    if(!d.ovgl._wfTex){const _wd=_wfRenderDataForDeck(d);if(_wd)d.ovgl.setData(_wd);}
-    if(!d.ovgl._wfTex)return;
-    d.ovgl.draw(pos, _wfDataMode(d), wfSharpness, _wfThemeMode());
+    // Strip 우선 — 비트맵 사전 렌더 + GPU 패닝 (Phase 2). 색 detail/overview 자동 일치.
+    // 매 프레임 호출 — buildKey 캐시-hit fast path 가 cheap. 데이터 변화 시 자동 rebuild
+    // (이전엔 !hasStrip 가드로 partial→final 전환 안 됐음 — resize 후에만 보이던 버그 원인).
+    _wfBuildStripIfNeeded(d, slot);
+    if(d.ovgl.hasStrip && d.ovgl.hasStrip()){
+      d.ovgl.drawStrip(pos);
+    } else {
+      // Fallback: 기존 4-band 셰이더 경로 (분석 진행 중 등 비트맵 빌드 실패 케이스).
+      if(!d.ovgl._wfTex){const _wd=_wfRenderDataForDeck(d);if(_wd)d.ovgl.setData(_wd);}
+      if(!d.ovgl._wfTex)return;
+      d.ovgl.draw(pos, _wfDataMode(d), wfSharpness, _wfThemeMode());
+    }
     // Continue to draw overlay markers on separate canvas
   } else {
     if(!d.wovCtx)return;
     const wfOv=_wfRenderDataForDeck(d);
     if(!wfOv)return;
-    const cv=document.getElementById('wov'+slot);if(!cv||!cv.width)return;
+    const cv=(d._els && d._els.wov && d._els.wov.isConnected) ? d._els.wov : document.getElementById('wov'+slot);if(!cv||!cv.width)return;
     const W=cv.width,H=cv.height,ctx=d.wovCtx;
     // Cache: render overview once, reuse until data/size changes
     const wfOvLen=_wfLen(wfOv);
@@ -3114,13 +3527,16 @@ function drawOverview(slot,prog){
   }
 
   // Overview overlay — cue points, loops, playhead (works for both WebGL and 2D modes)
-  const olCv=document.getElementById('wovol'+slot)||document.getElementById('wov'+slot);
+  // d._els 캐시 활용 — drawOverview 는 매 frame 호출 ×4 deck.
+  const _wovolEl = (d._els && d._els.wovol && d._els.wovol.isConnected) ? d._els.wovol : document.getElementById('wovol'+slot);
+  const _wovEl = (d._els && d._els.wov && d._els.wov.isConnected) ? d._els.wov : document.getElementById('wov'+slot);
+  const olCv = _wovolEl || _wovEl;
   if(!olCv)return;
   // For WebGL mode: use separate overlay canvas; for 2D mode: draw on same canvas
   let olCtx;
   if(d.ovgl){
     if(!d._wovOlCtx){
-      const olEl=document.getElementById('wovol'+slot);
+      const olEl = _wovolEl;
       if(!olEl)return;
       const _olW=(olCv.width/_WF_DPR)||olEl.parentElement.clientWidth;
       const _olH=(olCv.height/_WF_DPR)||olEl.parentElement.clientHeight;
@@ -3153,7 +3569,7 @@ function drawOverview(slot,prog){
   const botM = H2 - _ovBandH;
 
   // ── 비트 그리드 (오버뷰 = 하단 마진 전용, 반파 특성) ──
-  if(wfBeatStyle!=='none' && d._beatGrid && d._beatGrid.length>0 && _ovDur>0){
+  if(wfBeatStyleOverview!=='none' && d._beatGrid && d._beatGrid.length>0 && _ovDur>0){
     const bg = d._beatGrid;
     const totalBeats = bg.length;
     const bandTop = botM, bandH = _ovBandH;
@@ -3169,21 +3585,21 @@ function drawOverview(slot,prog){
       const isPhrase = (i % 16 === 0) && i>0;
       const isDownbeat = (i % 4 === 0) && !isPhrase;
       let mode=null;
-      if(wfBeatStyle==='phrase'){ if(isPhrase) mode='phrase'; }
-      else if(wfBeatStyle==='balanced'){
+      if(wfBeatStyleOverview==='phrase'){ if(isPhrase) mode='phrase'; }
+      else if(wfBeatStyleOverview==='balanced'){
         if(isPhrase) mode='phrase';
         else if(isDownbeat) mode='downbeat';
         else mode='regular-faint';
       }
-      else if(wfBeatStyle==='detailed'){ if(isPhrase) mode='phrase'; else if(isDownbeat) mode='downbeat'; else mode='regular'; }
-      else if(wfBeatStyle==='phrase-band'){
+      else if(wfBeatStyleOverview==='detailed'){ if(isPhrase) mode='phrase'; else if(isDownbeat) mode='downbeat'; else mode='regular'; }
+      else if(wfBeatStyleOverview==='phrase-band'){
         if(isPhrase){ olCtx.fillStyle='rgba(95,200,218,0.18)'; olCtx.fillRect(x-0.5,0,1,H2); mode='phrase'; }
       }
-      else if(wfBeatStyle==='hybrid'){ if(isPhrase) mode='phrase'; else if(isDownbeat) mode='downbeat'; else if(i%2===0) mode='regular'; }
+      else if(wfBeatStyleOverview==='hybrid'){ if(isPhrase) mode='phrase'; else if(isDownbeat) mode='downbeat'; else if(i%2===0) mode='regular'; }
       if(!mode) continue;
       let col, h, w;
-      if(mode==='regular'){ col='rgba(255,255,255,0.42)'; h=2; w=1; }
-      else if(mode==='regular-faint'){ col='rgba(255,255,255,0.32)'; h=2; w=1; }
+      if(mode==='regular'){ col='rgba(255,255,255,0.42)'; h=Math.min(bandH,5); w=1; }
+      else if(mode==='regular-faint'){ col='rgba(255,255,255,0.32)'; h=Math.min(bandH,5); w=1; }
       else if(mode==='downbeat'){ col='rgba(255,168,80,0.78)'; h=Math.min(bandH,5); w=1.5; }
       else { /* phrase: 풀 마진 + 시안 글로우 halo */
         olCtx.fillStyle='rgba(95,200,218,0.35)';
@@ -3247,18 +3663,190 @@ function drawOverview(slot,prog){
     olCtx.closePath();olCtx.fill();
   }
   // 플레이헤드: 세로 1px 전체
-  olCtx.fillStyle='rgba(255,255,255,.95)';olCtx.fillRect(Math.round(pos*W2)-.5,0,1,H2);
+  // Overview 플레이헤드 — 빨강 (rekordbox 스타일)
+  olCtx.fillStyle='#ff3030';olCtx.fillRect(Math.round(pos*W2)-.5,0,1.5,H2);
 }
 
 // Zoom waveform — GPU path (WebGL) + CPU fallback (2D Canvas)
+// Virtual deck PCM oscilloscope — 라이브 렌더 (캐시 미사용).
+//
+// 22kHz ds 샘플은 _decodePcmFor 에서 pcm-worker 가 1회 계산 후 main 에 transfer.
+// 매 프레임: msPerPx*22 sample/px × W px = ~17만 read (4ms 등 sub-1ms). 4덱 동시도 4ms 미만.
+// → 메인 스레드 영향 미미하면서 줌/테마/시크 시 항상 native 해상도. 캐시 16384px 캡 블러 회피.
+function _drawPcmOscilloscope(slot, prog){
+  const d=DECKS[slot];
+  if(!d?._pcm?.samples) return false;
+  // 매 frame × 4 deck × 120fps — d._els 캐시 사용 (stale 시 fallback).
+  const wzov = (d._els && d._els.wzov && d._els.wzov.isConnected) ? d._els.wzov : document.getElementById('wzov'+slot);
+  if(!wzov) return false;
+  // wovCtx2: DPR transform 적용된 ctx 사용 (sharp 렌더 + CSS 좌표). 미초기화 시 _get2DCtxCss 로 setup.
+  const ctx=d.wovCtx2||(d.wovCtx2=_get2DCtxCss(wzov));
+  if(!ctx)return false;
+  const W=Math.round(wzov.width/_WF_DPR), H=Math.round(wzov.height/_WF_DPR);
+  ctx.fillStyle='#04060a'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(255,255,255,.08)';
+  ctx.fillRect(0,Math.floor(H/2),W,1);
+  const pos=Math.max(0,Math.min(1,prog||0));
+  const posMsRaw=pos*d.dur, zoomMs=d.zoomMs||8000;
+  const cX_n=cfg.wfCenter==='left'?0.25:0.5, cX=cX_n*W;
+  const msPerPx=zoomMs/W;
+  // 픽셀 스냅 — 매 프레임 sub-pixel sample 윈도우 shift → 지글거림. posMs 를 msPerPx 격자로 round 하면
+  // 1px 미만 변동은 동일 출력, 1px 변동은 정확히 1px 시각 shift (rekordbox 식 부드러운 스크롤).
+  const posMs=Math.round(posMsRaw/msPerPx)*msPerPx;
+  const viewL=posMs-cX*msPerPx;
+  const samples=d._pcm.samples, sr=d._pcm.sampleRate;
+  const halfH=H*0.37, midY=H/2;
+  // Normalize gain — 트랙 전체 max abs 로 1회 계산 (rekordbox 처럼 envelope 가 마진까지 꽉 차게).
+  // 일반 음원은 ±0.5 정도라 halfH 영역의 절반만 차서 작아 보임. ±1 로 정규화하면 halfH 까지 도달.
+  if(!d._pcm._normGain){
+    let m=0; const s=samples;
+    for(let i=0;i<s.length;i++){const a=s[i]<0?-s[i]:s[i]; if(a>m)m=a;}
+    d._pcm._normGain = m>0.01 ? (1/m) : 1;
+  }
+  const _ng=d._pcm._normGain;
+  // 색상 lookup: overview/strip 와 정확히 동일 데이터 소스 사용 (_wfRenderDataForDeck).
+  const wfBand=_wfRenderDataForDeck(d);
+  const bandLen=wfBand?_wfLen(wfBand):0;
+  // bandRate 를 실제 데이터로부터 도출 — worker 가 짧은 트랙에 대해 min 6000 pts 강제하므로
+  // _rate (120) 가 실제 데이터 (6000pts/7.4s = 810Hz) 와 안 맞음. 같은 _durationMs 의 bins/s 로
+  // 효과적 rate 계산해야 PCM 의 시간축 (44.1kHz 샘플) 과 정렬됨.
+  const bandDurMs=wfBand?(wfBand._durationMs>0?wfBand._durationMs:(bandLen>0?(bandLen/_wfRateForData(d,wfBand)*1000):0)):0;
+  const bandRate=(bandLen>0 && bandDurMs>0) ? (bandLen/(bandDurMs/1000)) : (wfBand?_wfRateForData(d,wfBand):0);
+  const themeMode=wfTheme;
+  // 3band: PCM 모양 mirror 가 아니라 Pioneer 스타일 stacked-band 렌더링 (lo/mi/hi/ai 누적 레이어).
+  // mono:  주황 단일 hue 지만 강약(엔벨로프)으로 밝기 조절.
+  // rgb:   PCM 모양 + band 색상 가중 합성 (기본).
+  if(themeMode==='3band'){
+    // 3band — PCM peak mn/mx 로 outer 모양 (RGB/Mono 와 동일 sharp envelope) + band 별 inner layer 로 색 stack.
+    // 이전 코드는 band amplitude 만으로 그려 bar 형식처럼 boring. 이제 PCM 의 자연스러운 spike 모양 +
+    // 각 band 가 그 envelope 안의 layer 로 stack (BLUE outer, ORANGE 중간, CREAM, WHITE inner).
+    if(bandLen>0 && bandRate>0){
+      // rekordbox 4-band (튜너 매칭): BLUE / BROWN / ORANGE / cream WHITE.
+      const _CSL='rgb(35,100,240)';   // BLUE — bass (lo)
+      const _CSM='rgb(180,95,25)';    // BROWN — mid
+      const _CSH='rgb(255,166,2)';    // ORANGE — hi
+      const _CSA='rgb(245,235,210)';  // cream WHITE — air
+      const gridMarg = 10;
+      const yLim = Math.max(4, midY - gridMarg);
+      const cy=midY|0;
+      // 튜너와 동일 알고리즘 — band amplitude × scale, sub-bin 선형 보간.
+      // MAX-pool 제거: 확대 시 (msPerPx < pool) 인접 픽셀이 같은 값 → 박스 모양 발생.
+      // BAND_RATIO — 튜너 매칭. lo:0.95, mi:0.85, hi:0.90, ai:1.40.
+      const SC_LO=0.95, SC_MID=0.85, SC_HI=0.90, SC_AIR=1.40;
+      for(let x=0;x<W;x++){
+        const tMs=viewL+x*msPerPx;
+        if(tMs<0||tMs>d._pcm.durationMs)continue;
+        // Sub-bin 선형 보간 — pixel-precise band amp lookup. 확대해도 부드러운 envelope.
+        const bf=tMs/1000*bandRate;
+        const bI=Math.max(0, Math.min(bandLen-1, Math.floor(bf)));
+        const bN=Math.min(bandLen-1, bI+1);
+        const ft=bf-bI;
+        const oi=bI*8, on=bN*8;
+        const lo =(wfBand[oi  ]/255)*(1-ft) + (wfBand[on  ]/255)*ft;
+        const mid=(wfBand[oi+1]/255)*(1-ft) + (wfBand[on+1]/255)*ft;
+        const hi =(wfBand[oi+2]/255)*(1-ft) + (wfBand[on+2]/255)*ft;
+        const air=(wfBand[oi+3]/255)*(1-ft) + (wfBand[on+3]/255)*ft;
+        // 모든 layer = band amp × halfH × ratio. 큰 → 작은 순으로 그려서 outer→inner stacking.
+        const hLo =Math.round(Math.min(halfH, lo *halfH*SC_LO));
+        const hMid=Math.round(Math.min(halfH, mid*halfH*SC_MID));
+        const hHi =Math.round(Math.min(halfH, hi *halfH*SC_HI));
+        const hAir=Math.round(Math.min(halfH, air*halfH*SC_AIR));
+        if(hLo<1 && hMid<1 && hHi<1 && hAir<1)continue;
+        // BLUE outermost — symmetric envelope (kick decay 까지 lo 따라옴).
+        // 그리는 순서: BLUE → ORANGE → BROWN → WHITE (WHITE 가장 위/안쪽).
+        if(hLo>=1){
+          ctx.fillStyle=_CSL;
+          ctx.fillRect(x, cy-hLo, 1, hLo*2);
+        }
+        if(hHi>=1){
+          ctx.fillStyle=_CSH;
+          ctx.fillRect(x, cy-hHi, 1, hHi*2);
+        }
+        if(hMid>=1){
+          ctx.fillStyle=_CSM;
+          ctx.fillRect(x, cy-hMid, 1, hMid*2);
+        }
+        if(hAir>=1){
+          ctx.fillStyle=_CSA;
+          ctx.fillRect(x, cy-hAir, 1, hAir*2);
+        }
+      }
+      _drawZoomOverlayLayers(slot, ctx, W, H, posMs, msPerPx, cX, false);
+      return true;
+    }
+    // bandLen=0 fallthrough → mono/rgb 로 그릴 수도 있지만 일단 wfBand 로딩 대기
+  }
+  // mono / rgb : PCM mirror 모양 — Strip cache (overview) 와 동일 SSOT 색 공식 사용.
+  // WFColor.rgbTraceColor / monoColor 가 셰이더, strip CPU 렌더, PCM 라이브 모두에서 일치 → detail/overview 색 정합.
+  // 함수 ref 한 번만 lookup — 루프 안 W (1500)번 ×4 deck 의 prop access 절감.
+  const _wfPaintFn = (themeMode==='mono') ? window.WFColor.monoColor : window.WFColor.rgbTraceColor;
+  // Jitter 완화: 인접 픽셀 sample 윈도우 25% 오버랩 → 픽셀 경계에서 peak 가 한 픽셀 튀는 현상 감소.
+  const overlapMs=msPerPx*0.125;
+  let _lastFillKey=-1; // fillStyle 변경 skip 용 (인접 픽셀 같은 색이면 string allocation 절감)
+  for(let x=0;x<W;x++){
+    const tMs=viewL+x*msPerPx;
+    if(tMs<0||tMs>d._pcm.durationMs)continue;
+    const sStart=Math.max(0, Math.floor((tMs-overlapMs)/1000*sr));
+    const sEnd=Math.min(samples.length, Math.floor((tMs+msPerPx+overlapMs)/1000*sr));
+    let mn=1, mx=-1;
+    for(let i=sStart;i<sEnd;i++){const v=samples[i];if(v<mn)mn=v;if(v>mx)mx=v;}
+    if(mn>mx)continue;
+    // 트랙 normalize — 3band 와 동일.
+    mn*=_ng; mx*=_ng;
+    if(mn<-1)mn=-1; if(mx>1)mx=1;
+    const yMx=midY-mx*halfH, yMn=midY-mn*halfH;
+    let lo=0.5, mid=0.5, hi=0.5, air=0.5;
+    if(bandLen>0){
+      // overview 셰이더와 정확히 동치: 30ms MAX peak-pool + 4-tap 가중 보간 (CR4 근사).
+      // 너무 넓은 MAX 윈도우는 kick + hat 가 같이 잡혀 모든 band 가 높아짐 → dominant 사라져 cyan 으로 빠짐.
+      // 30ms = overview 의 per-texel pool 크기. 여기에 인접 4 bin 가중 평균으로 셰이더 CR4 와 맞춤.
+      const POOL_MS=30;
+      // 인접 4 영역 lookup (-2, -1, 0, +1) — CR4 가중 [-0.5, 1.5, 1.5, -0.5]/2 ≈ smooth blend.
+      // 단순화: 가중 [0.15, 0.35, 0.35, 0.15] 정규화된 평균.
+      const W4=[0.15, 0.35, 0.35, 0.15];
+      let aLo=0, aMi=0, aHi=0, aAi=0;
+      for(let k=-2;k<=1;k++){
+        const cMs=tMs + k*POOL_MS;
+        const bI0=Math.max(0, Math.floor(cMs/1000*bandRate));
+        const bI1=Math.min(bandLen, Math.max(bI0+1, Math.floor((cMs+POOL_MS)/1000*bandRate)));
+        let lP=0, mP=0, hP=0, aP=0;
+        for(let bi=bI0;bi<bI1;bi++){
+          const off=bi*8;
+          const v0=wfBand[off]/255, v1=wfBand[off+1]/255, v2=wfBand[off+2]/255, v3=wfBand[off+3]/255;
+          if(v0>lP)lP=v0; if(v1>mP)mP=v1; if(v2>hP)hP=v2; if(v3>aP)aP=v3;
+        }
+        const w=W4[k+2];
+        aLo+=lP*w; aMi+=mP*w; aHi+=hP*w; aAi+=aP*w;
+      }
+      lo=aLo; mid=aMi; hi=aHi; air=aAi;
+    }
+    // 색 inline — colorOfSample 의 배열 allocation 제거 + 동일 색 연속 시 fillStyle skip.
+    const _c = _wfPaintFn(lo, mid, hi, air);
+    let r=(_c[0]*255+0.5)|0, g=(_c[1]*255+0.5)|0, b=(_c[2]*255+0.5)|0;
+    if(r>255)r=255; if(r<0)r=0; if(g>255)g=255; if(g<0)g=0; if(b>255)b=255; if(b<0)b=0;
+    const _key=(r<<16)|(g<<8)|b;
+    if(_key!==_lastFillKey){
+      _lastFillKey=_key;
+      ctx.fillStyle=`rgb(${r},${g},${b})`;
+    }
+    ctx.fillRect(x, yMx, 1, Math.max(1, yMn-yMx));
+  }
+  _drawZoomOverlayLayers(slot, ctx, W, H, posMs, msPerPx, cX, false);
+  return true;
+}
 function drawZoomWaveform(slot,prog){
   const d=DECKS[slot];
   const wfData=_wfRenderDataForDeck(d);
   if(!d) return;
   const pos=Math.max(0,Math.min(1,prog||0));
+  // Virtual deck: PCM 디코드 트리거 + oscilloscope 모드 (사용 가능 시)
+  if(d.type!=='hw'&&!d._pcm&&!d._pcmPromise&&d._audioBlob){_decodePcmFor(d,slot);}
+  if(d.type!=='hw'&&d._pcm&&d.dur>0){
+    if(_drawPcmOscilloscope(slot,prog)) return;
+  }
   // 웨이브폼 데이터 없어도 중앙선은 그려서 트랙 길이 / 시간 감 유지
   if(!wfData){
-    const wzc=document.getElementById('wzc'+slot);
+    const wzc=(d._els && d._els.wzc && d._els.wzc.isConnected) ? d._els.wzc : document.getElementById('wzc'+slot);
     if(wzc && wzc.getContext){
       const ctx=wzc.getContext('2d');
       const W=wzc.width, H=wzc.height;
@@ -3268,7 +3856,7 @@ function drawZoomWaveform(slot,prog){
       // 현재 위치 커서
       if(d.dur>0){
         const cpx=Math.round(pos*W);
-        ctx.fillStyle='rgba(255,255,255,.55)';
+        ctx.fillStyle='#ff3030';
         ctx.fillRect(Math.max(0,cpx-1), 0, 2, H);
       }
     }
@@ -3325,37 +3913,78 @@ function drawZoomWaveform(slot,prog){
   }
 
   if(d.wgl){
-    // Window-based upload: only the visible zoom range at native waveform resolution.
-    // Avoids GPU MAX_TEXTURE_SIZE forcing a global downsample that smears entry jitter.
-    const rate=_wfRateForData(d,wfData);
     const totalDurMs=_wfDurMsForDeck(d,wfData)||1;
     const posMs=pos*d.dur;
     const zoomMs=d.zoomMs||8000;
-    // Pad window: 2× zoomMs either side so pan/seek within ±zoomMs doesn't trigger re-upload.
-    const winSpanMs=zoomMs*5;
-    const winCenterMs=Math.max(0,Math.min(totalDurMs,posMs));
-    let winStartMs=winCenterMs-winSpanMs/2;
-    let winEndMs=winCenterMs+winSpanMs/2;
-    if(winStartMs<0){winEndMs-=winStartMs;winStartMs=0;}
-    if(winEndMs>totalDurMs){winStartMs=Math.max(0,winStartMs-(winEndMs-totalDurMs));winEndMs=totalDurMs;}
+    const cX=cfg.wfCenter==='left'?0.25:0.5;
+    // Strip 우선 — 사전 렌더 비트맵 + GPU 패닝 (Phase 2). 매 프래그먼트 envelope 계산 0 → 지글거림 0.
+    // 매 프레임 호출 — buildKey 캐시-hit fast path 가 cheap. partial 1pass 데이터 → final 전환 자동 감지.
+    _wfBuildStripIfNeeded(d, slot);
+    if(d.wgl.hasStrip && d.wgl.hasStrip()){
+      d.wgl.drawStrip(posMs, zoomMs, cX);
+      drawZoomOverlay(slot,prog);
+      return;
+    }
+    // Fallback: 기존 band-셰이더 경로 (분석 진행 중 / 비트맵 빌드 실패 등).
+    // 하이브리드 캐시: 트랙이 GPU MAX_TEXTURE_SIZE 안에 들어가면 풀트랙 업로드(setData),
+    // 아니면 window+chunk snap (setWindowData). full-track 은 매 frame 0 upload (가장 부드럼),
+    // window 는 chunk 경계 넘을 때만 upload (~30s 마다). 둘 다 native 해상도 유지.
+    const rate=_wfRateForData(d,wfData);
     const wfBins=_wfLen(wfData);
-    const winStartIdx=Math.max(0,Math.floor(winStartMs*rate/1000));
-    const winEndIdx=Math.min(wfBins,Math.ceil(winEndMs*rate/1000));
-    const winActualStartMs=winStartIdx*1000/rate;
-    const winActualDurMs=(winEndIdx-winStartIdx)*1000/rate;
-    d.wgl.setWindowData(wfData,winStartIdx,winEndIdx,winActualDurMs);
+    const gl=d.wgl.gl;
+    const maxTex = gl ? Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 16384) : 16384;
+    // HW deck 은 항상 window 모드 (native 해상도 보존). full-track setData 는 다운샘플 일으킴.
+    // virtual deck (분석 데이터) 만 fits 시 풀 캐시 사용.
+    const fitsFullTrack = (d.type !== 'hw') && (wfBins <= maxTex);
+    if(fitsFullTrack){
+      // 풀 트랙 캐시 — 매 frame upload 0
+      if(d._wglDataCached !== wfData){
+        d.wgl.setData(wfData, totalDurMs);
+        d._wglDataCached = wfData;
+        d._wglWinCache = null;
+      }
+    } else {
+      // 큰 트랙 — window + chunk snap. window 크기를 canvas×4 로 제한해 native 해상도 유지.
+      // (waveform-gl.setWindowData 는 n > canvas_w*4 일 때 peak-pool 다운샘플 트리거 → 시각 손실).
+      d._wglDataCached = null;
+      const canvasW = d.wgl.canvas?.width || 1000;
+      // 목표 window 샘플 수: canvas×4 (다운샘플 안 일어나는 한계). 작아도 chunk snap 으로 OK.
+      const targetSamples = Math.min(maxTex, Math.max(2048, canvasW * 4));
+      const winSpanMs = Math.min(totalDurMs, (targetSamples / rate) * 1000);
+      const CHUNK = 1024;
+      const cur = d._wglWinCache;
+      const needsResnap = !cur || cur.totalDurMs !== totalDurMs ||
+        posMs < cur.startMs + winSpanMs*0.25 ||
+        posMs > cur.startMs + winSpanMs*0.75;
+      if(needsResnap){
+        let winStartMs = Math.max(0, posMs - winSpanMs/2);
+        let winEndMs = winStartMs + winSpanMs;
+        if(winEndMs > totalDurMs){ winEndMs = totalDurMs; winStartMs = Math.max(0, totalDurMs - winSpanMs); }
+        const rawStartIdx = Math.max(0, Math.floor(winStartMs * rate / 1000));
+        const rawEndIdx = Math.min(wfBins, Math.ceil(winEndMs * rate / 1000));
+        const winStartIdx = Math.floor(rawStartIdx / CHUNK) * CHUNK;
+        const winEndIdx = Math.min(wfBins, Math.ceil(rawEndIdx / CHUNK) * CHUNK);
+        d._wglWinCache = {
+          startIdx: winStartIdx, endIdx: winEndIdx,
+          startMs: winStartIdx * 1000 / rate,
+          durMs: (winEndIdx - winStartIdx) * 1000 / rate,
+          totalDurMs
+        };
+        d.wgl.setWindowData(wfData, winStartIdx, winEndIdx, d._wglWinCache.durMs);
+      }
+    }
     if(!d.wgl._wfTex){drawZoomOverlay(slot,prog);return;}
     const mode=_wfDataMode(d);
-    const cX=cfg.wfCenter==='left'?0.25:0.5;
-    // posMs in shader is now relative to window start (shader sees window as its full song)
-    d.wgl.draw(posMs-winActualStartMs, zoomMs, cX, mode, wfSharpness, _wfThemeMode());
+    // 풀-track: posMs 절대 시간. window: window-relative.
+    const drawPosMs = fitsFullTrack ? posMs : (posMs - (d._wglWinCache?.startMs || 0));
+    d.wgl.draw(drawPosMs, zoomMs, cX, mode, wfSharpness, _wfThemeMode());
     drawZoomOverlay(slot,prog);
     return;
   }
 
   // CPU 2D canvas fallback — with offscreen waveform cache
   if(!d.wzCtx)return;
-  const cv=document.getElementById('wzc'+slot);if(!cv||!cv.width)return;
+  const cv=(d._els && d._els.wzc && d._els.wzc.isConnected) ? d._els.wzc : document.getElementById('wzc'+slot);if(!cv||!cv.width)return;
   const W=cv.width,H=cv.height,ctx=d.wzCtx;
   const dur=d.dur,posMs=pos*dur;
   const pts=_wfLen(wfData);
@@ -3420,7 +4049,7 @@ function drawZoomWaveform(slot,prog){
 // Zoom overlay — beat grid, cue points, position cursor (transparent 2D canvas on top of WebGL)
 function drawZoomOverlay(slot, prog){
   const d=DECKS[slot];if(!d||!d.wovCtx2)return;
-  const wzov=document.getElementById('wzov'+slot);if(!wzov||!wzov.width)return;
+  const wzov=(d._els && d._els.wzov && d._els.wzov.isConnected) ? d._els.wzov : document.getElementById('wzov'+slot);if(!wzov||!wzov.width)return;
   const W=Math.round(wzov.width/_WF_DPR),H=Math.round(wzov.height/_WF_DPR),ctx=d.wovCtx2;
   const pos=Math.max(0,Math.min(1,prog||0));
   const dur=d.dur,posMs=pos*dur;
@@ -3489,7 +4118,19 @@ function addVirtualDeck(){
 
 function removeVirtualDeck(slot){
   const d=DECKS[slot];
-  if(d?.au){d.au.pause();URL.revokeObjectURL(d.au.src);}
+  if(d){
+    // Audio: 일시 정지 + Object URL 해제
+    if(d.au){try{d.au.pause();URL.revokeObjectURL(d.au.src);}catch(_){}}
+    // WebGL context — 명시적 destroy 로 GPU 메모리 즉시 회수.
+    if(d.wgl){try{d.wgl.destroy();}catch(_){}}
+    if(d.ovgl){try{d.ovgl.destroy();}catch(_){}}
+    // 큰 캐시 데이터 — GC 도와주기 (덱 제거 시 즉시 reference 끊음)
+    d._stripBitmap=null; d._wfCache=null; d._zmCache=null; d._ovCache=null;
+    d._pcm=null; d._pcmPromise=null;
+    d.rgbWf=null; d.rgbWfDetail=null;
+    d._wfByTheme=null; d._wfAudioBlob=null;  // theme-aware analysis cache 도 클리어 (Phase 4.0).
+    d._els=null; // DOM 핸들 캐시도 클리어
+  }
   delete DECKS[slot];
   if(E&&run){
     window.bridge.removeLayer(slot);
@@ -3659,7 +4300,7 @@ function deckHTMLDefault(slot){
         <div class="dwz-row">
           <div class="dwz" id="dwz${slot}" style="position:relative;${isLoaded?'':'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px'}">
             ${isLoaded
-              ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div>`
+              ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}" title="축소">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}" title="기본 (8초)">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}" title="확대 (최소 0.5초)">+</button></div>`
               :`<span style="font:400 11px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span>`
             }
           </div>
@@ -3750,7 +4391,7 @@ function _deckCommonParts(slot){
   </div>`;
   const wfZoom=`<div class="dwz" id="dwz${slot}" style="position:relative;${isLoaded?'':'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px'}">
     ${isLoaded
-      ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}">+</button></div>`
+      ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}" title="축소">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}" title="기본 (8초)">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}" title="확대 (최소 0.5초)">+</button></div>`
       :`<span style="font:400 11px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span>`
     }
   </div>`;
@@ -3997,6 +4638,26 @@ function deckHTMLObservatory(slot){
   const stAttr=stEmpty?'empty':'stop';
   const playerNum=slot+1;
   const modelTxt=isHW?(d.model||'CDJ'):'VIRTUAL';
+  // 트랙 소스 표시: trackDevId(미디어 보유 CDJ #) + slot(USB/SD/CD) — '/' 기준 두 줄
+  const _slotName=(s)=>s===1?'CD':s===2?'SD':s===3?'USB':s===4?'RB':'—';
+  const _srcHtml=(()=>{
+    if(!isHW) return '<span>LOCAL</span>';
+    const td=d.trackDevId||0, sl=d.usbSlot||0;
+    if(td>0 && sl>0) return `<span>CDJ${td}</span><span>${_slotName(sl)}</span>`;
+    if(td>0) return `<span>CDJ${td}</span>`;
+    return '<span>LINK</span>';
+  })();
+  // SMPTE/MASTER/A/B 행 — Row 레이아웃과 동일 인터랙션
+  const aAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="A"`:' disabled';
+  const bAc=isLoaded?`data-a="layer" data-i="${slot}" data-lyr="B"`:' disabled';
+  const smpteRow=`<div class="obs-smpte-row">
+    <div class="obs-smpte-lbl">SMPTE</div>
+    <span class="dksm-btn dksm-master obs-smpte-master${d.mtcMaster?' on':''}" id="dmst${slot}" data-a="mtc-master" data-i="${slot}">MASTER</span>
+    <div class="obs-smpte-ab">
+      <button class="dkbtn dklyr dklyr-a obs-smpte-ab-btn${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
+      <button class="dkbtn dklyr dklyr-b obs-smpte-ab-btn${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
+    </div>
+  </div>`;
   return `<div class="dk obs-dk" id="dk${slot}" data-st="${stAttr}" data-type="${isHW?'hw':'virtual'}">
     <div class="dshim"></div>
     <div class="obs-hdr">
@@ -4009,19 +4670,21 @@ function deckHTMLObservatory(slot){
         <span class="dksm-btn dksm-sync${d.sync?' on':''}" id="dsync${slot}">SYNC</span>
         <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}">MAST</span>
         <span class="dbadge br off obs-air" id="dair${slot}">AIR</span>
+        ${isHW?'':`<button class="dhtb cdl obs-cdl" data-a="remove" data-i="${slot}" title="${(window.t?window.t('lbl_remove_deck','덱 삭제'):'덱 삭제')}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>`}
       </div>
       <div class="obs-mini">
         <div class="dvu-hbar col fader"><div class="dvu-hfill" id="dvuF${slot}" style="--vu-level:0%"></div></div>
         <div class="dvu-hbar col vu"><div class="dvu-hfill" id="dvuL${slot}" style="--vu-level:0%"></div></div>
       </div>
-      <span class="dbadge bm obs-state" id="dbg${slot}">${stEmpty?'EMPTY':'STOP'}</span>
+      <div class="obs-state-cell">
+        <span class="dbadge bm obs-state" id="dbg${slot}">${stEmpty?'EMPTY':'STOP'}</span>
+      </div>
     </div>
     <div class="obs-body">
       <aside class="obs-meta">
         ${artEl}
         <div class="obs-meta-list">
-          <div class="row"><span class="k">SRC</span><span class="v">${isHW?'LINK':'LOCAL'}</span></div>
-          <div class="row"><span class="k">TYPE</span><span class="v">${isHW?'HW':'VIRT'}</span></div>
+          <div class="row"><span class="k">SRC</span><span class="v" id="dsrc${slot}">${_srcHtml}</span></div>
         </div>
       </aside>
       <div class="obs-center">
@@ -4034,15 +4697,19 @@ function deckHTMLObservatory(slot){
             <span id="wfkey${slot}" class="dk-key-box">—</span>
           </div>
         </div>
-        <div class="obs-wf">${wfOverview}<div class="dwz-row" style="height:auto">${wfZoom}</div></div>
+        ${stEmpty?`<div class="ddz obs-ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div class="obs-ddz-lbl">${(window.t?window.t('lbl_click_to_open','클릭하여 열기'):'클릭하여 열기')}</div><div class="obs-ddz-sub">MP3 · WAV · FLAC · AIFF · AAC · OGG · M4A</div></div>`
+          :`<div class="obs-wf">${wfOverview}<div class="dwz-row" style="height:auto">${wfZoom}</div></div>`}
       </div>
       <aside class="obs-right">
         <div class="obs-tc-stack">
           <span class="dtc obs-tc-now" id="dtc${slot}">${isLoaded?'00:00:00:00':'--:--:--:--'}</span>
+          <div class="obs-tc-rem" id="dtime${slot}"><span class="neg">--:--.---</span> / <span class="total">--:--.---</span></div>
         </div>
         <div class="obs-divider"></div>
         <div id="wfbpm${slot}"></div>
         ${phas}
+        <div class="obs-divider"></div>
+        ${smpteRow}
       </aside>
     </div>
   </div>`;
@@ -4053,10 +4720,13 @@ function patchDeck(slot){
   const el=document.getElementById('dk'+slot);
   if(!el)return; // deck element doesn't exist → need full renderDecks
   const d=DECKS[slot];if(!d)return;
-  // Destroy only THIS deck's GL contexts
+  // Destroy only THIS deck's GL contexts + 2D ctx ref 정리 (stale ref 방지).
   if(d.wgl){try{d.wgl.destroy();}catch(_){}d.wgl=null;}
   if(d.ovgl){try{d.ovgl.destroy();}catch(_){}d.ovgl=null;}
   d._wovOlCtx=null;
+  d.wovCtx2=null;  // PCM oscilloscope 의 wzov ctx — 새 canvas 에 재초기화되도록 null.
+  d.wovCtx=null;   // Overview 2D fallback ctx
+  d.wzCtx=null;    // Detail 2D fallback ctx
   // Replace just this deck's HTML
   const tmp=document.createElement('div');
   tmp.innerHTML=deckHTML(slot);
@@ -4104,9 +4774,55 @@ function _bindVirtualFader(slot,faderEl){
   });
 }
 
+// Per-deck DOM 핸들 캐시 — getElementById 매 tick 수십 회 → 0.
+// 덱 DOM 이 patchDeck/renderDecks 로 교체될 때마다 _buildDeckElsCache 재호출.
+// 사용처에서는 d._els.dk 처럼 접근. 요소 없으면 null (안전).
+function _buildDeckElsCache(slot, d){
+  if(!d) return;
+  const g = id => document.getElementById(id);
+  const dkEl = g('dk'+slot);
+  d._els = {
+    dk:    dkEl,
+    dbg:   g('dbg'+slot),
+    dair:  g('dair'+slot),
+    dsync: g('dsync'+slot),
+    dmst:  g('dmst'+slot),
+    ddmst: g('ddmst'+slot),
+    did:   g('did'+slot),
+    dhwl:  g('dhwl'+slot),
+    dtn:   g('dtn'+slot),
+    dta:   g('dta'+slot),
+    dtc:   g('dtc'+slot),
+    dtime: g('dtime'+slot),
+    dtsep: g('dtsep'+slot),
+    dvuF:  g('dvuF'+slot),
+    dvuL:  g('dvuL'+slot),
+    dvuR:  g('dvuR'+slot),
+    wzc:   g('wzc'+slot),
+    wzov:  g('wzov'+slot),
+    wov:   g('wov'+slot),
+    wovol: g('wovol'+slot),
+    wfkey: g('wfkey'+slot),
+    wfbpm: g('wfbpm'+slot),
+    dwov:  g('dwov'+slot),
+    dwz:   g('dwz'+slot),
+    'dwov-prog': g('dwov-prog'+slot),
+    dvustrip: g('dvustrip'+slot),
+    dart:  g('dart'+slot),
+    dsrc:  g('dsrc'+slot),
+    // Phase meter segments (1..4) — tick 마다 4 lookup ×4 deck = 16/frame.
+    dphs:  [null, g('dphs'+slot+'_1'), g('dphs'+slot+'_2'), g('dphs'+slot+'_3'), g('dphs'+slot+'_4')],
+    dphsf: [null, g('dphsf'+slot+'_1'), g('dphsf'+slot+'_2'), g('dphsf'+slot+'_3'), g('dphsf'+slot+'_4')],
+    // Play/Cue 버튼 (tick 마다 querySelector × 2 × 4 deck = 8/frame). dk root 안의 [data-a="..."].
+    playBtn: dkEl ? dkEl.querySelector('[data-a="play"]') : null,
+    cueBtn:  dkEl ? dkEl.querySelector('[data-a="cue"]')  : null,
+  };
+}
+
 function bindDeck(slot){
   const el=document.getElementById('dk'+slot);if(!el)return;
   const d=DECKS[slot];
+  _buildDeckElsCache(slot, d);
   _observeDeckCanvasContainers(slot);
   el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('dov');});
   el.addEventListener('dragleave',()=>el.classList.remove('dov'));
@@ -4144,6 +4860,7 @@ function bindDeck(slot){
   const wzDiv=document.getElementById('dwz'+slot);
   if(wzDiv){
     let _drag=null, _vel=0, _raf=null, _lastMoveT=0, _lastSeek=0;
+    let _clickStartX=0, _clickStartT=0, _wasDragged=false;
     // Vinyl motor loop — runs at 60fps during scratch
     // Simulates platter inertia: velocity decays when mouse stops, accelerates to 1.0 after release
     const _vinylTick=()=>{
@@ -4180,6 +4897,7 @@ function bindDeck(slot){
       if(e.target.closest('.dzb'))return;
       e.preventDefault();
       const d2=DECKS[slot];if(!d2||!d2.ld)return;
+      _clickStartX=e.clientX; _clickStartT=performance.now(); _wasDragged=false;
       DECKS[slot].scratch=true; _vel=0; _lastMoveT=performance.now(); _lastSeek=0;
       _drag={startX:e.clientX,startPos:d2.pos,lastX:e.clientX,lastT:performance.now()};
       wzDiv.setPointerCapture(e.pointerId);
@@ -4189,6 +4907,8 @@ function bindDeck(slot){
     });
     wzDiv.addEventListener('pointermove',e=>{
       if(!_drag)return;
+      // 클릭/드래그 판별 — 5px 이상 이동 시 드래그로 인식
+      if(Math.abs(e.clientX - _clickStartX) > 5) _wasDragged = true;
       const d2=DECKS[slot];if(!d2||d2.type==='hw')return;
       const rc=wzDiv.getBoundingClientRect(),msPerPx=(DECKS[slot]?.zoomMs||8000)/rc.width;
       const newMs=Math.max(0,Math.min(d2.dur,_drag.startPos-(e.clientX-_drag.startX)*msPerPx));
@@ -4205,10 +4925,26 @@ function bindDeck(slot){
       if(!_raf)_raf=requestAnimationFrame(_vinylTick);
     });
     wzDiv.addEventListener('pointerup',()=>{
+      const dt = performance.now() - _clickStartT;
+      const isClick = !_wasDragged && dt < 250;
       _drag=null; DECKS[slot].scratch=false;
       const d2=DECKS[slot];
+      // 클릭 (드래그 없음 + 짧은 시간) → play/pause 토글 (Virtual deck 만)
+      if(isClick && d2?.type !== 'hw' && d2?.au){
+        if(d2.pl){
+          try{d2.au.pause();}catch(_){}
+          d2.pl = false;
+        } else {
+          d2.au.currentTime = (d2.pos||0)/1000;
+          d2.au.playbackRate = 1.0;
+          d2.au.play().catch(()=>{});
+          d2.pl = true;
+        }
+        if(_raf){cancelAnimationFrame(_raf);_raf=null;}
+        return;
+      }
       if(d2?.au){
-        // Platter release: restore playbackRate to 1.0 and resume if was playing
+        // Platter release (드래그): playbackRate 복원 + 재생 상태 따라 resume/pause
         d2.au.playbackRate=1.0;
         d2.au.currentTime=(d2.pos||0)/1000;
         if(d2.pl){d2.au.play().catch(()=>{});}
@@ -4298,253 +5034,10 @@ function bindDeck(slot){
 }
 
 // ID3v2 tag parser — TIT2 (title), TPE1/TPE2 (artist), APIC (album art)
-function _id3DecodeText(fdata){
-  const enc=fdata[0];let txt='';
-  if(enc===0){for(let i=1;i<fdata.length;i++){if(fdata[i]===0)break;txt+=String.fromCharCode(fdata[i]);}}
-  else if(enc===1){let s=1,le=true;if(fdata.length>2&&fdata[1]===0xFF&&fdata[2]===0xFE){le=true;s=3;}else if(fdata.length>2&&fdata[1]===0xFE&&fdata[2]===0xFF){le=false;s=3;}for(let i=s;i+1<fdata.length;i+=2){const c=le?(fdata[i]|fdata[i+1]<<8):(fdata[i]<<8|fdata[i+1]);if(c===0)break;txt+=String.fromCharCode(c);}}
-  else if(enc===2){for(let i=1;i+1<fdata.length;i+=2){const c=(fdata[i]<<8|fdata[i+1]);if(c===0)break;txt+=String.fromCharCode(c);}}
-  else if(enc===3){txt=new TextDecoder('utf-8').decode(fdata.slice(1));const ni=txt.indexOf('\0');if(ni>=0)txt=txt.slice(0,ni);}
-  return txt.trim();
-}
-function _id3ParseBpm(txt){
-  const m=String(txt||'').replace(',','.').match(/\d+(?:\.\d+)?/);
-  const b=m?parseFloat(m[0]):0;
-  return b>20&&b<300?b:0;
-}
-function _id3DecodeTxxx(fdata){
-  const enc=fdata[0];let cut=-1,step=(enc===1||enc===2)?2:1;
-  if(step===1){for(let i=1;i<fdata.length;i++){if(fdata[i]===0){cut=i;break;}}}
-  else{for(let i=1;i+1<fdata.length;i+=2){if(fdata[i]===0&&fdata[i+1]===0){cut=i;break;}}}
-  if(cut<0)return{desc:_id3DecodeText(fdata),value:''};
-  const desc=_id3DecodeText(new Uint8Array([enc,...fdata.slice(1,cut)]));
-  const value=_id3DecodeText(new Uint8Array([enc,...fdata.slice(cut+step)]));
-  return{desc,value};
-}
-function _id3ApplyTextFrame(tags,fid,fdata){
-  const txt=_id3DecodeText(fdata);
-  if(fid==='TIT2'&&txt)tags.title=txt;
-  if(fid==='TPE1'&&txt)tags.artist=txt;
-  if(fid==='TPE2'&&txt&&!tags.artist)tags.artist=txt;
-  if(fid==='TKEY'&&txt)tags.key=txt;
-  if(fid==='TBPM'&&txt){const b=_id3ParseBpm(txt);if(b>0){tags.bpm=b;tags.bpmSource='TBPM';}}
-  if(fid==='TXXX'&&!tags.bpm){
-    const txxx=_id3DecodeTxxx(fdata);
-    const desc=String(txxx.desc||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-    if(desc==='bpm'||desc==='tempo'||desc==='trackbpm'){
-      const b=_id3ParseBpm(txxx.value);
-      if(b>0){tags.bpm=b;tags.bpmSource='TXXX:'+txxx.desc;}
-    }
-  }
-}
-function _normalizeAnalyzedBpm(bpm){
-  const b=Number(bpm)||0;
-  if(!(b>0))return 0;
-  const r=Math.round(b);
-  return Math.abs(b-r)<=0.35?r:Math.round(b*10)/10;
-}
-
-async function readID3Tags(file){
-  const tags={title:'',artist:'',art:null,key:'',bpm:0,bpmSource:''};
-  try{
-    const buf=await file.slice(0,Math.min(file.size,524288)).arrayBuffer();
-    const view=new DataView(buf);
-    let id3Start=0;
-    // AIFF: ID3v2 lives inside an 'ID3 ' chunk (may be at end of file)
-    if(view.getUint32(0,false)===0x464F524D){ // "FORM"
-      const formType=String.fromCharCode(view.getUint8(8),view.getUint8(9),view.getUint8(10),view.getUint8(11));
-      if(formType==='AIFF'||formType==='AIFC'){
-        // scan all chunks — ID3 tag may appear after the large SSND chunk
-        const id3Off=await _findAIFFId3(file);
-        if(id3Off<0)return tags;
-        const id3Buf=await file.slice(id3Off,id3Off+524288).arrayBuffer();
-        const id3V=new DataView(id3Buf);
-        if(id3V.getUint8(0)!==0x49||id3V.getUint8(1)!==0x44||id3V.getUint8(2)!==0x33)return tags;
-        const id3ver=id3V.getUint8(3);
-        const id3sz=(id3V.getUint8(6)&0x7F)<<21|(id3V.getUint8(7)&0x7F)<<14|(id3V.getUint8(8)&0x7F)<<7|(id3V.getUint8(9)&0x7F);
-        let ip=10;const ie=Math.min(10+id3sz,id3Buf.byteLength);
-        while(ip+10<ie){
-          const fid=String.fromCharCode(id3V.getUint8(ip),id3V.getUint8(ip+1),id3V.getUint8(ip+2),id3V.getUint8(ip+3));
-          if(fid[0]==='\0')break;
-          let fsz=id3ver===4?(id3V.getUint8(ip+4)&0x7F)<<21|(id3V.getUint8(ip+5)&0x7F)<<14|(id3V.getUint8(ip+6)&0x7F)<<7|(id3V.getUint8(ip+7)&0x7F):id3V.getUint32(ip+4,false);
-          if(fsz<=0||ip+10+fsz>ie)break;
-          const fdata=new Uint8Array(id3Buf,ip+10,fsz);
-          if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TKEY'||fid==='TBPM'||fid==='TXXX')_id3ApplyTextFrame(tags,fid,fdata);
-          if(fid==='APIC'&&!tags.art){try{const enc=fdata[0];let o=1;let mime='';while(o<fdata.length&&fdata[o]!==0){mime+=String.fromCharCode(fdata[o]);o++;}o++;o++;if(enc===0||enc===3){while(o<fdata.length&&fdata[o]!==0)o++;o++;}else{while(o+1<fdata.length){if(fdata[o]===0&&fdata[o+1]===0){o+=2;break;}o+=2;}}if(o<fdata.length){const imgData=fdata.slice(o);if(!mime||mime==='image/')mime=imgData[0]===0x89?'image/png':'image/jpeg';const blob=new Blob([imgData],{type:mime});tags.art=URL.createObjectURL(blob);tags._artRaw=imgData;}}catch(_){}}
-          ip+=10+fsz;
-        }
-        return tags;
-      }
-    }
-    // ID3v2 header check: "ID3"
-    if(view.getUint8(id3Start)!==0x49||view.getUint8(id3Start+1)!==0x44||view.getUint8(id3Start+2)!==0x33) return tags;
-    const ver=view.getUint8(id3Start+3);
-    const sz=(view.getUint8(id3Start+6)&0x7F)<<21|(view.getUint8(id3Start+7)&0x7F)<<14|(view.getUint8(id3Start+8)&0x7F)<<7|(view.getUint8(id3Start+9)&0x7F);
-    let pos=id3Start+10;
-    const end=Math.min(id3Start+10+sz,buf.byteLength);
-    while(pos+10<end){
-      const fid=String.fromCharCode(view.getUint8(pos),view.getUint8(pos+1),view.getUint8(pos+2),view.getUint8(pos+3));
-      if(fid[0]==='\0') break;
-      let fsz;
-      if(ver===4) fsz=(view.getUint8(pos+4)&0x7F)<<21|(view.getUint8(pos+5)&0x7F)<<14|(view.getUint8(pos+6)&0x7F)<<7|(view.getUint8(pos+7)&0x7F);
-      else fsz=view.getUint32(pos+4);
-      if(fsz<=0||pos+10+fsz>end) break;
-      const fdata=new Uint8Array(buf,pos+10,fsz);
-      if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TKEY'||fid==='TBPM'||fid==='TXXX')_id3ApplyTextFrame(tags,fid,fdata);
-      // APIC: album art (front cover preferred)
-      if(fid==='APIC'&&!tags.art){
-        try{
-          const enc=fdata[0];let o=1;
-          let mime='';while(o<fdata.length&&fdata[o]!==0){mime+=String.fromCharCode(fdata[o]);o++;}o++; // null-terminate
-          const picType=fdata[o];o++;
-          // skip description string
-          if(enc===0||enc===3){while(o<fdata.length&&fdata[o]!==0)o++;o++;}
-          else{while(o+1<fdata.length){if(fdata[o]===0&&fdata[o+1]===0){o+=2;break;}o+=2;}}
-          if(o<fdata.length){
-            const imgData=fdata.slice(o);
-            // Detect MIME by magic bytes (more reliable than APIC mime string)
-            if(imgData[0]===0xFF&&imgData[1]===0xD8) mime='image/jpeg';
-            else if(imgData[0]===0x89&&imgData[1]===0x50) mime='image/png';
-            else if(imgData[0]===0x47&&imgData[1]===0x49) mime='image/gif';
-            else if(!mime||!mime.startsWith('image/')) mime='image/jpeg';
-            console.log(`[ID3 APIC] enc=${enc} picType=${picType} mime=${mime} size=${imgData.length} magic=0x${imgData[0].toString(16)}${imgData[1].toString(16)}`);
-            const blob=new Blob([imgData],{type:mime});
-            tags.art=URL.createObjectURL(blob);
-            tags._artRaw=imgData;  // keep raw bytes for virtual dbserver
-          }else{console.warn('[ID3 APIC] no image data after header, o='+o+' fdata.length='+fdata.length);}
-        }catch(e){console.warn('[ID3 APIC parse error]',e);}
-      }
-      pos+=10+fsz;
-    }
-  }catch(e){console.warn('ID3 parse error:',e);}
-  return tags;
-}
-
-// BPM analysis — Spectral Flux + Generalized Autocorrelation
-// FFT window=1024, hop=512, spectral flux onset → GAC with √ exponent
-// Detect first audio position above -69dB (amplitude ≈ 0.000355)
-function detectAudioStart(ch, sr){
-  const threshold=Math.pow(10, -69/20); // -69dB → ~0.000355
-  const winSamples=Math.round(sr*0.005); // 5ms window for RMS
-  for(let i=0;i<ch.length-winSamples;i+=winSamples){
-    let sum=0;
-    for(let j=0;j<winSamples;j++){const s=ch[i+j]||0;sum+=s*s;}
-    if(Math.sqrt(sum/winSamples)>=threshold) return i/sr*1000; // ms
-  }
-  return 0;
-}
-
-async function analyzeBPM(blob){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:44100});
-    const ab=await blob.arrayBuffer();
-    const buf=await ctx.decodeAudioData(ab);
-    ctx.close();
-    const ch=buf.getChannelData(0),sr=buf.sampleRate;
-
-    // --- Energy-based onset detection (much faster than DFT) ---
-    const hopSz=256, frameSz=1024;
-    // Analyse 45 seconds from the middle for stable BPM
-    const maxSamples=Math.min(ch.length, sr*45);
-    const startSample=Math.max(0, Math.floor((ch.length-maxSamples)/2));
-    const nFrames=Math.floor((maxSamples-frameSz)/hopSz);
-    if(nFrames<100) return {bpm:0,startMs:0};
-
-    // Low-pass filter for kick detection (< 200Hz)
-    const aLP=Math.min(1, 2*Math.PI*200/sr);
-    // Compute sub-band energy per frame (kick-focused)
-    const energy=new Float32Array(nFrames);
-    let lp=0;
-    for(let f=0;f<nFrames;f++){
-      const off=startSample+f*hopSz;
-      let eLow=0,eFull=0;
-      for(let i=0;i<frameSz;i++){
-        const s=ch[off+i]||0;
-        lp+=aLP*(s-lp);
-        eLow+=lp*lp;
-        eFull+=s*s;
-      }
-      // Weighted: 70% kick energy + 30% full energy for better transient detection
-      energy[f]=0.7*eLow/frameSz + 0.3*eFull/frameSz;
-    }
-
-    // Onset detection: energy derivative (positive flux)
-    const onset=new Float32Array(nFrames);
-    for(let f=1;f<nFrames;f++){
-      const d=energy[f]-energy[f-1];
-      onset[f]=d>0?d:0;
-    }
-
-    // Adaptive threshold: local mean + 1.5*std in 0.5s windows
-    const winFrames=Math.round(500/(hopSz/sr*1000));
-    const peaks=new Float32Array(nFrames);
-    for(let f=0;f<nFrames;f++){
-      const lo=Math.max(0,f-winFrames),hi=Math.min(nFrames,f+winFrames);
-      let sum=0,sum2=0,cnt=0;
-      for(let i=lo;i<hi;i++){sum+=onset[i];sum2+=onset[i]*onset[i];cnt++;}
-      const mean=sum/cnt,std=Math.sqrt(sum2/cnt-mean*mean);
-      peaks[f]=onset[f]>(mean+1.5*std)?onset[f]:0;
-    }
-
-    // Autocorrelation on onset peaks
-    const hopMs=hopSz/sr*1000;
-    const minLag=Math.round(60000/(200*hopMs)); // 200 BPM
-    const maxLag=Math.round(60000/(60*hopMs));   // 60 BPM
-    const corrLen=Math.min(nFrames, Math.round(20000/hopMs));
-    const corr=new Float32Array(maxLag+1);
-
-    for(let lag=minLag;lag<=Math.min(maxLag,nFrames-1);lag++){
-      let c=0;
-      for(let i=0;i<corrLen&&i+lag<nFrames;i++) c+=peaks[i]*peaks[i+lag];
-      corr[lag]=c;
-    }
-
-    // Find peaks in correlation
-    const cPeaks=[];
-    for(let lag=minLag+1;lag<maxLag&&lag<nFrames-1;lag++){
-      if(corr[lag]>corr[lag-1]&&corr[lag]>corr[lag+1]&&corr[lag]>0){
-        // Parabolic interpolation for sub-frame precision
-        const a2=corr[lag-1],b2=corr[lag],c2=corr[lag+1];
-        const denom=a2-2*b2+c2;
-        const frac=denom!==0?(a2-c2)/(2*denom):0;
-        cPeaks.push({lag:lag+frac,val:b2});
-      }
-    }
-    cPeaks.sort((a,b)=>b.val-a.val);
-    if(cPeaks.length===0) return {bpm:0,startMs:0};
-
-    // Octave analysis: check multiples
-    let bestLag=cPeaks[0].lag;
-    const bestVal=cPeaks[0].val;
-
-    // Check half-lag (double BPM) — prefer faster tempo if strong
-    const halfLag=bestLag/2;
-    if(halfLag>=minLag){
-      // Find correlation near halfLag
-      const hIdx=Math.round(halfLag);
-      const hVal=corr[Math.max(minLag,Math.min(maxLag,hIdx))]||0;
-      if(hVal>bestVal*0.6) bestLag=halfLag;
-    }
-    // Check 2x lag (half BPM) — if much stronger, use it
-    const dblLag=bestLag*2;
-    if(dblLag<=maxLag){
-      const dIdx=Math.round(dblLag);
-      const dVal=corr[Math.max(minLag,Math.min(maxLag,dIdx))]||0;
-      if(dVal>bestVal*1.3) bestLag=dblLag;
-    }
-
-    let bpm=60000/(bestLag*hopMs);
-    // Normalize to 70-180 BPM range (DJ standard for electronic/dance)
-    while(bpm>180) bpm/=2;
-    while(bpm<70) bpm*=2;
-    // Round to nearest 0.1
-    bpm=Math.round(bpm*10)/10;
-
-    // Detect audio start at -69dB
-    const startMs=detectAudioStart(ch,sr);
-
-    return {bpm, startMs, numberOfChannels: buf.numberOfChannels||2};
-  }catch(e){console.warn('[BPM]',e);return {bpm:0,startMs:0,numberOfChannels:2};}
-}
+// ID3 frame decoding (_id3DecodeText/_id3ParseBpm/_id3DecodeTxxx/_id3ApplyTextFrame)
+// → renderer/id3-parser.js (Phase 4.13). 글로벌 lexical env 호환.
+// readID3Tags → renderer/id3-parser.js (Phase 4.13). 글로벌 lexical env 호환.
+// _normalizeAnalyzedBpm/detectAudioStart/analyzeBPM → renderer/bpm-analysis.js (Phase 4.15).
 
 function loadFile(slot,f){
   const d=DECKS[slot];if(!d)return;
@@ -4610,11 +5103,16 @@ function loadFile(slot,f){
   }
   // audio init — AIFF files are converted to WAV first (Chromium has no AIFF decoder)
   const _initAudio=(audioBlob)=>{
-    d._rgbWfFineToken=(d._rgbWfFineToken||0)+1;
+    // _loadToken: 트랙 변경 시 증가 → in-flight PCM decode 콜백이 stale 결과 폐기.
+    d._loadToken=(d._loadToken||0)+1;
     d._audioBlob=audioBlob;
-    d.rgbWfFine=null;d._rgbWfFinePromise=null;
+    d._pcm=null;d._pcmPromise=null;
+    // Theme-aware wf cache 도 트랙 변경 시 invalidate (Phase 4.0).
+    d._wfByTheme=null;
     if(d.au){d.au.pause();URL.revokeObjectURL(d.au.src);d.au=null;}
     d.au=new Audio();d.au.src=URL.createObjectURL(audioBlob);d.au.preload='auto';
+    // PCM 디코드 트랙 로드 직후 즉시 트리거 (첫 렌더까지 기다리지 않음). 워커가 다른 코어에서 처리.
+    setTimeout(()=>{ try{_decodePcmFor(d, slot);}catch(_){} }, 0);
     if(cfg.aoId)setOut(d.au,cfg.aoId);
     d.au.addEventListener('loadedmetadata',()=>{
       d.dur=d.au.duration*1000;d.bpm=0;d.ld=true;
@@ -4660,20 +5158,37 @@ function loadFile(slot,f){
           window.bridge.setVirtualArt(slot, null);
         }
       }
-      // Defer analysis so audio is playable immediately
+      // Defer analysis so audio is playable immediately.
+      // _loadToken 캡처: 분석 중 트랙 바뀌면 결과 폐기 (race condition 방지).
       setTimeout(async()=>{
         d._pwv7=false;
+        const analysisToken = d._loadToken||0;
+        // Theme-specific preset — 현재 wfTheme 으로 분석. 결과는 d._wfByTheme 에 cache.
+        const _curTheme = wfTheme;
+        const _preset = _wfThemePreset(_curTheme);
+        d._wfByTheme = d._wfByTheme || {};
+        d._wfAudioBlob = audioBlob;
         buildRGBWaveform(audioBlob,(done,partial)=>{
+            // stale: 트랙 바뀜 → partial chunk 무시
+            if(d._loadToken !== analysisToken) return;
             d.rgbWf=partial;
             d.rgbWfPts=Math.max(d.rgbWfPts||0,_wfLen(partial));
             const prog2=document.getElementById('dwov-prog'+slot);
-            if(prog2)prog2.style.width=(done/(d.rgbWfPts||8000)*100).toFixed(1)+'%';
+            if(prog2){
+              const pct = Math.min(100, (done/(d.rgbWfPts||8000))*100);
+              prog2.style.width = pct.toFixed(1)+'%';
+              prog2.dataset.pct = 'ANALYZING ' + pct.toFixed(0) + '%';
+            }
             if(partial&&_wfLen(partial)>2)_queuePartialWaveformPaint(slot,d,120);
-          },d.dur).then(wf=>{
+          },d.dur, undefined, undefined, _preset).then(wf=>{
+            // stale: 트랙 바뀜 → 최종 결과도 폐기
+            if(d._loadToken !== analysisToken) return;
             d.rgbWf=wf;
+            // Theme cache — 추후 theme 변경 시 재분석 없이 swap.
+            if(wf) d._wfByTheme[_curTheme]=wf;
             d._wfCache=null;
             const prog2=document.getElementById('dwov-prog'+slot);
-            if(prog2)prog2.style.width='0';
+            if(prog2){ prog2.style.width='0'; prog2.dataset.pct=''; }
             if(wf){
               buildWaveformCache(slot);
               // Upload data + ensure GL contexts exist, then draw immediately
@@ -4687,7 +5202,6 @@ function loadFile(slot,f){
                 drawOverview(slot,0);drawZoomWaveform(slot,0);
               }
             }
-            _scheduleRgbFineBuild(d,slot,d.pl?8000:2000);
         });
         Promise.resolve(d._id3Promise||Promise.resolve()).then(()=>analyzeBPM(audioBlob)).then(result=>{
           const analyzedBpm=result.bpm||0, startMs=result.startMs||0;
@@ -4936,9 +5450,7 @@ function doPlay(slot){
   const d=DECKS[slot];if(!d?.ld||!d.au||d.type==='hw')return;
   if(d.pl){
     d.au.pause();d.pl=false;
-    _scheduleRgbFineBuild(d,slot,1500);
   } else {
-    clearTimeout(d._rgbFineTimer);
     d.au.play().catch(()=>{});d.pl=true;d.cu=false;
   }
   _sendTCState(slot);
@@ -4977,7 +5489,6 @@ function doCueUp(slot){
   d.au.pause();
   d.au.currentTime=d.cp||0;
   d.pl=false;d.cu=true;
-  _scheduleRgbFineBuild(d,slot,1500);
   _sendTCState(slot);
   _artForceResync?.();
 }
@@ -4985,7 +5496,6 @@ function doCueUp(slot){
 function doReturnToStart(slot){
   const d=DECKS[slot];if(!d?.ld||!d.au||d.type==='hw')return;
   d.au.pause();d.au.currentTime=0;d.pl=false;d.cu=false;d.cp=0;
-  _scheduleRgbFineBuild(d,slot,1500);
   _sendTCState(slot);
   _artForceResync?.();
 }
@@ -5115,7 +5625,7 @@ function doEject(slot){
   if(d._vuAllAns){d._vuAllAns.forEach(a=>{try{a.disconnect();}catch(_){}});d._vuAllAns=null;d._vuAllBufs=null;}
   d._applyNchFn=null;
   if(d.vuSrc){try{d.vuSrc.disconnect();}catch(_){}}
-  Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,rgbWfFine:null,_rgbWfFinePromise:null,_rgbWfFineToken:(d._rgbWfFineToken||0)+1,_audioBlob:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,art:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
+  Object.assign(d,{ld:false,pl:false,cu:false,tn:'',ar:'',dur:0,pos:0,bpm:0,cp:0,key:'',wf:null,wfCtx:null,rgbWf:null,_loadToken:(d._loadToken||0)+1,_audioBlob:null,wovCtx:null,wzCtx:null,_wfCache:null,artUrl:null,art:null,_artRawB64:null,beatInBar:1,vuSrc:null,vuAn:null,vuBuf:null,vuAnL:null,vuAnR:null,vuBufL:null,vuBufR:null,vuL:0,vuR:0});
   if(E&&run)window.bridge.removeLayer(slot);
   patchDeck(slot);
 }
@@ -5185,9 +5695,16 @@ document.addEventListener('click',e=>{
   else if(act==='hw')doToggleHW(slot);
   else if(act==='remove')removeVirtualDeck(slot);
   else if(act==='expand')doExpandDeck(slot);
-  else if(act==='zoom-in'){const d2=DECKS[slot];if(d2)d2.zoomMs=Math.max(2000,(d2.zoomMs||8000)/2);}
-  else if(act==='zoom-out'){const d2=DECKS[slot];if(d2)d2.zoomMs=Math.min(32000,(d2.zoomMs||8000)*2);}
-  else if(act==='zoom-rst'){const d2=DECKS[slot];if(d2)d2.zoomMs=8000;}
+  else if(act==='zoom-in'){const d2=DECKS[slot];if(d2){d2.zoomMs=Math.max(500,(d2.zoomMs||8000)/2);_persistZoomMs(d2.zoomMs);}}
+  else if(act==='zoom-out'){
+    // 축소 캡: 트랙 길이의 2배까지 — 긴 곡(10분+)도 한 화면에 모두 보일 수 있게.
+    // (트랙 길이 자체로 cap 시 화면 끝까지 사용해 시각적으로 빡빡 → 2x 여유로 padding 효과)
+    const d2=DECKS[slot];if(!d2)return;
+    const cap=d2.dur>0?d2.dur*2:1800000; // 트랙 모름 시 30분
+    d2.zoomMs=Math.min(cap,(d2.zoomMs||8000)*2);
+    _persistZoomMs(d2.zoomMs);
+  }
+  else if(act==='zoom-rst'){const d2=DECKS[slot];if(d2){d2.zoomMs=8000;_persistZoomMs(8000);}}
   else if(act==='mtc-master'){
     // MTC Master: toggle — binds only to M output layer (not A/B)
     const d2=DECKS[slot];if(!d2)return;
@@ -5214,6 +5731,51 @@ document.getElementById('addDeckBtn').addEventListener('click',addVirtualDeck);
 let _wfF=0,_slowAt=0; // _slowAt: 1s throttle for status bar + TCNet stats
 let _lastDeckUiPaint=0;
 let _lastDeckVuPaint=0;
+
+// ── tick 안 매 프레임 alloc 되던 closure / 객체 → module 레벨 hoist (4 deck × 60fps = GC 부담 절감) ──
+// USB media → 플레이어 번호 색 (CDJ-3000 매핑). 트랙 메타 1=PINK,2=RED,3=ORG,4=YEL,5=GRN,6=CYN,7=BLU,8=PUR.
+const _MEDIA_COLORS = {1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
+// 자가-치유 marquee — text 변동/overflow 감지 후 .scrolling 클래스 토글. 200ms throttle 로 layout thrashing 방지.
+function _ensureMarquee(el, txt){
+  if(!el) return;
+  const inner = el.querySelector('.mq-inner');
+  const curTxt = inner ? inner.textContent : el.textContent;
+  if(curTxt !== txt){
+    el.classList.remove('scrolling');
+    el.textContent = txt;
+    el._mqLast = 0;
+  }
+  if(el.classList.contains('scrolling')) return;
+  const now = Date.now();
+  if(el._mqLast && now - el._mqLast < 200) return;
+  el._mqLast = now;
+  const cw = el.clientWidth, sw = el.scrollWidth;
+  if(cw === 0 || sw <= cw + 5 || !txt) return;
+  const wrap = document.createElement('span');
+  wrap.className = 'mq-inner';
+  wrap.textContent = txt;
+  el.textContent = '';
+  el.appendChild(wrap);
+  const overflow = sw - cw;
+  el.style.setProperty('--scroll-dist', '-' + overflow + 'px');
+  el.style.setProperty('--scroll-dur', Math.max(5, overflow/25) + 's');
+  el.classList.add('scrolling');
+}
+// VU 막대 dB 매핑. tier 변동 시에만 background 갱신 (style string 매번 parse 회피).
+function _vuBarSet(el, v){
+  if(!el) return;
+  const db = v>0.0001 ? 20*Math.log10(v) : -45;
+  const h = Math.min(100, Math.max(0, (db+45)*100/45));
+  el.style.setProperty('--vu-level', h+'%');
+  // 3단계 tier (>90 / >70 / 그 외) — tier 안 바뀌면 style.background skip.
+  const tier = h>90?2:h>70?1:0;
+  if(el._vuTier !== tier){
+    el._vuTier = tier;
+    el.style.background = tier===2 ? 'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 55%,#ff6b6b 100%)'
+                          : tier===1 ? 'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 100%)'
+                          : 'var(--grn)';
+  }
+}
 function tick(){
   _wfF++;
   tcTick();
@@ -5227,19 +5789,27 @@ function tick(){
 
   if(run){up=Math.floor((now-t0)/1000);pk++;}
 
-  // Faders (only when running with bridge)
+  // Faders (only when running with bridge) — _hdrEl 캐시로 매 tick × 3 getElementById/ch 절감.
   if(run){
     faders.forEach((v,i)=>{
       const pct=Math.round(v/255*100);
-      const fb=document.getElementById('fb'+i);if(fb)fb.style.height=pct+'%';
-      const fv=document.getElementById('fv'+i);if(fv)fv.textContent=pct+'%';
-      const fa=document.getElementById('fair'+i);if(fa)fa.classList.toggle('hide',!onAirCh[i]);
+      const fb=_hdrEl('fb'+i);if(fb)fb.style.height=pct+'%';
+      const fv=_hdrEl('fv'+i);if(fv)fv.textContent=pct+'%';
+      const fa=_hdrEl('fair'+i);if(fa)fa.classList.toggle('hide',!onAirCh[i]);
     });
   }
 
   Object.values(DECKS).forEach(d=>{
+    try{
     const slot=d.slot;
-    const el=document.getElementById('dk'+slot);if(!el)return;
+    // d._els.dk: bindDeck/_buildDeckElsCache 가 미리 캐시 — getElementById 매 tick × 4 deck 절감.
+    // stale ref 방지: dk DOM 이 detach 됐으면 fallback 으로 1회 lookup + cache 재빌드.
+    let el=d._els&&d._els.dk;
+    if(!el || !el.isConnected){
+      _buildDeckElsCache(slot, d);
+      el = d._els && d._els.dk;
+    }
+    if(!el)return;
     // update virtual deck playback position — ALWAYS (not gated by run)
     // Skip during scratch/drag: pos is controlled by pointermove, not audio element
     if(d.type!=='hw'&&d.au&&d.ld&&!d.scratch){
@@ -5324,64 +5894,64 @@ function tick(){
     const prog=d.dur>0?Math.max(0,Math.min(1,displayPos/d.dur)):0;
 
     if(shouldPaintDeckUi){
-    // UI updates — throttled to keep TCNet/audio priority stable
-    // Sync data-type attribute for CSS-based HW/Virtual element visibility
-    el.setAttribute('data-type', d.type==='hw'?'hw':'virtual');
-    // HW/Virtual 동일한 상태 표시 — 루프 중이면 play와 동일하게 처리
-    el.setAttribute('data-st',d._isLooping?'play':d._isReverse?'play':d.pl?'play':d.scratch?'play':d.cu?'cue':'stop');
-    // USB media color — deck border + glow via inline style (overrides data-st CSS)
+    // UI updates — throttled to keep TCNet/audio priority stable.
+    // setAttribute/style 변경은 reflow 트리거 가능 → key 가드로 변동 시만 갱신.
+    const _dt = d.type==='hw'?'hw':'virtual';
+    if(d._lastDtAttr!==_dt){ d._lastDtAttr=_dt; el.setAttribute('data-type', _dt); }
+    const _dst = d._isLooping?'play':d._isReverse?'play':d.pl?'play':d.scratch?'play':d.cu?'cue':'stop';
+    if(d._lastDstAttr!==_dst){ d._lastDstAttr=_dst; el.setAttribute('data-st', _dst); }
+    // USB media color — deck border + glow via inline style (overrides data-st CSS).
     {
-      const _MCOL={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
+      const _MCOL=_MEDIA_COLORS;
       const _mc=d.type==='hw'&&d._mediaColor>0?(_MCOL[d._mediaColor]||''):'';
-      if(_mc){
-        el.style.borderColor=_mc;el.style.borderWidth='2px';
-        el.style.boxShadow='none';
-      }else{
-        el.style.borderColor='';el.style.borderWidth='';el.style.boxShadow='';
+      if(d._lastMcKey!==_mc){
+        d._lastMcKey=_mc;
+        if(_mc){
+          el.style.borderColor=_mc; el.style.borderWidth='2px'; el.style.boxShadow='none';
+        }else{
+          el.style.borderColor=''; el.style.borderWidth=''; el.style.boxShadow='';
+        }
       }
     }
-    const tc=document.getElementById('dtc'+slot);
+    const tc=d._els.dtc;
     if(tc)tc.textContent=fTC(displayPos);
-    const timeEl=document.getElementById('dtime'+slot);
-    if(timeEl)timeEl.textContent=fTmMs(displayPos)+' / '+(d.dur>0?fTmMs(d.dur):'--:--.---');
-    // 자가-치유 marquee: 매 tick 마다 overflow 상태 확인. text 바뀌었으면 reset,
-    // scrolling 아직 없는데 overflow 발생했으면 marquee 재적용. 200ms throttle.
-    const ensureMarquee=(el, txt)=>{
-      if(!el) return;
-      const inner = el.querySelector('.mq-inner');
-      const curTxt = inner ? inner.textContent : el.textContent;
-      if(curTxt !== txt){
-        el.classList.remove('scrolling');
-        el.textContent = txt;
-        el._mqLast = 0;  // force immediate re-check
+    const timeEl=d._els.dtime;
+    if(timeEl){
+      // 시간 표시 모드: localStorage 우선 → observatory='rem' 기본 → 그 외='cur'
+      const _layoutNow2=document.body.dataset.layout||'';
+      if(d._timeMode==null){
+        let saved=null; try{ saved = localStorage.getItem('time_mode_pref'); }catch(_){}
+        d._timeMode = (saved === 'rem' || saved === 'cur') ? saved
+          : ((_layoutNow2==='observatory') ? 'rem' : 'cur');
       }
-      if(el.classList.contains('scrolling')) return;
-      const now = Date.now();
-      if(el._mqLast && now - el._mqLast < 200) return;
-      el._mqLast = now;
-      const cw = el.clientWidth, sw = el.scrollWidth;
-      if(cw === 0 || sw <= cw + 5 || !txt) return;
-      const wrap = document.createElement('span');
-      wrap.className = 'mq-inner';
-      wrap.textContent = txt;
-      el.textContent = '';
-      el.appendChild(wrap);
-      const overflow = sw - cw;
-      el.style.setProperty('--scroll-dist', '-' + overflow + 'px');
-      el.style.setProperty('--scroll-dur', Math.max(5, overflow/25) + 's');
-      el.classList.add('scrolling');
-    };
-    ensureMarquee(document.getElementById('dtn'+slot), d.tn||'—');
-    ensureMarquee(document.getElementById('dta'+slot), d.ar||'—');
+      if(!timeEl.style.cursor) timeEl.style.cursor='pointer';
+      const totalStr = d.dur>0 ? fTmMs(d.dur) : '--:--.---';
+      const isRem = d._timeMode === 'rem';
+      const leftMs = isRem ? Math.max(0, (d.dur||0) - displayPos) : displayPos;
+      const leftStr = d.dur>0 ? (isRem?'-':'')+fTmMs(leftMs) : '--:--.---';
+      if(_layoutNow2==='observatory' && timeEl.classList.contains('obs-tc-rem')){
+        // .neg / .total 자식 노드 캐시 — Observatory 레이아웃 동안 timeEl 고정 (DOM 재생성 시 d._els 갱신).
+        if(d._timeNegEl?.parentElement !== timeEl){
+          d._timeNegEl=timeEl.querySelector('.neg');
+          d._timeTotEl=timeEl.querySelector('.total');
+        }
+        if(d._timeNegEl) d._timeNegEl.textContent=leftStr;
+        if(d._timeTotEl) d._timeTotEl.textContent=totalStr;
+      } else {
+        timeEl.textContent = leftStr + ' / ' + totalStr;
+      }
+    }
+    _ensureMarquee(d._els.dtn, d.tn||'—');
+    _ensureMarquee(d._els.dta, d.ar||'—');
     // dtsep 은 Tower/Row 의 inline 'artist — title' 레이아웃에서만 의미가 있음.
     // Card(Simple) 는 vertical stack 이라 항상 hide. 다른 layout 은 항상 show.
-    const dtsepEl=document.getElementById('dtsep'+slot);
+    const dtsepEl=d._els.dtsep;
     if(dtsepEl){
       const isCard=document.body.dataset.layout==='card';
       dtsepEl.style.display=isCard?'none':'';
     }
     // Waveform key + BPM — 2-line display in TC info section
-    const wfkEl=document.getElementById('wfkey'+slot);
+    const wfkEl=d._els.wfkey;
     if(wfkEl){
       const raw=d.key||'';
       const cam=raw.split(' / ')[0]||'';
@@ -5389,26 +5959,40 @@ function tick(){
       wfkEl.textContent=cam||'—';
       wfkEl.style.display='';
     }
-    const wfbEl=document.getElementById('wfbpm'+slot);
+    const wfbEl=d._els.wfbpm;
     if(wfbEl){
       const hasBpm=d.bpm>0;
-      const _bpmFmt=(v)=>{const int=Math.floor(v),dec=((v-int)*10+0.5|0)%10;return`${int}<span style="font-size:0.7em;opacity:0.7">.${dec}</span>`;};
-      if(hasBpm){
-        const pitchPct=d.pitch!==undefined?d.pitch:((d.baseBpm&&d.baseBpm>0)?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
-        const ps=Math.abs(pitchPct)<0.05?'±0.00%':(pitchPct>0?'+':'')+pitchPct.toFixed(2)+'%';
-        const baseVal=(d.baseBpm&&d.baseBpm>0)?d.baseBpm:d.bpm;
-        const baseStr=_bpmFmt(baseVal);
-        const curStr=_bpmFmt(d.bpm);
-        wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;
-      }else{
-        // BPM 없는 트랙 — pitch fader 값은 별도로 수신되므로 표기, BPM 자리는 '—'.
-        const pp=(d.pitch!==undefined)?d.pitch:0;
-        const ps=Math.abs(pp)<0.05?'±0.00%':(pp>0?'+':'')+pp.toFixed(2)+'%';
-        wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap">—</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur" style="color:var(--tx4);opacity:.6">—<span style="font:400 9px var(--mn);color:var(--tx4);margin-left:2px">BPM</span></span>`;
+      // 60fps × 4 deck = 240 innerHTML/sec → 변동 시에만 갱신 (key 비교).
+      const pp=(d.pitch!==undefined)?d.pitch:(hasBpm&&d.baseBpm&&d.baseBpm>0?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
+      const _bpmKey=`${hasBpm?d.bpm.toFixed(2):'-'}|${(d.baseBpm||0).toFixed(2)}|${pp.toFixed(2)}`;
+      if(d._lastBpmKey!==_bpmKey){
+        d._lastBpmKey=_bpmKey;
+        const _bpmFmt=(v)=>{const int=Math.floor(v),dec=((v-int)*10+0.5|0)%10;return`${int}<span style="font-size:0.7em;opacity:0.7">.${dec}</span>`;};
+        if(hasBpm){
+          const ps=Math.abs(pp)<0.05?'±0.00%':(pp>0?'+':'')+pp.toFixed(2)+'%';
+          const baseVal=(d.baseBpm&&d.baseBpm>0)?d.baseBpm:d.bpm;
+          const baseStr=_bpmFmt(baseVal);
+          const curStr=_bpmFmt(d.bpm);
+          // 모든 값은 내부 계산된 숫자 포맷 — 외부 사용자 입력 아님 (XSS 안전).
+          wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${baseStr}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${curStr}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;
+        }else{
+          const ps=Math.abs(pp)<0.05?'±0.00%':(pp>0?'+':'')+pp.toFixed(2)+'%';
+          wfbEl.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx4);font-variant-numeric:tabular-nums;white-space:nowrap">—</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur" style="color:var(--tx4);opacity:.6">—<span style="font:400 9px var(--mn);color:var(--tx4);margin-left:2px">BPM</span></span>`;
+        }
       }
     }
-    const dhwlEl=document.getElementById('dhwl'+slot);
-    if(dhwlEl){const _hxSvg='<svg class="gi gi-hex"><use href="#i-hex"/></svg>';const _cirSvg='<svg class="gi gi-hex"><use href="#i-circle"/></svg>';dhwlEl.innerHTML=d.type==='hw'?(d.model?_hxSvg+' '+d.model:_hxSvg+' HW'):_cirSvg+' VIRTUAL';}
+    const dhwlEl=d._els.dhwl;
+    if(dhwlEl){
+      // d.type/d.model 은 CDJ 연결/해제 시에만 변동 → key 가드.
+      const _hwlKey=`${d.type==='hw'?1:0}|${d.model||''}`;
+      if(d._lastHwlKey!==_hwlKey){
+        d._lastHwlKey=_hwlKey;
+        const _hxSvg='<svg class="gi gi-hex"><use href="#i-hex"/></svg>';
+        const _cirSvg='<svg class="gi gi-hex"><use href="#i-circle"/></svg>';
+        // d.model 은 Pro DJ Link CDJ 디바이스 ID — 신뢰 가능한 LAN 소스, XSS 위험 없음.
+        dhwlEl.innerHTML=d.type==='hw'?(d.model?_hxSvg+' '+d.model:_hxSvg+' HW'):_cirSvg+' VIRTUAL';
+      }
+    }
 
     if(shouldPaintDeckVu){
       // VU meter — ALWAYS for virtual, only run-gated for HW
@@ -5441,18 +6025,22 @@ function tick(){
         d.vuL=peakL; d.vuR=peakR;
         d.vu=Math.max(peakL,peakR);
       }
-      // dB scale: peak 1.0 → 0dB, -45dB floor
-      const _vuBar=(id,v)=>{const el2=document.getElementById(id);if(!el2)return;const db=v>0.0001?20*Math.log10(v):-45;const h=Math.min(100,Math.max(0,(db+45)*100/45));el2.style.setProperty('--vu-level',h+'%');el2.style.background=h>90?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 55%,#ff6b6b 100%)':h>70?'linear-gradient(to top,var(--grn) 0%,var(--ylw2) 100%)':'var(--grn)';};
+      // dB scale: peak 1.0 → 0dB, -45dB floor (module 레벨 _vuBarSet — tier 변동 시에만 background 갱신).
+      // 캐시된 _els 우선, 없으면 fallback (다채널 L/R/3..8 은 cache 안 함 — 가변).
+      const _vuBarEl=(elOrId,v)=>{
+        const el = (typeof elOrId==='string') ? document.getElementById(elOrId) : elOrId;
+        _vuBarSet(el, v);
+      };
       if(d.type==='hw'){
-        _vuBar('dvuL'+slot,d.vuL||0);
+        _vuBarEl(d._els.dvuL, d.vuL||0);
         // Fader bar (linear, not dB)
-        const fEl=document.getElementById('dvuF'+slot);
+        const fEl=d._els.dvuF;
         if(fEl){const h=Math.round((d._faderSmooth||0)*100);fEl.style.setProperty('--vu-level',h+'%');fEl.style.background='var(--pur)';}
       } else if(d.vuChs&&d.vuChs.length>0){
         const CH_IDS=['L','R','3','4','5','6','7','8'];
-        d.vuChs.forEach((an,i)=>_vuBar('dvu'+(CH_IDS[i]||String(i+1))+slot, an._lvl||0));
+        d.vuChs.forEach((an,i)=>_vuBarEl('dvu'+(CH_IDS[i]||String(i+1))+slot, an._lvl||0));
       } else {
-        _vuBar('dvuL'+slot,d.vuL||0);_vuBar('dvuR'+slot,d.vuR||0);
+        _vuBarEl(d._els.dvuL, d.vuL||0); _vuBarEl(d._els.dvuR, d.vuR||0);
       }
     }
     if(d.type==='hw'){
@@ -5487,40 +6075,52 @@ function tick(){
       });
     }
 
-    const bg=document.getElementById('dbg'+slot);
+    const bg=d._els.dbg;
     if(bg){
-      // HW/Virtual 동일한 상태 배지
-      bg.textContent=d._isLooping?'LOOP':d._isReverse?'REV':d.pl?'PLAY':d.scratch?'HANDLING':d.cu?'CUE':'STOP';
-      bg.className='dbadge '+(d._isLooping?'bg':d._isReverse?'br':d.pl?'bg':d.scratch?'bb':d.cu?'by':'bm');
+      // HW/Virtual 동일한 상태 배지. textContent + className 둘 다 같은 상태에 의존 → key 가드.
+      const _bgKey = `${d._isLooping?'L':''}${d._isReverse?'R':''}${d.pl?'P':''}${d.scratch?'H':''}${d.cu?'C':''}`;
+      if(d._lastBgKey!==_bgKey){
+        d._lastBgKey=_bgKey;
+        bg.textContent=d._isLooping?'LOOP':d._isReverse?'REV':d.pl?'PLAY':d.scratch?'HANDLING':d.cu?'CUE':'STOP';
+        bg.className='dbadge '+(d._isLooping?'bg':d._isReverse?'br':d.pl?'bg':d.scratch?'bb':d.cu?'by':'bm');
+      }
     }
     // ON AIR badge — always visible, toggle on/off classes (no layout reflow)
-    const bAir=document.getElementById('dair'+slot);
+    const bAir=d._els.dair;
     if(bAir){bAir.classList.toggle('off',!d.onAir);bAir.classList.toggle('on',!!d.onAir);}
     // SYNC / MASTER LED buttons
-    const bSync=document.getElementById('dsync'+slot);
+    const bSync=d._els.dsync;
     if(bSync)bSync.classList.toggle('on',!!d.sync);
     // ddmst = deck sync MASTER (sec2), dmst = MTC MASTER out (sec4)
-    const bMst2=document.getElementById('ddmst'+slot);
+    const bMst2=d._els.ddmst;
     if(bMst2)bMst2.classList.toggle('on',!!d.master);
-    const bMst=document.getElementById('dmst'+slot);
+    const bMst=d._els.dmst;
     if(bMst)bMst.classList.toggle('on',!!d.mtcMaster);
-    const did=document.getElementById('did'+slot);
+    const did=d._els.did;
     if(did){
-      // HW: USB media color → player number color
+      // HW: USB media color → player number color. 색은 상태 변화 시에만 다시 set (key 가드).
       const _MCOL2={1:'#ff6b9d',2:'#ff4444',3:'#ff8c00',4:'#ffd700',5:'#44cc44',6:'#00cccc',7:'#4488ff',8:'#aa44ff'};
       const usbC=d.type==='hw'&&d._mediaColor>0?(_MCOL2[d._mediaColor]||''):'';
-      did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)');
+      const _didKey=`${d.type}|${d._mediaColor||0}|${d.scratch?1:0}|${d.pl?1:0}|${d.cu?1:0}`;
+      if(d._lastDidKey!==_didKey){
+        d._lastDidKey=_didKey;
+        did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)');
+      }
     }
-    // CUE/PLAY button states — CDJ-3000 style
-    const pb=el.querySelector('[data-a="play"]');
+    // CUE/PLAY button states — CDJ-3000 style. d._els 캐시 사용 (querySelector 8/frame 절감).
+    const pb=d._els.playBtn;
     if(pb){
-      pb.innerHTML=d.pl?'<svg class="gi gi-pause"><use href="#i-pause"/></svg>':'<svg class="gi gi-play"><use href="#i-play"/></svg>';
+      // SVG 자식은 d.pl toggle 시에만 교체. 평소엔 스킵 (60fps × 4 deck = 240 ops/sec 절감).
+      if(d._lastPlState!==!!d.pl){
+        d._lastPlState=!!d.pl;
+        pb.innerHTML=d.pl?'<svg class="gi gi-pause"><use href="#i-pause"/></svg>':'<svg class="gi gi-play"><use href="#i-play"/></svg>';
+      }
       pb.classList.toggle('ac',d.pl);
       pb.classList.toggle('blink',d.cu&&!d.pl); // blink in CUE state
       pb.classList.remove('blink');
       if(d.cu&&!d.pl) pb.classList.add('blink');
     }
-    const cub=el.querySelector('[data-a="cue"]');
+    const cub=d._els.cueBtn;
     if(cub){
       cub.classList.remove('ac','medium');
       if(d.cu&&!d.pl) cub.classList.add('ac');       // CUE active: bright
@@ -5529,7 +6129,7 @@ function tick(){
 
 
     // Overview/Waveform UI is expensive; skip while deck page is hidden.
-    const wov=document.getElementById('wov'+slot);
+    const wov=d._els.wov;
     if(deckUiVisible&&wov){
       const opW=d._ovTargetW||wov.width||0, opH=d._ovTargetH||wov.height||14;
       const ovStale=d.ovgl&&d.ovgl.gl.canvas!==wov;
@@ -5542,7 +6142,7 @@ function tick(){
           d._ovTargetW=opW;d._ovTargetH=opH;
           _sizeCvDpr(wov,opW,opH);
           try{d.ovgl=new OverviewGL(wov);d.wovCtx=null;}catch(e){d.wovCtx=wov.getContext('2d');}
-          const wovol=document.getElementById('wovol'+slot);
+          const wovol=d._els.wovol;
           if(wovol){_sizeCvDpr(wovol,opW,opH);d._wovOlCtx=_get2DCtxCss(wovol);}
           const wfD=_wfRenderDataForDeck(d);
           if(wfD&&d.ovgl)d.ovgl.setData(wfD);
@@ -5555,7 +6155,7 @@ function tick(){
     // Waveform drawing — requires data (either preview or detail waveform)
     if(deckUiVisible&&_wfRenderDataForDeck(d)){
       // Canvas stale-ref recovery: if WGL/2D ctx refers to a detached canvas, reinit
-      const wzc=document.getElementById('wzc'+slot);
+      const wzc=d._els.wzc;
       if(wzc){
         const wglStale=d.wgl&&d.wgl.gl.canvas!==wzc;
         const ctx2Stale=!d.wgl&&d.wzCtx&&d.wzCtx.canvas!==wzc;
@@ -5573,7 +6173,7 @@ function tick(){
             _sizeCvDpr(wzc,targetW,targetH);
             try{
               d.wgl=new WaveformGL(wzc); d.wzCtx=null;
-              const wzov=document.getElementById('wzov'+slot);
+              const wzov=d._els.wzov;
               if(wzov){_sizeCvDpr(wzov,targetW,targetH);d.wovCtx2=_get2DCtxCss(wzov);}
             }catch(e){d.wzCtx=wzc.getContext('2d');}
           }
@@ -5586,12 +6186,18 @@ function tick(){
       }
       // Waveform + overlay draw — position-gated (saves GPU when paused)
       const progPx=Math.round(prog*10000); // ~0.01% precision
-      const wzc2=document.getElementById('wzc'+slot);
-      // Detail waveform: 30fps (every 2nd tick) — user 요청, 시각적 충분
-      if(!d._wzTick)d._wzTick=0;
-      if(d._wfDirty||++d._wzTick>=2){
-        d._wzTick=0;
-        if(wzc2&&wzc2.width>0)drawZoomWaveform(slot,prog);
+      const wzc2=d._els.wzc;
+      // Detail waveform: playing 시 60fps, paused 시 position/zoom/theme 변화 또는 dirty 시 재렌더 (CPU/GPU 절약).
+      // HW 재생/TCNet keepalive 는 이 throttle 와 무관하게 별도 main process 스레드에서 동작.
+      const curZoom=d.zoomMs||8000;
+      const wfNeedsDraw = d.pl
+        || progPx!==d._lastWfProgPx
+        || curZoom!==d._lastWfZoom
+        || d._wfDirty;
+      if(wzc2&&wzc2.width>0 && wfNeedsDraw){
+        drawZoomWaveform(slot,prog);
+        d._lastWfProgPx=progPx;
+        d._lastWfZoom=curZoom;
       }
       // Overview: ~10fps (every 6th tick) — playhead barely moves
       if(!d._ovTick)d._ovTick=0;
@@ -5643,12 +6249,13 @@ function tick(){
       //   DOM 순서 _1=TL _2=TR _3=BL _4=BR → beat3→seg4, beat4→seg3
       // 1×4 가로 바 (row/tower/card): DOM 그대로 좌→우 (1,2,3,4)
       const _layoutNow=document.body.dataset.layout||'';
-      const _isPhaseHoriz=(_layoutNow==='row'||_layoutNow==='tower'||_layoutNow==='card');
+      const _isPhaseHoriz=(_layoutNow==='row'||_layoutNow==='tower'||_layoutNow==='card'||_layoutNow==='observatory');
       const _cwMap=_isPhaseHoriz?[null,1,2,3,4]:[null,1,2,4,3];
       for(let b=1;b<=4;b++){
         const si=_cwMap[b];
-        const seg=document.getElementById('dphs'+slot+'_'+si);
-        const fill=document.getElementById('dphsf'+slot+'_'+si);
+        // 캐시된 phaser 세그먼트. 캐시 stale 가능성 (phaser DOM 재생성) 시 fallback.
+        const seg=(d._els.dphs&&d._els.dphs[si]&&d._els.dphs[si].isConnected)?d._els.dphs[si]:document.getElementById('dphs'+slot+'_'+si);
+        const fill=(d._els.dphsf&&d._els.dphsf[si]&&d._els.dphsf[si].isConnected)?d._els.dphsf[si]:document.getElementById('dphsf'+slot+'_'+si);
         if(!seg||!fill)continue;
         if(!shouldShow){seg.classList.remove('on');fill.style.opacity='0';continue;}
         const active=b===beatInBar;
@@ -5699,6 +6306,11 @@ function tick(){
         beatPhase,
       });
     }
+    }catch(e){
+      // 한 deck 의 paint 에러가 tick loop 전체를 죽이지 않도록 격리.
+      // (UI freeze 원인이 deck 0 GL 컨텍스트 race 일 가능성 → 다른 deck 진행 보호)
+      console.warn('[tick] deck paint error slot='+(d?.slot??'?')+':', e?.message);
+    }
   });
 
   if(curTab==='mixer'&&_mixerDirty){
@@ -5724,7 +6336,9 @@ function tick(){
 }
 // 60fps cap via requestAnimationFrame + time gate
 let _lastTickT=0;
-const _TICK_MS=1000/60; // 16.67ms = 60fps
+// 120fps cap — 120Hz 모니터에서 웨이브폼 매끈한 스크롤. 60Hz 모니터는 rAF 가 60fps 로 자동 cap.
+// _DECK_UI_TICK_MS / _DECK_VU_TICK_MS 가 30fps 로 안에서 다시 throttle → 웨이브폼만 outer 속도.
+const _TICK_MS=1000/120; // 8.33ms target — 디스플레이 refresh 따라 자동 cap
 function _rafTick(ts){
   requestAnimationFrame(_rafTick);
   if(ts-_lastTickT<_TICK_MS) return;
@@ -5733,22 +6347,32 @@ function _rafTick(ts){
 }
 requestAnimationFrame(_rafTick);
 
+// Header element cache — updateHeader 매 tick (60fps) × 10 getElementById = 600/sec.
+// 캐시 후 isConnected 검증으로 stale 시 fallback (DOM 재생성 대비).
+const _hdrEls = {};
+function _hdrEl(id){
+  let el = _hdrEls[id];
+  if (el && el.isConnected) return el;
+  el = document.getElementById(id);
+  if (el) _hdrEls[id] = el;
+  return el;
+}
 function updateHeader(){
   const arenas=Object.values(tcNodes).filter(n=>Date.now()-n.lastSeen<10000).length;
   const active=Object.values(DECKS).filter(d=>d.ld).length;
-  const stB=document.getElementById('stBadge');
+  const stB=_hdrEl('stBadge');
   if(stB){stB.textContent=run?'ON':'OFF';stB.style.color=run?'var(--grn)':'var(--tx4)';}
-  const bDotTc=document.getElementById('bDotTc');
+  const bDotTc=_hdrEl('bDotTc');
   if(bDotTc)bDotTc.style.background=run?'var(--grn)':'var(--red)';
-  document.getElementById('stArena').textContent=arenas;
-  document.getElementById('stDecks').textContent=active;
-  document.getElementById('stUp').textContent=run?Math.floor(up/60)+'m '+(up%60)+'s':'—';
+  const stArena=_hdrEl('stArena'); if(stArena)stArena.textContent=arenas;
+  const stDecks=_hdrEl('stDecks'); if(stDecks)stDecks.textContent=active;
+  const stUp=_hdrEl('stUp'); if(stUp)stUp.textContent=run?Math.floor(up/60)+'m '+(up%60)+'s':'—';
   const artActive=run&&Object.values(OUT).some(o=>o.art);
-  const stAn=document.getElementById('stArtnet');
+  const stAn=_hdrEl('stArtnet');
   if(stAn){stAn.textContent=artActive?'ON':'OFF';stAn.style.color=artActive?'var(--grn)':'var(--tx4)';}
-  const bDotArt=document.getElementById('bDotArt');
+  const bDotArt=_hdrEl('bDotArt');
   if(bDotArt)bDotArt.style.background=artActive?'var(--grn)':'var(--red)';
-  document.getElementById('stAlert').classList.toggle('hide',run);
+  const stAlert=_hdrEl('stAlert'); if(stAlert)stAlert.classList.toggle('hide',run);
 }
 // CPU/MEM monitoring — poll every 2s to avoid overhead
 let _cpuTimer=0;
@@ -5756,8 +6380,8 @@ setInterval(async()=>{
   if(!window.bridge?.getCpuUsage)return;
   try{
     const m=await window.bridge.getCpuUsage();
-    const cpuEl=document.getElementById('stCpu');
-    const memEl=document.getElementById('stMem');
+    const cpuEl=_hdrEl('stCpu');
+    const memEl=_hdrEl('stMem');
     if(cpuEl){cpuEl.textContent=m.cpu+'%';cpuEl.style.color=m.cpu>80?'var(--red)':m.cpu>40?'var(--ylw2)':'var(--tx3)';}
     if(memEl)memEl.textContent=m.memMB+'MB';
   }catch(_){}
@@ -6056,11 +6680,11 @@ function renderAblink(){
 function _renderLinkBig(st){
   if(!st) return;
   const now=Date.now();
-  const bpmEl=document.getElementById('linkBpmBig');
+  const bpmEl=_hdrEl('linkBpmBig');
   if(bpmEl) bpmEl.textContent = (st.bpm>0 ? st.bpm.toFixed(2) : '—');
-  const peersEl=document.getElementById('linkPeersBig');
+  const peersEl=_hdrEl('linkPeersBig');
   if(peersEl) peersEl.textContent = (st.peers|0);
-  const sess=document.getElementById('linkSessLbl');
+  const sess=_hdrEl('linkSessLbl');
   if(sess){
     sess.textContent = !st.available ? '모듈 미설치' : (!st.enabled ? '비활성' : (st.peers>0?'연결됨':'대기'));
     sess.style.color = !st.available?'#b08040':(st.enabled?'var(--grn)':'var(--tx4)');
@@ -6069,13 +6693,13 @@ function _renderLinkBig(st){
   const q=st.quantum||4;
   const srcPhase=_computeLinkSourcePhase(now);
   const phase=Math.max(0,Math.min(q,st.enabled?srcPhase:(st.phase||0)));
-  const arc=document.getElementById('linkPhaseArc');
+  const arc=_hdrEl('linkPhaseArc');
   if(arc){
     const C=2*Math.PI*62; // ≈ 389.56
     const off = st.enabled ? C*(1-phase/q) : C;
     arc.setAttribute('stroke-dashoffset', off.toFixed(2));
   }
-  const txt=document.getElementById('linkPhaseTxt');
+  const txt=_hdrEl('linkPhaseTxt');
   if(txt) txt.textContent = (st.enabled?phase:0).toFixed(2);
   // 활성 비트 닷 강조
   const cur=Math.floor(phase)%q;
@@ -6086,14 +6710,20 @@ function _renderLinkBig(st){
   });
 }
 
-// ablink 페이지 활성 중에만 60ms 고빈도 폴링
-setInterval(async ()=>{
-  if(curTab!=='ablink') return;
-  try{
-    const st=await window.bridge.linkGetStatus?.();
-    if(st) _renderLinkBig(st);
-  }catch(_){}
-},60);
+// ablink 탭 진입 시에만 60ms 폴링 시작/종료 — 영구 setInterval 은 tab 비활성 시에도 매초 16번 빈 콜백.
+let _ablinkPollInt=null;
+function _ablinkPollStart(){
+  if(_ablinkPollInt)return;
+  _ablinkPollInt=setInterval(async ()=>{
+    try{
+      const st=await window.bridge.linkGetStatus?.();
+      if(st) _renderLinkBig(st);
+    }catch(_){}
+  },60);
+}
+function _ablinkPollStop(){
+  if(_ablinkPollInt){ clearInterval(_ablinkPollInt); _ablinkPollInt=null; }
+}
 
 // Art-Net 엔진 시작 — 확장 옵션 포함 단일 진입점
 async function _artnetStart(){
@@ -6111,8 +6741,8 @@ async function _artnetStart(){
 }
 // Link UI 상태 반영 (setEnabled 응답 또는 상태 조회 결과로 호출)
 function _updateLinkUi(st){
-  const dot=document.getElementById('linkStatusDot');
-  const lbl=document.getElementById('linkStatusLbl');
+  const dot=_hdrEl('linkStatusDot');
+  const lbl=_hdrEl('linkStatusLbl');
   if(!st){ if(dot)dot.style.background='#555'; if(lbl)lbl.textContent='—'; return; }
   if(dot) dot.style.background = (!st.available) ? '#b08040' : (st.enabled ? '#32be5a' : '#555');
   if(lbl){
@@ -6122,6 +6752,18 @@ function _updateLinkUi(st){
   }
 }
 // Boot: Art-Net / Link 자동 재시작 (지난 세션에서 켜져있었다면)
+// 시간 표시 토글 — document-level delegation. 모드는 localStorage 에 저장 (재실행 시 복원).
+document.addEventListener('click',(e)=>{
+  const tg=e.target;
+  if(!tg) return;
+  const el = tg.id && tg.id.startsWith('dtime') ? tg : (tg.closest && tg.closest('[id^="dtime"]'));
+  if(!el || !el.id || !el.id.startsWith('dtime')) return;
+  const slot = +el.id.slice(5);
+  const dk = DECKS[slot];
+  if(!dk) return;
+  dk._timeMode = (dk._timeMode === 'rem') ? 'cur' : 'rem';
+  try{ localStorage.setItem('time_mode_pref', dk._timeMode); }catch(_){}
+});
 window.addEventListener('DOMContentLoaded',()=>{
   if(cfg.anEnabled){
     _artnetStart().then(r=>{
@@ -6226,7 +6868,7 @@ setInterval(async ()=>{
   const bpm = _computeLinkSourceBpm();
   if(bpm>0){
     window.bridge.linkSetTempo?.(bpm);
-    const el=document.getElementById('linkBpmLbl');
+    const el=_hdrEl('linkBpmLbl');
     if(el) el.textContent = bpm.toFixed(2) + ' BPM';
   }
   _computeLinkSourcePhase(now);
@@ -6286,68 +6928,9 @@ function _computeLinkSourceBpm(){
   return 0;
 }
 
-// ════ History tracking ═══════════════════════════════
-const _histLog=[];
-let _histSessionStart=null;
-function _histStartSession(){if(!_histSessionStart){_histSessionStart=Date.now();document.getElementById('histSession').textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});}}
-function _histFinalizeOnAir(dk){
-  if(dk._histOnAirStart){dk._histOnAirMs=(dk._histOnAirMs||0)+(Date.now()-dk._histOnAirStart);dk._histOnAirStart=null;}
-}
-function _histAddEntry(slot,dk){
-  if(!dk.tn)return;
-  // 중복 체크: 같은 곡이 이미 마지막에 추가됐으면 skip
-  const last=_histLog[_histLog.length-1];
-  if(last&&last.slot===slot&&last.tn===dk.tn&&last.ar===dk.ar)return;
-  _histLog.push({slot,tn:dk.tn,ar:dk.ar||'',bpm:dk.bpm||0,key:dk.key||'',loadTime:dk._histLoadTime||Date.now(),onAirMs:dk._histOnAirMs||0,addedAt:Date.now()});
-  renderHistory();
-}
-function _histOnNewTrack(slot,dk){
-  _histFinalizeOnAir(dk);
-  if((dk._histOnAirMs||0)>=10000&&dk.tn)_histAddEntry(slot,dk);
-  dk._histOnAirMs=0;dk._histOnAirStart=null;dk._histLoadTime=Date.now();
-}
-function _histOnAirChange(slot,dk,wasOnAir,isOnAir){
-  if(!wasOnAir&&isOnAir&&dk.ld){dk._histOnAirStart=dk._histOnAirStart||Date.now();}
-  else if(wasOnAir&&!isOnAir&&dk._histOnAirStart){
-    dk._histOnAirMs=(dk._histOnAirMs||0)+(Date.now()-dk._histOnAirStart);dk._histOnAirStart=null;
-    if((dk._histOnAirMs||0)>=10000&&dk.tn)_histAddEntry(slot,dk);
-  }
-}
-function _histExport(){
-  if(!_histLog.length)return;
-  const hdr='#,TITLE,ARTIST,BPM,KEY,DECK,ON AIR(s),TIME\n';
-  const rows=_histLog.map((e,i)=>`${i+1},"${e.tn}","${e.ar}",${e.bpm},${e.key},DECK${e.slot+1},${Math.round(e.onAirMs/1000)},${new Date(e.addedAt).toLocaleTimeString('ko-KR')}`).join('\n');
-  const url=URL.createObjectURL(new Blob([hdr+rows],{type:'text/csv'}));
-  const a=document.createElement('a');a.href=url;a.download='bridge-history.csv';a.click();URL.revokeObjectURL(url);
-}
-function renderHistory(){
-  const list=document.getElementById('histList');if(!list)return;
-  document.getElementById('histCount').textContent=_histLog.length;
-  document.getElementById('histStatCount').textContent=_histLog.length;
-  const totalMs=_histLog.reduce((s,e)=>s+e.onAirMs,0);
-  document.getElementById('histStatTime').textContent=Math.floor(totalMs/60000)+'m'+Math.floor((totalMs%60000)/1000)+'s';
-  const bpms=_histLog.filter(e=>e.bpm>0);
-  document.getElementById('histStatBpm').textContent=bpms.length?(bpms.reduce((s,e)=>s+e.bpm,0)/bpms.length).toFixed(1):'—';
-  if(!_histLog.length){list.innerHTML=`<div class="hist-empty"><span class="material-symbols-outlined">music_off</span><span class="hist-empty-tx">아직 기록된 트랙이 없습니다</span><span style="font:400 10px var(--sn);color:var(--tx4)">ON AIR 10초 이상 재생된 트랙이 여기 표시됩니다</span></div>`;return;}
-  const now=Date.now();
-  list.innerHTML=[..._histLog].reverse().map((e,ri)=>{
-    const i=_histLog.length-ri;
-    const isNew=now-e.addedAt<300000;
-    const cls=e.onAirMs>=30000?'full':'short';
-    const ts=new Date(e.addedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
-    const dur=Math.floor(e.onAirMs/60000)+'m'+Math.floor((e.onAirMs%60000)/1000)+'s';
-    return`<div class="hist-row ${cls}">
-      <span class="hist-idx">${i}</span>
-      <div class="hist-art"><img src="assets/default-art.png" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>
-      <div class="hist-info"><div class="hist-tn">${e.tn}${isNew?'<span class="hist-new">NEW</span>':''}</div><div class="hist-ar">${e.ar}</div></div>
-      <span class="hist-bpm">${e.bpm?e.bpm.toFixed(1):'—'}</span>
-      <span class="hist-key">${e.key||'—'}</span>
-      <span class="hist-deck">DECK ${e.slot+1}</span>
-      <span class="hist-ts">${ts}</span>
-      <span class="hist-dur">${dur}</span>
-    </div>`;
-  }).join('');
-}
+// ════ History tracking → renderer/history-panel.js (Phase 2 modularization)
+// _histLog / _histStartSession / _histFinalizeOnAir / _histAddEntry / _histOnNewTrack
+// _histOnAirChange / _histExport / renderHistory 모두 history-panel.js 에서 window 글로벌로 노출.
 
 // ════ Sidebar switching ════════════════════════════════
 document.getElementById('sidebar').onclick=e=>{
@@ -6361,7 +6944,7 @@ document.getElementById('sidebar').onclick=e=>{
   if(curTab==='pdjl')renderPDJL();
   if(curTab==='tcnet')renderTcnet();
   if(curTab==='artnet'){loadInterfaces();renderArtnet();}
-  if(curTab==='ablink')renderAblink();
+  if(curTab==='ablink'){renderAblink(); _ablinkPollStart();} else _ablinkPollStop();
   if(curTab==='settings'){loadInterfaces();renderSettings();}
   if(curTab==='history')renderHistory();
   // Link 탭 전환 시 marquee 상태 리셋 + 여러 delay 로 재측정 시도
@@ -6539,15 +7122,15 @@ if(E){
       }
       if(dk._tidChangeCount>=3){
         console.log(`[UI] P${status.playerNum} track change confirmed: ${oldTid} → ${newTid}`);
-        dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfFine=null;dk._rgbWfFinePromise=null;dk._rgbWfFineToken=(dk._rgbWfFineToken||0)+1;dk._audioBlob=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;
+        dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk._loadToken=(dk._loadToken||0)+1;dk._audioBlob=null;dk.rgbWfDetail=null;dk._wfCache=null;dk._pcm=null;dk._pcmPromise=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;
         dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
         dk._trackId=newTid;dk._tidChangeCount=0;dk._tidChangeTo=0;
         dk._trackChangePending=false; dk._smoothPos=null;
-        const _artEl=document.getElementById('dart'+layerIndex);
+        const _artEl=(dk._els&&dk._els.dart&&dk._els.dart.isConnected)?dk._els.dart:document.getElementById('dart'+layerIndex);
         if(_artEl)_artEl.innerHTML='<img src="assets/default-art.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
         // Update title/artist DOM
-        const _tnEl=document.getElementById('dtn'+layerIndex);if(_tnEl)_tnEl.textContent='—';
-        const _taEl=document.getElementById('dta'+layerIndex);if(_taEl)_taEl.textContent='—';
+        const _tnEl=(dk._els&&dk._els.dtn&&dk._els.dtn.isConnected)?dk._els.dtn:document.getElementById('dtn'+layerIndex);if(_tnEl)_tnEl.textContent='—';
+        const _taEl=(dk._els&&dk._els.dta&&dk._els.dta.isConnected)?dk._els.dta:document.getElementById('dta'+layerIndex);if(_taEl)_taEl.textContent='—';
       }
     } else {
       dk._tidChangeCount=0;
@@ -6559,15 +7142,31 @@ if(E){
       if(newTid>0) dk._trackId=newTid;
     }
     // Always update model name (even when no track loaded)
-    if(status.name&&!dk.model){dk.model=status.name;const _hwlEl=document.getElementById('dhwl'+layerIndex);if(_hwlEl)_hwlEl.innerHTML='<svg class="gi gi-hex"><use href="#i-hex"/></svg> '+status.name;else patchDeck(layerIndex);}
+    if(status.name&&!dk.model){dk.model=status.name;const _hwlEl=(dk._els&&dk._els.dhwl&&dk._els.dhwl.isConnected)?dk._els.dhwl:document.getElementById('dhwl'+layerIndex);if(_hwlEl)_hwlEl.innerHTML='<svg class="gi gi-hex"><use href="#i-hex"/></svg> '+status.name;else patchDeck(layerIndex);}
     else if(status.name)dk.model=status.name;
+    // Track 소스 정보(어느 CDJ 의 어떤 슬롯에서 로드됐는지) — Observatory SRC 표시 (두 줄)
+    if(status.trackDeviceId!=null && (status.trackDeviceId!==dk.trackDevId || status.slot!==dk.usbSlot || status.trackType!==dk.trackType)){
+      dk.trackDevId=status.trackDeviceId|0;
+      dk.usbSlot=status.slot|0;
+      dk.trackType=status.trackType|0;
+      const _srcEl=(dk._els&&dk._els.dsrc&&dk._els.dsrc.isConnected)?dk._els.dsrc:document.getElementById('dsrc'+layerIndex);
+      if(_srcEl){
+        const _slotName=(s)=>s===1?'CD':s===2?'SD':s===3?'USB':s===4?'RB':'—';
+        const td=dk.trackDevId, sl=dk.usbSlot;
+        const lines=[];
+        if(td>0 && sl>0){ lines.push('CDJ'+td); lines.push(_slotName(sl)); }
+        else if(td>0){ lines.push('CDJ'+td); }
+        else { lines.push(dk.type==='hw'?'LINK':'LOCAL'); }
+        _srcEl.replaceChildren(...lines.map(t=>{const s=document.createElement('span');s.textContent=t;return s;}));
+      }
+    }
     // If track ejected (hasTrack went false for 2+ consecutive status), reset
     if(!status.hasTrack){
       dk._noTrackCount=(dk._noTrackCount||0)+1;
       if(dk._noTrackCount>=3 && dk.ld){
         console.log(`[UI] P${status.playerNum} track ejected`);
         dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.pl=false;dk.bpm=0;
-        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk.rgbWfFine=null;dk._rgbWfFinePromise=null;dk._rgbWfFineToken=(dk._rgbWfFineToken||0)+1;dk._audioBlob=null;dk.rgbWfDetail=null;dk._wfCache=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
+        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk._loadToken=(dk._loadToken||0)+1;dk._audioBlob=null;dk.rgbWfDetail=null;dk._wfCache=null;dk._pcm=null;dk._pcmPromise=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
         patchDeck(layerIndex);
       }
       return;
@@ -6711,7 +7310,7 @@ if(E){
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk)return;
     dk.art=d.art||null;
-    const el=document.getElementById('dart'+li);
+    const el=(dk._els&&dk._els.dart&&dk._els.dart.isConnected)?dk._els.dart:document.getElementById('dart'+li);
     if(el){
       if(d.art){
         const img=el.querySelector('img');
@@ -6756,7 +7355,16 @@ if(E){
           return{h,mn:-h,mx:h,r:(p.low||0)/255,g:(p.mid||0)/255,b:(p.hi||0)/255};
         });
         dk._pwv7=true;dk.wfCapability='pwv7';
-      } else if(d.wfType==='nxs2_3band'||d.wfType==='mono'){
+      } else if(d.wfType==='nxs2_3band'){
+        // NXS2 3-band: low/mid/hi 각 band 진폭을 r/g/b 로 매핑 → shader 가 RGB 색상 합성.
+        // 이전엔 r=g=b=0 으로 두어 모든 sample 이 단색(파랑)으로 보이던 버그 수정.
+        dk.rgbWfDetail=d.pts.map(p=>{
+          const r=p.low||0, g=p.mid||0, b=p.hi||0;
+          const h=Math.max(r,g,b,(p.height||0)/31);
+          return{r,g,b,h,mn:-h,mx:h};
+        });
+        dk._pwv7=true;dk.wfCapability='pwv7'; // 3-band 처리는 PWV7 와 동일
+      } else if(d.wfType==='mono'){
         dk.rgbWfDetail=d.pts.map(p=>{
           const h=Math.max(p.low||0,p.mid||0,p.hi||0,(p.height||0)/31);
           return{r:0,g:0,b:0,h,mn:-h,mx:h};
@@ -6789,15 +7397,22 @@ if(E){
     else if(d.duration>0)dk.dur=d.duration*1000;
     if(d.bpm>0){dk.baseBpm=d.bpm;dk._metaBaseBpm=true;} // metadata BPM is authoritative
     if(d.album)dk.album=d.album;
-    console.log(`[UI] P${d.playerNum} meta: "${d.title}" by "${d.artist}"`);
+    // Bitrate (kbps) 와 파일 종류(MP3/FLAC/WAV 등) — 0 이면 미수신
+    if(d.bitrate>0) dk.bitrateKbps=d.bitrate|0;
+    if(d.fileKind){
+      // "MP3 File", "FLAC File", "AIFF File" 등 → 확장자만 추출
+      const m=String(d.fileKind).match(/([A-Z0-9]{2,5})/i);
+      if(m) dk.fileExt=m[1].toUpperCase();
+    }
+    console.log(`[UI] P${d.playerNum} meta: "${d.title}" by "${d.artist}" ${dk.fileExt||''} ${dk.bitrateKbps||0}kbps`);
     // Update track name in TCNet layer
     if(window.bridge&&dk.tn){
       window.bridge.updateLayer(li,{trackName:dk.tn,artistName:dk.ar||''});
     }
     // Incremental DOM update — no full rebuild needed for meta changes
-    const _tnEl=document.getElementById('dtn'+li);if(_tnEl)_tnEl.textContent=dk.tn||'—';
-    const _taEl=document.getElementById('dta'+li);if(_taEl)_taEl.textContent=dk.ar||'—';
-    const _sepEl=document.getElementById('dtsep'+li);if(_sepEl)_sepEl.style.display='';
+    const _tnEl=(dk._els&&dk._els.dtn&&dk._els.dtn.isConnected)?dk._els.dtn:document.getElementById('dtn'+li);if(_tnEl)_tnEl.textContent=dk.tn||'—';
+    const _taEl=(dk._els&&dk._els.dta&&dk._els.dta.isConnected)?dk._els.dta:document.getElementById('dta'+li);if(_taEl)_taEl.textContent=dk.ar||'—';
+    const _sepEl=(dk._els&&dk._els.dtsep&&dk._els.dtsep.isConnected)?dk._els.dtsep:document.getElementById('dtsep'+li);if(_sepEl)_sepEl.style.display='';
   });
   window.bridge.onDJMStatus?.(d=>{
     _markMixerDirty();

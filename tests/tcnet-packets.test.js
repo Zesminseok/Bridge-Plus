@@ -1,0 +1,390 @@
+'use strict';
+
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const corePath = path.join(__dirname, '..', 'bridge-core.js');
+const core = require(corePath);
+
+function test(name, fn){
+  try{
+    fn();
+    console.log(`ok - ${name}`);
+  }catch(err){
+    console.error(`not ok - ${name}`);
+    console.error(err.stack || err.message);
+    process.exitCode = 1;
+  }
+}
+
+function loadPrivateBuilders(){
+  const source = fs.readFileSync(corePath, 'utf8');
+  const Module = require('module');
+  const sandbox = {
+    module: { exports: {} },
+    exports: {},
+    // bridge-core.js 가 './pdjl/packets' 같은 상대경로를 require 하도록 corePath 기준 require 사용
+    require: Module.createRequire(corePath),
+    __dirname: path.dirname(corePath),
+    __filename: corePath,
+    Buffer,
+    console,
+    process,
+    setTimeout,
+    clearTimeout,
+    setInterval,
+    clearInterval,
+  };
+  vm.runInNewContext(`${source}\nmodule.exports.__test = { mkMixerData, nxs2BeatCountToMs, shouldKeepPredictedBeatAnchor, parsePDJL };`, sandbox, { filename: corePath });
+  return sandbox.module.exports.__test;
+}
+
+function makeRequest(dataType, layer){
+  const msg = Buffer.alloc(core.TC.H + 2);
+  msg.writeUInt16LE(0x1234, 0);
+  msg[2] = 3;
+  msg[3] = 5;
+  msg.write('TCN', 4, 'ascii');
+  msg[7] = 0x14;
+  msg.write('ARENA\0\0\0', 8, 8, 'ascii');
+  msg[17] = 4;
+  msg[core.TC.H] = dataType;
+  msg[core.TC.H + 1] = layer;
+  return msg;
+}
+
+test('TCNet Request body is parsed as dataType then layer', () => {
+  const bridge = new core.BridgeCore({ tcnetIface: '127.0.0.1' });
+  bridge.layers[1] = { trackName: 'Layer 2', artistName: 'Artist', trackId: 222, state: core.STATE.PLAYING };
+  bridge.layers[3] = { trackName: 'Layer 4', artistName: 'Wrong', trackId: 444, state: core.STATE.PLAYING };
+  const sent = [];
+  bridge._uc = (pkt) => sent.push(pkt);
+
+  bridge._handleTCNetMsg(makeRequest(core.TC.DT_META, 2), { address: '127.0.0.1', port: 65032 }, 'test');
+
+  assert.strictEqual(sent.length, 1);
+  assert.strictEqual(sent[0][core.TC.H], core.TC.DT_META);
+  assert.strictEqual(sent[0][core.TC.H + 1], 2);
+  assert.strictEqual(sent[0].readUInt32LE(543), 222);
+});
+
+test('Status Layer Source uses TCNet absolute byte 34/body offset 10', () => {
+  const pkt = core.mkStatus(65032, {}, [{ state: core.STATE.PLAYING, trackId: 1, deviceName: 'CDJ' }], [255], [true]);
+  assert.strictEqual(pkt[34], 1);
+  assert.strictEqual(pkt[32], 0);
+});
+
+test('TCNet header minor matches Arena-compatible v3.5', () => {
+  const pkt = core.mkDataMeta(1, { artistName: 'A', trackName: 'T', trackId: 7 });
+  assert.strictEqual(pkt[2], 3);
+  assert.strictEqual(pkt[3], 5);
+});
+
+test('Metadata text is UTF-32LE like PRO DJ LINK Bridge', () => {
+  const pkt = core.mkDataMeta(1, { artistName: 'AB', trackName: '희망', trackId: 7 });
+  assert.strictEqual(pkt[29], 0x41);
+  assert.strictEqual(pkt[30], 0x00);
+  assert.strictEqual(pkt[31], 0x00);
+  assert.strictEqual(pkt[32], 0x00);
+  assert.strictEqual(pkt[33], 0x42);
+  assert.strictEqual(pkt[285], 0x6c);
+  assert.strictEqual(pkt[286], 0xd7);
+  assert.strictEqual(pkt[289], 0xdd);
+  assert.strictEqual(pkt[290], 0xb9);
+});
+
+test('MixerData channel block follows TCNet V3.5 field order', () => {
+  const { mkMixerData } = loadPrivateBuilders();
+  const pkt = mkMixerData([99], 'DJM-900NXS2', { eq: [[10, 20, 30, 40]], xfAssign: [2], xfader: 123, masterLvl: 231 });
+  const body = pkt.slice(core.TC.H);
+  const off = 101;
+
+  assert.strictEqual(body[75], 123);
+  assert.strictEqual(body[off + 1], 99);
+  assert.strictEqual(body[off + 2], 99);
+  assert.strictEqual(body[off + 3], 10);
+  assert.strictEqual(body[off + 4], 0);
+  assert.strictEqual(body[off + 5], 20);
+  assert.strictEqual(body[off + 6], 30);
+  assert.strictEqual(body[off + 7], 0);
+  assert.strictEqual(body[off + 8], 40);
+  assert.strictEqual(body[off + 13], 2);
+});
+
+test('DJM 0x57 subscribe matches official bridge macOS bitmask', () => {
+  const pkt = core.buildDjmSubscribePacket('darwin');
+  assert.strictEqual(pkt.slice(0, 10).compare(core.PDJL.MAGIC), 0);
+  assert.strictEqual(pkt[0x0A], 0x57);
+  assert.strictEqual(pkt[0x1f], 0x01);
+  assert.strictEqual(pkt[0x20], 0x00);
+  assert.strictEqual(pkt[0x21], 0xe1);
+  assert.strictEqual(pkt[0x22], 0x00);
+  assert.strictEqual(pkt[0x23], 0x04);
+  assert.strictEqual(pkt[0x24], 0x01);
+});
+
+test('DJM 0x57 subscribe matches official bridge Windows bitmask', () => {
+  const pkt = core.buildDjmSubscribePacket('win32');
+  assert.strictEqual(pkt.slice(0, 10).compare(core.PDJL.MAGIC), 0);
+  assert.strictEqual(pkt[0x0A], 0x57);
+  assert.strictEqual(pkt[0x1f], 0x01);
+  assert.strictEqual(pkt[0x20], 0x00);
+  assert.strictEqual(pkt[0x21], 0xff);
+  assert.strictEqual(pkt[0x22], 0x00);
+  assert.strictEqual(pkt[0x23], 0x04);
+  assert.strictEqual(pkt[0x24], 0x01);
+});
+
+test('DJM path does not keep a dedicated unicast keepalive helper', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('const sendDjmAnn='), false);
+  assert.strictEqual(source.includes('DJM keepalive #'), false);
+});
+
+test('DJM handlers do not trigger bridge join re-entry', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('_bridgeJoinFn'), false);
+});
+
+test('PDJL announce path uses selected interface identity instead of iterating all interfaces', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('for(const iface of getAllInterfaces()){\n        if(!iface.internal&&iface.broadcast&&iface.broadcast!==\'127.255.255.255\'){\n          const pkt=buildPdjlBridgeKeepalivePacket(iface.address,iface.mac||pdjlMAC,spoofPlayer);'), false);
+  assert.strictEqual(source.includes('const ifaces = getAllInterfaces().filter(i=>!i.internal&&i.broadcast&&i.broadcast!==\'127.255.255.255\');'), false);
+  assert.strictEqual(source.includes('getAllInterfaces()\n        .filter(i=>!i.internal && i.broadcast && i.broadcast!==\'127.255.255.255\')\n        .map(i=>i.broadcast)\n        .concat([\'255.255.255.255\'])'), false);
+});
+
+test('PDJL announce path stays on the selected interface broadcast only', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes("if(iface) return [iface.broadcast, '255.255.255.255'];"), false);
+});
+
+test('DJM subscribe sockets use platform-specific source ports', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('this._djmSubSock.bind(50006, pdjlIP'), true);
+  assert.strictEqual(source.includes('this._pdjlSocketByPort?.[50001]'), true);
+});
+
+test('Windows PDJL sockets bind to the selected interface IP', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes("const autoPdjlIface = (process.platform==='win32' && !this._shouldDelayWinAutoPdjl())"), true);
+  assert.strictEqual(source.includes("const bindAddr = process.platform==='win32' ? winBindIp : undefined;"), true);
+  assert.strictEqual(source.includes('s.bind(50000, pdjlIP, ()=>{ try{s.setBroadcast(true);}catch(_){} });'), true);
+});
+
+test('Windows auto PDJL selection prefers link-local interfaces before TCNet localAddr', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('_isLinkLocalIp(ip){'), true);
+  assert.strictEqual(source.includes("const linkLocal = ifaces.find(iface=>this._isLinkLocalIp(iface.address));"), true);
+  assert.strictEqual(source.includes('const autoIface = this._pickAutoPdjlIface();'), true);
+});
+
+test('Windows auto mode delays initial PDJL announce until a remote device is detected', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('_shouldDelayWinAutoPdjl(){'), true);
+  assert.strictEqual(source.includes("console.log('[PDJL] Windows auto mode: delaying announce until remote PDJL device is detected');"), true);
+  assert.strictEqual(source.includes("console.log('[PDJL] Windows auto mode: waiting for remote PDJL after rebind reset');"), true);
+  assert.strictEqual(source.includes("const autoPdjlIface = (process.platform==='win32' && !this._shouldDelayWinAutoPdjl())"), true);
+});
+
+test('PDJL bridge hello matches hardware-capture layout', () => {
+  const pkt = core.buildPdjlBridgeHelloPacket(5);
+  assert.strictEqual(pkt.length, 37);
+  assert.strictEqual(pkt.toString('hex'), '5173707431576d4a4f4c0a005443532d53484f574b4f4e54524f4c00000000000101002505');
+});
+
+test('PDJL bridge claim uses device id at byte 0x31', () => {
+  const pkt = core.buildPdjlBridgeClaimPacket('169.254.56.19', 'c8:4d:44:24:13:b2', 1, 5, 'darwin');
+  assert.strictEqual(pkt[0x0A], 0x02);
+  assert.strictEqual(pkt[0x30], 0x05);
+  assert.strictEqual(pkt[0x31], 0x00);
+  assert.strictEqual(pkt.slice(0x24, 0x28).toString('hex'), 'a9fe3813');
+  assert.strictEqual(pkt.slice(0x28, 0x2e).toString('hex'), 'c84d442413b2');
+});
+
+test('PDJL bridge keepalive matches official bridge capture role bytes', () => {
+  // identity byte (0x24): MAC 에서 derived (pdjlIdentityByteFromMac). 플랫폼별 fixed 가 아닌 deterministic.
+  // byte 0x30=0x08 (mac_pioneer + fullcap4 일치), 0x34=playerNum, 0x35=0x20 device-type role.
+  const pkt = core.buildPdjlBridgeKeepalivePacket('169.254.56.19', 'c8:4d:44:24:13:b2', 5, 'darwin');
+  assert.strictEqual(pkt.length, 54);
+  assert.strictEqual(pkt[0x0A], 0x06);
+  // identity byte 결정은 MAC 함수 결과 — 0 / 0xFF 가 아닌 정상값이면 통과.
+  assert.notStrictEqual(pkt[0x24], 0x00);
+  assert.notStrictEqual(pkt[0x24], 0xFF);
+  assert.strictEqual(pkt[0x30], 0x08);
+  assert.strictEqual(pkt[0x34], 0x05);
+  assert.strictEqual(pkt[0x35], 0x20);
+});
+
+test('Windows dbserver keepalive uses TCS-SHOWKONTROL name (Pioneer pcap-verified)', () => {
+  // mac_pioneer.pcap: Pioneer 공식 95B keepalive 도 'TCS-SHOWKONTROL' 사용
+  // (이전엔 'BRIDGE+' 사용했으나 CDJ 가 dbserver 인식 못 해 cue/meta 미수신 가능성)
+  const pkt = core.buildDbServerKeepalivePacket('169.254.56.19', 'c8:4d:44:24:13:b2', 5, 'win32');
+  assert.strictEqual(pkt.length, 95);
+  assert.strictEqual(pkt[0x0A], 0x06);
+  assert.strictEqual(pkt.toString('ascii', 0x0C, 0x1B).replace(/\0+$/,''), 'TCS-SHOWKONTROL');
+  assert.strictEqual(pkt[0x20], 0x01);
+  assert.strictEqual(pkt[0x21], 0x01);
+  assert.strictEqual(pkt[0x23], 0x36);
+  assert.strictEqual(pkt[0x24], 0x05);
+  assert.strictEqual(pkt.slice(0x26, 0x2c).toString('hex'), 'c84d442413b2');
+  assert.strictEqual(pkt.slice(0x2c, 0x30).toString('hex'), 'a9fe3813');
+  assert.strictEqual(pkt[0x35], 0x64);
+  assert.strictEqual(pkt.toString('ascii', 54, 69), 'PIONEER DJ CORP');
+  assert.strictEqual(pkt.toString('ascii', 74, 90), 'PRODJLINK BRIDGE');
+  assert.strictEqual(pkt[94], 0x43);
+});
+
+test('PDJL bridge notify matches reference 0x55 layout', () => {
+  const pkt = core.buildBridgeNotifyPacket(5);
+  assert.strictEqual(pkt.length, 44);
+  assert.strictEqual(pkt[0x0A], 0x55);
+  assert.strictEqual(pkt[31], 0x01);
+  assert.strictEqual(pkt[32], 0x00);
+  assert.strictEqual(pkt[33], 0x8B);
+  assert.strictEqual(pkt[34], 0x08);
+  assert.strictEqual(pkt[39], 0x01);
+  assert.strictEqual(pkt[40], 0x05);
+  assert.strictEqual(pkt[41], 0x01);
+  assert.strictEqual(pkt[42], 0x03);
+  assert.strictEqual(pkt[43], 0x01);
+});
+
+test('renderer consumes dedicated DJM stereo master meter peaks', () => {
+  const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  const mixerSrc = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'mixer-panel.js'), 'utf8');
+  const source = indexSrc + '\n' + mixerSrc; // mixer 코드는 mixer-panel.js 로 이동 (Phase 2.4)
+  assert.strictEqual(source.includes('if(d.masterL!=null)_djmMasterVuL=d.masterL;'), true);
+  assert.strictEqual(source.includes('if(d.masterR!=null)_djmMasterVuR=d.masterR;'), true);
+  assert.strictEqual(source.includes('if(d.masterLBands!=null)_djmMasterLBands=d.masterLBands;'), true);
+  assert.strictEqual(source.includes('if(d.masterRBands!=null)_djmMasterRBands=d.masterRBands;'), true);
+  assert.strictEqual(source.includes('const hasStereoMasterVu=(_djmMasterVuL>0||_djmMasterVuR>0)||(_djmMasterLBands?.length>0)||(_djmMasterRBands?.length>0);'), true);
+  assert.strictEqual(source.includes('function _vuDisplayFrom255(v,gain=1.7,gamma=0.72){'), true);
+  assert.strictEqual(source.includes('function _vuDisplayFromBands(bands,gain=2.2,gamma=0.72){'), true);
+});
+
+test('renderer treats master cue as button state', () => {
+  const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  const mixerSrc = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'mixer-panel.js'), 'utf8');
+  const source = indexSrc + '\n' + mixerSrc;
+  assert.strictEqual(source.includes("const _masterCueOn=!!(_djmMasterCue||_djmMasterCueB||_djmHpCueLink||_djmHpCueLinkB);"), true);
+  assert.strictEqual(source.includes("if(_mcueBtn)_mcueBtn.classList.toggle('on',_masterCueOn);"), true);
+  assert.strictEqual(source.includes("_mxSetAuxToggle('mxCueMasterAux',_masterCueOn,'ylw');"), true);
+});
+
+test('bridge forwards DJM stereo master meter peaks to renderer', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('this.onDJMMeter?.({ch:p.ch, spectrum:p.spectrum, masterL:p.masterL, masterR:p.masterR, masterLBands:p.masterLBands, masterRBands:p.masterRBands});'), true);
+});
+
+test('dbserver follow-up requests are staggered instead of firing all at once', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('_scheduleDbFollowUps(ip, slot, trackId, playerNum, tt, meta.artworkId||0);'), true);
+  assert.strictEqual(source.includes('defer(520, ()=>this._dbserverWaveformDetail(ip, slot, trackId, playerNum, trackType));'), true);
+  assert.strictEqual(source.includes('defer(1640, ()=>this._dbserverBeatGrid(ip, slot, trackId, playerNum, trackType));'), true);
+});
+
+test('virtual waveform bin rate constants exist', () => {
+  // VIRTUAL_WF_RATE=120 (overview), HW_WF_RATE=150, RGB_WF_FINE_RATE 는 fine path 가 no-op 으로 변환된 후
+  // 상수 자체는 존재 (값은 변경 가능). VIRTUAL 만 강제 검증.
+  const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  assert.match(source, /const VIRTUAL_WF_(?:RATE|\\u\{52\}ATE)\s*=\s*120/, 'overview bin rate constant');
+  assert.match(source, /const HW_WF_(?:RATE|\\u\{52\}ATE)\s*=\s*150/, 'hardware bin rate constant');
+});
+
+test('deck UI repaint is throttled separately from TCNet tick', () => {
+  // Waveform 만 120fps (외부 _TICK_MS), 다른 deck UI 는 30fps (_DECK_UI_TICK_MS) 로 분리.
+  // 사용자 선호: '웨이브폼만큼은 FPS 120 으로, 나머지는 30프레임'.
+  const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  assert.match(source, /const _DECK_UI_TICK_MS\s*=\s*1000\s*\/\s*30/, 'deck UI throttle should be 30fps');
+  assert.match(source, /const _TICK_MS\s*=\s*1000\s*\/\s*120/, 'outer tick should be 120fps for waveform');
+  assert.match(source, /const shouldPaintDeckUi=deckUiVisible&&\(now-_lastDeckUiPaint>=_DECK_UI_TICK_MS\)/, 'deck UI gate');
+});
+
+test('deck VU repaint is throttled separately from waveform redraw', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  assert.strictEqual(source.includes('const _DECK_VU_TICK_MS=1000/30;'), true);
+  assert.strictEqual(source.includes("const shouldPaintDeckVu=deckUiVisible&&(now-_lastDeckVuPaint>=_DECK_VU_TICK_MS);"), true);
+  assert.strictEqual(source.includes('if(shouldPaintDeckVu){'), true);
+});
+
+test('mixer repaint is throttled independently at 60fps', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  assert.strictEqual(source.includes('const _MIXER_TICK_MS=1000/60;'), true);
+  assert.strictEqual(source.includes("if(curTab==='mixer'&&_mixerDirty){"), true);
+  assert.strictEqual(source.includes('if(now-_lastMixerPaint>=_MIXER_TICK_MS){'), true);
+});
+
+test('link phaser follows the selected BPM source phase, not only raw Link status', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  assert.strictEqual(source.includes('function _computeDeckPhase(slot){'), true);
+  assert.strictEqual(source.includes('function _computeLinkSourcePhase(now=Date.now()){'), true);
+  assert.strictEqual(source.includes('const srcPhase=_computeLinkSourcePhase(now);'), true);
+});
+
+test('virtual fine waveform path fully removed', () => {
+  // rgbWfFine 2pass 분석은 제거되었고 호출 사이트도 정리됨. 1pass progressive 만 사용.
+  const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  assert.doesNotMatch(source, /function\s+_scheduleRgbFineBuild/, 'stub should be removed');
+  assert.doesNotMatch(source, /function\s+_wfEnsureRgbFine/, 'stub should be removed');
+  // _wfRenderDataForDeck/Strip 의 fallback 체인에 rgbWfFine 안 들어감.
+  assert.match(source, /function _wfRenderDataForDeck\(d\)\{[\s\S]*?d\?\.rgbWf\|\|d\?\.rgbWfDetail[\s\S]*?\}/, 'render data lookup should not include rgbWfFine fallback');
+});
+
+test('virtual waveform build throttles partial repaints', () => {
+  // YIELD_MS 는 main-thread 분석 시절의 상수. 현재는 rgbwf-worker.js 가 별 스레드에서 돌아 yield 불필요.
+  // 핵심 검증: _queuePartialWaveformPaint 가 1pass progressive 페인트를 throttle 하는지.
+  const indexSrc = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  assert.match(indexSrc, /function _queuePartialWaveformPaint\(slot,\s*d,\s*minInterval=120\)/, 'partial paint throttle helper');
+  assert.match(indexSrc, /if\(partial&&_wfLen\(partial\)>2\)_queuePartialWaveformPaint\(slot,d,120\);/, 'load handler should queue partial repaints');
+});
+
+test('virtual PDJL status logging is throttled instead of printing every packet', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('_shouldLogRate(key, intervalMs=3000, summary=null){'), true);
+  assert.strictEqual(source.includes("if(this._shouldLogRate(`virt_status_${playerNum}`, 10000, _summary)){"), true);
+});
+
+test('dbserver failure warnings are rate-limited to avoid repeated spam', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes("if(this._shouldLogRate(`db_meta_fail_${cacheKey}`, 10000, e.message)){"), true);
+  assert.strictEqual(source.includes("if(this._shouldLogRate(`db_art_fail_${cacheKey}`, 10000, e.message)){"), true);
+  assert.strictEqual(source.includes("if(this._shouldLogRate(`db_follow_fail_${playerNum}_${delay}`, 10000, e.message)){"), true);
+});
+
+test('NXS2 beat count position matches beat-derived formula', () => {
+  const { nxs2BeatCountToMs } = loadPrivateBuilders();
+  assert.strictEqual(nxs2BeatCountToMs(64, 128), 30000);
+  assert.strictEqual(nxs2BeatCountToMs(0, 128), 0);
+  assert.strictEqual(nxs2BeatCountToMs(12, 0), 0);
+});
+
+test('NXS2 backward beat anchor keeps predicted playhead for small snapbacks', () => {
+  const { shouldKeepPredictedBeatAnchor } = loadPrivateBuilders();
+  assert.strictEqual(shouldKeepPredictedBeatAnchor(10000, 9850, 133, false), true);
+  assert.strictEqual(shouldKeepPredictedBeatAnchor(10000, 8700, 133, false), false);
+  assert.strictEqual(shouldKeepPredictedBeatAnchor(10000, 9850, 133, true), false);
+});
+
+test('NXS2 status does not synthesize fraction from non-duration trackBeats field', () => {
+  const { parsePDJL } = loadPrivateBuilders();
+  const pkt = Buffer.alloc(0x120);
+  Buffer.from('Qspt1WmJOL', 'ascii').copy(pkt, 0);
+  pkt[0x0a] = 0x0a;
+  Buffer.from('CDJ-2000NXS2', 'ascii').copy(pkt, 0x0b);
+  pkt[0x21] = 0xd2; // observed in pcap; fallback player byte is 0x24
+  pkt[0x24] = 4;
+  pkt[0x29] = 3;
+  pkt.writeUInt32BE(2846, 0x2c);
+  pkt[0x7b] = core.STATE.PLAYING;
+  pkt.writeUInt16BE(12600, 0x92);
+  pkt.writeUInt32BE(32, 0xa0);
+  pkt.writeUInt32BE(256, 0xb4);
+
+  const parsed = parsePDJL(pkt);
+  assert.strictEqual(parsed.playerNum, 4);
+  assert.strictEqual(parsed.isNXS2, true);
+  assert.strictEqual(parsed.trackBeats, 256);
+  assert.strictEqual(parsed.positionFraction, 0);
+});

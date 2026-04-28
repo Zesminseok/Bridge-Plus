@@ -12,28 +12,29 @@ const os    = require('os');
 const path  = require('path');
 const fs    = require('fs');
 
-// Cue 디버그 로그 — 바탕화면(Desktop)에 누적. OneDrive Desktop 포함 여러 후보 시도.
-// 비동기 + buffered write 로 UI freeze 방지 (이전 sync write 가 매 호출 메인 스레드 블록했음).
+// 디버그 로그 — Desktop 우선, CloudStorage 동기화 폴더면 tmpdir 폴백.
+// freeze 회피: ① console.log 사용 안 함 ② Desktop 이 CloudStorage 로 redirect 되어 있으면 skip.
 function _resolveDbgLogPath(){
   const home = os.homedir();
+  // CloudStorage(Dropbox/iCloud/OneDrive) 동기화 폴더는 write 마다 동기화 → freeze 유발. 회피.
+  const isCloudSynced = (p) => {
+    try{
+      const real = fs.realpathSync(path.dirname(p));
+      return /CloudStorage|Dropbox|iCloud|com~apple~CloudDocs|OneDrive/.test(real);
+    }catch(_){ return false; }
+  };
+  // 1순위: Desktop (사용자 접근성). 동기화 폴더이거나 실패하면 tmpdir 로 폴백.
   const candidates = [
     path.join(home, 'Desktop', 'bridge-debug.log'),
-    path.join(home, 'OneDrive', 'Desktop', 'bridge-debug.log'),
-    path.join(home, 'OneDrive', '바탕 화면', 'bridge-debug.log'),
     path.join(home, '바탕 화면', 'bridge-debug.log'),
+    path.join(os.tmpdir(), 'bridge-debug.log'),
   ];
-  // OneDrive — Personal 변종 (OneDrive - <Org>) 도 자동 탐색
-  try{
-    for(const dir of fs.readdirSync(home)){
-      if(dir.startsWith('OneDrive')){
-        candidates.push(path.join(home, dir, 'Desktop', 'bridge-debug.log'));
-        candidates.push(path.join(home, dir, '바탕 화면', 'bridge-debug.log'));
-      }
-    }
-  }catch(_){}
   for(const p of candidates){
     try{
-      fs.mkdirSync(path.dirname(p), { recursive: true });
+      const dir = path.dirname(p);
+      fs.mkdirSync(dir, { recursive: true });
+      // CloudStorage 동기화 폴더는 skip
+      if(isCloudSynced(p)) continue;
       fs.writeFileSync(p, '');
       return p;
     }catch(_){}
@@ -51,12 +52,12 @@ function _dbgLogFlush(){
   fs.appendFile(_DBG_LOG_PATH, chunk, ()=>{ _dbgLogFlushScheduled=false; });
 }
 function _dbgLog(msg){
-  console.log(msg);
+  // console.log 제거 — Electron production 빌드에서 stdout 파이프 버퍼 풀(64KB) 시 동기 블록 → UI freeze.
   if(!_DBG_LOG_PATH) return;
   try{
     if(!_dbgLogInited){
-      // 초기 헤더는 한 번만 sync 로 — 이후엔 모두 비동기
-      try{ fs.writeFileSync(_DBG_LOG_PATH, `=== BRIDGE+ BRIDGE+ debug log — started ${new Date().toISOString()} ===\nlog path: ${_DBG_LOG_PATH}\n`); }catch(_){}
+      // 초기 헤더 비동기 write — sync 사용 안 함.
+      _dbgLogQueue.push(`=== BRIDGE+ debug log — started ${new Date().toISOString()} ===\nlog path: ${_DBG_LOG_PATH}\n`);
       _dbgLogInited = true;
     }
     _dbgLogQueue.push(`[${new Date().toISOString()}] ${msg}\n`);
@@ -490,9 +491,15 @@ class BridgeCore {
     this.running = false;
     // clear all intervals and timeouts
     this._timers.forEach(t=>{clearInterval(t);clearTimeout(t);}); this._timers=[];
+    // 이름있는 PDJL 타이머는 _timers 와 분리 관리 (rebindPDJL 마다 개별 clear). stop() 에서도 명시 정리.
+    for(const _k of ['_djmRetryTimer','_pdjlAnnTimer','_djmSubTimer','_bridgeNotifyTimer','_djmWatchTimer']){
+      if(this[_k]){ try{clearInterval(this[_k]);}catch(_){} try{clearTimeout(this[_k]);}catch(_){} this[_k]=null; }
+    }
     // Delay socket close by 100ms to let OptOut UDP packets flush from OS buffer
     const closeSockets=()=>{
       const sockets = [this.txSocket,this.rxSocket,this._loRxSocket,this._ipRxSocket,this.lPortSocket,this._dataSocket];
+      // _pdjlAnnSock 더블 close 가드 — 클리어 전에 snapshot 후 비교 (이전엔 비운 array 에 includes → 항상 false → 더블 close).
+      const _pdjlSnap = this._pdjlSockets ? [...this._pdjlSockets] : null;
       if(this._pdjlSockets) this._pdjlSockets.forEach(s=>sockets.push(s));
       else if(this.pdjlSocket) sockets.push(this.pdjlSocket);
       sockets.forEach(s=>{try{s?.close();}catch(_){}});
@@ -500,8 +507,8 @@ class BridgeCore {
       this._ipRxSocket=null; this.lPortSocket=null; this._dataSocket=null; this.pdjlSocket=null;
       try{this._ownPorts?.clear();}catch(_){}
       this._pdjlSockets=[];
-      // _pdjlAnnSock may be shared with _pdjlSockets[0], don't double-close
-      if(this._pdjlAnnSock && !this._pdjlSockets?.includes(this._pdjlAnnSock)){
+      // _pdjlAnnSock 가 snapshot 안에 없을 때만 close (snap 안에 있으면 이미 위 forEach 에서 close 됨).
+      if(this._pdjlAnnSock && !(_pdjlSnap && _pdjlSnap.includes(this._pdjlAnnSock))){
         try{this._pdjlAnnSock.close();}catch(_){}
       }
       this._pdjlAnnSock=null;
@@ -1366,7 +1373,7 @@ class BridgeCore {
       }
     }, 20000);
     this._djmRetryTimer=_djmRetryT;
-    this._timers.push(_djmRetryT);
+    // _timers.push 제거 — 이름있는 timer 는 rebindPDJL 마다 개별 clear 되므로 _timers[] 에 누적시키면 stale handle leak.
     console.log(`[PDJL] annSock ready (shared=${!!this._pdjlSockets?.[0]}) ip=${pdjlIP} allBCs=[${allBCs.join(',')}]`);
 
     // 95B dbserver keepalive — UNICAST to CDJs only (not broadcast!)
@@ -1397,7 +1404,7 @@ class BridgeCore {
         if(!liveSession()) return;
         sendAnn();sendDbKeepalive();
       },1500);
-      this._timers.push(this._pdjlAnnTimer);
+      // _timers.push 제거 — _pdjlAnnTimer 는 rebindPDJL/stop 에서 개별 clear (line 703, 1212).
       console.log('[PDJL] keepalive loop started (post-join)');
     }, 6700);
 
@@ -1472,10 +1479,10 @@ class BridgeCore {
       sendDjmSub();
     }, 25000);
     this._djmSubTimer=_subRetryT;
-    this._timers.push(_subRetryT);
+    // _timers.push 제거 — rebindPDJL 에서 _djmSubTimer 개별 clear.
     const _notifyTimer=setInterval(()=>{ if(!liveSession()) return; sendBridgeNotifyToAll(); },2000);
     this._bridgeNotifyTimer=_notifyTimer;
-    this._timers.push(_notifyTimer);
+    // _timers.push 제거 — rebindPDJL 에서 _bridgeNotifyTimer 개별 clear.
 
     // DJM freshness watchdog — lastSeen >10s 이면 연결 해제로 간주하고 모든 믹서 상태 초기화
     // (UI는 onDeviceList 빈 DJM + hasRealFaders:false 를 받으면 defaults 로 복귀)
@@ -1500,7 +1507,7 @@ class BridgeCore {
       }
     },2000);
     this._djmWatchTimer=_djmWatch;
-    this._timers.push(_djmWatch);
+    // _timers.push 제거 — rebindPDJL 에서 _djmWatchTimer 개별 clear.
 
     // Virtual CDJ status broadcast every 500ms — keeps Arena updated on virtual decks
     // Real CDJs broadcast status packets ~every 500ms; Arena stops querying if it stops seeing them
@@ -1592,6 +1599,7 @@ class BridgeCore {
           if(this._bgTrackLen) delete this._bgTrackLen[p.playerNum];
           if(this._precisePos) delete this._precisePos[p.playerNum];
           if(this._wfTrackLen) delete this._wfTrackLen[p.playerNum];
+          if(this._cuePoints) delete this._cuePoints[p.playerNum];
           // NXS2 한정: 트랙 변경 시 cuePos/totalLength stale 잔존 명시적 초기화
           if(p.isNXS2){
             if(this._cuePosMs) this._cuePosMs[p.playerNum] = 0;
@@ -1679,14 +1687,26 @@ class BridgeCore {
           // ── End/Ended state (both models): show last known position, clamp to totalLenMs ──
           const prev = this.layers[li]?.timecodeMs || 0;
           timecodeMs = (totalLenMs > 0 && prev > totalLenMs) ? totalLenMs : (prev || totalLenMs);
-          if(acc){ acc._playStart=0; acc._anchorMs=null; acc._anchorTime=null; acc._noBeatAnchorTime=null; acc._noBeatAnchorMs=null; acc._fracMs=null; acc._fracAnchorTime=null; }
+          if(acc){
+            acc._playStart=0; acc._anchorMs=null; acc._anchorTime=null;
+            acc._noBeatAnchorTime=null; acc._noBeatAnchorMs=null;
+            acc._fracMs=null; acc._fracAnchorTime=null;
+            // _prevState 업데이트 누락이 hot cue 다중 누름 버그 원인이었음:
+            // ENDED→PLAYING 전환 시 prev 가 PLAYING 으로 남아 wasStoppedLike 가 fail 해
+            // anchor reset 이 안 일어나 stale totalLenMs 그대로 사용 → 즉시 끝 점프.
+            acc._prevState = p.state;
+          }
         } else if(p.isPlaying || p.isLooping){
           // ── Playing/Looping: CDJ-2000NXS2 interpolation (+ CDJ-3000 fallback without 0x0b) ──
           if(!acc) this._tcAcc[li] = acc = { prevBn:0, elapsedMs:0, trackId:p.trackId, dbgCount:0, metaRequested:false };
           // State transition: CUED/PAUSED/STOPPED → PLAYING 순간 accumulator 리셋.
           // (hot cue / play 버튼 모두 이 전환을 거치며, 점프 위치를 즉시 반영)
           const prevSt = acc._prevState;
-          const wasStoppedLike = prevSt === STATE.CUEDOWN || prevSt === STATE.PAUSED || prevSt === STATE.STOPPED || prevSt === STATE.IDLE;
+          // ENDED 포함: NXS2 fw 1.87 은 hot cue 다중 누름 시 ENDED→PLAYING 직접 transition
+          // (CUED 패킷 거치지 않음). ENDED 가 reset 트리거에 빠져있어 anchor 가 stale (totalLenMs)
+          // 그대로 유지되어 timecode 가 즉시 끝으로 점프하던 버그 수정.
+          const wasStoppedLike = prevSt === STATE.CUEDOWN || prevSt === STATE.PAUSED ||
+            prevSt === STATE.STOPPED || prevSt === STATE.IDLE || prevSt === STATE.ENDED;
           if(wasStoppedLike){
             acc._fracMs = null; acc._fracAnchorTime = null;
             acc._anchorMs = null; acc._anchorTime = null;
@@ -1696,7 +1716,50 @@ class BridgeCore {
           }
           acc._prevState = p.state;
 
-          if(p.positionFraction > 0 && totalLenMs > 0){
+          // NXS2 루프: TC forward 진행 + saved loop cue 매칭 시 wrap, 그 외 trackEnd 에서 clamp.
+          if(p.isNXS2 && p.isLooping){
+            const wasLooping = (this.layers[li]?.state === STATE.LOOPING);
+            if(!wasLooping){
+              const lastTc = this.layers[li]?.timecodeMs || 0;
+              acc._loopAnchorMs = lastTc > 0 ? lastTc : (acc._fracMs || 0);
+              acc._loopAnchorTime = Date.now();
+            }
+            let baseMs = acc._loopAnchorMs || 0;
+            const beatMs = p.bpm > 0 ? 60000/p.bpm : (p.bpmTrack > 0 ? 60000/p.bpmTrack : 60000/130);
+            let loopEndMs = baseMs + beatMs * 4;
+            let hasSaved = false;
+            const cuePts = this._cuePoints?.[p.playerNum];
+            if(cuePts){
+              const matchedLoop = cuePts.find(c =>
+                c.type === 'loop' && c.loopEndMs > c.timeMs &&
+                Math.abs(c.timeMs - baseMs) < beatMs * 2
+              );
+              if(matchedLoop){
+                baseMs = matchedLoop.timeMs;
+                loopEndMs = matchedLoop.loopEndMs;
+                hasSaved = true;
+              }
+            }
+            const elapsed = Date.now() - (acc._loopAnchorTime || Date.now());
+            const advance = elapsed * (p.pitchMultiplier || 1);
+            if(hasSaved){
+              // saved loop: 정확한 길이 wrap
+              const loopMs = loopEndMs - baseMs;
+              timecodeMs = Math.round(baseMs + (advance % Math.max(1, loopMs)));
+            } else {
+              // unknown length: anchor 부터 forward, trackEnd 에서 clamp (past-end 방지)
+              const proposed = (acc._loopAnchorMs || baseMs) + advance;
+              const cap = totalLenMs > 0 ? totalLenMs - 50 : Infinity;
+              timecodeMs = Math.round(Math.min(proposed, cap));
+            }
+            acc._loopStartMs = Math.round(baseMs);
+            acc._loopEndMs   = Math.round(loopEndMs);
+            // acc._fracMs / _anchor 도 동기화 (루프 풀릴 때 ms 점프 최소화)
+            acc._fracMs = timecodeMs;
+            acc._fracAnchorTime = Date.now();
+            acc._anchorMs = timecodeMs;
+            acc._anchorTime = Date.now();
+          } else if(p.positionFraction > 0 && totalLenMs > 0){
             // NXS2 positionFraction 은 beatNum/trackBeats 비율 → BEAT 단위로 quantize
             // 되어 있다 (128BPM 에서 ~469ms 간격). beat 사이에는 rawFracMs 가
             // 정지하므로 내부적으로 extrapolation 필요. "beat 크로싱" 감지 시에만
@@ -1787,7 +1850,15 @@ class BridgeCore {
               if(pm > 0){
                 if(acc._noBeatAnchorTime == null){
                   acc._noBeatAnchorTime = Date.now();
-                  acc._noBeatAnchorMs = (this.layers[li]?.timecodeMs) || 0;
+                  // wasStoppedLike 직후: layers[li].timecodeMs 가 stale (ENDED clamp=totalLenMs)
+                  // 일 수 있어 그대로 사용 시 hot cue 다중 누름 시 즉시 끝으로 점프. cuePosMs
+                  // (마지막 CUEDOWN 시점 tc) 우선, 없으면 0 으로 fresh start.
+                  const cuePos = (this._cuePosMs?.[p.playerNum]) || 0;
+                  const lastTc = (this.layers[li]?.timecodeMs) || 0;
+                  // 만약 lastTc 가 totalLenMs 부근(끝) 이면 stale 로 간주 → cuePos 사용.
+                  // 그 외엔 lastTc (extrapolation 연속성 유지).
+                  const nearEnd = totalLenMs > 0 && lastTc >= totalLenMs - 200;
+                  acc._noBeatAnchorMs = nearEnd ? cuePos : lastTc;
                 }
                 const elapsed = Date.now() - acc._noBeatAnchorTime;
                 timecodeMs = Math.round(acc._noBeatAnchorMs + elapsed * pm);
@@ -1812,7 +1883,8 @@ class BridgeCore {
           // state 트래킹 유지 (다음 playing 진입 때 transition 감지용)
           if(acc) acc._prevState = p.state;
           if(p.state === STATE.CUEDOWN){
-            // beatNum in CUEDOWN = current cue position
+            // beatNum in CUEDOWN = current cue position. 비트그리드 우선 lookup.
+            // 큐 리스트 매칭은 transient mis-match 일으켜서 제거 (1비트 점프 버그).
             const cueBeat = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
             if(cueBeat > 0){
               const bg = this._beatGrids?.[p.playerNum];
@@ -1827,8 +1899,9 @@ class BridgeCore {
             } else {
               timecodeMs = 0;
             }
-          } else if(this.layers[li]?.timecodeMs > 0){
-            timecodeMs = this.layers[li].timecodeMs;
+          } else {
+            if(this._cueEnterTime) delete this._cueEnterTime[p.playerNum];
+            if(this.layers[li]?.timecodeMs > 0) timecodeMs = this.layers[li].timecodeMs;
           }
           if(acc){ acc._playStart=0; acc._anchorMs=null; acc._anchorTime=null; acc._noBeatAnchorTime=null; acc._noBeatAnchorMs=null; acc._fracMs=null; acc._fracAnchorTime=null; }
         }
@@ -1871,9 +1944,11 @@ class BridgeCore {
         p.totalLenMs = totalLenMs; // beat-based ms precision — renderer uses this for dk.dur
 
         // CUEDOWN 상태 = CDJ 가 현재 큐 포인트에 있음 → cuePosMs 캡쳐.
-        // DJ 가 CUE 버튼으로 새 큐 설정하면 그 위치가 timecodeMs 로 들어옴.
+        // 주의: P1_TO_STATE[0x07]=CUEDOWN 이지만 0x07 은 "CUE 누른 채 재생(cuing)" 상태.
+        // 이때 cuePosMs 갱신하면 매 packet timecode 가 cue 로 저장되어 큐 마커가 플레이헤드 따라감.
+        // p1===0x06 (parked at cue) 일 때만 캡처해야 함.
         if(!this._cuePosMs) this._cuePosMs = {};
-        if(p.state === STATE.CUEDOWN && timecodeMs >= 0){
+        if(p.p1 === 0x06 && timecodeMs >= 0){
           this._cuePosMs[p.playerNum] = timecodeMs;
         }
         p.cuePosMs = this._cuePosMs[p.playerNum] || 0;
@@ -1903,7 +1978,7 @@ class BridgeCore {
           const dTc = timecodeMs - cs.lastTc;
           const expected = dt>0 ? Math.round(dt * (p.pitchMultiplier||1)) : 0;
           const drift = dTc - expected;
-          _dbgLog(`[CDJ] P${p.playerNum} ${p.isNXS2?'NXS2':'3000'} fw=${p.firmware} len=${p._rawMsgLen} src=dev${p.trackDeviceId}/slot${p.slot}/tt${p.trackType} tid=${p.trackId} st=${p.p1Name}(0x${p.p1.toString(16)}) tc=${timecodeMs}ms dur=${totalLenMs}ms beat=${p.beatNum}/${p.trackBeats} bib=${p.beatInBar} bpm=${p.bpm}/${p.bpmTrack} pitch=${p.effectivePitch?.toFixed?.(2)}% posFrac=${p.positionFraction?.toFixed?.(4)} cuePos=${p.cuePosMs}ms loop=[${p.loopStartMs||0},${p.loopEndMs||0}] dt=${dt}ms ΔTc=${dTc}ms drift=${drift}ms${stChanged?' [STATE_CHG]':''}${bigJump?' [JUMP]':''}`);
+          _dbgLog(`[CDJ] P${p.playerNum} ${p.isNXS2?'NXS2':'3000'} fw=${p.firmware} len=${p._rawMsgLen} src=dev${p.trackDeviceId}/slot${p.slot}/tt${p.trackType} tid=${p.trackId} st=${p.p1Name}(0x${p.p1.toString(16)}) tc=${timecodeMs}ms dur=${totalLenMs}ms beat=${p.beatNum}/${p.trackBeats} bib=${p.beatInBar} bpm=${p.bpm}/${p.bpmTrack} pitch=${p.effectivePitch?.toFixed?.(3)}% posFrac=${p.positionFraction?.toFixed?.(4)} cuePos=${p.cuePosMs}ms loop=[${p.loopStartMs||0},${p.loopEndMs||0}] dt=${dt}ms ΔTc=${dTc}ms drift=${drift}ms${stChanged?' [STATE_CHG]':''}${bigJump?' [JUMP]':''}`);
           cs.lastT = nowL; cs.lastState = p.state; cs.lastTc = timecodeMs;
         }
 
@@ -1962,8 +2037,18 @@ class BridgeCore {
         xfader:p.xfader, masterLvl:p.masterLvl, masterBalance:p.masterBalance, masterCue:p.masterCue,
         boothLvl:p.boothLvl, hpLevel:p.hpLevel, hpCueCh:p.hpCueCh,
         eqCurve:p.eqCurve, faderCurve:p.faderCurve,
-        cueBtn:p.cueBtn, xfAssign:p.xfAssign,
+        cueBtn:p.cueBtn, cueBtnB:p.cueBtnB, xfAssign:p.xfAssign,
         chExtra:p.chExtra, hasRealFaders:true,
+        // Beat FX / Color FX — parser 가 채워주는 필드들 (이전엔 IPC 로 안 보내져 UI 비활성)
+        beatFxSel:p.beatFxSel, beatFxAssign:p.beatFxAssign, beatFxLevel:p.beatFxLevel, beatFxOn:p.beatFxOn,
+        fxFreqLo:p.fxFreqLo, fxFreqMid:p.fxFreqMid, fxFreqHi:p.fxFreqHi,
+        sendReturn:p.sendReturn, multiIoSel:p.multiIoSel,
+        colorFxSel:p.colorFxSel, colorFxParam:p.colorFxParam, sendExt1:p.sendExt1, sendExt2:p.sendExt2,
+        hpMixing:p.hpMixing,
+        // V10/A9 확장 (이미 parser 에서 채움)
+        isV10:p.isV10, boothEqHi:p.boothEqHi, boothEqLo:p.boothEqLo, boothEqBtn:p.boothEqBtn,
+        masterCueB:p.masterCueB, hpCueLink:p.hpCueLink, hpCueLinkB:p.hpCueLinkB,
+        isolatorOn:p.isolatorOn, isolatorHi:p.isolatorHi, isolatorMid:p.isolatorMid, isolatorLo:p.isolatorLo,
         pktType:msg[10], pktLen:msg.length, rawHex
       });
     }
@@ -2721,18 +2806,26 @@ class BridgeCore {
   _dbReadResponse(sock){
     return new Promise((res,rej)=>{
       const chunks = [];
+      // 누수 방지: success/timeout/error 어느 경로든 listener 와 timer 모두 정리.
+      let timer = null;
+      const cleanup = () => {
+        if(timer){ clearTimeout(timer); timer = null; }
+        sock.removeListener('data', onData);
+        sock.removeListener('error', onError);
+      };
       const onData = d => {
         chunks.push(d);
         const buf = Buffer.concat(chunks);
         // NumberField format: UInt32(magic)=5 + UInt32(txId)=5 + UInt16(type)=3 + UInt8(argc)=2 + Binary(tags)=17 = 32+ bytes
         if(buf.length >= 32){
-          sock.removeListener('data', onData);
+          cleanup();
           res(buf);
         }
       };
+      const onError = e => { cleanup(); rej(e); };
       sock.on('data', onData);
-      sock.once('error', rej);
-      setTimeout(()=>{sock.removeListener('data',onData);rej(new Error('response timeout'));}, 5000);
+      sock.once('error', onError);
+      timer = setTimeout(()=>{ cleanup(); rej(new Error('response timeout')); }, 5000);
     });
   }
 
@@ -2861,6 +2954,20 @@ class BridgeCore {
             case 0x000d: meta.bpm=(item.args[1]?.val||0)/100; break;
             case 0x000f: meta.key=label1; break;
             case 0x0006: meta.genre=label1||label2; break;
+            // 0x0011/0x0014/0x0010: bitrate/fileKind/fileSize 후보 — CDJ 응답에 미포함이므로
+            // 별도 트랙 정보 쿼리(metadata-archive 또는 menu_request type=0x1000) 가 필요. 일단 매핑만 남겨둠.
+            case 0x0011: meta.bitrate=item.args[1]?.val||0; break;
+            case 0x0014: meta.fileKind=label1||label2; break;
+            case 0x0010: meta.fileSize=item.args[1]?.val||0; break;
+            // 실측 (2026-04-26 NXS2/CDJ-3000 mixed): label / 원곡자(alt artist) / 등록일
+            case 0x000e: meta.label=label1||label2; break;
+            case 0x0028: meta.altArtist=label1||label2; break;
+            case 0x002e: meta.dateAdded=label1; break;
+            default:
+              // 진단: 알 수 없는 itemType 도 한 번씩 로그로 남겨 ID 매핑 확인
+              if(label1 || label2){
+                _dbgLog(`[META-UNK] P${playerNum} itemType=0x${itemType.toString(16).padStart(4,'0')} label1="${label1}" label2="${label2}" num=${item.args[1]?.val||0}`);
+              }
           }
         }
       }
@@ -3051,7 +3158,9 @@ class BridgeCore {
       catch(e){ console.warn(`[DBSRV] cue NXS2 P${playerNum} err:`, e.message); }
     }
     if(cues&&cues.length>0){
-      // PCO2/PCOB 모두 timeMs 는 ms 단위 — 변환 불필요.
+      // bridge-core 에 큐 포인트 캐싱 — NXS2 메모리큐 정확한 ms / 루프 길이 활용용.
+      if(!this._cuePoints) this._cuePoints = {};
+      this._cuePoints[playerNum] = cues;
       this.onCuePoints?.(playerNum, cues);
       const hot=cues.filter(c=>c.type==='hot').length;
       const mem=cues.filter(c=>c.type==='memory').length;
@@ -3248,7 +3357,16 @@ class BridgeCore {
             try{
               const commentBytes=anlzData.readUInt32BE(e+0x28);
               if(commentBytes>0&&commentBytes<512){
-                cue.name=anlzData.toString('utf16be',e+0x2C,e+0x2C+commentBytes).replace(/\0+$/,'');
+                // UTF-16BE 수동 디코딩 — Node.js Buffer 는 'utf16be' 미지원 (Latin-1 fallback → 한글/일본어 깨짐).
+                // _dbReadField 와 동일 패턴: readUInt16BE 루프 + null 종료.
+                let _name='';
+                const _end=Math.min(e+0x2C+commentBytes, anlzData.length-1);
+                for(let _j=e+0x2C;_j<_end;_j+=2){
+                  const _ch=anlzData.readUInt16BE(_j);
+                  if(_ch===0)break;
+                  _name+=String.fromCharCode(_ch);
+                }
+                cue.name=_name;
                 const colorOff=e+0x2C+commentBytes;
                 if(colorOff+3<e+entryLen){
                   cue.colorR=anlzData[colorOff+1];

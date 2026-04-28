@@ -46,16 +46,30 @@ function renderSettings(){
     </div>
     <div class="sl">웨이브폼 설정</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">Theme</span><select class="ss" id="wfThemeSel"><option value="3band" ${wfTheme==='3band'?'selected':''}>3 Band</option><option value="rgb" ${wfTheme==='rgb'?'selected':''}>RGB</option></select></div>
+      <div class="srw"><span class="srl">Theme</span><select class="ss" id="wfThemeSel"><option value="3band" ${wfTheme==='3band'?'selected':''}>3 Band</option><option value="rgb" ${wfTheme==='rgb'?'selected':''}>RGB</option><option value="mono" ${wfTheme==='mono'?'selected':''}>Mono</option></select></div>
       <div class="srw"><span class="srl">Sharpness</span><div style="display:flex;align-items:center;gap:6px"><input type="range" id="wfSharpnessSl" min="0" max="1" step="0.05" value="${wfSharpness}" title="0=sharp 1=legacy 3-tap smoothing" style="width:120px"><span id="wfSharpnessLbl" style="font:400 10px var(--mn);color:var(--tx3);width:32px;text-align:right">${wfSharpness.toFixed(2)}</span></div></div>
       <div class="srw"><span class="srl">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
-      <div class="srw"><span class="srl">비트 그리드</span><select class="ss" id="wfBeatStyleSel">
-        <option value="none" ${wfBeatStyle==='none'?'selected':''}>없음</option>
-        <option value="phrase" ${wfBeatStyle==='phrase'?'selected':''}>Phrase 만 (16비트)</option>
-        <option value="balanced" ${wfBeatStyle==='balanced'?'selected':''}>균형 (다운비트 + Phrase)</option>
-        <option value="detailed" ${wfBeatStyle==='detailed'?'selected':''}>상세 (모든 비트)</option>
-        <option value="phrase-band" ${wfBeatStyle==='phrase-band'?'selected':''}>Phrase 강조 (밴드)</option>
-        <option value="hybrid" ${wfBeatStyle==='hybrid'?'selected':''}>하이브리드</option>
+      <div class="srw"><span class="srl">비트 그리드 — 오버뷰</span><select class="ss" id="wfBeatStyleOverviewSel">
+        <option value="none" ${wfBeatStyleOverview==='none'?'selected':''}>없음</option>
+        <option value="phrase" ${wfBeatStyleOverview==='phrase'?'selected':''}>Phrase 만 (16비트)</option>
+        <option value="balanced" ${wfBeatStyleOverview==='balanced'?'selected':''}>균형 (다운비트 + Phrase)</option>
+        <option value="detailed" ${wfBeatStyleOverview==='detailed'?'selected':''}>상세 (모든 비트)</option>
+        <option value="phrase-band" ${wfBeatStyleOverview==='phrase-band'?'selected':''}>Phrase 강조 (밴드)</option>
+        <option value="hybrid" ${wfBeatStyleOverview==='hybrid'?'selected':''}>하이브리드</option>
+      </select></div>
+      <div class="srw"><span class="srl">비트 그리드 — 디테일</span><select class="ss" id="wfBeatStyleDetailSel">
+        <option value="none" ${wfBeatStyleDetail==='none'?'selected':''}>없음</option>
+        <option value="phrase" ${wfBeatStyleDetail==='phrase'?'selected':''}>Phrase 만 (16비트)</option>
+        <option value="balanced" ${wfBeatStyleDetail==='balanced'?'selected':''}>균형 (다운비트 + Phrase)</option>
+        <option value="detailed" ${wfBeatStyleDetail==='detailed'?'selected':''}>상세 (모든 비트)</option>
+        <option value="phrase-band" ${wfBeatStyleDetail==='phrase-band'?'selected':''}>Phrase 강조 (밴드)</option>
+        <option value="hybrid" ${wfBeatStyleDetail==='hybrid'?'selected':''}>하이브리드</option>
+      </select></div>
+      <div class="srw"><span class="srl">Phrase 표시</span><select class="ss" id="wfPhraseStyleSel">
+        <option value="none" ${wfPhraseStyle==='none'?'selected':''}>없음</option>
+        <option value="margin" ${wfPhraseStyle==='margin'?'selected':''}>Margin Tick (minimal)</option>
+        <option value="label" ${wfPhraseStyle==='label'?'selected':''}>Mood 라벨 (INTRO/CHORUS/DROP)</option>
+        <option value="cycle" ${wfPhraseStyle==='cycle'?'selected':''}>Color Cycling</option>
       </select></div>
       <div class="srw"><span class="srl">큐 마커 스타일</span><select class="ss" id="wfCueStyleSel">
         <option value="chip" ${wfCueStyle==='chip'?'selected':''}>Chip — 라벨 (A/B/C)</option>
@@ -252,11 +266,23 @@ function renderSettings(){
   }
   // Waveform settings
   const wfThemeSel=el.querySelector('#wfThemeSel');
-  if(wfThemeSel){wfThemeSel.value=wfTheme;wfThemeSel.onchange=e=>{wfTheme=e.target.value==='rgb'?'rgb':'3band';_wfPersistAndApply();};}
-  const wfBeatStyleSel=el.querySelector('#wfBeatStyleSel');
-  if(wfBeatStyleSel){wfBeatStyleSel.onchange=e=>{
-    wfBeatStyle=e.target.value;
-    _wfWriteLS('wf_beat_style',wfBeatStyle);
+  if(wfThemeSel){wfThemeSel.value=wfTheme;wfThemeSel.onchange=e=>{const v=e.target.value;wfTheme=(v==='rgb'||v==='mono'||v==='3band')?v:'rgb';_wfPersistAndApply();};}
+  const wfBeatStyleOverviewSel=el.querySelector('#wfBeatStyleOverviewSel');
+  if(wfBeatStyleOverviewSel){wfBeatStyleOverviewSel.onchange=e=>{
+    wfBeatStyleOverview=e.target.value;
+    _wfWriteLS('wf_beat_style_overview',wfBeatStyleOverview);
+    _wfInvalidateAndRedraw();
+  };}
+  const wfBeatStyleDetailSel=el.querySelector('#wfBeatStyleDetailSel');
+  if(wfBeatStyleDetailSel){wfBeatStyleDetailSel.onchange=e=>{
+    wfBeatStyleDetail=e.target.value;
+    _wfWriteLS('wf_beat_style_detail',wfBeatStyleDetail);
+    _wfInvalidateAndRedraw();
+  };}
+  const wfPhraseStyleSel=el.querySelector('#wfPhraseStyleSel');
+  if(wfPhraseStyleSel){wfPhraseStyleSel.onchange=e=>{
+    wfPhraseStyle=e.target.value;
+    _wfWriteLS('wf_phrase_style',wfPhraseStyle);
     _wfInvalidateAndRedraw();
   };}
   const wfCueStyleSel=el.querySelector('#wfCueStyleSel');
