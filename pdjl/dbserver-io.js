@@ -7,6 +7,8 @@ const _DB_RESP_MAX = 16 * 1024 * 1024; // 16MB cap (artwork JPEG < 5MB, metadata
 
 // 첫 응답 헤더 (32B 이상) 도착 시점에 resolve.
 // SECURITY: malicious/buggy CDJ 가 무한 응답으로 메모리 폭주시키지 못하게 16MB cap.
+// PERF: 32B 헤더 도착 전까지 concat 호출 회피 — totalLen 도달 후 한 번만 concat.
+//   또 첫 chunk 만으로 32B 충족이면 그대로 resolve (대다수 케이스).
 // 누수 방지: success/timeout/error 어느 경로든 listener 와 timer 모두 정리.
 function dbReadResponse(sock){
   return new Promise((res,rej)=>{
@@ -22,12 +24,11 @@ function dbReadResponse(sock){
       chunks.push(d);
       totalLen += d.length;
       if(totalLen > _DB_RESP_MAX){ cleanup(); rej(new Error('dbserver response too large')); return; }
-      const buf = Buffer.concat(chunks);
-      // NumberField format: UInt32(magic)=5 + UInt32(txId)=5 + UInt16(type)=3 + UInt8(argc)=2 + Binary(tags)=17 = 32+ bytes
-      if(buf.length >= 32){
-        cleanup();
-        res(buf);
-      }
+      // NumberField format: 32+ bytes 누적되어야 헤더 완성 — 그 전엔 concat skip.
+      if(totalLen < 32) return;
+      cleanup();
+      // 첫 chunk 만으로 충족된 일반 케이스: concat 회피.
+      res(chunks.length === 1 ? chunks[0] : Buffer.concat(chunks, totalLen));
     };
     const onError = e => { cleanup(); rej(e); };
     sock.on('data', onData);

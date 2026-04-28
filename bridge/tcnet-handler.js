@@ -51,19 +51,21 @@ function _getMixerScratch(core){
 }
 
 // 신규 노드 등록 직전 cap/TTL 강제 — bridge-core 의 _startListenerPortRx 에서도 재사용.
+// PERF: nodes 멤버십이 바뀌면 core._nodesGen 을 증가 — virtual-deck 등 consumer 가
+//   캐시 무효화 신호로 활용 (Object.values(nodes) 매 호출 회피).
 function registerTCNetNode(core, key, entry){
   const nodes = core.nodes;
-  // 이미 존재하면 update 만 (cap 영향 없음).
+  // 이미 존재하면 update 만 (cap 영향 없음 + gen 안 올림 — IP/이름 등 stable 식별자는 그대로).
   if(nodes[key]){ Object.assign(nodes[key], entry); return false; }
   // cap 도달 시: 먼저 stale (TTL 초과) entry 제거, 그래도 차면 LRU evict.
   const keys = Object.keys(nodes);
+  let evicted = 0;
   if(keys.length >= TCNET_MAX_NODES){
     const now = Date.now();
-    let staleEvicted = 0;
     for(const k of keys){
       if(now - (nodes[k]?.lastSeen||0) > TCNET_NODE_TTL_MS){
         delete nodes[k];
-        staleEvicted++;
+        evicted++;
       }
     }
     if(Object.keys(nodes).length >= TCNET_MAX_NODES){
@@ -73,10 +75,11 @@ function registerTCNetNode(core, key, entry){
         const ls = nodes[k]?.lastSeen||0;
         if(ls < oldestSeen){ oldestSeen = ls; oldestKey = k; }
       }
-      if(oldestKey) delete nodes[oldestKey];
+      if(oldestKey){ delete nodes[oldestKey]; evicted++; }
     }
   }
   nodes[key] = entry;
+  core._nodesGen = (core._nodesGen|0) + 1 + evicted;
   return true; // newly registered
 }
 

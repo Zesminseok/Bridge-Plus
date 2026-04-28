@@ -83,13 +83,22 @@ function sendVirtualCDJStatus(core, playerNum, trackId, bpm){
 
     try{core._pdjlAnnSock.send(pkt,0,pkt.length,50002,'127.0.0.1');}catch(_){}
     try{core._pdjlAnnSock.send(pkt,0,pkt.length,50001,'127.0.0.1');}catch(_){}
-    const arenaIPs = new Set();
-    for(const n of Object.values(core.nodes||{})){
-      if(n?.ip && n.ip!=='127.0.0.1' && (n.name?.includes('Arena') || n.vendor?.includes('Resolume'))){
-        arenaIPs.add(n.ip);
+    // PERF: Arena IP 목록은 nodes 가 변할 때만 재계산 — gen counter 가 같으면 캐시 사용.
+    //   nodes 변경은 tcnet-handler.registerTCNetNode 가 core._nodesGen 을 증가시킴.
+    const curGen = core._nodesGen|0;
+    if(core._arenaIpCacheGen !== curGen || !core._arenaIpCache){
+      const ips = [];
+      for(const n of Object.values(core.nodes||{})){
+        if(n?.ip && n.ip!=='127.0.0.1' && (n.name?.includes('Arena') || n.vendor?.includes('Resolume'))){
+          ips.push(n.ip);
+        }
       }
+      core._arenaIpCache = ips;
+      core._arenaIpCacheGen = curGen;
     }
-    for(const ip of arenaIPs){
+    const arenaIPs = core._arenaIpCache;
+    for(let i=0;i<arenaIPs.length;i++){
+      const ip = arenaIPs[i];
       try{core._pdjlAnnSock.send(pkt,0,pkt.length,50002,ip);}catch(_){}
       try{core._pdjlAnnSock.send(pkt,0,pkt.length,50001,ip);}catch(_){}
     }

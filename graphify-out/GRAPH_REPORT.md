@@ -1,12 +1,12 @@
 # Graph Report - /Users/zes2021/Documents/claude_projects/bridge-clone  (2026-04-29)
 
 ## Corpus Check
-- 60 files · ~352,372 words
+- 60 files · ~352,702 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 973 nodes · 1449 edges · 68 communities detected
-- Extraction: 82% EXTRACTED · 18% INFERRED · 0% AMBIGUOUS · INFERRED: 265 edges (avg confidence: 0.8)
+- 973 nodes · 1450 edges · 68 communities detected
+- Extraction: 82% EXTRACTED · 18% INFERRED · 0% AMBIGUOUS · INFERRED: 266 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -81,7 +81,7 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `BridgeCore` - 84 edges
-2. `push()` - 52 edges
+2. `push()` - 53 edges
 3. `TCNet Link Specification V3.5.1B (02/03/2022)` - 33 edges
 4. `ArtnetEngine` - 26 edges
 5. `Player 1 Row — Daft Punk — Children Of The Night` - 17 edges
@@ -124,7 +124,7 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.05
-Nodes (47): _findByNameUnix(), _findByNameWin(), _findByPortUnix(), _findByPortWin(), isProtected(), _killUnix(), _killWin(), _pidNameUnix() (+39 more)
+Nodes (49): _findByNameUnix(), _findByNameWin(), _findByPortUnix(), _findByPortWin(), isProtected(), _killUnix(), _killWin(), _pidNameUnix() (+41 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.03
@@ -259,28 +259,28 @@ Cohesion: 0.48
 Nodes (1): LTCProcessor
 
 ### Community 34 - "Community 34"
-Cohesion: 0.33
-Nodes (4): analyzeBPM(), detectAudioStart(), buildRGBWaveform(), _getRgbWfWorker()
-
-### Community 35 - "Community 35"
 Cohesion: 0.29
 Nodes (7): Bottom transport/status bar spanning full width — fine tick-marks timeline, small status chips/icons, muted dark background, 2x2 deck grid (4 decks): 'Children Of The Night', 'Around The World (Guam Bapt…)', 'Technologic', 'Something About Us' — each with track title, deck meta row, waveform overview with amber/teal/green/purple accents, large monospaced timecode (e.g. 01:24:18, 00:48:04, 00:16:00, 00:00:00), BPM readout (128/125/…), knob/level indicators cluster, Right-side Mixer column with vertical channel VU bars (6 channels) in green/amber gradient, 'Crossfade' label with horizontal slider, 'Session Log' list of labeled events/tracks, Atelier — Editorial Studio Dark full-page layout (dark warm-neutral theme, brand 'Bridge' wordmark top-left, top utility bar with Warehouse/Room 01 session label and tempo/beat indicators), Color palette: deep charcoal/near-black background (#0f0d0b-ish), warm ivory text, amber/gold primary accent, secondary per-deck hue (teal, green, violet) — editorial studio dark aesthetic, Large editorial timecode typography — monospace HH:MM:SS, amber/gold tint on black, dominant visual anchor of each deck card, Waveform style: full-width per-deck mini overview with colored frequency bands (warm amber/orange for deck1, cyan-teal for deck2, green for deck3, violet/purple for deck4) on near-black panel with subtle grid
 
-### Community 36 - "Community 36"
+### Community 35 - "Community 35"
 Cohesion: 0.6
 Nodes (3): deactivate(), getStatus(), refresh()
 
-### Community 37 - "Community 37"
+### Community 36 - "Community 36"
 Cohesion: 0.4
 Nodes (5): BridgeClone class (TCNet sender), Electron bootstrap (main.js + preload.js), prolink-connect integration (Stage 3), renderer/index.html GUI scaffold, Resolume Arena Pioneer DJ TCNet reception
 
-### Community 38 - "Community 38"
+### Community 37 - "Community 37"
 Cohesion: 0.4
 Nodes (5): Card layout variant, Matrix/Row layout variant, Tower layout variant, Refine Preview - spacing/alignment/font/title compare, BRIDGE+ Layout Variants (Tower/Card/Matrix)
 
-### Community 39 - "Community 39"
+### Community 38 - "Community 38"
 Cohesion: 0.67
 Nodes (2): _packColorHeightPtsForIpc(), _packWaveformForIpc()
+
+### Community 39 - "Community 39"
+Cohesion: 0.67
+Nodes (2): analyzeBPM(), detectAudioStart()
 
 ### Community 40 - "Community 40"
 Cohesion: 0.5
@@ -449,14 +449,14 @@ Nodes (1): Default Album Art (Vinyl Record Placeholder)
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `push()` connect `Community 0` to `Community 2`, `Community 34`, `Community 5`, `Community 7`, `Community 8`, `Community 11`, `Community 28`, `Community 29`?**
-  _High betweenness centrality (0.108) - this node is a cross-community bridge._
+- **Why does `push()` connect `Community 0` to `Community 2`, `Community 5`, `Community 39`, `Community 7`, `Community 8`, `Community 11`, `Community 28`, `Community 29`?**
+  _High betweenness centrality (0.109) - this node is a cross-community bridge._
 - **Why does `BridgeCore` connect `Community 2` to `Community 0`, `Community 11`, `Community 5`?**
-  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
 - **Why does `DbServerPool` connect `Community 0` to `Community 1`?**
   _High betweenness centrality (0.061) - this node is a cross-community bridge._
-- **Are the 51 inferred relationships involving `push()` (e.g. with `_dbgLog()` and `._startPDJLRx()`) actually correct?**
-  _`push()` has 51 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 52 inferred relationships involving `push()` (e.g. with `_dbgLog()` and `._startPDJLRx()`) actually correct?**
+  _`push()` has 52 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `EQ knob arc (12 o'clock Boost/Cut)`, `v0.7.0 BRIDGE+ Onyx Studio design`, `v0.5.0 Initial release` to the rest of the system?**
   _243 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**

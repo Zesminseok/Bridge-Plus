@@ -1057,6 +1057,42 @@ test('SEC: dbserver-client PWV7 bounds — attacker-controlled length 거부', (
   assert.match(src, /PWV7_MAX_ENTRIES = 65535/);
 });
 
+// ─── perf MED fixes (Codex audit) ──────────────────────────────────────
+
+test('PERF: virtual-deck Arena IP 캐시 — _nodesGen 변경 시에만 재계산', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'virtual-deck.js'), 'utf8');
+  // gen counter 기반 캐시
+  assert.match(src, /core\._nodesGen\|0/);
+  assert.match(src, /core\._arenaIpCacheGen !== curGen \|\| !core\._arenaIpCache/);
+  assert.match(src, /core\._arenaIpCache = ips/);
+  // 본문 inline 매번 Set 할당 회피 — 신규 Set\(\) 매번 allocate 가 사라짐
+  assert.ok(!/const arenaIPs = new Set\(\);[\s\S]*?for\(const n of Object\.values\(core\.nodes/.test(src),
+    'Set 매번 할당하는 구버전 패턴이 남아있음');
+});
+
+test('PERF: tcnet-handler — registerTCNetNode 가 _nodesGen 증가', () => {
+  const { registerTCNetNode } = require(path.join(__dirname, '..', 'bridge', 'tcnet-handler'));
+  const fakeCore = { nodes: {}, _nodesGen: 0 };
+  registerTCNetNode(fakeCore, 'k1', { lastSeen: Date.now() });
+  assert.strictEqual(fakeCore._nodesGen, 1);
+  registerTCNetNode(fakeCore, 'k2', { lastSeen: Date.now() });
+  assert.strictEqual(fakeCore._nodesGen, 2);
+  // 같은 키 update 는 gen 증가 안 함
+  registerTCNetNode(fakeCore, 'k1', { lastSeen: Date.now() });
+  assert.strictEqual(fakeCore._nodesGen, 2);
+});
+
+test('PERF: dbserver-io — 32B 미만 누적 시 Buffer.concat 호출 안 함', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'pdjl', 'dbserver-io.js'), 'utf8');
+  // totalLen<32 가드로 concat 회피
+  assert.match(src, /if\(totalLen < 32\) return;/);
+  // 첫 chunk fast path
+  assert.match(src, /chunks\.length === 1 \? chunks\[0\] : Buffer\.concat/);
+  // 옛 패턴 (every-data concat) 가 사라졌는지
+  assert.ok(!/const buf = Buffer\.concat\(chunks\);[\s\S]*?if\(buf\.length >= 32\)/.test(src),
+    'concat-on-every-chunk 옛 패턴이 남아있음');
+});
+
 // ─── pcm-decode worker error drain ───────────────────────────────────────
 
 test('pcm-decode: worker fatal error drains pending jobs', () => {

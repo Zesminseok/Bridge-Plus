@@ -235,7 +235,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/license-service.js",
       "source_location": "L1",
       "id": "users_zes2021_library_cloudstorage_dropbox_claude_projects_bridge_clone_license_service_js",
-      "community": 36,
+      "community": 35,
       "norm_label": "license-service.js"
     },
     {
@@ -244,7 +244,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/license-service.js",
       "source_location": "L18",
       "id": "license_service_getstatus",
-      "community": 36,
+      "community": 35,
       "norm_label": "getstatus()"
     },
     {
@@ -253,7 +253,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/license-service.js",
       "source_location": "L22",
       "id": "license_service_activate",
-      "community": 36,
+      "community": 35,
       "norm_label": "activate()"
     },
     {
@@ -262,7 +262,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/license-service.js",
       "source_location": "L32",
       "id": "license_service_deactivate",
-      "community": 36,
+      "community": 35,
       "norm_label": "deactivate()"
     },
     {
@@ -271,7 +271,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/license-service.js",
       "source_location": "L40",
       "id": "license_service_refresh",
-      "community": 36,
+      "community": 35,
       "norm_label": "refresh()"
     },
     {
@@ -2692,7 +2692,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/waveform-analysis.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_renderer_waveform_analysis_js",
-      "community": 34,
+      "community": 0,
       "norm_label": "waveform-analysis.js"
     },
     {
@@ -2701,7 +2701,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/waveform-analysis.js",
       "source_location": "L10",
       "id": "waveform_analysis_getrgbwfworker",
-      "community": 34,
+      "community": 0,
       "norm_label": "_getrgbwfworker()"
     },
     {
@@ -2710,7 +2710,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/waveform-analysis.js",
       "source_location": "L48",
       "id": "waveform_analysis_buildrgbwaveform",
-      "community": 34,
+      "community": 0,
       "norm_label": "buildrgbwaveform()"
     },
     {
@@ -3043,7 +3043,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/bpm-analysis.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_renderer_bpm_analysis_js",
-      "community": 34,
+      "community": 39,
       "norm_label": "bpm-analysis.js"
     },
     {
@@ -3052,7 +3052,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/bpm-analysis.js",
       "source_location": "L7",
       "id": "bpm_analysis_normalizeanalyzedbpm",
-      "community": 34,
+      "community": 39,
       "norm_label": "_normalizeanalyzedbpm()"
     },
     {
@@ -3061,7 +3061,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/bpm-analysis.js",
       "source_location": "L14",
       "id": "bpm_analysis_detectaudiostart",
-      "community": 34,
+      "community": 39,
       "norm_label": "detectaudiostart()"
     },
     {
@@ -3070,7 +3070,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/bpm-analysis.js",
       "source_location": "L25",
       "id": "bpm_analysis_analyzebpm",
-      "community": 34,
+      "community": 39,
       "norm_label": "analyzebpm()"
     },
     {
@@ -4031,7 +4031,7 @@
       "label": "registerTCNetNode()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
-      "source_location": "L54",
+      "source_location": "L56",
       "id": "tcnet_handler_registertcnetnode",
       "community": 11,
       "norm_label": "registertcnetnode()"
@@ -4040,7 +4040,7 @@
       "label": "handleTCNetMsg()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
-      "source_location": "L85",
+      "source_location": "L88",
       "id": "tcnet_handler_handletcnetmsg",
       "community": 11,
       "norm_label": "handletcnetmsg()"
@@ -4121,7 +4121,7 @@
       "label": "startVirtualDbServer()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
-      "source_location": "L103",
+      "source_location": "L112",
       "id": "virtual_deck_startvirtualdbserver",
       "community": 2,
       "norm_label": "startvirtualdbserver()"
@@ -4130,7 +4130,7 @@
       "label": "handleVDbRequest()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
-      "source_location": "L189",
+      "source_location": "L198",
       "id": "virtual_deck_handlevdbrequest",
       "community": 2,
       "norm_label": "handlevdbrequest()"
@@ -4139,7 +4139,7 @@
       "label": "findVirtualArt()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
-      "source_location": "L246",
+      "source_location": "L255",
       "id": "virtual_deck_findvirtualart",
       "community": 2,
       "norm_label": "findvirtualart()"
@@ -4445,7 +4445,7 @@
       "label": "dbReadResponse()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/dbserver-io.js",
-      "source_location": "L11",
+      "source_location": "L13",
       "id": "dbserver_io_dbreadresponse",
       "community": 0,
       "norm_label": "dbreadresponse()"
@@ -4454,7 +4454,7 @@
       "label": "dbReadFullResponse()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/dbserver-io.js",
-      "source_location": "L41",
+      "source_location": "L42",
       "id": "dbserver_io_dbreadfullresponse",
       "community": 0,
       "norm_label": "dbreadfullresponse()"
@@ -4807,7 +4807,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-bridge-start.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_main_ipc_bridge_start_js",
-      "community": 39,
+      "community": 38,
       "norm_label": "ipc-bridge-start.js"
     },
     {
@@ -4816,7 +4816,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-bridge-start.js",
       "source_location": "L6",
       "id": "ipc_bridge_start_packcolorheightptsforipc",
-      "community": 39,
+      "community": 38,
       "norm_label": "_packcolorheightptsforipc()"
     },
     {
@@ -4825,7 +4825,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-bridge-start.js",
       "source_location": "L20",
       "id": "ipc_bridge_start_packwaveformforipc",
-      "community": 39,
+      "community": 38,
       "norm_label": "_packwaveformforipc()"
     },
     {
@@ -4834,7 +4834,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-bridge-start.js",
       "source_location": "L26",
       "id": "ipc_bridge_start_registerbridgestartipc",
-      "community": 39,
+      "community": 38,
       "norm_label": "registerbridgestartipc()"
     },
     {
@@ -5242,7 +5242,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 37,
+      "community": 36,
       "norm_label": "electron bootstrap (main.js + preload.js)",
       "id": "setup_guide_electron_bootstrap"
     },
@@ -5255,7 +5255,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 37,
+      "community": 36,
       "norm_label": "renderer/index.html gui scaffold",
       "id": "setup_guide_renderer_indexhtml"
     },
@@ -5268,7 +5268,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 37,
+      "community": 36,
       "norm_label": "bridgeclone class (tcnet sender)",
       "id": "setup_guide_bridgeclone_class"
     },
@@ -5281,7 +5281,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 37,
+      "community": 36,
       "norm_label": "prolink-connect integration (stage 3)",
       "id": "setup_guide_prolink_connect"
     },
@@ -5294,7 +5294,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 37,
+      "community": 36,
       "norm_label": "resolume arena pioneer dj tcnet reception",
       "id": "setup_guide_resolume_tcnet"
     },
@@ -6243,7 +6243,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 38,
+      "community": 37,
       "norm_label": "bridge+ layout variants (tower/card/matrix)",
       "id": "doc_theme_variants"
     },
@@ -6256,7 +6256,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 38,
+      "community": 37,
       "norm_label": "tower layout variant",
       "id": "doc_concept_tower_layout"
     },
@@ -6269,7 +6269,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 38,
+      "community": 37,
       "norm_label": "card layout variant",
       "id": "doc_concept_card_layout"
     },
@@ -6282,7 +6282,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 38,
+      "community": 37,
       "norm_label": "matrix/row layout variant",
       "id": "doc_concept_matrix_layout"
     },
@@ -6295,7 +6295,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 38,
+      "community": 37,
       "norm_label": "refine preview - spacing/alignment/font/title compare",
       "id": "doc_preview_refine"
     },
@@ -7405,7 +7405,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 35,
+      "community": 34,
       "norm_label": "atelier \u2014 editorial studio dark full-page layout (dark warm-neutral theme, brand 'bridge' wordmark top-left, top utility bar with warehouse/room 01 session label and tempo/beat indicators)",
       "id": "atelier_full_page"
     },
@@ -7418,7 +7418,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 35,
+      "community": 34,
       "norm_label": "2x2 deck grid (4 decks): 'children of the night', 'around the world (guam bapt...)', 'technologic', 'something about us' \u2014 each with track title, deck meta row, waveform overview with amber/teal/green/purple accents, large monospaced timecode (e.g. 01:24:18, 00:48:04, 00:16:00, 00:00:00), bpm readout (128/125/...), knob/level indicators cluster",
       "id": "atelier_full_deck_grid"
     },
@@ -7431,7 +7431,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 35,
+      "community": 34,
       "norm_label": "waveform style: full-width per-deck mini overview with colored frequency bands (warm amber/orange for deck1, cyan-teal for deck2, green for deck3, violet/purple for deck4) on near-black panel with subtle grid",
       "id": "atelier_full_waveform_style"
     },
@@ -7444,7 +7444,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 35,
+      "community": 34,
       "norm_label": "large editorial timecode typography \u2014 monospace hh:mm:ss, amber/gold tint on black, dominant visual anchor of each deck card",
       "id": "atelier_full_timecode"
     },
@@ -7457,7 +7457,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 35,
+      "community": 34,
       "norm_label": "right-side mixer column with vertical channel vu bars (6 channels) in green/amber gradient, 'crossfade' label with horizontal slider, 'session log' list of labeled events/tracks",
       "id": "atelier_full_mixer_panel"
     },
@@ -7470,7 +7470,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 35,
+      "community": 34,
       "norm_label": "bottom transport/status bar spanning full width \u2014 fine tick-marks timeline, small status chips/icons, muted dark background",
       "id": "atelier_full_bottom_bar"
     },
@@ -7483,7 +7483,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 35,
+      "community": 34,
       "norm_label": "color palette: deep charcoal/near-black background (#0f0d0b-ish), warm ivory text, amber/gold primary accent, secondary per-deck hue (teal, green, violet) \u2014 editorial studio dark aesthetic",
       "id": "atelier_full_palette"
     },
@@ -15876,6 +15876,18 @@
       "relation": "calls",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
+      "source_location": "L93",
+      "weight": 1.0,
+      "_src": "virtual_deck_sendvirtualcdjstatus",
+      "_tgt": "main_push",
+      "source": "main_push",
+      "target": "virtual_deck_sendvirtualcdjstatus"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/pdjl/dbserver.js",
       "source_location": "L19",
       "weight": 1.0,
@@ -21024,7 +21036,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
-      "source_location": "L54",
+      "source_location": "L56",
       "weight": 1.0,
       "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_tcnet_handler_js",
       "_tgt": "tcnet_handler_registertcnetnode",
@@ -21036,7 +21048,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
-      "source_location": "L85",
+      "source_location": "L88",
       "weight": 1.0,
       "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_tcnet_handler_js",
       "_tgt": "tcnet_handler_handletcnetmsg",
@@ -21048,7 +21060,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
-      "source_location": "L94",
+      "source_location": "L97",
       "weight": 1.0,
       "_src": "tcnet_handler_handletcnetmsg",
       "_tgt": "tcnet_handler_startswithbridgeci",
@@ -21060,7 +21072,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
-      "source_location": "L99",
+      "source_location": "L102",
       "weight": 1.0,
       "_src": "tcnet_handler_handletcnetmsg",
       "_tgt": "tcnet_handler_readname8",
@@ -21072,7 +21084,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
-      "source_location": "L164",
+      "source_location": "L167",
       "weight": 1.0,
       "_src": "tcnet_handler_handletcnetmsg",
       "_tgt": "tcnet_handler_getmixerscratch",
@@ -21084,7 +21096,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
-      "source_location": "L107",
+      "source_location": "L110",
       "weight": 1.0,
       "_src": "tcnet_handler_handletcnetmsg",
       "_tgt": "tcnet_handler_registertcnetnode",
@@ -21168,7 +21180,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
-      "source_location": "L103",
+      "source_location": "L112",
       "weight": 1.0,
       "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_virtual_deck_js",
       "_tgt": "virtual_deck_startvirtualdbserver",
@@ -21180,7 +21192,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
-      "source_location": "L189",
+      "source_location": "L198",
       "weight": 1.0,
       "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_virtual_deck_js",
       "_tgt": "virtual_deck_handlevdbrequest",
@@ -21192,7 +21204,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
-      "source_location": "L246",
+      "source_location": "L255",
       "weight": 1.0,
       "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_virtual_deck_js",
       "_tgt": "virtual_deck_findvirtualart",
@@ -21480,7 +21492,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/dbserver-io.js",
-      "source_location": "L11",
+      "source_location": "L13",
       "weight": 1.0,
       "_src": "users_zes2021_documents_claude_projects_bridge_clone_pdjl_dbserver_io_js",
       "_tgt": "dbserver_io_dbreadresponse",
@@ -21492,7 +21504,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/dbserver-io.js",
-      "source_location": "L41",
+      "source_location": "L42",
       "weight": 1.0,
       "_src": "users_zes2021_documents_claude_projects_bridge_clone_pdjl_dbserver_io_js",
       "_tgt": "dbserver_io_dbreadfullresponse",
