@@ -73,7 +73,7 @@ function _writeUtf32LE(buf, offset, str, maxChars){
 }
 
 function buildHdr(type){
-  const b = Buffer.alloc(TC.H);
+  const b = Buffer.allocUnsafe(TC.H);
   TC.NID.copy(b,0); TC.VER.copy(b,2); TC.MAGIC.copy(b,4);
   b[7] = type;
   b.write(TC.NNAME.padEnd(8,'\0'), 8, 8, 'ascii');
@@ -88,7 +88,7 @@ function buildHdr(type){
 // ─────────────────────────────────────────────
 
 function mkOptIn(port, uptime, nc){
-  const b = Buffer.alloc(TC.SZ_OI);
+  const b = Buffer.allocUnsafe(TC.SZ_OI);
   buildHdr(TC.OPTIN).copy(b,0);
   const d = b.slice(24);
   d.writeUInt16LE(nc||2, 0);
@@ -300,7 +300,7 @@ function mkDataMeta(layerIdx, layerData){
 }
 
 function mkNotification(){
-  const b = Buffer.alloc(30);
+  const b = Buffer.allocUnsafe(30);
   buildHdr(TC.NOTIFY).copy(b, 0);
   const d = b.slice(TC.H);
   d[0]=0xFF; d[1]=0xFF; d[2]=0xFF; d[3]=0x00; d[4]=0x1E; d[5]=0x00;
