@@ -147,6 +147,16 @@ test('renderer exposes 3 waveform themes (3 Band, RGB, Mono)', () => {
   assert.match(renderer, /function _wfRenderDataForDeck\(d\)\{[^}]*d\?\.type==='hw'/, '_wfRenderDataForDeck branches on hw vs virtual');
 });
 
+test('overview overlay markers use static OffscreenCanvas cache', () => {
+  const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
+  const renderer = fs.readFileSync(rendererPath, 'utf8');
+  assert.match(renderer, /d\._ovOverlayCache/, 'overview overlay cache property missing');
+  assert.match(renderer, /trackId\}\|\$\{cuesHash\}\|\$\{beatsHash\}\|\$\{W2\}\|\$\{H2\}\|\$\{wfTheme\}/, 'overview overlay cache key should include track/cues/beats/size/theme');
+  assert.match(renderer, /new OffscreenCanvas\(W2,H2\)/, 'overview overlay cache should render static markers into OffscreenCanvas');
+  assert.match(renderer, /olCtx\.drawImage\(d\._ovOverlayCache\.canvas,0,0\)/, 'overview overlay cache hit should blit once to the overlay context');
+  assert.match(renderer, /if\(!_ovHasOffscreenCanvas\)\{[\s\S]*_drawOverviewOverlayStatic\(olCtx\);[\s\S]*_drawOverviewPlayhead\(olCtx\);[\s\S]*return;/, 'no-OffscreenCanvas fallback should run full overlay redraw');
+});
+
 test('2d fallback cache uses signed min/max peaks', () => {
   const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
   const wfAnalysisPath = path.join(__dirname, '..', 'renderer', 'waveform-analysis.js');
