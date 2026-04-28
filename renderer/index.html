@@ -4164,6 +4164,13 @@ function ensureHWDeck(playerNum){
 
 // ════ Deck rendering ═════════════════════════════════
 function renderDecks(){
+  // DOM rebuild 직전 — 모든 deck paint-cache key 무효화. 캐시가 남아있으면
+  // BPM/타이틀/모델 등 다음 tick 에서 동일 key 라 판단해 새 DOM 에 다시 안 쓰임.
+  for(let i=0;i<DECKS.length;i++){
+    const d=DECKS[i]; if(!d) continue;
+    d._lastBpmKey=null; d._lastHwlKey=null; d._lastBgKey=null;
+    d._lastDidKey=null; d._lastDrawKey=null; d._lastFillKey=null; d._lastMcKey=null;
+  }
   const slots=getUsedSlots();
   const hwS=slots.filter(s=>DECKS[s].type==='hw');
   const vtS=slots.filter(s=>DECKS[s].type==='virtual');
