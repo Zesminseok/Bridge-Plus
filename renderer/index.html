@@ -394,11 +394,20 @@ body[data-layout="card"] .dvu-fader .dvu-hbar{cursor:ew-resize}
 .dk.dov .ddzi{border-color:var(--blu);color:var(--blu)}
 .add-deck-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border:1.5px dashed var(--bdr2);border-radius:12px;cursor:pointer;color:var(--tx3);font:600 11px var(--sn);background:0;transition:all .18s;width:100%}
 .add-deck-btn:hover{border-color:var(--key);color:var(--key);background:rgba(135,135,255,.03)}
-/* Tower 모드: addDeckBtn 은 vtRow 안 마지막 자식 (JS 가 이동). 덱 폭에 맞춤, + 아이콘 크게 */
-body[data-layout="tower"] #vtRow > #addDeckBtn{flex:0 0 auto;width:270px;min-width:270px;align-self:stretch;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;font-size:0;letter-spacing:0}
-body[data-layout="tower"] #vtRow > #addDeckBtn > span:first-child{font-size:48px;line-height:1;color:var(--tx3)}
-body[data-layout="tower"] #vtRow > #addDeckBtn > span:first-child svg{width:48px;height:48px}
-body[data-layout="tower"] #vtRow > #addDeckBtn > span:last-child{display:none}
+/* Tower 모드: addDeckBtn 은 vtRow 안 마지막 자식 (JS 가 이동).
+   다른 테마처럼 + 아이콘 + 텍스트 함께 보이게. 폭 조절은 컨텐츠 + 적당한 padding. */
+body[data-layout="tower"] #vtRow > #addDeckBtn{
+  flex:0 0 auto;width:auto;min-width:140px;align-self:stretch;
+  padding:14px 18px;margin:0;
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  border:1.5px dashed var(--bdr2);background:0;
+  font:600 11px var(--sn);color:var(--tx3);letter-spacing:0;
+  transition:all .18s;
+}
+body[data-layout="tower"] #vtRow > #addDeckBtn > span:first-child{font-size:24px;line-height:1;color:var(--tx3)}
+body[data-layout="tower"] #vtRow > #addDeckBtn > span:first-child svg{width:24px;height:24px}
+body[data-layout="tower"] #vtRow > #addDeckBtn > span:last-child{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px}
+body[data-layout="tower"] #vtRow > #addDeckBtn:hover{border-color:var(--key);color:var(--key)}
 body[data-layout="tower"] #vtRow > #addDeckBtn:hover > span:first-child{color:var(--key)}
 .sgr{background:var(--bg2);border:none;border-radius:10px;padding:4px 16px;margin-bottom:12px}
 .srw{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(60,60,80,.1)}.srw:last-child{border-bottom:none}
