@@ -1941,30 +1941,7 @@ class BridgeCore {
   _sendVirtualCDJStatus(playerNum, trackId, bpm){ return _vd.sendVirtualCDJStatus(this, playerNum, trackId, bpm); }
 
   /** Push JPEG artwork to Resolume Arena REST API as clip thumbnail fallback. */
-  async _pushArtToResolume(slot, jpegBuf){
-    try{
-      // Find Arena IP from known nodes
-      let arenaIP = '127.0.0.1';
-      for(const n of Object.values(this.nodes)){
-        if(n.vendor && n.vendor.includes('Resolume')) arenaIP = n.ip;
-      }
-
-      // Resolume REST API: PUT raw JPEG binary as clip thumbnail
-      const layer = slot + 1;
-      const clip = 1;
-      const http = require('http');
-      const url = `http://${arenaIP}:8080/api/v1/composition/layers/${layer}/clips/${clip}/thumbnail`;
-      console.log(`[ARENA-ART] PUT ${url} (${jpegBuf.length}B JPEG)`);
-      const req = http.request(url, {method:'PUT', headers:{'Content-Type':'image/jpeg','Content-Length':jpegBuf.length}}, res=>{
-        let d='';res.on('data',c=>d+=c);
-        res.on('end',()=>console.log(`[ARENA-ART] thumbnail ${res.statusCode} slot${slot+1}: ${d.slice(0,80)}`));
-      });
-      req.on('error', e=>console.warn(`[ARENA-ART] REST failed: ${e.message} (enable HTTP server in Arena Preferences)`));
-      req.write(jpegBuf); req.end();
-    }catch(e){
-      console.warn(`[ARENA-ART] push failed: ${e.message}`);
-    }
-  }
+  async _pushArtToResolume(slot, jpegBuf){ return _vd.pushArtToResolume(this, slot, jpegBuf); }
 
   _startVirtualDbServer(){ return _vd.startVirtualDbServer(this); }
 
@@ -1973,18 +1950,7 @@ class BridgeCore {
 
   _handleVDbRequest(sock, buf){ return _vd.handleVDbRequest(this, sock, buf); }
 
-  // Find artwork for a specific trackId (matches layer's trackId → slot → _virtualArt)
-  _findArtByTrackId(trackId){
-    if(!trackId) return null;
-    for(let i=0;i<8;i++){
-      const ld=this.layers[i];
-      if(ld && ld.trackId===trackId){
-        const buf=this._virtualArt[i];
-        if(buf&&buf.length>100) return buf;
-      }
-    }
-    return null;
-  }
+  _findArtByTrackId(trackId){ return _vd.findArtByTrackId(this, trackId); }
 
   _findVirtualArt(){ return _vd.findVirtualArt(this); }
 

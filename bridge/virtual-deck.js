@@ -262,6 +262,43 @@ function findVirtualArt(core){
   return null;
 }
 
+// trackId 가 매칭되는 layer slot 의 _virtualArt 반환 (BLANK_JPEG 제외).
+function findArtByTrackId(core, trackId){
+  if(!trackId) return null;
+  for(let i=0;i<8;i++){
+    const ld = core.layers[i];
+    if(ld && ld.trackId===trackId){
+      const buf = core._virtualArt[i];
+      if(buf && buf.length>100) return buf;
+    }
+  }
+  return null;
+}
+
+// Resolume Arena REST API (port 8080) 로 raw JPEG 썸네일 PUT — 호스트 앱 설정에서
+// HTTP server 켜져 있어야 동작. 실패 시 경고만.
+async function pushArtToResolume(core, slot, jpegBuf){
+  try{
+    let arenaIP = '127.0.0.1';
+    for(const n of Object.values(core.nodes)){
+      if(n.vendor && n.vendor.includes('Resolume')) arenaIP = n.ip;
+    }
+    const layer = slot + 1;
+    const clip = 1;
+    const http = require('http');
+    const url = `http://${arenaIP}:8080/api/v1/composition/layers/${layer}/clips/${clip}/thumbnail`;
+    console.log(`[ARENA-ART] PUT ${url} (${jpegBuf.length}B JPEG)`);
+    const req = http.request(url, {method:'PUT', headers:{'Content-Type':'image/jpeg','Content-Length':jpegBuf.length}}, res=>{
+      let d='';res.on('data',c=>d+=c);
+      res.on('end',()=>console.log(`[ARENA-ART] thumbnail ${res.statusCode} slot${slot+1}: ${d.slice(0,80)}`));
+    });
+    req.on('error', e=>console.warn(`[ARENA-ART] REST failed: ${e.message} (enable HTTP server in host preferences)`));
+    req.write(jpegBuf); req.end();
+  }catch(e){
+    console.warn(`[ARENA-ART] push failed: ${e.message}`);
+  }
+}
+
 module.exports = {
   registerVirtualDeck,
   unregisterVirtualDeck,
@@ -270,5 +307,7 @@ module.exports = {
   startVirtualDbServer,
   handleVDbRequest,
   findVirtualArt,
+  findArtByTrackId,
+  pushArtToResolume,
   BLANK_JPEG,
 };

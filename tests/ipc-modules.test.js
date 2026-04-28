@@ -842,11 +842,11 @@ test('preload.js: on* 함수가 listener remover 클로저 반환 (누수 방지
 
 // ─── BridgeCore split — bridge/virtual-deck.js ─────────────────────────
 
-test('virtual-deck: 8개 helper + BLANK_JPEG export', () => {
+test('virtual-deck: helper export + BLANK_JPEG (Phase 5.2/5.8)', () => {
   const mod = require(path.join(__dirname, '..', 'bridge', 'virtual-deck'));
   ['registerVirtualDeck','unregisterVirtualDeck','setVirtualArt',
    'sendVirtualCDJStatus','startVirtualDbServer','handleVDbRequest',
-   'findVirtualArt'].forEach(name => {
+   'findVirtualArt','findArtByTrackId','pushArtToResolume'].forEach(name => {
     assert.strictEqual(typeof mod[name], 'function', `missing helper: ${name}`);
   });
   assert.ok(Buffer.isBuffer(mod.BLANK_JPEG), 'BLANK_JPEG should be Buffer');
