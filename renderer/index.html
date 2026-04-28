@@ -1172,6 +1172,7 @@ body[data-layout="card"] .cd-ddz .ddzi{font-size:28px!important;color:var(--tx3)
 /* ═════════════════════════════════════════════════════════════ */
 /* ═ OBSERVATORY 테마 — CRT phosphor terminal (4 채널 2×2 콘솔) ═ */
 /* ═════════════════════════════════════════════════════════════ */
+/* Observatory 테마 — 덱 영역에만 적용. 메뉴/설정 등 전역 UI 는 영향 없음. */
 body[data-layout="observatory"]{
   --obs-void:#04060a;--obs-plate:#0a0d12;--obs-plate-2:#11151c;
   --obs-amber:#f6a516;--obs-amber-2:#d68a09;
@@ -1180,14 +1181,15 @@ body[data-layout="observatory"]{
   --obs-green:#6df08c;--obs-green-dim:#5fa173;
   --obs-red:#ff5b3b;--obs-cyan:#4fd0e0;
   --obs-ink-low:#56657a;--obs-ink-mid:#8ca0b8;
-  background:var(--obs-void)!important;
 }
-body[data-layout="observatory"] .pg{background:var(--obs-void)}
-body[data-layout="observatory"] *{border-radius:0!important}
+/* border-radius:0 은 deck-row 안 요소로 한정 (전역 menu/settings 둥근모서리 보존). */
+body[data-layout="observatory"] .deck-row,
+body[data-layout="observatory"] .deck-row *{border-radius:0!important}
 
-/* CRT scanlines + vignette overlay */
-body[data-layout="observatory"]::after{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+/* CRT scanlines + vignette — deck-row 컨테이너 내부에만 (전체 창 X). */
+body[data-layout="observatory"] .deck-row{position:relative}
+body[data-layout="observatory"] .deck-row::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:5;
   background:
     repeating-linear-gradient(180deg,rgba(255,255,255,.018) 0,rgba(255,255,255,.018) 1px,transparent 1px,transparent 3px),
     radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.4) 100%);
