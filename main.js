@@ -456,6 +456,29 @@ function saveBounds(){
   }catch(e){console.warn('[WIN] saveBounds error:',e.message);}
 }
 
+// 스플래시 텍스트 i18n — main process 는 renderer 의 i18n.js 와 분리되므로 자체 mini dict 사용.
+// app.getLocale() 결과 로 런타임 언어 자동 감지. 키 없으면 영어 fallback.
+const SPLASH_TR = {
+  en: { start_msg: 'Starting BRIDGE+...', start_sub: 'Network initialization', stop_msg: 'Shutting down...', stop_sub: 'Closing TCNet & Pro DJ Link' },
+  ko: { start_msg: 'BRIDGE+ 시작 중...', start_sub: '네트워크 초기화', stop_msg: '종료 중...', stop_sub: 'TCNet · Pro DJ Link 연결 해제' },
+  ja: { start_msg: 'BRIDGE+ 起動中...', start_sub: 'ネットワーク初期化', stop_msg: '終了中...', stop_sub: 'TCNet · Pro DJ Link 接続解除' },
+  es: { start_msg: 'Iniciando BRIDGE+...', start_sub: 'Iniciando red', stop_msg: 'Cerrando...', stop_sub: 'Desconectando TCNet y Pro DJ Link' },
+  de: { start_msg: 'BRIDGE+ wird gestartet...', start_sub: 'Netzwerk-Initialisierung', stop_msg: 'Wird beendet...', stop_sub: 'TCNet & Pro DJ Link werden getrennt' },
+  fr: { start_msg: 'Démarrage de BRIDGE+...', start_sub: 'Initialisation réseau', stop_msg: 'Arrêt en cours...', stop_sub: 'Déconnexion TCNet & Pro DJ Link' },
+};
+function _splashLocale(){
+  try{
+    const loc = (app.getLocale() || 'en').toLowerCase();
+    if (loc.startsWith('ko')) return 'ko';
+    if (loc.startsWith('ja')) return 'ja';
+    if (loc.startsWith('es')) return 'es';
+    if (loc.startsWith('de')) return 'de';
+    if (loc.startsWith('fr')) return 'fr';
+  }catch(_){}
+  return 'en';
+}
+function _splashT(key){ return (SPLASH_TR[_splashLocale()] || SPLASH_TR.en)[key] || SPLASH_TR.en[key] || key; }
+
 let splash=null;
 function showSplash(msg,sub){
   if(splash&&!splash.isDestroyed()){try{splash.destroy();}catch(_){}}
@@ -502,7 +525,7 @@ function createWindow(){
   });
   try{ win.setMenuBarVisibility(false); }catch(_){}
   // Show splash while loading
-  showSplash('BRIDGE+ 시작 중...','네트워크 초기화');
+  showSplash(_splashT('start_msg'), _splashT('start_sub'));
   win.once('ready-to-show',()=>{
     win.show();
     setTimeout(()=>{if(splash&&!splash.isDestroyed())splash.destroy();splash=null;},1500);
@@ -620,7 +643,7 @@ function doQuit(){
   // 2. Signal renderer to clean up WebGL contexts (prevents V8 BackingStore crash)
   try{if(win&&!win.isDestroyed())win.webContents.send('app:quitting');}catch(_){}
   // 3. Show shutdown splash BEFORE hiding main window (so position is correct)
-  showSplash('종료 중...','TCNet · ProDJ Link 연결 해제');
+  showSplash(_splashT('stop_msg'), _splashT('stop_sub'));
   // 4. Hide main window after splash is positioned
   try{if(win&&!win.isDestroyed()){win.hide();}}catch(_){}
   // 4. Stop bridge after small delay (let splash render first)
