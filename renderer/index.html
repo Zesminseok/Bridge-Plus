@@ -878,10 +878,12 @@ body[data-layout="row"] select.ss:focus,
 body[data-layout="tower"] select.ss:focus,
 body[data-layout="card"] select.ss:focus,
 body[data-layout="observatory"] select.ss:focus{border-color:rgba(255,107,44,.4)}
-/* 전역 border-radius 0 — MONO 테마의 핵심 특징 (각진 UI). Observatory 는 deck-row 만 적용 */
+/* 전역 border-radius 0 — 모든 layout 공통 (각진 UI 통일). 사이드바/헤더/설정 패널 같은
+   글로벌 UI 박스들이 layout 마다 다른 라운드값으로 보이지 않도록 통일. */
 body[data-layout="row"] *,
 body[data-layout="tower"] *,
-body[data-layout="card"] *{border-radius:0!important}
+body[data-layout="card"] *,
+body[data-layout="observatory"] *{border-radius:0!important}
 
 /* DK 카드 및 보더 톤 통일 */
 body[data-layout="row"] .dk,
@@ -1188,10 +1190,6 @@ body[data-layout="observatory"]{
   --obs-red:#ff5b3b;--obs-cyan:#4fd0e0;
   --obs-ink-low:#56657a;--obs-ink-mid:#8ca0b8;
 }
-/* border-radius:0 은 deck-row 안 요소로 한정 (전역 menu/settings 둥근모서리 보존). */
-body[data-layout="observatory"] .deck-row,
-body[data-layout="observatory"] .deck-row *{border-radius:0!important}
-
 /* CRT scanlines + vignette — deck-row 컨테이너 내부에만 (전체 창 X). */
 body[data-layout="observatory"] .deck-row{position:relative}
 body[data-layout="observatory"] .deck-row::after{
