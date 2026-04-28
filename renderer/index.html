@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8"><title>BRIDGE+ | Professional DJ Bridge</title>
-<!-- CSP — Electron 환경 보안 strengthening. 'unsafe-inline'/'unsafe-eval' 은 현재 inline style/event handler 사용 위해 허용.
-     외부 origin 차단 (default-src 'self') — 악의적 remote script 로드 방지.
-     data:/blob: 허용 (album art base64, audio blob URL).
-     bridge-audio: custom protocol (decoded WAV stream — bypassCSP=true 라 영향 없지만 명시). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: bridge-audio:; img-src 'self' data: blob: bridge-audio:; media-src 'self' data: blob: bridge-audio:; connect-src 'self' data: blob: bridge-audio:; font-src 'self' data:;">
+<!-- CSP — Electron 환경 보안. unsafe-inline 유지 (inline style/handler 용). unsafe-eval 제거 (사용처 없음 검증 완료).
+     외부 origin 차단, data:/blob: 허용 (album art / audio blob). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob: bridge-audio:; img-src 'self' data: blob: bridge-audio:; media-src 'self' data: blob: bridge-audio:; connect-src 'self' data: blob: bridge-audio:; font-src 'self' data:;">
 <!-- MONO 테마 (E/F/G 레이아웃) 전용 폰트 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4356,11 +4354,11 @@ function deckHTMLRow(slot){
         <span class="dksm-btn dksm-master${d.master?' on':''}" id="ddmst${slot}" style="padding:1px 5px;font-size:7px;min-width:42px">MASTER</span>
       </div>
       <div class="rw-title-inline">
-        <span id="dta${slot}">${(isLoaded&&d.ar)?d.ar:'—'}</span>
+        <span id="dta${slot}">${(isLoaded&&d.ar)?_escHtml(d.ar):'—'}</span>
         <span class="dk-title-sep" id="dtsep${slot}">—</span>
-        <span id="dtn${slot}">${isLoaded?(d.tn||'—'):'—'}</span>
+        <span id="dtn${slot}">${isLoaded?(d.tn?_escHtml(d.tn):'—'):'—'}</span>
       </div>
-      <span class="dhwl" id="dhwl${slot}" style="font:500 9px var(--mn);color:var(--tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+d.model:''):''}</span>
+      <span class="dhwl" id="dhwl${slot}" style="font:500 9px var(--mn);color:var(--tx3);letter-spacing:.04em;display:inline-flex;align-items:center;gap:4px">${isHW?(d.model?'<svg class="gi gi-hex"><use href="#i-hex"/></svg>'+_escHtml(d.model):''):''}</span>
       ${isHW?'':`<button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>`}
     </div>
     <div class="rw-body${isHW?'':' no-eq'}">
@@ -5018,8 +5016,17 @@ function loadFile(slot,f){
       const _art=document.getElementById('dart'+slot);
       if(_art&&d.artUrl){
         const _existImg=_art.querySelector('img');
-        if(_existImg){_existImg.src=d.artUrl;}
-        else{_art.innerHTML=`<img src="${d.artUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.src='assets/default-art.png'">`;}
+        if(_existImg){_existImg.src=_safeImgSrc(d.artUrl);}
+        else{
+          // createElement — 변조된 artUrl 의 attribute injection 차단 (DOM API 가 자동 escape).
+          while(_art.firstChild)_art.removeChild(_art.firstChild);
+          const _img=document.createElement('img');
+          _img.src=_safeImgSrc(d.artUrl);
+          _img.alt='';
+          _img.style.cssText='width:100%;height:100%;object-fit:cover;display:block';
+          _img.onerror=function(){this.src='assets/default-art.png';};
+          _art.appendChild(_img);
+        }
       }
       if(E&&run)window.bridge.updateLayer(slot,{trackName:d.tn||'',artistName:d.ar||''});
       return tags;
@@ -5913,8 +5920,8 @@ function tick(){
         d._lastHwlKey=_hwlKey;
         const _hxSvg='<svg class="gi gi-hex"><use href="#i-hex"/></svg>';
         const _cirSvg='<svg class="gi gi-hex"><use href="#i-circle"/></svg>';
-        // d.model 은 Pro DJ Link CDJ 디바이스 ID — 신뢰 가능한 LAN 소스, XSS 위험 없음.
-        dhwlEl.innerHTML=d.type==='hw'?(d.model?_hxSvg+' '+d.model:_hxSvg+' HW'):_cirSvg+' VIRTUAL';
+        // d.model 은 PDJL 패킷에서 추출 — LAN 도 untrusted (compromised device / Wi-Fi 침투) 가정 escape.
+        dhwlEl.innerHTML=d.type==='hw'?(d.model?_hxSvg+' '+_escHtml(d.model):_hxSvg+' HW'):_cirSvg+' VIRTUAL';
       }
     }
 
@@ -7239,8 +7246,18 @@ if(E){
     if(el){
       if(d.art){
         const img=el.querySelector('img');
-        if(img){img.src=d.art;img.decoding='async';}
-        else{el.innerHTML=`<img src="${d.art}" alt="" decoding="async" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.src='assets/default-art.png'">`;}
+        if(img){img.src=_safeImgSrc(d.art);img.decoding='async';}
+        else{
+          while(el.firstChild)el.removeChild(el.firstChild);
+          const _img=document.createElement('img');
+          _img.src=_safeImgSrc(d.art);
+          _img.alt='';
+          _img.decoding='async';
+          _img.loading='lazy';
+          _img.style.cssText='width:100%;height:100%;object-fit:cover;display:block';
+          _img.onerror=function(){this.src='assets/default-art.png';};
+          el.appendChild(_img);
+        }
       } else {
         // 아트워크 없음 → 기본 바이닐 이미지로 복원
         el.innerHTML='<img src="assets/default-art.png" alt="" decoding="async" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block">';

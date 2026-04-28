@@ -4,11 +4,13 @@
 const { PDJL, hasPDJLMagic, readPDJLNameField } = require('./packets');
 const { STATE, P1_TO_STATE, P1_NAME } = require('../tcnet/packets');
 
-function parsePDJL(msg){
+// Optional hints — caller (_onPDJL) 가 이미 hasMagic/nameField 계산했다면
+// 중복 호출 (~500 packets/sec × string allocation) 회피. backward compat 유지.
+function parsePDJL(msg, hints){
   if(msg.length<11) return null;
-  const hasMagic = hasPDJLMagic(msg);
+  const hasMagic = (hints && hints.hasMagic !== undefined) ? hints.hasMagic : hasPDJLMagic(msg);
   const type = msg[10];
-  const name = readPDJLNameField(msg);
+  const name = (hints && hints.nameField !== undefined) ? hints.nameField : readPDJLNameField(msg);
   const isKnownDjmShape =
     (type===PDJL.DJM && msg.length>=0x80) ||
     (type===PDJL.DJM2 && msg.length>=0x24) ||

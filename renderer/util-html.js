@@ -10,6 +10,18 @@ function _escHtml(s){
   return String(s).replace(/[<>"'&]/g, c => _ESC_MAP[c]);
 }
 
+// Album art / image src 안전 처리 — data:image/{jpeg,png,webp,gif} / blob: / assets/ 만 허용.
+// dbserver TCP 응답이 변조되거나 ID3 art 가 악성이어도 javascript: scheme 등 차단.
+// 통과한 값은 _escHtml 로 quote attribute 탈출도 방지 (defense in depth).
+function _safeImgSrc(s){
+  if (s == null) return '';
+  const v = String(s);
+  if (/^data:image\/(jpeg|png|webp|gif);base64,/i.test(v)) return _escHtml(v);
+  if (/^blob:/.test(v)) return _escHtml(v);
+  if (/^assets\//.test(v)) return _escHtml(v);
+  return 'assets/default-art.png';
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { _escHtml };
+  module.exports = { _escHtml, _safeImgSrc };
 }

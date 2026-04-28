@@ -1486,7 +1486,9 @@ class BridgeCore {
       const magic=hasMagic?'pdjl':'RAW';
       try{this._djmCaptureStream.write(`${ts} ${rinfo.address}:${rinfo.port} ${magic} type=0x${type.toString(16).padStart(2,'0')} len=${msg.length} name=${name} ${hex}\n`);}catch(_){}
     }
-    const p = parsePDJL(msg);
+    // hot-path 최적화: 위에서 이미 계산된 hasMagic/nameField 를 hint 로 전달
+    // (parser 내부 중복 계산 회피 — string alloc/decode 절감, ~500 pkt/s).
+    const p = parsePDJL(msg, { hasMagic, nameField });
     // Log first occurrence of each packet type per source — skip CDJ status (too noisy)
     if(!this._pdjlDbg) this._pdjlDbg={};
     const dbgK=rinfo.address+':'+msg[10];
@@ -2744,6 +2746,10 @@ class BridgeCore {
   _dbReadResponse(sock){
     return new Promise((res,rej)=>{
       const chunks = [];
+      let totalLen = 0;
+      // SECURITY: malicious/buggy CDJ 가 무한 응답으로 메모리 폭주시키지 못하게 16MB cap.
+      // 일반 metadata 응답 < 64KB, artwork JPEG < 5MB → 16MB 면 충분.
+      const _DB_RESP_MAX = 16 * 1024 * 1024;
       // 누수 방지: success/timeout/error 어느 경로든 listener 와 timer 모두 정리.
       let timer = null;
       const cleanup = () => {
@@ -2753,6 +2759,8 @@ class BridgeCore {
       };
       const onData = d => {
         chunks.push(d);
+        totalLen += d.length;
+        if(totalLen > _DB_RESP_MAX){ cleanup(); rej(new Error('dbserver response too large')); return; }
         const buf = Buffer.concat(chunks);
         // NumberField format: UInt32(magic)=5 + UInt32(txId)=5 + UInt16(type)=3 + UInt8(argc)=2 + Binary(tags)=17 = 32+ bytes
         if(buf.length >= 32){
@@ -2770,9 +2778,17 @@ class BridgeCore {
   _dbReadFullResponse(sock, idleMs=300){
     return new Promise((res,rej)=>{
       const chunks = [];
+      let totalLen = 0;
+      const _DB_RESP_MAX = 16 * 1024 * 1024; // 16MB cap (artwork/메타데이터 모두 충분)
       let timer = null;
       const onData = d => {
         chunks.push(d);
+        totalLen += d.length;
+        if(totalLen > _DB_RESP_MAX){
+          if(timer) clearTimeout(timer);
+          sock.removeListener('data', onData);
+          rej(new Error('dbserver full response too large')); return;
+        }
         // Reset idle timer on each chunk
         if(timer) clearTimeout(timer);
         timer = setTimeout(()=>{
