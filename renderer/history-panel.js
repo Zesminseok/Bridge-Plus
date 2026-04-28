@@ -87,7 +87,9 @@
     const stBpm = document.getElementById('histStatBpm');
     if(stBpm) stBpm.textContent = bpms.length ? (bpms.reduce((s,e) => s + e.bpm, 0)/bpms.length).toFixed(1) : '—';
     if(!_histLog.length){
-      list.innerHTML = `<div class="hist-empty"><span class="material-symbols-outlined">music_off</span><span class="hist-empty-tx">아직 기록된 트랙이 없습니다</span><span style="font:400 10px var(--sn);color:var(--tx4)">ON AIR 10초 이상 재생된 트랙이 여기 표시됩니다</span></div>`;
+      const emptyTitle = window.t ? window.t('history_empty_title', '아직 기록된 트랙이 없습니다') : '아직 기록된 트랙이 없습니다';
+      const emptyHint = window.t ? window.t('history_empty_hint', 'ON AIR 10초 이상 재생된 트랙이 여기 표시됩니다') : 'ON AIR 10초 이상 재생된 트랙이 여기 표시됩니다';
+      list.innerHTML = `<div class="hist-empty"><span class="material-symbols-outlined">music_off</span><span class="hist-empty-tx">${emptyTitle}</span><span style="font:400 10px var(--sn);color:var(--tx4)">${emptyHint}</span></div>`;
       return;
     }
     const now = Date.now();

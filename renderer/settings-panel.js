@@ -11,13 +11,13 @@ function renderSettings(){
   const ifaceOpts=(ifaces,field)=>{
     const sel=cfg[field]||'';
     const loopSel=sel==='127.0.0.1'?'selected':'';
-    const loopOpt=`<option value="127.0.0.1" ${loopSel}>lo0 (localhost 127.0.0.1) — Arena 같은 맥</option>`;
+    const loopOpt=`<option value="127.0.0.1" ${loopSel}>lo0 (localhost 127.0.0.1) — ${(window.t?window.t('opt_same_mac_arena','Arena 같은 맥'):'Arena 같은 맥')}</option>`;
     const netOpts=ifaces.filter(i=>!i.internal).map(i=>{
       const label=i.hwPort||i.name;
-      const suffix=i.address.startsWith('169.254')?'  (링크로컬 CDJ)':'';
+      const suffix=i.address.startsWith('169.254')?`  (${(window.t?window.t('opt_linklocal_cdj','링크로컬 CDJ'):'링크로컬 CDJ')})`:'';
       return`<option value="${i.address}" ${sel===i.address?'selected':''}>${i.name} — ${i.address} (${label})${suffix}</option>`;
     }).join('');
-    return `<option value="">자동 감지</option>${loopOpt}${netOpts}`;
+    return `<option value="">${(window.t?window.t('lbl_auto_detect','자동 감지'):'자동 감지')}</option>${loopOpt}${netOpts}`;
   };
 
   // 언어 드롭다운 옵션 빌드 (i18n.js 의 supported list 기반)
@@ -48,36 +48,36 @@ function renderSettings(){
     <div class="sgr">
       <div class="srw"><span class="srl">Theme</span><select class="ss" id="wfThemeSel"><option value="3band" ${wfTheme==='3band'?'selected':''}>3 Band</option><option value="rgb" ${wfTheme==='rgb'?'selected':''}>RGB</option><option value="mono" ${wfTheme==='mono'?'selected':''}>Mono</option></select></div>
       <div class="srw"><span class="srl">Sharpness</span><div style="display:flex;align-items:center;gap:6px"><input type="range" id="wfSharpnessSl" min="0" max="1" step="0.05" value="${wfSharpness}" title="0=sharp 1=legacy 3-tap smoothing" style="width:120px"><span id="wfSharpnessLbl" style="font:400 10px var(--mn);color:var(--tx3);width:32px;text-align:right">${wfSharpness.toFixed(2)}</span></div></div>
-      <div class="srw"><span class="srl" data-i18n="set_playhead">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
+      <div class="srw"><span class="srl" data-i18n="set_playhead">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>${(window.t?window.t('lbl_position_center','중앙 (Center)'):'중앙 (Center)')}</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>${(window.t?window.t('lbl_position_left','좌측 (Left 25%)'):'좌측 (Left 25%)')}</option></select></div>
       <div class="srw"><span class="srl" data-i18n="set_beatgrid_overview">비트 그리드 — 오버뷰</span><select class="ss" id="wfBeatStyleOverviewSel">
-        <option value="none" ${wfBeatStyleOverview==='none'?'selected':''}>없음</option>
-        <option value="phrase" ${wfBeatStyleOverview==='phrase'?'selected':''}>Phrase 만 (16비트)</option>
-        <option value="balanced" ${wfBeatStyleOverview==='balanced'?'selected':''}>균형 (다운비트 + Phrase)</option>
-        <option value="detailed" ${wfBeatStyleOverview==='detailed'?'selected':''}>상세 (모든 비트)</option>
-        <option value="phrase-band" ${wfBeatStyleOverview==='phrase-band'?'selected':''}>Phrase 강조 (밴드)</option>
-        <option value="hybrid" ${wfBeatStyleOverview==='hybrid'?'selected':''}>하이브리드</option>
+        <option value="none" ${wfBeatStyleOverview==='none'?'selected':''}>${(window.t?window.t('opt_none','없음'):'없음')}</option>
+        <option value="phrase" ${wfBeatStyleOverview==='phrase'?'selected':''}>${(window.t?window.t('opt_phrase_only_16','Phrase 만 (16비트)'):'Phrase 만 (16비트)')}</option>
+        <option value="balanced" ${wfBeatStyleOverview==='balanced'?'selected':''}>${(window.t?window.t('opt_beatgrid_balanced','균형 (다운비트 + Phrase)'):'균형 (다운비트 + Phrase)')}</option>
+        <option value="detailed" ${wfBeatStyleOverview==='detailed'?'selected':''}>${(window.t?window.t('opt_beatgrid_detailed','상세 (모든 비트)'):'상세 (모든 비트)')}</option>
+        <option value="phrase-band" ${wfBeatStyleOverview==='phrase-band'?'selected':''}>${(window.t?window.t('opt_phrase_band','Phrase 강조 (밴드)'):'Phrase 강조 (밴드)')}</option>
+        <option value="hybrid" ${wfBeatStyleOverview==='hybrid'?'selected':''}>${(window.t?window.t('opt_hybrid','하이브리드'):'하이브리드')}</option>
       </select></div>
       <div class="srw"><span class="srl" data-i18n="set_beatgrid_detail">비트 그리드 — 디테일</span><select class="ss" id="wfBeatStyleDetailSel">
-        <option value="none" ${wfBeatStyleDetail==='none'?'selected':''}>없음</option>
-        <option value="phrase" ${wfBeatStyleDetail==='phrase'?'selected':''}>Phrase 만 (16비트)</option>
-        <option value="balanced" ${wfBeatStyleDetail==='balanced'?'selected':''}>균형 (다운비트 + Phrase)</option>
-        <option value="detailed" ${wfBeatStyleDetail==='detailed'?'selected':''}>상세 (모든 비트)</option>
-        <option value="phrase-band" ${wfBeatStyleDetail==='phrase-band'?'selected':''}>Phrase 강조 (밴드)</option>
-        <option value="hybrid" ${wfBeatStyleDetail==='hybrid'?'selected':''}>하이브리드</option>
+        <option value="none" ${wfBeatStyleDetail==='none'?'selected':''}>${(window.t?window.t('opt_none','없음'):'없음')}</option>
+        <option value="phrase" ${wfBeatStyleDetail==='phrase'?'selected':''}>${(window.t?window.t('opt_phrase_only_16','Phrase 만 (16비트)'):'Phrase 만 (16비트)')}</option>
+        <option value="balanced" ${wfBeatStyleDetail==='balanced'?'selected':''}>${(window.t?window.t('opt_beatgrid_balanced','균형 (다운비트 + Phrase)'):'균형 (다운비트 + Phrase)')}</option>
+        <option value="detailed" ${wfBeatStyleDetail==='detailed'?'selected':''}>${(window.t?window.t('opt_beatgrid_detailed','상세 (모든 비트)'):'상세 (모든 비트)')}</option>
+        <option value="phrase-band" ${wfBeatStyleDetail==='phrase-band'?'selected':''}>${(window.t?window.t('opt_phrase_band','Phrase 강조 (밴드)'):'Phrase 강조 (밴드)')}</option>
+        <option value="hybrid" ${wfBeatStyleDetail==='hybrid'?'selected':''}>${(window.t?window.t('opt_hybrid','하이브리드'):'하이브리드')}</option>
       </select></div>
       <div class="srw"><span class="srl" data-i18n="set_phrase">Phrase 표시</span><select class="ss" id="wfPhraseStyleSel">
-        <option value="none" ${wfPhraseStyle==='none'?'selected':''}>없음</option>
+        <option value="none" ${wfPhraseStyle==='none'?'selected':''}>${(window.t?window.t('opt_none','없음'):'없음')}</option>
         <option value="margin" ${wfPhraseStyle==='margin'?'selected':''}>Margin Tick (minimal)</option>
-        <option value="label" ${wfPhraseStyle==='label'?'selected':''}>Mood 라벨 (INTRO/CHORUS/DROP)</option>
+        <option value="label" ${wfPhraseStyle==='label'?'selected':''}>${(window.t?window.t('opt_mood_label','Mood 라벨 (INTRO/CHORUS/DROP)'):'Mood 라벨 (INTRO/CHORUS/DROP)')}</option>
         <option value="cycle" ${wfPhraseStyle==='cycle'?'selected':''}>Color Cycling</option>
       </select></div>
       <div class="srw"><span class="srl" data-i18n="set_cue_marker">큐 마커 스타일</span><select class="ss" id="wfCueStyleSel">
-        <option value="chip" ${wfCueStyle==='chip'?'selected':''}>Chip — 라벨 (A/B/C)</option>
-        <option value="pill" ${wfCueStyle==='pill'?'selected':''}>Pill — 캡슐</option>
-        <option value="diamond" ${wfCueStyle==='diamond'?'selected':''}>Diamond — 마름모</option>
-        <option value="bardot" ${wfCueStyle==='bardot'?'selected':''}>Bar+Dot — 풀 막대</option>
-        <option value="flag" ${wfCueStyle==='flag'?'selected':''}>Flag — 펜타곤</option>
-        <option value="stripe" ${wfCueStyle==='stripe'?'selected':''}>Stripe — 컬러 띠</option>
+        <option value="chip" ${wfCueStyle==='chip'?'selected':''}>${(window.t?window.t('opt_chip_label','Chip — 라벨 (A/B/C)'):'Chip — 라벨 (A/B/C)')}</option>
+        <option value="pill" ${wfCueStyle==='pill'?'selected':''}>${(window.t?window.t('opt_pill_capsule','Pill — 캡슐'):'Pill — 캡슐')}</option>
+        <option value="diamond" ${wfCueStyle==='diamond'?'selected':''}>${(window.t?window.t('opt_diamond_rhombus','Diamond — 마름모'):'Diamond — 마름모')}</option>
+        <option value="bardot" ${wfCueStyle==='bardot'?'selected':''}>${(window.t?window.t('opt_bardot_full_bar','Bar+Dot — 풀 막대'):'Bar+Dot — 풀 막대')}</option>
+        <option value="flag" ${wfCueStyle==='flag'?'selected':''}>${(window.t?window.t('opt_flag_pentagon','Flag — 펜타곤'):'Flag — 펜타곤')}</option>
+        <option value="stripe" ${wfCueStyle==='stripe'?'selected':''}>${(window.t?window.t('opt_stripe_color','Stripe — 컬러 띠'):'Stripe — 컬러 띠')}</option>
       </select></div>
     </div>
     <div class="sl" data-i18n="set_license">라이선스</div>
@@ -90,7 +90,7 @@ function renderSettings(){
     </div>
     <div class="sl" data-i18n="set_tcnet">TCNet 설정</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">Node Name <span style="font:400 9px var(--mn);color:var(--tx4)">(%%=자동번호, 최대8자)</span></span><input type="text" value="${cfg.nm}" data-cfg="nm" placeholder="Bridge%%" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:110px;text-align:right" maxlength="9"></div>
+      <div class="srw"><span class="srl">Node Name <span style="font:400 9px var(--mn);color:var(--tx4)">${(window.t?window.t('hint_node_name_auto','(%%=자동번호, 최대8자)'):'(%%=자동번호, 최대8자)')}</span></span><input type="text" value="${cfg.nm}" data-cfg="nm" placeholder="Bridge%%" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:110px;text-align:right" maxlength="9"></div>
       <div class="srw"><span class="srl" data-i18n="set_tcnet_iface">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
       <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl" data-i18n="set_tcnet_mode">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
@@ -98,41 +98,40 @@ function renderSettings(){
     <div class="sl" data-i18n="set_pdjl">Pro DJ Link 설정</div>
     <div class="sgr">
       <div class="srw"><span class="srl" data-i18n="set_pdjl_iface">Pro DJ Link 인터페이스</span><select class="ss" data-cfg="pdjlIface">${ifaceOpts(allIfaces,'pdjlIface')}</select></div>
-      <div class="srw"><span class="srl" data-i18n="set_iface_list">인터페이스 목록</span><button class="mode-btn" id="btnIfaceRefresh" style="height:24px;padding:0 10px">새로고침</button></div>
+      <div class="srw"><span class="srl" data-i18n="set_iface_list">인터페이스 목록</span><button class="mode-btn" id="btnIfaceRefresh" style="height:24px;padding:0 10px">${(window.t?window.t('btn_refresh','새로고침'):'새로고침')}</button></div>
     </div>
     <div class="sl" data-i18n="set_audio_out">오디오 출력</div>
     <div class="sgr">
-      <div class="srw"><span class="srl" data-i18n="set_audio_device">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div>
-      <div class="srw"><span class="srl" data-i18n="set_audio_channel">출력 채널</span><div style="display:flex;align-items:center;gap:6px"><select class="ss" data-cfg="aoChPair" style="max-width:120px" disabled><option>감지 중…</option></select><span id="aoChAutoLbl" style="font:400 9px var(--mn);color:var(--grn);display:none">AUTO</span></div></div>
+      <div class="srw"><span class="srl" data-i18n="set_audio_device">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">${(window.t?window.t('opt_system_default','시스템 기본'):'시스템 기본')}</option>${devOpts}</select></div>
+      <div class="srw"><span class="srl" data-i18n="set_audio_channel">출력 채널</span><div style="display:flex;align-items:center;gap:6px"><select class="ss" data-cfg="aoChPair" style="max-width:120px" disabled><option>${(window.t?window.t('opt_detecting','감지 중…'):'감지 중…')}</option></select><span id="aoChAutoLbl" style="font:400 9px var(--mn);color:var(--grn);display:none">AUTO</span></div></div>
     </div>
     <div class="al alw" style="margin-top:8px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
       <div style="font:400 10px var(--sn);color:var(--ylw)">
-        <b>두 NIC 환경:</b> TCNet 인터페이스 = 공유기 LAN (192.168.x.x), Pro DJ Link 인터페이스 = CDJ 이더넷 (169.254.x.x).<br>
-        인터페이스·모드 변경은 실시간 적용됩니다.
+        ${(window.t?window.t('hint_tcnet_interfaces','<b>두 NIC 환경:</b> TCNet 인터페이스 = 공유기 LAN (192.168.x.x), Pro DJ Link 인터페이스 = CDJ 이더넷 (169.254.x.x).<br>인터페이스·모드 변경은 실시간 적용됩니다.'):'<b>두 NIC 환경:</b> TCNet 인터페이스 = 공유기 LAN (192.168.x.x), Pro DJ Link 인터페이스 = CDJ 이더넷 (169.254.x.x).<br>인터페이스·모드 변경은 실시간 적용됩니다.')}
       </div>
     </div>
     <div class="sl mt" data-i18n="set_smpte">SMPTE 타임코드 출력</div>
     <div class="sgr">
       <div class="srw"><span class="srl" data-i18n="set_framerate">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl" data-i18n="set_latency">레이턴시 보정</span><div style="display:flex;align-items:center;gap:6px"><input type="number" step="1" min="-5000" max="5000" value="${cfg.tcOffsetMs|0}" data-cfg="tcOffsetMs" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:90px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">ms (LTC/MTC/Art-Net 공통, + 면 TC 앞섬)</span></div></div>
-      ${['A','B','M'].map(lyr=>`<div class="srw"><span class="srl">LTC — Layer ${lyr}</span><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select class="ss" data-cfg="tcLtc${lyr}" style="max-width:180px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg[`tcLtc${lyr}`]===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select><select class="ss" data-cfg="tcLtc${lyr}Ch" style="width:72px" disabled><option>감지 중…</option></select></div></div>`).join('')}
+      <div class="srw"><span class="srl" data-i18n="set_latency">레이턴시 보정</span><div style="display:flex;align-items:center;gap:6px"><input type="number" step="1" min="-5000" max="5000" value="${cfg.tcOffsetMs|0}" data-cfg="tcOffsetMs" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:90px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">${(window.t?window.t('hint_tcnet_latency','ms (LTC/MTC/Art-Net 공통, + 면 TC 앞섬)'):'ms (LTC/MTC/Art-Net 공통, + 면 TC 앞섬)')}</span></div></div>
+      ${['A','B','M'].map(lyr=>`<div class="srw"><span class="srl">LTC — Layer ${lyr}</span><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select class="ss" data-cfg="tcLtc${lyr}" style="max-width:180px"><option value="">${(window.t?window.t('opt_system_default','시스템 기본'):'시스템 기본')}</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg[`tcLtc${lyr}`]===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select><select class="ss" data-cfg="tcLtc${lyr}Ch" style="width:72px" disabled><option>${(window.t?window.t('opt_detecting','감지 중…'):'감지 중…')}</option></select></div></div>`).join('')}
       <div class="srw"><span class="srl" data-i18n="set_mtc_out">MTC MIDI 출력</span><select class="ss" id="midiOutSel" style="max-width:200px"><option value="">—</option></select></div>
     </div>
     <div class="al alw" style="margin-top:6px;margin-bottom:4px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
-      <div style="font:400 10px var(--sn);color:var(--ylw)">LTC는 음원과 다른 장치로 출력해야 합니다. 덱 카드의 [TC] 버튼으로 모드를 선택하세요.</div>
+      <div style="font:400 10px var(--sn);color:var(--ylw)">${(window.t?window.t('hint_ltc_device','LTC는 음원과 다른 장치로 출력해야 합니다. 덱 카드의 [TC] 버튼으로 모드를 선택하세요.'):'LTC는 음원과 다른 장치로 출력해야 합니다. 덱 카드의 [TC] 버튼으로 모드를 선택하세요.')}</div>
     </div>
-    <div class="sl mt">문제 해결</div>
+    <div class="sl mt">${(window.t?window.t('set_troubleshooting','문제 해결'):'문제 해결')}</div>
     <div class="sgr">
-      <div class="srw"><span class="srl" data-i18n="set_cleanup_zombie">잔여 프로세스 정리</span><button id="btnCleanupZombies" class="ss" style="cursor:pointer;width:auto;padding:4px 10px">실행</button></div>
+      <div class="srw"><span class="srl" data-i18n="set_cleanup_zombie">잔여 프로세스 정리</span><button id="btnCleanupZombies" class="ss" style="cursor:pointer;width:auto;padding:4px 10px">${(window.t?window.t('btn_run','실행'):'실행')}</button></div>
       <div id="cleanupZombiesResult" style="font:400 10px var(--mn);color:var(--tx3);padding:0 2px;margin-top:-2px;display:none;white-space:pre-line;line-height:1.4"></div>
     </div>
     <div class="al alw" style="margin-top:6px;margin-bottom:4px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
-      <div style="font:400 10px var(--sn);color:var(--ylw)">Arena 에 TCNet 이 계속 연결됨으로 표시되거나 포트 충돌 시 사용. 현재 인스턴스는 유지하고 좀비/포트 점유만 정리합니다.</div>
+      <div style="font:400 10px var(--sn);color:var(--ylw)">${(window.t?window.t('cleanup_hint','Arena 에 TCNet 이 계속 연결됨으로 표시되거나 포트 충돌 시 사용. 현재 인스턴스는 유지하고 좀비/포트 점유만 정리합니다.'):'Arena 에 TCNet 이 계속 연결됨으로 표시되거나 포트 충돌 시 사용. 현재 인스턴스는 유지하고 좀비/포트 점유만 정리합니다.')}</div>
     </div>
-    <div class="sl mt">정보</div>
+    <div class="sl mt">${(window.t?window.t('lbl_info','정보'):'정보')}</div>
     <div class="sgr">
       <div class="srw"><span class="srl" data-i18n="set_version">Version</span><span class="srv" id="appVerLbl">…</span></div>
     </div>`;
@@ -152,35 +151,35 @@ function renderSettings(){
     _btnCz.addEventListener('click', async ()=>{
       _btnCz.disabled = true;
       const orig = _btnCz.textContent;
-      _btnCz.textContent = '정리 중…';
+      _btnCz.textContent = (window.t?window.t('cleanup_running','정리 중…'):'정리 중…');
       _outCz.style.display = 'block';
       _outCz.style.color = 'var(--tx3)';
-      _outCz.textContent = '실행 중…';
+      _outCz.textContent = (window.t?window.t('cleanup_in_progress','실행 중…'):'실행 중…');
       try{
         const r = await window.bridge.cleanupZombies();
         if(!r || r.ok===false){
           _outCz.style.color = 'var(--red,#f55)';
-          _outCz.textContent = '실패: ' + (r?.error||'unknown');
+          _outCz.textContent = (window.t?window.t('cleanup_failed','실패: '):'실패: ') + (r?.error||'unknown');
         }else{
           const procs = (r.killedProcs||[]).map(p=>`  • ${p.name} (PID ${p.pid})`).join('\n');
           const ports = (r.killedPorts||[]).map(p=>`  • port ${p.port}/${p.proto} (PID ${p.pid})`).join('\n');
           const remaining = (r.remaining||[]).map(p=>`  • port ${p.port}/${p.proto} (PID ${p.pid})`).join('\n');
           const lines = [];
-          lines.push(`자기 PID 보호: ${r.selfPid}`);
-          lines.push(`종료된 프로세스: ${(r.killedProcs||[]).length}개${procs?'\n'+procs:''}`);
-          lines.push(`해제된 포트: ${(r.killedPorts||[]).length}개${ports?'\n'+ports:''}`);
+          lines.push(`${(window.t?window.t('cleanup_self_pid','자기 PID 보호'):'자기 PID 보호')}: ${r.selfPid}`);
+          lines.push(`${(window.t?window.t('cleanup_killed_processes','종료된 프로세스'):'종료된 프로세스')}: ${(r.killedProcs||[]).length}${procs?'\n'+procs:''}`);
+          lines.push(`${(window.t?window.t('cleanup_freed_ports','해제된 포트'):'해제된 포트')}: ${(r.killedPorts||[]).length}${ports?'\n'+ports:''}`);
           if((r.remaining||[]).length){
-            lines.push(`⚠ 잔여 점유: ${r.remaining.length}개\n${remaining}`);
+            lines.push(`${(window.t?window.t('cleanup_remaining','잔여 점유'):'잔여 점유')}: ${r.remaining.length}\n${remaining}`);
             _outCz.style.color = 'var(--ylw)';
           }else{
-            lines.push('✅ 모든 포트 해제 완료');
+            lines.push(window.t?window.t('cleanup_all_ports_free','모든 포트 해제 완료'):'모든 포트 해제 완료');
             _outCz.style.color = 'var(--grn,#5f5)';
           }
           _outCz.textContent = lines.join('\n');
         }
       }catch(e){
         _outCz.style.color = 'var(--red,#f55)';
-        _outCz.textContent = '오류: '+e.message;
+        _outCz.textContent = (window.t?window.t('cleanup_error','오류: '):'오류: ')+e.message;
       }
       _btnCz.disabled = false;
       _btnCz.textContent = orig;
@@ -195,7 +194,7 @@ function renderSettings(){
         // Invalidate cache and re-probe for new device
         delete _devChCache[e.target.value||'__default__'];
         const aoChSel=el.querySelector('[data-cfg="aoChPair"]');
-        if(aoChSel){aoChSel.disabled=true;aoChSel.innerHTML='<option>감지 중…</option>';}
+        if(aoChSel){aoChSel.disabled=true;aoChSel.innerHTML=`<option>${(window.t?window.t('opt_detecting','감지 중…'):'감지 중…')}</option>`;}
         _probeDevChannels(e.target.value).then(max=>{
           if(aoChSel){
             const cur=parseInt(cfg.aoChPair)||0;
@@ -213,7 +212,7 @@ function renderSettings(){
         const layer=k.slice(-1);
         delete _devChCache[e.target.value||'__default__'];
         const ltcChSel=el.querySelector(`[data-cfg="tcLtc${layer}Ch"]`);
-        if(ltcChSel){ltcChSel.disabled=true;ltcChSel.innerHTML='<option>감지 중…</option>';}
+        if(ltcChSel){ltcChSel.disabled=true;ltcChSel.innerHTML=`<option>${(window.t?window.t('opt_detecting','감지 중…'):'감지 중…')}</option>`;}
         _probeDevChannels(e.target.value).then(max=>{
           if(ltcChSel){
             const cur=parseInt(cfg[`tcLtc${layer}Ch`])||0;

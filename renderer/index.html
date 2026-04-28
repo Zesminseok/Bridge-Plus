@@ -1726,8 +1726,8 @@ body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
       <span style="font:500 9px var(--lb);color:var(--tx3);letter-spacing:.1em;text-transform:uppercase" id="hSt">READY</span>
     </div>
     <button class="btn btng" id="mainBtn">START</button>
-    <button id="reloadBtn" title="UI 다시 로드 (Cmd/Ctrl+R)" onclick="window.location.reload()" style="padding:6px 9px;-webkit-app-region:no-drag;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;cursor:pointer;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--tx3);transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.12)';this.style.color='var(--tx)'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.color='var(--tx3)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
-    <div style="display:flex;align-items:center;gap:5px;-webkit-app-region:no-drag" title="출력 볼륨">
+    <button id="reloadBtn" title="Reload UI (Cmd/Ctrl+R)" onclick="window.location.reload()" style="padding:6px 9px;-webkit-app-region:no-drag;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;cursor:pointer;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--tx3);transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.12)';this.style.color='var(--tx)'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.color='var(--tx3)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+    <div style="display:flex;align-items:center;gap:5px;-webkit-app-region:no-drag" title="Output volume">
       <span style="font:700 8px var(--mn);color:var(--tx4);letter-spacing:.06em">M.VOL</span>
       <input type="range" id="masterVol" min="0" max="100" value="100" step="1"
         style="width:64px;height:4px;appearance:none;background:linear-gradient(to right,var(--grn) 100%,rgba(255,255,255,.12) 100%);border-radius:2px;outline:none;cursor:pointer;-webkit-app-region:no-drag"
@@ -1755,7 +1755,7 @@ body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
 <div class="pg" id="pgLink">
   <div class="al alw" id="stAlert">
     <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
-    <span style="font:400 11px var(--sn);color:var(--ylw)">START를 눌러 TCNet을 시작하세요</span>
+    <span style="font:400 11px var(--sn);color:var(--ylw)" data-i18n="lbl_press_start">START를 눌러 TCNet을 시작하세요</span>
   </div>
   <div class="sl" id="outLayersHdr" onclick="toggleOutLayers()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none">
     <span>OUTPUT LAYERS</span>
@@ -1788,7 +1788,7 @@ body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
 <!-- PRO DJ LINK -->
 <div class="pg hide" id="pgPdjl">
   <div id="pdjlStatus"></div>
-  <div class="sl">기기 목록</div>
+  <div class="sl" data-i18n="pdjl_device_list">기기 목록</div>
   <div id="pdjlDevList"></div>
 </div>
 
@@ -1816,9 +1816,9 @@ body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
     </div>
     <div class="hist-list" id="histList" style="flex:1;overflow-y:auto"></div>
     <div class="hist-footer" id="histFooter">
-      <div class="hist-stat"><span class="hist-stat-lbl">재생 곡수</span><span class="hist-stat-val" id="histStatCount">0</span></div>
-      <div class="hist-stat"><span class="hist-stat-lbl">총 ON AIR</span><span class="hist-stat-val" id="histStatTime">0:00</span></div>
-      <div class="hist-stat"><span class="hist-stat-lbl">평균 BPM</span><span class="hist-stat-val" id="histStatBpm">—</span></div>
+      <div class="hist-stat"><span class="hist-stat-lbl" data-i18n="history_play_count">재생 곡수</span><span class="hist-stat-val" id="histStatCount">0</span></div>
+      <div class="hist-stat"><span class="hist-stat-lbl" data-i18n="history_total_on_air">총 ON AIR</span><span class="hist-stat-val" id="histStatTime">0:00</span></div>
+      <div class="hist-stat"><span class="hist-stat-lbl" data-i18n="history_avg_bpm">평균 BPM</span><span class="hist-stat-val" id="histStatBpm">—</span></div>
     </div>
   </div>
 </div>
@@ -1829,13 +1829,13 @@ body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
     <div class="mx-hdr">
       <span class="material-symbols-outlined" style="font-size:18px;color:var(--pur)">equalizer</span>
       <span class="mx-title">MIXER</span>
-      <span class="mx-model" id="mxModel">DJM 미연결</span>
-      <span class="mx-offline" id="mxOffline">하드웨어 연결 시 실시간 데이터 표시</span>
+      <span class="mx-model" id="mxModel" data-i18n="lbl_no_djm">DJM 미연결</span>
+      <span class="mx-offline" id="mxOffline" data-i18n="lbl_realtime_hw">하드웨어 연결 시 실시간 데이터 표시</span>
     </div>
     <div class="mx-empty" id="mxEmpty">
       <span class="material-symbols-outlined">settings_input_hdmi</span>
       <span class="mx-empty-tx" data-i18n="lbl_djm_disconnected">DJM 믹서가 연결되지 않았습니다</span>
-      <span class="mx-empty-sub">Pro DJ Link 네트워크에 DJM을 연결하면<br>실시간 믹서 데이터가 표시됩니다</span>
+      <span class="mx-empty-sub" data-i18n="lbl_djm_hint">Pro DJ Link 네트워크에 DJM을 연결하면 실시간 믹서 데이터가 표시됩니다</span>
     </div>
     <div id="mxContent" style="display:none">
       <!-- 3-COL: LEFT (MIC/HP/COLOR) | MIDDLE (channels + xfader) | RIGHT (master + aux) -->
@@ -2659,7 +2659,7 @@ function _updateArtnetUi(running){
   const dot=document.getElementById('anStatusDot');
   const lbl=document.getElementById('anStatusLbl');
   if(dot)dot.style.background=running?'#32be5a':'#555';
-  if(lbl)lbl.textContent=running?'송신 중':'정지';
+  if(lbl)lbl.textContent=running?(window.t?window.t('status_sending','송신 중'):'송신 중'):(window.t?window.t('status_stopped','정지'):'정지');
 }
 // DMX builder: aggregates DJM state → Uint8Array, ships to engine at ~40Hz
 // (engine resends the buffer via OpDmx at its own rate)
@@ -2882,7 +2882,7 @@ async function _probeAndFillChSels(el){
   const aoChSel=el.querySelector('[data-cfg="aoChPair"]');
   if(aoChSel){
     aoChSel.disabled=true;
-    aoChSel.innerHTML='<option>감지 중…</option>';
+    aoChSel.innerHTML=`<option>${(window.t?window.t('opt_detecting','감지 중…'):'감지 중…')}</option>`;
     const max=await _probeDevChannels(cfg.aoId);
     _fillChSelPair(aoChSel,max,parseInt(cfg.aoChPair)||0);
     aoChSel.disabled=false;
@@ -2891,7 +2891,7 @@ async function _probeAndFillChSels(el){
     const ltcChSel=el.querySelector(`[data-cfg="tcLtc${lyr}Ch"]`);
     if(ltcChSel){
       ltcChSel.disabled=true;
-      ltcChSel.innerHTML='<option>감지 중…</option>';
+      ltcChSel.innerHTML=`<option>${(window.t?window.t('opt_detecting','감지 중…'):'감지 중…')}</option>`;
       const max=await _probeDevChannels(cfg[`tcLtc${lyr}`]);
       _fillChSelMono(ltcChSel,max,parseInt(cfg[`tcLtc${lyr}Ch`])||0);
       ltcChSel.disabled=false;
@@ -4386,8 +4386,8 @@ function deckHTMLDefault(slot){
         <div class="dwz-row">
           <div class="dwz" id="dwz${slot}" style="position:relative;${isLoaded?'':'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px'}">
             ${isLoaded
-              ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}" title="축소">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}" title="기본 (8초)">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}" title="확대 (최소 0.5초)">+</button></div>`
-              :`<span style="font:400 11px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span>`
+              ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}" title="Zoom out">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}" title="Default (8s)">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}" title="Zoom in (min 0.5s)">+</button></div>`
+              :`<span style="font:400 11px var(--sn);color:var(--tx3);opacity:.6">${d.model?(window.t?window.t('no_loaded','로드 안됨'):'로드 안됨'):(window.t?window.t('cdj_waiting','CDJ 대기 중...'):'CDJ 대기 중...')}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':(window.t?window.t('load_track','트랙을 로드하세요'):'트랙을 로드하세요')}</span>`
             }
           </div>
         </div>
@@ -4477,8 +4477,8 @@ function _deckCommonParts(slot){
   </div>`;
   const wfZoom=`<div class="dwz" id="dwz${slot}" style="position:relative;${isLoaded?'':'display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px'}">
     ${isLoaded
-      ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}" title="축소">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}" title="기본 (8초)">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}" title="확대 (최소 0.5초)">+</button></div>`
-      :`<span style="font:400 11px var(--sn);color:var(--tx3);opacity:.6">${d.model?'로드 안됨':'CDJ 대기 중...'}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':'트랙을 로드하세요'}</span>`
+      ?`<canvas id="wzc${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas><canvas id="wzov${slot}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas><div class="dzoom-btns"><button class="dzb" data-a="zoom-out" data-i="${slot}" title="Zoom out">−</button><button class="dzb" data-a="zoom-rst" data-i="${slot}" title="Default (8s)">RST</button><button class="dzb" data-a="zoom-in" data-i="${slot}" title="Zoom in (min 0.5s)">+</button></div>`
+      :`<span style="font:400 11px var(--sn);color:var(--tx3);opacity:.6">${d.model?(window.t?window.t('no_loaded','로드 안됨'):'로드 안됨'):(window.t?window.t('cdj_waiting','CDJ 대기 중...'):'CDJ 대기 중...')}</span><span style="font:400 9px var(--mn);color:var(--tx4)">${d.model?'Empty Track':(window.t?window.t('load_track','트랙을 로드하세요'):'트랙을 로드하세요')}</span>`
     }
   </div>`;
   // Art
@@ -4500,7 +4500,7 @@ function deckHTMLRow(slot){
         <span class="dk-num" id="did${slot}" style="opacity:.5">${slot+1}</span>
         <span class="dk-player-lbl">PLAYER</span>
         <span class="dbadge bm">EMPTY</span>
-        <div class="rw-title-inline"><span style="color:var(--tx4)">빈 덱</span></div>
+        <div class="rw-title-inline"><span style="color:var(--tx4)">${(window.t?window.t('lbl_empty_deck','빈 덱'):'빈 덱')}</span></div>
         <button class="dhtb cdl" data-a="remove" data-i="${slot}"><svg class="gi gi-close"><use href="#i-close"/></svg></button>
       </div>
       <div class="ddz rw-ddz" data-a="open" data-i="${slot}"><div class="ddzi">+</div><div style="font:400 11px var(--sn);color:var(--tx3)">${(window.t?window.t('lbl_click_to_open','클릭하여 열기'):'클릭하여 열기')}</div></div>
@@ -4578,7 +4578,7 @@ function deckHTMLTower(slot){
       </div>
       <div class="ddz tw-ddz" data-a="open" data-i="${slot}" style="padding:40px 10px;text-align:center">
         <div class="ddzi" style="margin:0 auto 8px">+</div>
-        <div style="font:400 10px var(--sn);color:var(--tx3)">클릭하여 열기</div>
+        <div style="font:400 10px var(--sn);color:var(--tx3)">${(window.t?window.t('lbl_click_to_open','클릭하여 열기'):'클릭하여 열기')}</div>
       </div>
     </div>`;
   }
@@ -5385,13 +5385,13 @@ function loadFile(slot,f){
         // Show non-blocking info in deck area instead of blocking alert
         const _stEl=document.getElementById('did'+slot);
         if(_stEl)_stEl.innerHTML=`<div style="font:400 9px var(--sn);color:var(--ylw);line-height:1.4">
-          <b>${f.name.split('.').pop().toUpperCase()}</b> 포맷은 FFmpeg 필요<br>
+          <b>${f.name.split('.').pop().toUpperCase()}</b> ${(window.t?window.t('ffmpeg_needed','포맷은 FFmpeg 필요'):'포맷은 FFmpeg 필요')}<br>
           <span style="color:var(--tx3)">brew install ffmpeg</span></div>`;
         return;
       }
       // Show converting progress in deck
       const _stEl=document.getElementById('did'+slot);
-      if(_stEl)_stEl.innerHTML='<span style="color:var(--ylw);font:600 9px var(--mn)">변환 중…</span>';
+      if(_stEl)_stEl.innerHTML=`<span style="color:var(--ylw);font:600 9px var(--mn)">${(window.t?window.t('converting','변환 중…'):'변환 중…')}</span>`;
       const _progUnsub=window.bridge.onAudioProgress((data)=>{
         if(data.slot!==slot)return;
         const bar=document.getElementById('wovol'+slot);
@@ -5400,7 +5400,7 @@ function loadFile(slot,f){
       const res=await window.bridge.decodeAudio(f.path||f.name,slot).catch(e=>({ok:false,err:e.message}));
       if(!res.ok){
         const stEl=document.getElementById('did'+slot);
-        if(stEl)stEl.innerHTML=`<span style="color:var(--red);font:600 9px var(--mn)">변환 실패: ${_escHtml(String(res.err||'').slice(0,60))}</span>`;
+        if(stEl)stEl.innerHTML=`<span style="color:var(--red);font:600 9px var(--mn)">${(window.t?window.t('conversion_failed','변환 실패: '):'변환 실패: ')}${_escHtml(String(res.err||'').slice(0,60))}</span>`;
         return;
       }
       if(d._tempPath){window.bridge.cleanupTemp(d._tempPath);}
@@ -5484,7 +5484,7 @@ async function _rebuildAuRoutingAuto(){
   _autoChMode=(maxCh>2);
   // Update AUTO label in Settings if open
   const _autoLbl=document.getElementById('aoChAutoLbl');
-  if(_autoLbl){_autoLbl.style.display=_autoChMode?'':'none';if(_autoLbl.parentElement?.previousSibling)_autoLbl.title=_autoChMode?`${maxCh}ch 자동 매핑`:'수동 채널 쌍';}
+  if(_autoLbl){_autoLbl.style.display=_autoChMode?'':'none';if(_autoLbl.parentElement?.previousSibling)_autoLbl.title=_autoChMode?`${maxCh}ch auto mapping`:'Manual channel pair';}
   // Set output device
   if(cfg.aoId&&ac.setSinkId){try{await ac.setSinkId(cfg.aoId);}catch(e){console.warn('[AuCtx] setSinkId:',e);}}
   try{mg.disconnect();}catch(_){}
@@ -6577,7 +6577,7 @@ function renderPDJL(){
   const now=Date.now(),devs=pdjlDevices.filter(d=>now-d.lastSeen<10000);
   const hwDevs=devs.filter(d=>!d.virtual);
   const col=pdjlPort?'var(--grn)':'var(--red)';
-  document.getElementById('pdjlStatus').innerHTML=`<div class="al ${pdjlPort?'als':'aler'}"><span class="dot ${pdjlPort?'dpu':''}" style="width:5px;height:5px;flex-shrink:0;background:${col}"></span><div style="font:500 11px var(--sn);color:${col}">Pro DJ Link — ${pdjlPort?'UDP '+pdjlPort+' 수신 중':'바인드 실패'}</div></div>`;
+  document.getElementById('pdjlStatus').innerHTML=`<div class="al ${pdjlPort?'als':'aler'}"><span class="dot ${pdjlPort?'dpu':''}" style="width:5px;height:5px;flex-shrink:0;background:${col}"></span><div style="font:500 11px var(--sn);color:${col}">Pro DJ Link — ${pdjlPort?'UDP '+pdjlPort+' '+(window.t?window.t('pdjl_receiving','수신 중'):'수신 중'):(window.t?window.t('pdjl_bind_failed','바인드 실패'):'바인드 실패')}</div></div>`;
   // hide device list when no HW devices are present
   const devListEl=document.getElementById('pdjlDevList');
   const devLabelEl=devListEl.previousElementSibling; // "기기 목록" label
@@ -6596,15 +6596,15 @@ function renderPDJL(){
 function renderTcnet(){
   const nodes=Object.values(tcNodes).filter(n=>Date.now()-n.lastSeen<10000);
   document.getElementById('pgTcnet').innerHTML=`
-    ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span><div><div style="font:500 11px var(--sn);color:var(--grn)">TCNet — ${TC_NAME||'BRIDGE+'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">Data: 브로드캐스트 + Resolume Arena 유니캐스트 동시</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">오프라인</span></div>`}
-    <div class="sl">노드</div>
+    ${run?`<div class="al als"><span class="dot dpu" style="width:5px;height:5px;flex-shrink:0;background:var(--grn)"></span><div><div style="font:500 11px var(--sn);color:var(--grn)">TCNet — ${TC_NAME||'BRIDGE+'}</div><div style="font:400 9px var(--mn);color:var(--tx3)">${(window.t?window.t('tcnet_data_route','Data: 브로드캐스트 + Resolume Arena 유니캐스트 동시'):'Data: 브로드캐스트 + Resolume Arena 유니캐스트 동시')}</div></div></div>`:`<div class="al alw"><span style="font:400 11px var(--sn);color:var(--ylw)">${(window.t?window.t('status_offline','오프라인'):'오프라인')}</span></div>`}
+    <div class="sl">${(window.t?window.t('lbl_nodes','노드'):'노드')}</div>
     <div class="tbl">
       <div class="tblh" style="grid-template-columns:140px 80px 1fr 120px">${['NODE','TYPE','VENDOR / DEVICE','IP'].map(h=>`<div style="font:600 10px var(--sn);color:var(--tx3);letter-spacing:.04em">${h}</div>`).join('')}</div>
       <div class="tblr" style="grid-template-columns:140px 80px 1fr 120px"><div style="font:500 11px var(--mn);color:var(--tx)">${TC_NAME||'BRIDGE+'}</div><div><span class="bd bg">SERVER</span></div><div style="font:400 11px var(--mn);color:var(--tx3)">BRIDGE+</div><div style="font:400 11px var(--mn);color:var(--tx3)">active</div></div>
       ${nodes.map(n=>{const vendorStr=(n.vendor&&n.device)?(n.vendor===n.device?n.vendor:n.vendor+' '+n.device):(n.vendor||n.device||'—');return`<div class="tblr" style="grid-template-columns:140px 80px 1fr 120px"><div style="font:500 11px var(--mn);color:var(--tx)">${_escHtml(n.name)}</div><div><span class="bd ${n.type===2?'bg':'bb'}">${n.type===2?'SERVER':'Client'}</span></div><div style="font:400 11px var(--mn);color:var(--tx3)">${_escHtml(vendorStr)}</div><div style="font:400 11px var(--mn);color:var(--tx3)">${_escHtml(n.ip)}</div></div>`;}).join('')}
-      ${nodes.length===0?'<div style="padding:9px 12px;color:var(--tx3);font:400 11px var(--sn)">Arena 미감지 — Arena에서 TCNet 활성화하세요</div>':''}
+      ${nodes.length===0?`<div style="padding:9px 12px;color:var(--tx3);font:400 11px var(--sn)">${(window.t?window.t('tcnet_arena_missing','Arena 미감지 — Arena에서 TCNet 활성화하세요'):'Arena 미감지 — Arena에서 TCNet 활성화하세요')}</div>`:''}
     </div>
-    <div class="sl mt">통계</div>
+    <div class="sl mt">${(window.t?window.t('lbl_stats','통계'):'통계')}</div>
     <div class="pgr">${[{l:'TIME 0xFE',v:pk,c:'var(--grn)'},{l:'DATA 0xC8',v:pk,c:'var(--pur)'},{l:'OPTIN 0x02',v:up,c:'var(--blu)'},{l:'STATUS 0x05',v:Math.floor(up/2),c:'var(--ylw)'}].map(p=>`<div class="pgc"><div style="font:500 9px var(--sn);color:var(--tx3);margin-bottom:3px">${p.l}</div><div style="font:600 14px var(--mn);color:${p.c};font-variant-numeric:tabular-nums">${p.v.toLocaleString()}</div></div>`).join('')}</div>`;
 }
 
@@ -6616,32 +6616,32 @@ function renderArtnet(){
   const ifaceOpts=(ifaces,field)=>{
     const sel=cfg[field]||'';
     const loopSel=sel==='127.0.0.1'?'selected':'';
-    const loopOpt=`<option value="127.0.0.1" ${loopSel}>lo0 (localhost 127.0.0.1) — Arena 같은 맥</option>`;
+    const loopOpt=`<option value="127.0.0.1" ${loopSel}>lo0 (localhost 127.0.0.1) — ${(window.t?window.t('opt_same_mac_arena','Arena 같은 맥'):'Arena 같은 맥')}</option>`;
     const netOpts=(ifaces||[]).filter(i=>!i.internal).map(i=>{
       const label=i.hwPort||i.name;
-      const suffix=i.address.startsWith('169.254')?'  (링크로컬 CDJ)':'';
+      const suffix=i.address.startsWith('169.254')?`  (${(window.t?window.t('opt_linklocal_cdj','링크로컬 CDJ'):'링크로컬 CDJ')})`:'';
       return`<option value="${i.address}" ${sel===i.address?'selected':''}>${i.name} — ${i.address} (${label})${suffix}</option>`;
     }).join('');
-    return `<option value="">자동 감지</option>${loopOpt}${netOpts}`;
+    return `<option value="">${(window.t?window.t('lbl_auto_detect','자동 감지'):'자동 감지')}</option>${loopOpt}${netOpts}`;
   };
   const inpStyle='background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none';
   el.innerHTML=`
-    <div class="sl">Art-Net 출력 <span id="anStatusDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#555;margin-left:6px;vertical-align:middle"></span></div>
+    <div class="sl">${(window.t?window.t('artnet_output','Art-Net 출력'):'Art-Net 출력')} <span id="anStatusDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#555;margin-left:6px;vertical-align:middle"></span></div>
     <div class="sgr">
-      <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnEnabled" ${cfg.anEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">ArtTimeCode + DMX 송신 엔진 시작</span></label></div>
-      <div class="srw"><span class="srl">Art-Net 인터페이스</span><select class="ss" data-cfg="anIface">${ifaceOpts(allIfaces,'anIface')}</select></div>
-      <div class="srw"><span class="srl">송신 모드</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnUnicast" ${cfg.anUnicast?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">유니캐스트 (특정 노드 IP로만 송신)</span></label></div>
-      <div class="srw"><span class="srl">유니캐스트 IP</span><input type="text" value="${cfg.anUnicastIp||''}" data-cfg="anUnicastIp" placeholder="예: 192.168.1.50" ${cfg.anUnicast?'':'disabled'} style="${inpStyle};width:140px;text-align:right"></div>
-      <div class="srw"><span class="srl">브로드캐스트 IP</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="${inpStyle};width:140px;text-align:right"></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('lbl_enabled','활성화'):'활성화')}</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnEnabled" ${cfg.anEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">${(window.t?window.t('artnet_engine_start','ArtTimeCode + DMX 송신 엔진 시작'):'ArtTimeCode + DMX 송신 엔진 시작')}</span></label></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('artnet_interface','Art-Net 인터페이스'):'Art-Net 인터페이스')}</span><select class="ss" data-cfg="anIface">${ifaceOpts(allIfaces,'anIface')}</select></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('lbl_send_mode','송신 모드'):'송신 모드')}</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnUnicast" ${cfg.anUnicast?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">${(window.t?window.t('artnet_unicast_hint','유니캐스트 (특정 노드 IP로만 송신)'):'유니캐스트 (특정 노드 IP로만 송신)')}</span></label></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('lbl_unicast_ip','유니캐스트 IP'):'유니캐스트 IP')}</span><input type="text" value="${cfg.anUnicastIp||''}" data-cfg="anUnicastIp" placeholder="예: 192.168.1.50" ${cfg.anUnicast?'':'disabled'} style="${inpStyle};width:140px;text-align:right"></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('lbl_broadcast_ip','브로드캐스트 IP'):'브로드캐스트 IP')}</span><input type="text" value="${cfg.tcArtnetIp}" data-cfg="tcArtnetIp" placeholder="255.255.255.255" style="${inpStyle};width:140px;text-align:right"></div>
       <div class="srw"><span class="srl">Port</span><input type="text" value="${cfg.tcArtnetPort}" data-cfg="tcArtnetPort" placeholder="6454" style="${inpStyle};width:70px;text-align:right"></div>
-      <div class="srw"><span class="srl">Frame Rate (TC)</span><span style="font:400 10px var(--mn);color:var(--tx3)">SMPTE 프레임레이트와 공유 (${cfg.tcFps} fps)</span></div>
-      <div class="srw"><span class="srl">ArtPollReply</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnPoll" ${cfg.anPollReply?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">컨트롤러 자동 탐지 응답 (grandMA·Resolume·QLC+)</span></label></div>
-      <div class="srw"><span class="srl">ArtSync</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnSync" ${cfg.anSync?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpSync(0x5200) 프레임 래치 송신</span></label></div>
-      <div class="srw"><span class="srl">DMX 출력</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnDmxEn" ${cfg.anDmxEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpDmx 0x5000</span></label></div>
-      <div class="srw"><span class="srl">DMX 주기</span><div style="display:flex;align-items:center;gap:6px"><input type="number" min="10" max="50" value="${cfg.anDmxHz||40}" data-cfg="anDmxHz" style="${inpStyle};width:70px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">Hz (10~50)</span></div></div>
+      <div class="srw"><span class="srl">Frame Rate (TC)</span><span style="font:400 10px var(--mn);color:var(--tx3)">${(window.t?window.t('artnet_frame_rate_shared','SMPTE 프레임레이트와 공유'):'SMPTE 프레임레이트와 공유')} (${cfg.tcFps} fps)</span></div>
+      <div class="srw"><span class="srl">ArtPollReply</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnPoll" ${cfg.anPollReply?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">${(window.t?window.t('artnet_poll_reply','컨트롤러 자동 탐지 응답 (grandMA·Resolume·QLC+)'):'컨트롤러 자동 탐지 응답 (grandMA·Resolume·QLC+)')}</span></label></div>
+      <div class="srw"><span class="srl">ArtSync</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnSync" ${cfg.anSync?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">${(window.t?window.t('artnet_sync_send','OpSync(0x5200) 프레임 래치 송신'):'OpSync(0x5200) 프레임 래치 송신')}</span></label></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('dmx_output','DMX 출력'):'DMX 출력')}</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkAnDmxEn" ${cfg.anDmxEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">OpDmx 0x5000</span></label></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('dmx_cycle','DMX 주기'):'DMX 주기')}</span><div style="display:flex;align-items:center;gap:6px"><input type="number" min="10" max="50" value="${cfg.anDmxHz||40}" data-cfg="anDmxHz" style="${inpStyle};width:70px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">Hz (10~50)</span></div></div>
       <div class="srw"><span class="srl">DMX Universe</span><input type="number" min="0" max="32767" value="${cfg.anDmxUniverse}" data-cfg="anDmxUniverse" style="${inpStyle};width:80px;text-align:right"></div>
-      <div class="srw"><span class="srl">DMX 소스</span><select class="ss" data-cfg="anDmxSource">${[['off','Off'],['fader','DJM 페이더 (ch1-6)'],['vu','DJM VU (ch1-6)'],['all','DJM 전체 (fader+VU+xf+master)']].map(([v,l])=>`<option value="${v}" ${cfg.anDmxSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">송신 상태</span><span id="anStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">정지</span></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('dmx_source','DMX 소스'):'DMX 소스')}</span><select class="ss" data-cfg="anDmxSource">${[['off','Off'],['fader',(window.t?window.t('dmx_fader','DJM 페이더 (ch1-6)'):'DJM 페이더 (ch1-6)')],['vu',(window.t?window.t('dmx_vu','DJM VU (ch1-6)'):'DJM VU (ch1-6)')],['all',(window.t?window.t('dmx_all','DJM 전체 (fader+VU+xf+master)'):'DJM 전체 (fader+VU+xf+master)')]].map(([v,l])=>`<option value="${v}" ${cfg.anDmxSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('send_status','송신 상태'):'송신 상태')}</span><span id="anStatusLbl" style="font:400 10px var(--mn);color:var(--tx3)">${(window.t?window.t('status_stopped','정지'):'정지')}</span></div>
     </div>
     `;
   // ─── 값 바인딩
@@ -6733,17 +6733,17 @@ function renderAblink(){
       <div style="min-width:110px;text-align:center">
         <div style="font:500 10px var(--lb);color:var(--tx3);letter-spacing:.15em;margin-bottom:4px">PEERS</div>
         <div id="linkPeersBig" style="font:700 36px var(--mn);color:var(--tx);font-variant-numeric:tabular-nums;line-height:1">0</div>
-        <div style="font:500 10px var(--mn);color:var(--tx4);margin-top:6px" id="linkSessLbl">대기</div>
+        <div style="font:500 10px var(--mn);color:var(--tx4);margin-top:6px" id="linkSessLbl">${(window.t?window.t('link_waiting','대기'):'대기')}</div>
       </div>
     </div>
     <div class="sgr" style="margin-top:10px">
-      <div class="srw"><span class="srl">활성화</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkLinkEnabled" ${cfg.linkEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">Link 세션 참여 — BPM 송신 (단방향)</span></label></div>
-      <div class="srw"><span class="srl">BPM 소스</span><select class="ss" data-cfg="linkSource">${[['mixer','Mixer BPM (DJM)'],['deck','선택 덱 BPM'],['master','Master 덱 BPM (Pro DJ Link)']].map(([v,l])=>`<option value="${v}" ${cfg.linkSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="srw" id="linkDeckRow" style="${cfg.linkSource==='deck'?'':'display:none'}"><span class="srl">덱 선택</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${i+1}</option>`).join('')}</select></div>
-      <div class="srw" id="linkVdeckHintRow" style="${cfg.linkSource==='deck'?'':'display:none'}"><span class="srl"></span><span style="font:400 10px var(--sn);color:var(--tx3)">💡 선택 덱이 <b>버츄얼 덱</b>이면 BPM + 페이저가 자동 동기화됩니다 (하드웨어 덱은 BPM만 송신).</span></div>
-      <div class="srw"><span class="srl">페이저 정렬</span><div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button id="btnLinkTap" class="mode-btn" style="padding:5px 10px;font:600 10px var(--lb);letter-spacing:.05em" title="지금 이 순간을 다운비트(beat 0)로 강제">탭 다운비트</button>
-        <button id="btnLinkMaster" class="mode-btn" style="padding:5px 10px;font:600 10px var(--lb);letter-spacing:.05em" title="Pro DJ Link 마스터 덱의 beat-in-bar 에 세션 phase 정렬">마스터 덱 정렬</button>
+      <div class="srw"><span class="srl">${(window.t?window.t('lbl_enabled','활성화'):'활성화')}</span><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chkLinkEnabled" ${cfg.linkEnabled?'checked':''} style="accent-color:var(--grn)"><span style="font:400 10px var(--sn);color:var(--tx2)">${(window.t?window.t('link_enabled_hint','Link 세션 참여 — BPM 송신 (단방향)'):'Link 세션 참여 — BPM 송신 (단방향)')}</span></label></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('bpm_source','BPM 소스'):'BPM 소스')}</span><select class="ss" data-cfg="linkSource">${[['mixer','Mixer BPM (DJM)'],['deck',(window.t?window.t('select_deck','선택 덱'):'선택 덱')+' BPM'],['master','Master Deck BPM (Pro DJ Link)']].map(([v,l])=>`<option value="${v}" ${cfg.linkSource===v?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="srw" id="linkDeckRow" style="${cfg.linkSource==='deck'?'':'display:none'}"><span class="srl">${(window.t?window.t('select_deck','덱 선택'):'덱 선택')}</span><select class="ss" data-cfg="linkDeckIdx" id="linkDeckSel">${[0,1,2,3,4,5].map(i=>`<option value="${i}" ${(cfg.linkDeckIdx|0)===i?'selected':''}>Deck ${i+1}</option>`).join('')}</select></div>
+      <div class="srw" id="linkVdeckHintRow" style="${cfg.linkSource==='deck'?'':'display:none'}"><span class="srl"></span><span style="font:400 10px var(--sn);color:var(--tx3)">💡 ${(window.t?window.t('link_vdeck_hint','선택 덱이 <b>버츄얼 덱</b>이면 BPM + 페이저가 자동 동기화됩니다 (하드웨어 덱은 BPM만 송신).'):'선택 덱이 <b>버츄얼 덱</b>이면 BPM + 페이저가 자동 동기화됩니다 (하드웨어 덱은 BPM만 송신).')}</span></div>
+      <div class="srw"><span class="srl">${(window.t?window.t('phaser_align','페이저 정렬'):'페이저 정렬')}</span><div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button id="btnLinkTap" class="mode-btn" style="padding:5px 10px;font:600 10px var(--lb);letter-spacing:.05em" title="${(window.t?window.t('title_tap_downbeat','지금 이 순간을 다운비트(beat 0)로 강제'):'지금 이 순간을 다운비트(beat 0)로 강제')}">${(window.t?window.t('link_tap_downbeat','탭 다운비트'):'탭 다운비트')}</button>
+        <button id="btnLinkMaster" class="mode-btn" style="padding:5px 10px;font:600 10px var(--lb);letter-spacing:.05em" title="${(window.t?window.t('title_align_master','Pro DJ Link 마스터 덱의 beat-in-bar 에 세션 phase 정렬'):'Pro DJ Link 마스터 덱의 beat-in-bar 에 세션 phase 정렬')}">${(window.t?window.t('link_align_master','마스터 덱 정렬'):'마스터 덱 정렬')}</button>
         <span id="linkAlignHint" style="font:400 10px var(--mn);color:var(--tx4);align-self:center"></span>
       </div></div>
     </div>
@@ -6791,23 +6791,23 @@ function renderAblink(){
   };
   const btnTap=el.querySelector('#btnLinkTap');
   if(btnTap)btnTap.onclick=async ()=>{
-    if(!cfg.linkEnabled){flashHint('Link 비활성 — 먼저 활성화',false);return;}
+    if(!cfg.linkEnabled){flashHint((window.t?window.t('link_disabled_hint','Link 비활성 — 먼저 활성화'):'Link 비활성 — 먼저 활성화'),false);return;}
     const r=await window.bridge.linkAlignBeat?.(0);
-    flashHint(r?.ok ? '다운비트 정렬됨 (beat=0)' : '정렬 실패', !!r?.ok);
+    flashHint(r?.ok ? (window.t?window.t('link_downbeat_aligned','다운비트 정렬됨 (beat=0)'):'다운비트 정렬됨 (beat=0)') : (window.t?window.t('align_failed','정렬 실패'):'정렬 실패'), !!r?.ok);
   };
   const btnMaster=el.querySelector('#btnLinkMaster');
   if(btnMaster)btnMaster.onclick=async ()=>{
-    if(!cfg.linkEnabled){flashHint('Link 비활성 — 먼저 활성화',false);return;}
+    if(!cfg.linkEnabled){flashHint((window.t?window.t('link_disabled_hint','Link 비활성 — 먼저 활성화'):'Link 비활성 — 먼저 활성화'),false);return;}
     // 마스터 덱의 beatInBar(1..4) → Link beat phase(0..3) 로 변환
     let masterSlot=-1;
     for(const k of Object.keys(DECKS).map(Number).sort()){
       if(DECKS[k]?.master){masterSlot=k;break;}
     }
-    if(masterSlot<0){flashHint('마스터 덱 없음',false);return;}
+    if(masterSlot<0){flashHint((window.t?window.t('no_master_deck','마스터 덱 없음'):'마스터 덱 없음'),false);return;}
     const bib=DECKS[masterSlot].beatInBar||1;
     const phase=((bib-1)%4+4)%4; // 1→0, 2→1, 3→2, 4→3
     const r=await window.bridge.linkAlignBeat?.(phase);
-    flashHint(r?.ok ? `Deck ${masterSlot+1} 정렬 (beat=${phase})` : '정렬 실패', !!r?.ok);
+    flashHint(r?.ok ? `Deck ${masterSlot+1} aligned (beat=${phase})` : (window.t?window.t('align_failed','정렬 실패'):'정렬 실패'), !!r?.ok);
   };
   // 초기 상태 반영
   window.bridge.linkGetStatus?.().then(st=>{ _updateLinkUi(st); _renderLinkBig(st); });
@@ -6823,7 +6823,7 @@ function _renderLinkBig(st){
   if(peersEl) peersEl.textContent = (st.peers|0);
   const sess=_hdrEl('linkSessLbl');
   if(sess){
-    sess.textContent = !st.available ? '모듈 미설치' : (!st.enabled ? '비활성' : (st.peers>0?'연결됨':'대기'));
+    sess.textContent = !st.available ? (window.t?window.t('module_missing','모듈 미설치'):'모듈 미설치') : (!st.enabled ? (window.t?window.t('status_disabled','비활성'):'비활성') : (st.peers>0?(window.t?window.t('status_connected','연결됨'):'연결됨'):(window.t?window.t('link_waiting','대기'):'대기')));
     sess.style.color = !st.available?'#b08040':(st.enabled?'var(--grn)':'var(--tx4)');
   }
   // phase 링 (0..quantum → stroke-dashoffset)
@@ -6883,9 +6883,9 @@ function _updateLinkUi(st){
   if(!st){ if(dot)dot.style.background='#555'; if(lbl)lbl.textContent='—'; return; }
   if(dot) dot.style.background = (!st.available) ? '#b08040' : (st.enabled ? '#32be5a' : '#555');
   if(lbl){
-    if(!st.available) lbl.textContent='모듈 미설치';
-    else if(!st.enabled) lbl.textContent='비활성';
-    else lbl.textContent=`활성 · 피어 ${st.peers||0}`;
+    if(!st.available) lbl.textContent=(window.t?window.t('module_missing','모듈 미설치'):'모듈 미설치');
+    else if(!st.enabled) lbl.textContent=(window.t?window.t('status_disabled','비활성'):'비활성');
+    else lbl.textContent=`${(window.t?window.t('active_peers','활성 · 피어'):'활성 · 피어')} ${st.peers||0}`;
   }
 }
 // Boot: Art-Net / Link 자동 재시작 (지난 세션에서 켜져있었다면)
@@ -7753,7 +7753,7 @@ if(E){
     }
     const ov=document.createElement('div');
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:12px';
-    ov.innerHTML='<div style="font:600 16px var(--sn);color:var(--tx);letter-spacing:.05em">종료 중...</div><div style="font:400 11px var(--mn);color:var(--tx3)">TCNet 연결 해제 및 소켓 정리</div>';
+    ov.innerHTML=`<div style="font:600 16px var(--sn);color:var(--tx);letter-spacing:.05em">${(window.t?window.t('shutting_down','종료 중...'):'종료 중...')}</div><div style="font:400 11px var(--mn);color:var(--tx3)">${(window.t?window.t('shutdown_hint','TCNet 연결 해제 및 소켓 정리'):'TCNet 연결 해제 및 소켓 정리')}</div>`;
     document.body.appendChild(ov);
   });
 }

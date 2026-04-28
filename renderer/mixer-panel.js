@@ -162,7 +162,7 @@ function updateMixer(){
   const mxModel=_mxEl('mxModel');
   const mxOffline=_mxEl('mxOffline');
   const connected=djmDevs.length>0;
-  if(mxModel)mxModel.textContent=connected?djmDevs.map(d=>d.name).join(', '):'DJM 미연결';
+  if(mxModel)mxModel.textContent=connected?djmDevs.map(d=>d.name).join(', '):(window.t?window.t('lbl_no_djm','DJM 미연결'):'DJM 미연결');
   if(mxOffline)mxOffline.style.display=connected?'none':'';
   const mxEmpty=_mxEl('mxEmpty');
   const mxContent=_mxEl('mxContent');
