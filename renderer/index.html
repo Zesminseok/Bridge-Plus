@@ -168,8 +168,8 @@ body[data-platform="darwin"] .hdr{padding-left:80px}
 .deck-row{display:flex;flex-direction:column;gap:6px}
 .deck-row.compact{gap:4px}
 .deck-row.compact .dk-hdr{padding:3px 8px 2px}
-.dk{background:rgba(26,27,33,.95);border:1px solid rgba(135,135,255,.08);border-radius:12px;overflow:hidden;transition:border-color .3s,background .3s;min-width:0;min-height:300px}
-/* 빈 덱도 로드된 덱과 동일한 min-height — 일관성. .ddz 안내 문구 가운데 정렬. */
+.dk{background:rgba(26,27,33,.95);border:1px solid rgba(135,135,255,.08);border-radius:12px;overflow:hidden;transition:border-color .3s,background .3s;min-width:0}
+/* 빈 덱: 트랙 로드 전이라도 .ddz 안내 문구 가운데 정렬. */
 .dk[data-st="empty"]{display:flex;flex-direction:column}
 .dk[data-st="empty"] .ddz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .dk[data-st="play"]{background:rgba(26,27,36,.97);border-color:rgba(74,225,131,.18)}.dk[data-st="cue"]{background:rgba(26,27,36,.97);border-color:rgba(239,194,10,.15)}.dk.dov{border-color:rgba(164,201,255,.25)!important}
@@ -1042,9 +1042,9 @@ body[data-layout="row"] .rw-ddz{padding:40px;text-align:center}
 
 /* ═════════ TOWER 레이아웃 — 200px 세로 컬럼, 가로 스크롤 ═════════ */
 body[data-layout="tower"] .deck-row{flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding-bottom:8px;align-items:flex-start;max-width:100%}
-body[data-layout="tower"] .dk.tw-dk{width:270px;min-width:270px;min-height:520px;flex-shrink:0;padding:10px 10px 9px;display:flex;flex-direction:column;gap:9px;border-radius:6px}
-/* 빈 덱도 로드된 덱과 동일 높이 — 일관성 */
-body[data-layout="tower"] .dk.tw-dk[data-st="empty"]{justify-content:flex-start}
+body[data-layout="tower"] .dk.tw-dk{width:270px;min-width:270px;flex-shrink:0;padding:10px 10px 9px;display:flex;flex-direction:column;gap:9px;border-radius:6px}
+/* Tower 빈 덱은 add-deck 버튼과 동일 폭/높이 — 트랙 로드 전 placeholder. */
+body[data-layout="tower"] .dk.tw-dk[data-st="empty"]{min-height:520px}
 body[data-layout="tower"] .dk.tw-dk[data-st="empty"] .ddz.tw-ddz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
 body[data-layout="tower"] .tw-head{display:flex;align-items:center;gap:8px;padding:2px 0 6px;border-bottom:1px solid var(--bdr);min-height:26px}
 body[data-layout="tower"] .tw-head-top{display:flex;align-items:center;gap:6px;height:22px;flex:0 0 auto}
@@ -1121,8 +1121,9 @@ body[data-layout="card"] .deck-row{display:grid!important;grid-template-columns:
 }
 
 /* 덱 카드 컨테이너 — 라운딩 최소화 (사용자 요청: "라운딩 빼줘") */
-body[data-layout="card"] .dk.cd-dk{display:flex!important;flex-direction:column!important;gap:12px!important;padding:14px!important;border:1px solid var(--bdr)!important;border-radius:0!important;background:var(--bg-lowest)!important;min-width:0!important;min-height:280px!important;overflow:hidden!important;box-sizing:border-box!important}
-/* Card 빈 덱도 동일 높이 */
+body[data-layout="card"] .dk.cd-dk{display:flex!important;flex-direction:column!important;gap:12px!important;padding:14px!important;border:1px solid var(--bdr)!important;border-radius:0!important;background:var(--bg-lowest)!important;min-width:0!important;overflow:hidden!important;box-sizing:border-box!important}
+/* Card 빈 덱 placeholder 가운데 정렬 */
+body[data-layout="card"] .dk.cd-dk[data-st="empty"]{min-height:280px}
 body[data-layout="card"] .dk.cd-dk[data-st="empty"] .ddz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
 
 /* HERO: 정확히 56px 높이 (앨범아트와 동일).
@@ -1226,11 +1227,12 @@ body[data-layout="observatory"] .deck-row::after{
     radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.4) 100%);
 }
 
-/* 4 채널 2×2 그리드 */
+/* 4 채널 2×2 그리드 — 각 셀은 컨텐츠 자연 높이로 (auto-fit 행). */
 body[data-layout="observatory"] #vtRow.deck-row,
 body[data-layout="observatory"] .deck-row{
   display:grid!important;
   grid-template-columns:1fr 1fr!important;
+  grid-auto-rows:min-content!important;
   gap:0!important;
   flex-direction:unset!important;
   flex-wrap:unset!important;
