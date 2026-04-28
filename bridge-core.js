@@ -201,6 +201,7 @@ class BridgeCore {
     this._beatGrids = {};   // playerNum -> [{beatInBar, bpm, timeMs}]
     this._bgTrackLen = {}; // playerNum -> estimated track length ms (beat grid last beat + interval)
     this._dbConns  = {};  // ip -> net.Socket
+    this._dbSessions = new Map();  // `${ip}|${spoofPlayer}` -> pooled dbserver TCP session
     this._virtualArt = {};  // slot -> Buffer (JPEG data for virtual deck artwork)
     this._dbSrv = null;  // virtual dbserver (TCP 12523 emulation)
     this._lastVdbTrackId = 0;  // last trackId from 0x2002 (cross-connection fallback)
@@ -468,6 +469,7 @@ class BridgeCore {
       try{s.removeAllListeners();s.destroy();}catch(_){}
     }
     this._dbConns={};
+    this._dbCleanupSessions();
     // stop DJM capture if active
     if(this._djmCapture) this.stopDJMCapture();
     // remove all callbacks to prevent post-stop activity
@@ -616,6 +618,7 @@ class BridgeCore {
     if(!this.running) return;
     const prev = this.pdjlBindAddr;
     this.pdjlBindAddr = newAddr||null;
+    this._dbCleanupSessions();
     // 명시적 auto/empty 로 되돌아가면 자동 선택 잠금 해제 → 재-자동감지 가능
     if(!newAddr || newAddr==='auto' || newAddr==='0.0.0.0'){
       this._autoPdjlLocked = false;
@@ -2748,6 +2751,85 @@ class BridgeCore {
     return sock;
   }
 
+  _dbCleanupSessions(){
+    if(!this._dbSessions) return;
+    for(const entry of this._dbSessions.values()){
+      entry.invalidated = true;
+      if(entry.idleTimer){ clearTimeout(entry.idleTimer); entry.idleTimer = null; }
+      try{ entry.sock?.destroy(); }catch(_){}
+    }
+    this._dbSessions.clear();
+  }
+
+  async _dbAcquire(ip, spoofPlayer){
+    const DB_SESSION_IDLE_MS = 30000;
+    if(!this._dbSessions) this._dbSessions = new Map();
+    const key = `${ip}|${spoofPlayer}`;
+    let entry = this._dbSessions.get(key);
+    if(!entry || entry.invalidated){
+      entry = { sock:null, mutex:Promise.resolve(), idleTimer:null, invalidated:false, connectPromise:null };
+      this._dbSessions.set(key, entry);
+      entry.connectPromise = this._dbConnect(ip, spoofPlayer).then(sock=>{
+        if(entry.invalidated){
+          try{sock.destroy();}catch(_){}
+          throw new Error('dbserver session invalidated');
+        }
+        entry.sock = sock;
+        const onDead = () => {
+          if(entry.invalidated) return;
+          entry.invalidated = true;
+          if(entry.idleTimer){ clearTimeout(entry.idleTimer); entry.idleTimer = null; }
+          if(this._dbSessions?.get(key) === entry) this._dbSessions.delete(key);
+          try{entry.sock?.destroy();}catch(_){}
+        };
+        entry.onDead = onDead;
+        sock.once('error', onDead);
+        sock.once('close', onDead);
+        return sock;
+      }).catch(err=>{
+        if(this._dbSessions?.get(key) === entry) this._dbSessions.delete(key);
+        entry.invalidated = true;
+        throw err;
+      });
+    }
+    if(!entry.sock) await entry.connectPromise;
+
+    const previous = entry.mutex.catch(()=>{});
+    let unlock = null;
+    entry.mutex = previous.then(()=>new Promise(resolve=>{ unlock = resolve; }));
+    await previous;
+
+    if(entry.invalidated || !entry.sock){
+      if(unlock) unlock();
+      return this._dbAcquire(ip, spoofPlayer);
+    }
+    if(entry.idleTimer){ clearTimeout(entry.idleTimer); entry.idleTimer = null; }
+
+    let released = false;
+    const invalidate = () => {
+      if(entry.invalidated) return;
+      entry.invalidated = true;
+      if(entry.idleTimer){ clearTimeout(entry.idleTimer); entry.idleTimer = null; }
+      if(this._dbSessions?.get(key) === entry) this._dbSessions.delete(key);
+      if(entry.onDead){
+        try{entry.sock?.removeListener('error', entry.onDead);}catch(_){}
+        try{entry.sock?.removeListener('close', entry.onDead);}catch(_){}
+      }
+      try{entry.sock?.destroy();}catch(_){}
+    };
+    const release = () => {
+      if(released) return;
+      released = true;
+      if(!entry.invalidated && this._dbSessions?.get(key) === entry){
+        if(entry.idleTimer) clearTimeout(entry.idleTimer);
+        entry.idleTimer = setTimeout(()=>invalidate(), DB_SESSION_IDLE_MS);
+        try{entry.idleTimer.unref?.();}catch(_){}
+      }
+      if(unlock) unlock();
+    };
+    return { sock:entry.sock, release, invalidate };
+  }
+
   _dbReadResponse(sock){
     return new Promise((res,rej)=>{
       const chunks = [];
@@ -2875,9 +2957,10 @@ class BridgeCore {
   async _dbserverMetadata(ip, slot, trackId, playerNum, trackType=1){
     // Spoof as player 7 to avoid conflict with CDJs 1-6
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
 
       // Send REKORDBOX_METADATA_REQ (type 0x2002)
       // trackType: 1=RB (rekordbox analyzed), 2=Unanalyzed, 5=AudioCD
@@ -2947,27 +3030,25 @@ class BridgeCore {
         this.onTrackMetadata?.(playerNum, {...meta, durationMs});
       }
 
-      // Teardown metadata connection
-      try{
-        const teardown = this._dbBuildMsg(0xfffffffe, 0x0100, []);
-        sock.write(teardown);
-      }catch(_){}
+      // Keep the pooled dbserver TCP session open; idle TTL handles teardown.
 
       // Stagger heavy follow-up requests so HW track load does not create a burst
       // of parallel TCP work that stalls UI/audio on slower systems.
       this._scheduleDbFollowUps(ip, slot, trackId, playerNum, tt, meta.artworkId||0);
     }catch(e){
+      if(session) session.invalidate();
       throw e;
     }finally{
-      try{sock?.destroy();}catch(_){}
+      if(session) session.release();
     }
   }
 
   async _dbserverWaveform(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
       const wfRmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
       const wfReq = this._dbBuildMsg(1, 0x2004, [
         wfRmst, this._dbArg4(0), this._dbArg4(trackId), this._dbArg4(0),
@@ -2994,14 +3075,18 @@ class BridgeCore {
         this.onWaveformPreview?.(playerNum, {seg:0, pts, wfType:'preview'});
       } else {
       }
-    }finally{try{sock?.destroy();}catch(_){}}
+    }catch(e){
+      if(session) session.invalidate();
+      throw e;
+    }finally{if(session) session.release();}
   }
 
   async _dbserverWaveformDetail(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
       // 0x2904 = WAVE_DETAIL_REQ — 150 segments/sec, full resolution
       const wfRmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
       const wfReq = this._dbBuildMsg(1, 0x2904, [
@@ -3035,17 +3120,19 @@ class BridgeCore {
       } else {
       }
     }catch(e){
+      if(session) session.invalidate();
       console.warn(`[DBSRV] P${playerNum} waveform detail failed:`,e.message);
-    }finally{try{sock?.destroy();}catch(_){}}
+    }finally{if(session) session.release();}
   }
 
   // NXS2 extension request (0x2c04) for 3-band waveform (PWV7)
   // Returns raw bass/mid/treble bytes per entry (3 bytes/entry, 150 entries/sec)
   async _dbserverWaveformNxs2(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
       // PWV7 magic = 0x50575637 ("PWV7" big-endian)
       const rmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
       const req = this._dbBuildMsg(1, 0x2c04, [
@@ -3097,11 +3184,13 @@ class BridgeCore {
         pos+=tTL;
       }
     }catch(e){
+      if(session) session.invalidate();
       console.warn(`[DBSRV] P${playerNum} nxs2 waveform failed:`,e.message);
-    }finally{try{sock?.destroy();}catch(_){}}
+    }finally{if(session) session.release();}
   }
 
   async _dbserverCuePoints(ip, slot, trackId, playerNum, trackType){
+    // Orchestrator only: the concrete cue fetchers below acquire pooled dbserver sessions.
     // 우선순위: EXT(0x2b04, 색상+코멘트) → STD(0x2104, 36바이트 stride) → ANLZ(0x2c04 폴백).
     // RMST menu 필드는 DATA 카테고리 = 0x08 (cue/beat/wf 데이터 fetch 공통).
     let cues = null;
@@ -3144,9 +3233,10 @@ class BridgeCore {
   //   +0x4F + commentSize  u8x3  R, G, B
   async _dbserverCuePointsExt(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
       // CUE_LIST_EXT_REQ — RMST(menu=DATA=0x08, slot) + trackId + 0 (3 args).
       const rmst = this._dbRMST(spoofPlayer, 0x08, slot, trackType||1);
       const req = this._dbBuildMsg(1, 0x2b04, [
@@ -3208,18 +3298,20 @@ class BridgeCore {
       cues.sort((a,b)=>a.timeMs-b.timeMs);
       return cues.length>0 ? cues : null;
     }catch(e){
+      if(session) session.invalidate();
       console.warn(`[DBSRV] P${playerNum} cue ext failed:`,e.message);
       return null;
-    }finally{try{sock?.destroy();}catch(_){}}
+    }finally{if(session) session.release();}
   }
 
   // (구 ANLZ-magic 스캔 방식 — dbserver 응답에는 PCO2 magic 이 그대로 안 담겨 있어
   // 원래부터 동작하지 않았음. 표준 36바이트 stride 기반 fallback 으로 교체.)
   async _dbserverCuePointsNxs2(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
       // 진단 결과 (0.9.3.37 로그): 응답 0x4f02 / arg[2]=0 → 빈 응답.
       // 다중 조합 시도 — slot 변형 + PCO2/PCOB magic + EXT marker 변형.
       // 첫 번째 binary blob 받는 조합 선택.
@@ -3388,9 +3480,10 @@ class BridgeCore {
       }
       return null;
     }catch(e){
+      if(session) session.invalidate();
       console.warn(`[DBSRV] P${playerNum} PCO2 cue points failed:`,e.message);
       return null;
-    }finally{try{sock?.destroy();}catch(_){}}
+    }finally{if(session) session.release();}
   }
 
   // dbserver CUE_LIST_REQ (0x2104) — Nexus 표준 36바이트 stride 엔트리.
@@ -3406,9 +3499,10 @@ class BridgeCore {
   //  half-frame 값을 ms 로 직접 사용 → 1 half-frame ≈ 0.15ms 이므로 위치가 6.67배 압축됐음.)
   async _dbserverCuePointsStd(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
       // CUE_LIST_REQ — RMST(menu=DATA=0x08, slot) + trackId (2 args).
       const rmst = this._dbRMST(spoofPlayer, 0x08, slot, trackType||1);
       const req = this._dbBuildMsg(1, 0x2104, [
@@ -3449,16 +3543,18 @@ class BridgeCore {
       cues.sort((a,b)=>a.timeMs-b.timeMs);
       return cues.length>0 ? cues : null;
     }catch(e){
+      if(session) session.invalidate();
       console.warn(`[DBSRV] P${playerNum} cue std failed:`,e.message);
       return null;
-    }finally{try{sock?.destroy();}catch(_){}}
+    }finally{if(session) session.release();}
   }
 
   async _dbserverBeatGrid(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
       // 0x2204 = BEAT_GRID_REQ
       const rmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
       const req = this._dbBuildMsg(1, 0x2204, [
@@ -3512,17 +3608,19 @@ class BridgeCore {
       } else {
       }
     }catch(e){
+      if(session) session.invalidate();
       console.warn(`[DBSRV] P${playerNum} beat grid failed:`,e.message);
-    }finally{try{sock?.destroy();}catch(_){}}
+    }finally{if(session) session.release();}
   }
 
   // PSSI — 곡 구조(프레이즈) 분석. 0x2c04 ANLZ tag 요청, rekordbox가 분석한 경우에만 존재.
   // 반환: { phrases:[{timeMs, kind, label, color, beat}], endMs, mood }
   async _dbserverSongStructure(ip, slot, trackId, playerNum, trackType){
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
       const rmst = this._dbRMST(spoofPlayer, 0x04, slot, trackType||1);
       // PSSI magic: 'P'(0x50)'S'(0x53)'S'(0x53)'I'(0x49) BE UInt32 = 0x50535349
       const req = this._dbBuildMsg(1, 0x2c04, [
@@ -3632,8 +3730,9 @@ class BridgeCore {
         this.onSongStructure?.(playerNum, { phrases:valid, endMs, mood:hiMood });
       }
     }catch(e){
+      if(session) session.invalidate();
       console.warn(`[DBSRV] P${playerNum} song structure failed:`,e.message);
-    }finally{try{sock?.destroy();}catch(_){}}
+    }finally{if(session) session.release();}
   }
 
   // 프레이즈 종류 → 라벨/색상 맵. mood_high 에 따라 의미가 달라지지만
@@ -3671,9 +3770,10 @@ class BridgeCore {
 
   async _dbserverArtwork(ip, slot, artworkId, playerNum, cacheKey){
     const spoofPlayer = 5;
-    let sock;
+    let session;
     try{
-      sock = await this._dbConnect(ip, spoofPlayer);
+      session = await this._dbAcquire(ip, spoofPlayer);
+      const sock = session.sock;
       const artRmst = this._dbRMST(spoofPlayer, 0x08, slot, 0x01);
       const artReq = this._dbBuildMsg(1, 0x2003, [artRmst, this._dbArg4(artworkId)]);
       sock.write(artReq);
@@ -3695,7 +3795,10 @@ class BridgeCore {
         this.setVirtualArt(playerNum-1, img);
       } else {
       }
-    }finally{try{sock?.destroy();}catch(_){}}
+    }catch(e){
+      if(session) session.invalidate();
+      throw e;
+    }finally{if(session) session.release();}
   }
 }
 

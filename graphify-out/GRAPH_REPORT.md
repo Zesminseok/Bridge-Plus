@@ -1,12 +1,12 @@
 # Graph Report - /Users/zes2021/Documents/claude_projects/bridge-clone  (2026-04-29)
 
 ## Corpus Check
-- 53 files · ~345,468 words
+- 53 files · ~345,927 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 922 nodes · 1355 edges · 69 communities detected
-- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 141 edges (avg confidence: 0.8)
+- 924 nodes · 1361 edges · 70 communities detected
+- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 142 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -79,9 +79,10 @@
 - [[_COMMUNITY_Community 66|Community 66]]
 - [[_COMMUNITY_Community 67|Community 67]]
 - [[_COMMUNITY_Community 68|Community 68]]
+- [[_COMMUNITY_Community 69|Community 69]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `BridgeCore` - 83 edges
+1. `BridgeCore` - 85 edges
 2. `push()` - 41 edges
 3. `TCNet Link Specification V3.5.1B (02/03/2022)` - 33 edges
 4. `ArtnetEngine` - 26 edges
@@ -124,7 +125,7 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.06
+Cohesion: 0.05
 Nodes (19): BridgeCore, _dbgLog(), dbArg4(), dbBinary(), dbBuildArtResponse(), dbBuildMenuItem(), dbBuildMsg(), dbNum1() (+11 more)
 
 ### Community 1 - "Community 1"
@@ -264,44 +265,44 @@ Cohesion: 0.29
 Nodes (7): Bottom transport/status bar spanning full width — fine tick-marks timeline, small status chips/icons, muted dark background, 2x2 deck grid (4 decks): 'Children Of The Night', 'Around The World (Guam Bapt…)', 'Technologic', 'Something About Us' — each with track title, deck meta row, waveform overview with amber/teal/green/purple accents, large monospaced timecode (e.g. 01:24:18, 00:48:04, 00:16:00, 00:00:00), BPM readout (128/125/…), knob/level indicators cluster, Right-side Mixer column with vertical channel VU bars (6 channels) in green/amber gradient, 'Crossfade' label with horizontal slider, 'Session Log' list of labeled events/tracks, Atelier — Editorial Studio Dark full-page layout (dark warm-neutral theme, brand 'Bridge' wordmark top-left, top utility bar with Warehouse/Room 01 session label and tempo/beat indicators), Color palette: deep charcoal/near-black background (#0f0d0b-ish), warm ivory text, amber/gold primary accent, secondary per-deck hue (teal, green, violet) — editorial studio dark aesthetic, Large editorial timecode typography — monospace HH:MM:SS, amber/gold tint on black, dominant visual anchor of each deck card, Waveform style: full-width per-deck mini overview with colored frequency bands (warm amber/orange for deck1, cyan-teal for deck2, green for deck3, violet/purple for deck4) on near-black panel with subtle grid
 
 ### Community 35 - "Community 35"
-Cohesion: 0.4
-Nodes (4): _decodePcmFor(), _getPcmWorker(), buildRGBWaveform(), _getRgbWfWorker()
-
-### Community 36 - "Community 36"
 Cohesion: 0.6
 Nodes (3): deactivate(), getStatus(), refresh()
 
-### Community 37 - "Community 37"
+### Community 36 - "Community 36"
 Cohesion: 0.4
 Nodes (5): BridgeClone class (TCNet sender), Electron bootstrap (main.js + preload.js), prolink-connect integration (Stage 3), renderer/index.html GUI scaffold, Resolume Arena Pioneer DJ TCNet reception
 
-### Community 38 - "Community 38"
+### Community 37 - "Community 37"
 Cohesion: 0.4
 Nodes (5): Card layout variant, Matrix/Row layout variant, Tower layout variant, Refine Preview - spacing/alignment/font/title compare, BRIDGE+ Layout Variants (Tower/Card/Matrix)
 
-### Community 39 - "Community 39"
+### Community 38 - "Community 38"
 Cohesion: 0.67
 Nodes (2): analyzeBPM(), detectAudioStart()
 
-### Community 40 - "Community 40"
+### Community 39 - "Community 39"
 Cohesion: 0.67
 Nodes (2): _packColorHeightPtsForIpc(), _packWaveformForIpc()
 
-### Community 41 - "Community 41"
+### Community 40 - "Community 40"
 Cohesion: 0.5
 Nodes (0): 
 
+### Community 41 - "Community 41"
+Cohesion: 1.0
+Nodes (2): buildRGBWaveform(), _getRgbWfWorker()
+
 ### Community 42 - "Community 42"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): _decodePcmFor(), _getPcmWorker()
 
 ### Community 43 - "Community 43"
 Cohesion: 0.67
-Nodes (3): 3x2 Deck Grid Layout, Proposal A - Compact Pro, 56px Icon Sidebar (LIVE/MIX/PDJL/TCNET/ARTNET/LINK)
+Nodes (0): 
 
 ### Community 44 - "Community 44"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (3): 3x2 Deck Grid Layout, Proposal A - Compact Pro, 56px Icon Sidebar (LIVE/MIX/PDJL/TCNET/ARTNET/LINK)
 
 ### Community 45 - "Community 45"
 Cohesion: 1.0
@@ -345,19 +346,19 @@ Nodes (0):
 
 ### Community 55 - "Community 55"
 Cohesion: 1.0
-Nodes (2): Proposal C - Minimal Tactical (light theme), 3-column body layout (260/flex/320)
+Nodes (0): 
 
 ### Community 56 - "Community 56"
 Cohesion: 1.0
-Nodes (2): Information priority: Timecode > Waveform > Track ID > BPM > others, Proposal G - Timecode First (Monolith) information hierarchy
+Nodes (2): Proposal C - Minimal Tactical (light theme), 3-column body layout (260/flex/320)
 
 ### Community 57 - "Community 57"
 Cohesion: 1.0
-Nodes (2): Preview Develop - G.ROW + Waveform 2-band + Beat Ring + Knob Arc, Preview v2 - TOWER/CARD/ROW developed with channel strip + fader
+Nodes (2): Information priority: Timecode > Waveform > Track ID > BPM > others, Proposal G - Timecode First (Monolith) information hierarchy
 
 ### Community 58 - "Community 58"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (2): Preview Develop - G.ROW + Waveform 2-band + Beat Ring + Knob Arc, Preview v2 - TOWER/CARD/ROW developed with channel strip + fader
 
 ### Community 59 - "Community 59"
 Cohesion: 1.0
@@ -377,89 +378,93 @@ Nodes (0):
 
 ### Community 63 - "Community 63"
 Cohesion: 1.0
-Nodes (1): v0.5.0 Initial release
+Nodes (0): 
 
 ### Community 64 - "Community 64"
 Cohesion: 1.0
-Nodes (1): graphify workflow rules
+Nodes (1): v0.5.0 Initial release
 
 ### Community 65 - "Community 65"
 Cohesion: 1.0
-Nodes (1): PDJL key facts (ports, broadcast, header, BPM encoding)
+Nodes (1): graphify workflow rules
 
 ### Community 66 - "Community 66"
 Cohesion: 1.0
-Nodes (1): Default Album Artwork Placeholder (Vinyl Disc)
+Nodes (1): PDJL key facts (ports, broadcast, header, BPM encoding)
 
 ### Community 67 - "Community 67"
 Cohesion: 1.0
-Nodes (1): Default Album Art (Vinyl/CD Placeholder)
+Nodes (1): Default Album Artwork Placeholder (Vinyl Disc)
 
 ### Community 68 - "Community 68"
+Cohesion: 1.0
+Nodes (1): Default Album Art (Vinyl/CD Placeholder)
+
+### Community 69 - "Community 69"
 Cohesion: 1.0
 Nodes (1): Default Album Art (Vinyl Record Placeholder)
 
 ## Knowledge Gaps
 - **243 isolated node(s):** `EQ knob arc (12 o'clock Boost/Cut)`, `v0.7.0 BRIDGE+ Onyx Studio design`, `v0.5.0 Initial release`, `renderer/index.html GUI scaffold`, `prolink-connect integration (Stage 3)` (+238 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 44`** (2 nodes): `jsString()`, `electron_analyze_waveform.js`
+- **Thin community `Community 45`** (2 nodes): `jsString()`, `electron_analyze_waveform.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 45`** (2 nodes): `test()`, `dbserver.test.js`
+- **Thin community `Community 46`** (2 nodes): `test()`, `dbserver.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 46`** (2 nodes): `test()`, `pdjl-packets.test.js`
+- **Thin community `Community 47`** (2 nodes): `test()`, `pdjl-packets.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 47`** (2 nodes): `test()`, `pdjl-parser.test.js`
+- **Thin community `Community 48`** (2 nodes): `test()`, `pdjl-parser.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 48`** (2 nodes): `test()`, `license-service.test.js`
+- **Thin community `Community 49`** (2 nodes): `test()`, `license-service.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 49`** (2 nodes): `test()`, `metadata-bpm.test.js`
+- **Thin community `Community 50`** (2 nodes): `test()`, `metadata-bpm.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 50`** (2 nodes): `registerLicenseIpc()`, `ipc-license.js`
+- **Thin community `Community 51`** (2 nodes): `registerLicenseIpc()`, `ipc-license.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 51`** (2 nodes): `registerLinkIpc()`, `ipc-link.js`
+- **Thin community `Community 52`** (2 nodes): `registerLinkIpc()`, `ipc-link.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 52`** (2 nodes): `registerBridgeIfaceIpc()`, `ipc-bridge-iface.js`
+- **Thin community `Community 53`** (2 nodes): `registerBridgeIfaceIpc()`, `ipc-bridge-iface.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 53`** (2 nodes): `registerAppIpc()`, `ipc-app.js`
+- **Thin community `Community 54`** (2 nodes): `registerAppIpc()`, `ipc-app.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 54`** (2 nodes): `registerBridgeSimpleIpc()`, `ipc-bridge-simple.js`
+- **Thin community `Community 55`** (2 nodes): `registerBridgeSimpleIpc()`, `ipc-bridge-simple.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 55`** (2 nodes): `Proposal C - Minimal Tactical (light theme)`, `3-column body layout (260/flex/320)`
+- **Thin community `Community 56`** (2 nodes): `Proposal C - Minimal Tactical (light theme)`, `3-column body layout (260/flex/320)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 56`** (2 nodes): `Information priority: Timecode > Waveform > Track ID > BPM > others`, `Proposal G - Timecode First (Monolith) information hierarchy`
+- **Thin community `Community 57`** (2 nodes): `Information priority: Timecode > Waveform > Track ID > BPM > others`, `Proposal G - Timecode First (Monolith) information hierarchy`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 57`** (2 nodes): `Preview Develop - G.ROW + Waveform 2-band + Beat Ring + Knob Arc`, `Preview v2 - TOWER/CARD/ROW developed with channel strip + fader`
+- **Thin community `Community 58`** (2 nodes): `Preview Develop - G.ROW + Waveform 2-band + Beat Ring + Knob Arc`, `Preview v2 - TOWER/CARD/ROW developed with channel strip + fader`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 58`** (1 nodes): `preload.js`
+- **Thin community `Community 59`** (1 nodes): `preload.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 59`** (1 nodes): `pcm-worker.js`
+- **Thin community `Community 60`** (1 nodes): `pcm-worker.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 60`** (1 nodes): `gen-test-tones.js`
+- **Thin community `Community 61`** (1 nodes): `gen-test-tones.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 61`** (1 nodes): `rename-stub.js`
+- **Thin community `Community 62`** (1 nodes): `rename-stub.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (1 nodes): `gen-sweep-clean.js`
+- **Thin community `Community 63`** (1 nodes): `gen-sweep-clean.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (1 nodes): `v0.5.0 Initial release`
+- **Thin community `Community 64`** (1 nodes): `v0.5.0 Initial release`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 64`** (1 nodes): `graphify workflow rules`
+- **Thin community `Community 65`** (1 nodes): `graphify workflow rules`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 65`** (1 nodes): `PDJL key facts (ports, broadcast, header, BPM encoding)`
+- **Thin community `Community 66`** (1 nodes): `PDJL key facts (ports, broadcast, header, BPM encoding)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 66`** (1 nodes): `Default Album Artwork Placeholder (Vinyl Disc)`
+- **Thin community `Community 67`** (1 nodes): `Default Album Artwork Placeholder (Vinyl Disc)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 67`** (1 nodes): `Default Album Art (Vinyl/CD Placeholder)`
+- **Thin community `Community 68`** (1 nodes): `Default Album Art (Vinyl/CD Placeholder)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 68`** (1 nodes): `Default Album Art (Vinyl Record Placeholder)`
+- **Thin community `Community 69`** (1 nodes): `Default Album Art (Vinyl Record Placeholder)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `push()` connect `Community 0` to `Community 35`, `Community 4`, `Community 6`, `Community 39`, `Community 7`, `Community 14`, `Community 25`, `Community 28`, `Community 29`?**
+- **Why does `push()` connect `Community 0` to `Community 4`, `Community 6`, `Community 38`, `Community 7`, `Community 41`, `Community 42`, `Community 14`, `Community 25`, `Community 28`, `Community 29`?**
   _High betweenness centrality (0.077) - this node is a cross-community bridge._
 - **Why does `BridgeCore` connect `Community 0` to `Community 4`, `Community 14`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
 - **Why does `buildHtml()` connect `Community 29` to `Community 0`?**
   _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Are the 40 inferred relationships involving `push()` (e.g. with `_dbgLog()` and `._handleTCNetMsg()`) actually correct?**
@@ -467,6 +472,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `EQ knob arc (12 o'clock Boost/Cut)`, `v0.7.0 BRIDGE+ Onyx Studio design`, `v0.5.0 Initial release` to the rest of the system?**
   _243 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._

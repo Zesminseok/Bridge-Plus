@@ -2,11 +2,49 @@
 
 const assert = require('assert');
 const path = require('path');
+const fs = require('fs');
 
 function test(name, fn){
   try { fn(); console.log(`ok - ${name}`); }
   catch(err){ console.error(`not ok - ${name}`); console.error(err.stack || err.message); process.exitCode = 1; }
 }
+
+// ─── bridge-core.js — dbserver TCP session reuse ───────────────────────
+
+test('bridge-core: dbserver methods use session acquisition instead of direct connect', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
+  assert.match(src, /async _dbAcquire\(ip, spoofPlayer\)\{/);
+  for(const name of [
+    '_dbserverMetadata',
+    '_dbserverWaveform',
+    '_dbserverWaveformDetail',
+    '_dbserverWaveformNxs2',
+    '_dbserverCuePointsExt',
+    '_dbserverCuePointsNxs2',
+    '_dbserverCuePointsStd',
+    '_dbserverBeatGrid',
+    '_dbserverSongStructure',
+    '_dbserverArtwork',
+  ]){
+    const start = src.indexOf(`async ${name}(`);
+    assert.ok(start >= 0, `${name} missing`);
+    const next = src.indexOf('\n  async ', start + 1);
+    const body = src.slice(start, next > start ? next : src.indexOf('\n}', start));
+    assert.ok(body.includes('this._dbAcquire(ip, spoofPlayer)'), `${name} should acquire pooled session`);
+    assert.strictEqual(body.includes('this._dbConnect(ip, spoofPlayer)'), false, `${name} should not open direct TCP session`);
+    assert.ok(body.includes('session.release()'), `${name} should release pooled session`);
+  }
+});
+
+test('bridge-core: dbserver session pool has idle TTL, invalidation, and stop cleanup', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
+  assert.match(src, /this\._dbSessions\s*=\s*new Map\(\)/);
+  assert.match(src, /const DB_SESSION_IDLE_MS = 30000/);
+  assert.match(src, /sock\.once\('error', onDead\)/);
+  assert.match(src, /sock\.once\('close', onDead\)/);
+  assert.match(src, /clearTimeout\(entry\.idleTimer\)/);
+  assert.match(src, /this\._dbSessions\.clear\(\)/);
+});
 
 // ─── main/ipc-link.js ──────────────────────────────────────────────────
 
