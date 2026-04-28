@@ -48,8 +48,8 @@ function renderSettings(){
     <div class="sgr">
       <div class="srw"><span class="srl">Theme</span><select class="ss" id="wfThemeSel"><option value="3band" ${wfTheme==='3band'?'selected':''}>3 Band</option><option value="rgb" ${wfTheme==='rgb'?'selected':''}>RGB</option><option value="mono" ${wfTheme==='mono'?'selected':''}>Mono</option></select></div>
       <div class="srw"><span class="srl">Sharpness</span><div style="display:flex;align-items:center;gap:6px"><input type="range" id="wfSharpnessSl" min="0" max="1" step="0.05" value="${wfSharpness}" title="0=sharp 1=legacy 3-tap smoothing" style="width:120px"><span id="wfSharpnessLbl" style="font:400 10px var(--mn);color:var(--tx3);width:32px;text-align:right">${wfSharpness.toFixed(2)}</span></div></div>
-      <div class="srw"><span class="srl">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
-      <div class="srw"><span class="srl">비트 그리드 — 오버뷰</span><select class="ss" id="wfBeatStyleOverviewSel">
+      <div class="srw"><span class="srl" data-i18n="set_playhead">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>중앙 (Center)</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>좌측 (Left 25%)</option></select></div>
+      <div class="srw"><span class="srl" data-i18n="set_beatgrid_overview">비트 그리드 — 오버뷰</span><select class="ss" id="wfBeatStyleOverviewSel">
         <option value="none" ${wfBeatStyleOverview==='none'?'selected':''}>없음</option>
         <option value="phrase" ${wfBeatStyleOverview==='phrase'?'selected':''}>Phrase 만 (16비트)</option>
         <option value="balanced" ${wfBeatStyleOverview==='balanced'?'selected':''}>균형 (다운비트 + Phrase)</option>
@@ -57,7 +57,7 @@ function renderSettings(){
         <option value="phrase-band" ${wfBeatStyleOverview==='phrase-band'?'selected':''}>Phrase 강조 (밴드)</option>
         <option value="hybrid" ${wfBeatStyleOverview==='hybrid'?'selected':''}>하이브리드</option>
       </select></div>
-      <div class="srw"><span class="srl">비트 그리드 — 디테일</span><select class="ss" id="wfBeatStyleDetailSel">
+      <div class="srw"><span class="srl" data-i18n="set_beatgrid_detail">비트 그리드 — 디테일</span><select class="ss" id="wfBeatStyleDetailSel">
         <option value="none" ${wfBeatStyleDetail==='none'?'selected':''}>없음</option>
         <option value="phrase" ${wfBeatStyleDetail==='phrase'?'selected':''}>Phrase 만 (16비트)</option>
         <option value="balanced" ${wfBeatStyleDetail==='balanced'?'selected':''}>균형 (다운비트 + Phrase)</option>
@@ -65,13 +65,13 @@ function renderSettings(){
         <option value="phrase-band" ${wfBeatStyleDetail==='phrase-band'?'selected':''}>Phrase 강조 (밴드)</option>
         <option value="hybrid" ${wfBeatStyleDetail==='hybrid'?'selected':''}>하이브리드</option>
       </select></div>
-      <div class="srw"><span class="srl">Phrase 표시</span><select class="ss" id="wfPhraseStyleSel">
+      <div class="srw"><span class="srl" data-i18n="set_phrase">Phrase 표시</span><select class="ss" id="wfPhraseStyleSel">
         <option value="none" ${wfPhraseStyle==='none'?'selected':''}>없음</option>
         <option value="margin" ${wfPhraseStyle==='margin'?'selected':''}>Margin Tick (minimal)</option>
         <option value="label" ${wfPhraseStyle==='label'?'selected':''}>Mood 라벨 (INTRO/CHORUS/DROP)</option>
         <option value="cycle" ${wfPhraseStyle==='cycle'?'selected':''}>Color Cycling</option>
       </select></div>
-      <div class="srw"><span class="srl">큐 마커 스타일</span><select class="ss" id="wfCueStyleSel">
+      <div class="srw"><span class="srl" data-i18n="set_cue_marker">큐 마커 스타일</span><select class="ss" id="wfCueStyleSel">
         <option value="chip" ${wfCueStyle==='chip'?'selected':''}>Chip — 라벨 (A/B/C)</option>
         <option value="pill" ${wfCueStyle==='pill'?'selected':''}>Pill — 캡슐</option>
         <option value="diamond" ${wfCueStyle==='diamond'?'selected':''}>Diamond — 마름모</option>
@@ -82,28 +82,28 @@ function renderSettings(){
     </div>
     <div class="sl" data-i18n="set_license">라이선스</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">상태</span><span id="licStatusBadge" class="srv" style="color:var(--ylw)">TEST BUILD</span></div>
-      <div class="srw"><span class="srl">이메일</span><input id="licEmail" type="email" autocomplete="off" placeholder="user@example.com" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:190px;text-align:right"></div>
-      <div class="srw"><span class="srl">시리얼 코드</span><input id="licSerial" type="text" autocomplete="off" placeholder="BRIDGE-XXXX-XXXX" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:190px;text-align:right"></div>
-      <div class="srw"><span class="srl">관리</span><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="mode-btn" id="btnLicActivate" style="height:24px;padding:0 10px">Activate</button><button class="mode-btn" id="btnLicRefresh" style="height:24px;padding:0 10px">Refresh</button><button class="mode-btn" id="btnLicDeactivate" style="height:24px;padding:0 10px">Deactivate</button></div></div>
-      <div class="srw"><span class="srl">메시지</span><span id="licStatusDetail" class="srv" style="max-width:260px;text-align:right;color:var(--tx3)">License system disabled in test builds.</span></div>
+      <div class="srw"><span class="srl" data-i18n="set_status">상태</span><span id="licStatusBadge" class="srv" style="color:var(--ylw)">TEST BUILD</span></div>
+      <div class="srw"><span class="srl" data-i18n="set_email">이메일</span><input id="licEmail" type="email" autocomplete="off" placeholder="user@example.com" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:190px;text-align:right"></div>
+      <div class="srw"><span class="srl" data-i18n="set_serial">시리얼 코드</span><input id="licSerial" type="text" autocomplete="off" placeholder="BRIDGE-XXXX-XXXX" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:190px;text-align:right"></div>
+      <div class="srw"><span class="srl" data-i18n="set_manage">관리</span><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="mode-btn" id="btnLicActivate" style="height:24px;padding:0 10px">Activate</button><button class="mode-btn" id="btnLicRefresh" style="height:24px;padding:0 10px">Refresh</button><button class="mode-btn" id="btnLicDeactivate" style="height:24px;padding:0 10px">Deactivate</button></div></div>
+      <div class="srw"><span class="srl" data-i18n="set_message">메시지</span><span id="licStatusDetail" class="srv" style="max-width:260px;text-align:right;color:var(--tx3)">License system disabled in test builds.</span></div>
     </div>
     <div class="sl" data-i18n="set_tcnet">TCNet 설정</div>
     <div class="sgr">
       <div class="srw"><span class="srl">Node Name <span style="font:400 9px var(--mn);color:var(--tx4)">(%%=자동번호, 최대8자)</span></span><input type="text" value="${cfg.nm}" data-cfg="nm" placeholder="Bridge%%" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:110px;text-align:right" maxlength="9"></div>
-      <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
+      <div class="srw"><span class="srl" data-i18n="set_tcnet_iface">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
       <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl" data-i18n="set_tcnet_mode">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
     </div>
     <div class="sl" data-i18n="set_pdjl">Pro DJ Link 설정</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">Pro DJ Link 인터페이스</span><select class="ss" data-cfg="pdjlIface">${ifaceOpts(allIfaces,'pdjlIface')}</select></div>
-      <div class="srw"><span class="srl">인터페이스 목록</span><button class="mode-btn" id="btnIfaceRefresh" style="height:24px;padding:0 10px">새로고침</button></div>
+      <div class="srw"><span class="srl" data-i18n="set_pdjl_iface">Pro DJ Link 인터페이스</span><select class="ss" data-cfg="pdjlIface">${ifaceOpts(allIfaces,'pdjlIface')}</select></div>
+      <div class="srw"><span class="srl" data-i18n="set_iface_list">인터페이스 목록</span><button class="mode-btn" id="btnIfaceRefresh" style="height:24px;padding:0 10px">새로고침</button></div>
     </div>
     <div class="sl" data-i18n="set_audio_out">오디오 출력</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div>
-      <div class="srw"><span class="srl">출력 채널</span><div style="display:flex;align-items:center;gap:6px"><select class="ss" data-cfg="aoChPair" style="max-width:120px" disabled><option>감지 중…</option></select><span id="aoChAutoLbl" style="font:400 9px var(--mn);color:var(--grn);display:none">AUTO</span></div></div>
+      <div class="srw"><span class="srl" data-i18n="set_audio_device">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div>
+      <div class="srw"><span class="srl" data-i18n="set_audio_channel">출력 채널</span><div style="display:flex;align-items:center;gap:6px"><select class="ss" data-cfg="aoChPair" style="max-width:120px" disabled><option>감지 중…</option></select><span id="aoChAutoLbl" style="font:400 9px var(--mn);color:var(--grn);display:none">AUTO</span></div></div>
     </div>
     <div class="al alw" style="margin-top:8px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
@@ -114,10 +114,10 @@ function renderSettings(){
     </div>
     <div class="sl mt" data-i18n="set_smpte">SMPTE 타임코드 출력</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
-      <div class="srw"><span class="srl">레이턴시 보정</span><div style="display:flex;align-items:center;gap:6px"><input type="number" step="1" min="-5000" max="5000" value="${cfg.tcOffsetMs|0}" data-cfg="tcOffsetMs" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:90px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">ms (LTC/MTC/Art-Net 공통, + 면 TC 앞섬)</span></div></div>
+      <div class="srw"><span class="srl" data-i18n="set_framerate">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
+      <div class="srw"><span class="srl" data-i18n="set_latency">레이턴시 보정</span><div style="display:flex;align-items:center;gap:6px"><input type="number" step="1" min="-5000" max="5000" value="${cfg.tcOffsetMs|0}" data-cfg="tcOffsetMs" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:90px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">ms (LTC/MTC/Art-Net 공통, + 면 TC 앞섬)</span></div></div>
       ${['A','B','M'].map(lyr=>`<div class="srw"><span class="srl">LTC — Layer ${lyr}</span><div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select class="ss" data-cfg="tcLtc${lyr}" style="max-width:180px"><option value="">시스템 기본</option>${audioDevs.map(d=>`<option value="${d.deviceId}" ${cfg[`tcLtc${lyr}`]===d.deviceId?'selected':''}>${d.label||d.deviceId.slice(0,14)}</option>`).join('')}</select><select class="ss" data-cfg="tcLtc${lyr}Ch" style="width:72px" disabled><option>감지 중…</option></select></div></div>`).join('')}
-      <div class="srw"><span class="srl">MTC MIDI 출력</span><select class="ss" id="midiOutSel" style="max-width:200px"><option value="">—</option></select></div>
+      <div class="srw"><span class="srl" data-i18n="set_mtc_out">MTC MIDI 출력</span><select class="ss" id="midiOutSel" style="max-width:200px"><option value="">—</option></select></div>
     </div>
     <div class="al alw" style="margin-top:6px;margin-bottom:4px">
       <span class="dot" style="width:5px;height:5px;flex-shrink:0;background:var(--ylw)"></span>
@@ -125,7 +125,7 @@ function renderSettings(){
     </div>
     <div class="sl mt">문제 해결</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">잔여 프로세스 정리</span><button id="btnCleanupZombies" class="ss" style="cursor:pointer;width:auto;padding:4px 10px">실행</button></div>
+      <div class="srw"><span class="srl" data-i18n="set_cleanup_zombie">잔여 프로세스 정리</span><button id="btnCleanupZombies" class="ss" style="cursor:pointer;width:auto;padding:4px 10px">실행</button></div>
       <div id="cleanupZombiesResult" style="font:400 10px var(--mn);color:var(--tx3);padding:0 2px;margin-top:-2px;display:none;white-space:pre-line;line-height:1.4"></div>
     </div>
     <div class="al alw" style="margin-top:6px;margin-bottom:4px">
@@ -134,7 +134,7 @@ function renderSettings(){
     </div>
     <div class="sl mt">정보</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">Version</span><span class="srv" id="appVerLbl">…</span></div>
+      <div class="srw"><span class="srl" data-i18n="set_version">Version</span><span class="srv" id="appVerLbl">…</span></div>
     </div>`;
 
   // 동적 버전 표시 — main process 가 package.json + .build-number 합쳐서 반환
