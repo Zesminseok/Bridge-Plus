@@ -2716,6 +2716,11 @@ class BridgeCore {
 
     // Step 2: connect to actual port + greeting
     const sock = new net2.Socket();
+    // setKeepAlive(true, 5000) — TCP keepalive 5s 후 → idle 끊김 빠른 감지.
+    // setNoDelay(true) — Nagle 비활성, dbserver greeting/SETUP_REQ 작은 패킷 즉시 전송.
+    // setTimeout 5000ms 유지 — CDJ 부팅 직후 / 네트워크 jitter 시 false timeout 방지.
+    sock.setKeepAlive(true, 5000);
+    sock.setNoDelay(true);
     sock.setTimeout(5000);
     await new Promise((res,rej)=>{
       sock.on('error', rej);

@@ -1,7 +1,7 @@
 # Graph Report - /Users/zes2021/Documents/claude_projects/bridge-clone  (2026-04-29)
 
 ## Corpus Check
-- 53 files · ~345,277 words
+- 53 files · ~345,468 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
