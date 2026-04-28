@@ -791,6 +791,28 @@ test('preload.js: on* 함수가 listener remover 클로저 반환 (누수 방지
   assert.ok(directOnCalls === 2, `expected exactly 2 ipcRenderer.on (inside _on helpers), got ${directOnCalls}`);
 });
 
+// ─── BridgeCore split — bridge/virtual-deck.js ─────────────────────────
+
+test('virtual-deck: 8개 helper + BLANK_JPEG export', () => {
+  const mod = require(path.join(__dirname, '..', 'bridge', 'virtual-deck'));
+  ['registerVirtualDeck','unregisterVirtualDeck','setVirtualArt',
+   'sendVirtualCDJStatus','startVirtualDbServer','handleVDbRequest',
+   'findVirtualArt'].forEach(name => {
+    assert.strictEqual(typeof mod[name], 'function', `missing helper: ${name}`);
+  });
+  assert.ok(Buffer.isBuffer(mod.BLANK_JPEG), 'BLANK_JPEG should be Buffer');
+  assert.ok(mod.BLANK_JPEG.length > 0, 'BLANK_JPEG should be non-empty');
+});
+
+test('virtual-deck: BLANK_JPEG 단일 인스턴스 (bridge-core 와 공유)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
+  // bridge-core.js 가 자체 BLANK_JPEG IIFE 정의를 갖지 않고 _vd 에서 import
+  assert.match(src, /const BLANK_JPEG = _vd\.BLANK_JPEG/);
+  // 자체 IIFE 정의가 남아있지 않음 (default-art.jpg readFileSync 호출이 bridge-core 에서 사라짐)
+  const directReads = (src.match(/readFileSync\([^)]*default-art\.jpg/g) || []).length;
+  assert.strictEqual(directReads, 0, 'bridge-core 에 default-art.jpg 직접 읽기가 남아있음');
+});
+
 // ─── BridgeCore split — bridge/beat-anchor.js ──────────────────────────
 
 test('beat-anchor: nxs2BeatCountToMs converts beat count to ms', () => {

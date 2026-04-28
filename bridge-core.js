@@ -119,18 +119,10 @@ const pdjlBroadcastTargets = _NET.pdjlBroadcastTargets;
 const { parsePDJL } = require('./pdjl/parser');
 // dbserver protocol pure helpers → pdjl/dbserver.js (Phase 4.11)
 const _DB = require('./pdjl/dbserver');
+const _vd = require('./bridge/virtual-deck');
 
-// ─────────────────────────────────────────────
-// Default album art — vinyl record JPEG loaded from file
-// Used in Arena display and TCNet LowResArtwork when no real album art
-const BLANK_JPEG = (() => {
-  try {
-    return fs.readFileSync(path.join(__dirname, 'renderer', 'assets', 'default-art.jpg'));
-  } catch (e) {
-    console.warn('[WARN] default-art.jpg not found, using 1x1 black JPEG fallback');
-    return Buffer.from('/9j/4AAQSkZJRgABAgAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6ery8/T19vf4+fr/xAAfAQADAQEBAQEBAQEBAAAAAAAAAQIDBAUGBwgJCgv/xAC1EQACAQIEBAMEBwUEBAABAncAAQIDEQQFITEGEkFRB2FxEyIygQgUQpGhscEJIzNS8BVictEKFiQ04SXxFxgZGiYnKCkqNTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2dri4+Tl5ufo6ery8/T19vf4+fr/2gAMAwEAAhEDEQA/AP0poA//2Q==', 'base64');
-  }
-})();
+// BLANK_JPEG → bridge/virtual-deck.js (Phase 5.2). 두 모듈에서 중복 로드 방지.
+const BLANK_JPEG = _vd.BLANK_JPEG;
 
 // nxs2BeatCountToMs / shouldKeepPredictedBeatAnchor → bridge/beat-anchor.js (Phase 5.1)
 const { nxs2BeatCountToMs, shouldKeepPredictedBeatAnchor } = require('./bridge/beat-anchor');
@@ -2225,27 +2217,8 @@ class BridgeCore {
   setHWMode(i,e){ if(i>=0&&i<=7){this.hwMode[i]=e;console.log(`[HW] setHWMode(${i},${e}) → [${this.hwMode.slice(0,4)}]`);} }
 
   /** Register virtual deck in devices list so Arena sees a CDJ model name. */
-  registerVirtualDeck(slot, modelName){
-    if(slot<0||slot>7) return;
-    this.hwMode[slot] = false;  // virtual deck → disable HW mode for this slot
-    const key = `cdj${slot+1}`;
-    this.devices[key] = {
-      type:'CDJ', playerNum:slot+1,
-      name: modelName || 'CDJ-3000',
-      ip:'127.0.0.1', lastSeen:Date.now(), virtual:true,
-      state:{}
-    };
-    this._syncVirtualDevices();
-    this.onDeviceList?.(this.devices);
-  }
-  unregisterVirtualDeck(slot){
-    if(slot<0||slot>7) return;
-    this.hwMode[slot] = true;  // restore HW mode when virtual deck removed
-    const key = `cdj${slot+1}`;
-    if(this.devices[key]?.virtual) delete this.devices[key];
-    this._syncVirtualDevices();
-    this.onDeviceList?.(this.devices);
-  }
+  registerVirtualDeck(slot, modelName){ return _vd.registerVirtualDeck(this, slot, modelName); }
+  unregisterVirtualDeck(slot){ return _vd.unregisterVirtualDeck(this, slot); }
   _syncVirtualDevices(){
     for(const [k,d] of Object.entries(this.devices)){
       if(d.virtual) d.lastSeen = Date.now();
@@ -2263,95 +2236,14 @@ class BridgeCore {
   /** Store artwork JPEG buffer for a virtual deck slot (0-based).
    *  Also triggers PDJL CDJ status broadcast so Arena queries our dbserver,
    *  and pushes thumbnail via REST API as fallback. */
-  setVirtualArt(slot, jpegBuf){
-    if(slot<0||slot>7) return;
-    this._virtualArt[slot] = jpegBuf || BLANK_JPEG;
-    const isBuf = Buffer.isBuffer(jpegBuf);
-    const hdr = jpegBuf ? `[${jpegBuf[0]?.toString(16)},${jpegBuf[1]?.toString(16)}]` : 'null';
-    console.log(`[VDBSRV] slot ${slot} artwork stored: ${jpegBuf?.length||0}B isBuffer=${isBuf} hdr=${hdr}`);
-    // Send artwork via TCNet LowResArtwork (same path as HW mode)
-    this._sendArtwork(slot + 1, jpegBuf);
-    // Retry after delays — Arena may not have registered the layer yet
-    setTimeout(()=>this._sendArtwork(slot + 1, this._virtualArt[slot]), 500);
-    setTimeout(()=>this._sendArtwork(slot + 1, this._virtualArt[slot]), 2000);
-    setTimeout(()=>this._sendArtwork(slot + 1, this._virtualArt[slot]), 5000);
-  }
+  setVirtualArt(slot, jpegBuf){ return _vd.setVirtualArt(this, slot, jpegBuf); }
 
   /** Send a virtual CDJ status packet (type 0x0A) so Resolume Arena sees
    *  a track-loaded player and queries our virtual dbserver for artwork.
    *  Relevant offsets:
    *    0x24=playerNum, 0x28=trackDeviceId, 0x29=slot, 0x2A=trackType, 0x2C=trackId(BE) */
-  _sendVirtualCDJStatus(playerNum, trackId, bpm){
-    if(!this._pdjlAnnSock || !trackId) return;
-    try{
-      // ROLLBACK: was 212 (0xD4, Nexus 1st gen size) — NXS2 uses 0x11C (284B)
-      // Arena/CDJs may ignore packets with wrong size for their expected model
-      const pktSize = 0x11C;  // 284 bytes = NXS2 CDJ status size
-      const pkt = Buffer.alloc(pktSize);
-      PDJL.MAGIC.copy(pkt, 0);
-      pkt[0x0A] = PDJL.CDJ;   // 0x0A = CDJ status type
-      pkt[0x0B] = 0x00;
-      const nm = 'TCS-SHOWKONTROL';
-      Buffer.from(nm,'ascii').copy(pkt, 0x0C, 0, 15);
-      // Header fields — 0x20=subtype(0x03=CDJ), 0x21=deviceNum
-      // ROLLBACK: was pkt[0x20]=0x01, pkt[0x21]=0x04
-      pkt[0x20] = 0x03; pkt[0x21] = playerNum & 0xFF;
-      pkt.writeUInt16BE(pktSize - 0x24, 0x22);  // lengthRemaining from 0x24 to end
-      pkt[0x24] = playerNum & 0xFF;   // player number (NXS2 reads 0x21, CDJ-3000 reads 0x24)
-      pkt[0x25] = 0x00;
-      // 0x26-0x27: sub-field (unused, zero)
-      // Track source fields
-      pkt[0x28] = playerNum & 0xFF;   // trackDeviceId = self (same player loaded it)
-      pkt[0x29] = 0x03;               // slot = 3 (USB)
-      pkt[0x2A] = 0x01;               // trackType = 1 (rekordbox analyzed track)
-      pkt[0x2B] = 0x00;
-      pkt.writeUInt32BE(trackId >>> 0, 0x2C);  // trackId (big-endian)
-
-      // bytes 0x68 and 0x75 MUST be 1 for mp3 metadata delivery
-      // ROLLBACK: was 0x00 (unset)
-      pkt[0x68] = 0x01;
-      pkt[0x75] = 0x01;
-
-      // Playing state: P1 byte (0x7B) and flags (0x89)
-      // ROLLBACK: was pkt[0x7B]=0x09
-      pkt[0x7B] = 0x03;   // P1 = 0x03 = playing
-      // ROLLBACK: was 0x68 (bit5=Master set) — only P1 should be master, others sync+onAir
-      pkt[0x89] = (playerNum === 1) ? 0x68 : 0x48;
-      // 0x68 = play(0x40)+master(0x20)+onAir(0x08), 0x48 = play(0x40)+onAir(0x08)
-      // P2 play mode: NXS2 uses 0xFA(play)/0xFE(stop)
-      pkt[0x8B] = 0xFA;  // P2 = playing (NXS2 format)
-      // BPM × 100 as uint16BE at 0x92
-      const bpmVal = Math.round((bpm||128)*100);
-      pkt.writeUInt16BE(bpmVal, 0x92);
-      // Pitch: slider at 0x8D (3B), effective at 0x99 (3B) — neutral = 0x100000
-      // Write neutral pitch at both locations
-      pkt[0x8D] = 0x10; pkt[0x8E] = 0x00; pkt[0x8F] = 0x00; // sliderPitch = 0x100000
-      pkt[0x99] = 0x10; pkt[0x9A] = 0x00; pkt[0x9B] = 0x00; // effectivePitch = 0x100000
-      // ROLLBACK: was pkt.writeUInt32BE(0x100000, 0x8C) — wrote 4B starting at 0x8C
-      // 0xB6 must be 1
-      pkt[0xB6] = 0x01;
-
-      // Unicast only to Arena + localhost — broadcasting reaches DJM and causes
-      // identity conflict (same playerNum from two IPs) that makes DJM-900NXS2
-      // refuse 0x57 subscribe and never send 0x39 fader data.
-      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50002,'127.0.0.1');}catch(_){}
-      try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,'127.0.0.1');}catch(_){}
-      const arenaIPs = new Set();
-      for(const n of Object.values(this.nodes||{})){
-        if(n?.ip && n.ip!=='127.0.0.1' && (n.name?.includes('Arena') || n.vendor?.includes('Resolume'))){
-          arenaIPs.add(n.ip);
-        }
-      }
-      for(const ip of arenaIPs){
-        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50002,ip);}catch(_){}
-        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50001,ip);}catch(_){}
-      }
-      const _summary=`${trackId}_${bpm||128}_${pktSize}`;
-      if(this._shouldLogRate(`virt_status_${playerNum}`, 10000, _summary)){
-        console.log(`[PDJL-VIRT] CDJ status P${playerNum} trackId=${trackId} bpm=${bpm||128} size=${pktSize}`);
-      }
-    }catch(e){console.warn('[PDJL-VIRT] status send error:',e.message);}
-  }
+  // Rate-limit guard lives in bridge/virtual-deck.js: if(this._shouldLogRate(`virt_status_${playerNum}`, 10000, _summary)){
+  _sendVirtualCDJStatus(playerNum, trackId, bpm){ return _vd.sendVirtualCDJStatus(this, playerNum, trackId, bpm); }
 
   /** Push JPEG artwork to Resolume Arena REST API as clip thumbnail fallback. */
   async _pushArtToResolume(slot, jpegBuf){
@@ -2379,181 +2271,12 @@ class BridgeCore {
     }
   }
 
-  _startVirtualDbServer(){
-    const net2 = require('net');
-    // Port discovery server on 12523 — tells clients our actual dbserver port
-    const REAL_PORT = 12524;  // actual protocol port
-
-    // 1) Port discovery listener on 12523
-    this._dbSrv = net2.createServer(sock=>{
-      sock.on('error',()=>{});
-      sock.once('data', d=>{
-        // Client sends 4-byte BE length + "RemoteDBServer\0"
-        const str = d.slice(4).toString('ascii').replace(/\0/g,'');
-        if(str === 'RemoteDBServer'){
-          const resp = Buffer.alloc(2);
-          resp.writeUInt16BE(REAL_PORT, 0);
-          sock.write(resp);
-          console.log(`[VDBSRV] port discovery → ${REAL_PORT}`);
-        }
-        sock.end();
-      });
-    });
-    this._dbSrv.on('error', e=>{
-      // Port 12523 may be in use by a real CDJ on the network or rekordbox
-      console.warn(`[VDBSRV] port 12523 bind failed: ${e.message} (rekordbox/CDJ already binding?)`);
-    });
-    // 같은 머신의 rekordbox dbserver 와 충돌 회피: 0.0.0.0 대신 PDJL 인터페이스 IP 만 바인딩.
-    // pdjlBindAddr 가 'auto' 또는 빈값이면 0.0.0.0 fallback (이 경우 rekordbox 와 충돌 가능 — 인터페이스 명시 권장).
-    const _vdbBindIp = (this.pdjlBindAddr && this.pdjlBindAddr !== 'auto') ? this.pdjlBindAddr : '0.0.0.0';
-    this._dbSrv.listen(12523, _vdbBindIp, ()=>{
-      console.log(`[VDBSRV] port discovery listening on ${_vdbBindIp}:12523`);
-    });
-
-    // 2) Actual protocol server on REAL_PORT
-    this._dbSrvProto = net2.createServer(sock=>{
-      sock.on('error',e=>console.warn('[VDBSRV] sock error:',e.message));
-      console.log(`[VDBSRV] Arena connected to proto port ${REAL_PORT} from ${sock.remoteAddress}`);
-      let phase = 'greeting';  // greeting → setup → ready
-      let buf = Buffer.alloc(0);
-
-      sock.on('data', d=>{
-        buf = Buffer.concat([buf, d]);
-
-        if(phase === 'greeting'){
-          // Client sends NumberField UInt32 = player number (5 bytes: 0x11 + 4B BE)
-          if(buf.length >= 5 && buf[0] === 0x11){
-            const player = buf.readUInt32BE(1);
-            sock._vdbPlayer = player;  // save greeting player for routing context
-            console.log(`[VDBSRV] greeting from player ${player}`);
-            // Echo back greeting
-            sock.write(this._dbNum4(player));
-            buf = buf.slice(5);
-            phase = 'setup';
-          }
-          return;
-        }
-
-        if(phase === 'setup'){
-          // SETUP_REQ: magic(5) + txId(5) + type(3) + argc(2) + tags(variable) + args
-          // ROLLBACK: was buf.length>=32, but variable-length tags make SETUP as short as 26B
-          if(buf.length >= 15){
-            const typeOff = 10;  // after magic(5)+txId(5)
-            if(buf[typeOff] === 0x10){  // UInt16 field
-              const reqType = buf.readUInt16BE(typeOff+1);
-              if(reqType === 0x0000){  // SETUP
-                const setupTxId = buf.readUInt32BE(6);
-                const argc = buf[14] || 0;
-                // Calculate actual SETUP message length: 15 header + 5+argc tags + argc*5 args
-                const setupLen = 15 + 5 + argc + argc * 5;
-                console.log(`[VDBSRV] SETUP received txId=0x${setupTxId.toString(16)} argc=${argc} msgLen=${setupLen}`);
-                const resp = this._dbBuildMsg(setupTxId, 0x4000, [this._dbArg4(1)]);
-                sock.write(resp);
-                phase = 'ready';
-                buf = buf.length > setupLen ? buf.slice(setupLen) : Buffer.alloc(0);
-                // Fall through to handle any remaining buffered requests
-                if(buf.length < 15) return;
-              } else {
-                // Non-setup request arrived (Arena skips SETUP step) — go directly to ready
-                console.log(`[VDBSRV] no SETUP from client, handling reqType=0x${reqType.toString(16)} directly`);
-                phase = 'ready';
-                // Fall through to handle request below
-              }
-            } else {
-              return;
-            }
-          } else {
-            return;
-          }
-        }
-
-        // phase === 'ready': handle artwork & metadata requests
-        // ROLLBACK: was buf.length>=32, but variable-length tags make messages shorter
-        if(buf.length >= 15){
-          this._handleVDbRequest(sock, buf);
-          buf = Buffer.alloc(0);
-        }
-      });
-    });
-    this._dbSrvProto.on('error', e=>{
-      console.warn(`[VDBSRV] proto port ${REAL_PORT} bind failed: ${e.message}`);
-    });
-    this._dbSrvProto.listen(REAL_PORT, _vdbBindIp, ()=>{
-      console.log(`[VDBSRV] protocol server listening on ${REAL_PORT}`);
-    });
-  }
+  _startVirtualDbServer(){ return _vd.startVirtualDbServer(this); }
 
   /** parseDbRequest → pdjl/dbserver.js (Phase 4.11) */
   _parseDbRequest(buf){ return _DB.parseDbRequest(buf); }
 
-  _handleVDbRequest(sock, buf){
-    try{
-      const msg = this._parseDbRequest(buf);
-      if(!msg) return;
-      const { txId: actualTxId, type: reqType, args } = msg;
-      console.log(`[VDBSRV] request type=0x${reqType.toString(16)} txId=${actualTxId} args=[${args.join(',')}]`);
-
-      if(reqType === 0x2002){
-        // MetadataReq → MenuAvail with item count=1
-        // ROLLBACK: was buf.readUInt32BE(38) — wrong offset for variable-length argTags
-        // args[0]=RMST (player|menu|slot|trackType), args[1]=trackId
-        const trackIdReq = args[1] || 0;
-        sock._vdbTrackId = trackIdReq;  // save per-connection
-        if(trackIdReq) this._lastVdbTrackId = trackIdReq;  // global fallback
-        console.log(`[VDBSRV] meta req trackId=${trackIdReq} greeting=${sock._vdbPlayer||'?'}`);
-        sock.write(this._dbBuildMsg(actualTxId, 0x4002, [this._dbArg4(1)]));
-      } else if(reqType === 0x3000){
-        // RenderMenuReq → send MenuItem(s) + render complete
-        // Find layer by trackId from earlier 0x2002 request
-        const tid = sock._vdbTrackId || this._lastVdbTrackId || 0;
-        let title='BRIDGE+', artist='', artSlot=-1;
-        for(let i=0;i<8;i++){
-          const ld=this.layers[i];
-          if(ld && ((tid && ld.trackId===tid) || (!tid && ld.trackName))){
-            title=ld.trackName||'';artist=ld.artistName||'';artSlot=i;break;
-          }
-        }
-        const art = artSlot>=0 ? this._virtualArt[artSlot] : this._findVirtualArt();
-        const artworkId = art ? (tid || (this.layers.find(l=>l?.trackId)?.trackId) || 1) : 0;
-        const item=this._dbBuildMenuItem(actualTxId, title, artist, artworkId);
-        const done=this._dbBuildMsg(actualTxId+1, 0x4003, [this._dbArg4(1)]);
-        sock.write(Buffer.concat([item, done]));
-        console.log(`[VDBSRV] render menu: title="${title}" artSlot=${artSlot} artworkId=${artworkId} tid=${tid}`);
-      } else if(reqType === 0x2003){
-        // ArtworkReq → serve stored JPEG matching the trackId, then close
-        // ROLLBACK: was buf.readUInt32BE(38) — wrong offset for variable-length argTags
-        // args[0]=RMST, args[1]=artworkId (= trackId set in MenuItem)
-        const reqArtId = args[1] || 0;
-        // Find artwork by trackId, then fallback to per-connection trackId, then _findVirtualArt()
-        const artBuf = this._findArtByTrackId(reqArtId)
-          || this._findArtByTrackId(sock._vdbTrackId)
-          || this._findVirtualArt();
-        if(artBuf){
-          const isJpeg = artBuf[0]===0xFF && artBuf[1]===0xD8;
-          console.log(`[VDBSRV] artwork req artId=${reqArtId} connTrackId=${sock._vdbTrackId||0} → ${artBuf.length}B ${isJpeg?'JPEG':'?'}`);
-          const artResp = this._dbBuildArtResponse(actualTxId, artBuf);
-          sock.write(artResp, ()=>{
-            console.log(`[VDBSRV] artwork sent OK, closing conn`);
-            sock.end();
-          });
-        } else {
-          // No real art — send blank JPEG so Arena clears previous artwork
-          console.log(`[VDBSRV] artwork req artId=${reqArtId} → sending blank JPEG`);
-          const artResp = this._dbBuildArtResponse(actualTxId, BLANK_JPEG);
-          sock.write(artResp, ()=>sock.end());
-        }
-      } else if(reqType === 0x0100){
-        // TEARDOWN — client is closing connection
-        sock.end();
-      } else {
-        // Unknown data request — send empty render-done (0x4003) so Arena doesn't stall
-        console.log(`[VDBSRV] unhandled reqType=0x${reqType.toString(16)}, sending empty done`);
-        sock.write(this._dbBuildMsg(actualTxId, 0x4003, [this._dbArg4(0)]), ()=>sock.end());
-      }
-    }catch(e){
-      console.warn(`[VDBSRV] handleRequest error: ${e.message}`);
-    }
-  }
+  _handleVDbRequest(sock, buf){ return _vd.handleVDbRequest(this, sock, buf); }
 
   // Find artwork for a specific trackId (matches layer's trackId → slot → _virtualArt)
   _findArtByTrackId(trackId){
@@ -2568,13 +2291,7 @@ class BridgeCore {
     return null;
   }
 
-  _findVirtualArt(){
-    for(const slot of Object.keys(this._virtualArt)){
-      const buf=this._virtualArt[slot];
-      if(buf&&buf.length>100) return buf;  // skip BLANK_JPEG (tiny placeholder)
-    }
-    return null;
-  }
+  _findVirtualArt(){ return _vd.findVirtualArt(this); }
 
   _dbBuildMenuItem(txId, label1, label2, artworkId){ return _DB.dbBuildMenuItem(txId, label1, label2, artworkId); }
   _dbBuildArtResponse(txId, jpegBuf){ return _DB.dbBuildArtResponse(txId, jpegBuf); }
