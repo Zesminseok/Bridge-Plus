@@ -773,6 +773,24 @@ test('main.js: web-contents-created deny-by-default guards present', () => {
   assert.match(src, /webSecurity:\s*true/);
 });
 
+test('main.js: BrowserWindow sandbox:true 적용 (main + splash)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+  // main + splash 두 BrowserWindow 모두 sandbox:true 명시.
+  const matches = src.match(/sandbox:\s*true/g) || [];
+  assert.ok(matches.length >= 2, `expected ≥2 sandbox:true (main+splash), got ${matches.length}`);
+});
+
+test('preload.js: on* 함수가 listener remover 클로저 반환 (누수 방지)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'preload.js'), 'utf8');
+  assert.match(src, /removeListener/);
+  // _on 헬퍼가 정의되어 있는지
+  assert.match(src, /function _on\(channel, cb\)\{/);
+  // on* 채널 등록이 _on / _onArgless 로 통일됐는지 (직접 ipcRenderer.on(...) 호출 부재)
+  // 단, _on / _onArgless 안의 ipcRenderer.on 두 개는 허용.
+  const directOnCalls = (src.match(/ipcRenderer\.on\(/g) || []).length;
+  assert.ok(directOnCalls === 2, `expected exactly 2 ipcRenderer.on (inside _on helpers), got ${directOnCalls}`);
+});
+
 // ─── pcm-decode worker error drain ───────────────────────────────────────
 
 test('pcm-decode: worker fatal error drains pending jobs', () => {

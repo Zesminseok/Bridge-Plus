@@ -463,7 +463,7 @@ function showSplash(msg,sub){
   splash=new BrowserWindow({
     width:W,height:H,frame:false,transparent:true,alwaysOnTop:true,
     resizable:false,skipTaskbar:true,
-    webPreferences:{contextIsolation:true,nodeIntegration:false},
+    webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true},
   });
   const html=`<!DOCTYPE html><html><head><style>
     *{box-sizing:border-box}
@@ -498,7 +498,7 @@ function createWindow(){
     minWidth:900,minHeight:680,show:false,
     backgroundColor:'#111318',titleBarStyle:'hiddenInset',
     autoHideMenuBar:true, menuBarVisible:false,
-    webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,webSecurity:true},
+    webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true},
   });
   try{ win.setMenuBarVisibility(false); }catch(_){}
   // Show splash while loading

@@ -1,5 +1,19 @@
 'use strict';
 const{contextBridge,ipcRenderer}=require('electron');
+
+// ipcRenderer.on listener 가 UI 재마운트 시 누적되는 누수 방지 — 등록 후 remover 반환.
+// 기존 호출자가 반환값을 무시해도 동작 동일 (backward compat).
+function _on(channel, cb){
+  const wrapped = (_e, d) => cb(d);
+  ipcRenderer.on(channel, wrapped);
+  return () => { try { ipcRenderer.removeListener(channel, wrapped); } catch (_) {} };
+}
+function _onArgless(channel, cb){
+  const wrapped = () => cb();
+  ipcRenderer.on(channel, wrapped);
+  return () => { try { ipcRenderer.removeListener(channel, wrapped); } catch (_) {} };
+}
+
 contextBridge.exposeInMainWorld('bridge',{
   platform: process.platform,
   start:(o)=>ipcRenderer.invoke('bridge:start',o),
@@ -12,20 +26,20 @@ contextBridge.exposeInMainWorld('bridge',{
   registerVirtualDeck:(slot,model)=>ipcRenderer.invoke('bridge:registerVirtualDeck',{slot,model}),
   unregisterVirtualDeck:(slot)=>ipcRenderer.invoke('bridge:unregisterVirtualDeck',{slot}),
   setHWMode:(i,e)=>ipcRenderer.invoke('bridge:setHWMode',{i,en:e}),
-  onStatus:(cb)=>ipcRenderer.on('bridge:status',(_,d)=>cb(d)),
-  onTcnetNode:(cb)=>ipcRenderer.on('tcnet:node',(_,d)=>cb(d)),
-  onCDJStatus:(cb)=>ipcRenderer.on('bridge:cdj',(_,d)=>cb(d)),
-  onDJMStatus:(cb)=>ipcRenderer.on('bridge:djm',(_,d)=>cb(d)),
-  onDevices:(cb)=>ipcRenderer.on('pdjl:devices',(_,d)=>cb(d)),
-  onInterfaces:(cb)=>ipcRenderer.on('net:interfaces',(_,d)=>cb(d)),
-  onDJMMeter:(cb)=>ipcRenderer.on('bridge:djmmeter',(_,d)=>cb(d)),
-  onWaveformPreview:(cb)=>ipcRenderer.on('bridge:wfpreview',(_,d)=>cb(d)),
-  onWaveformDetail:(cb)=>ipcRenderer.on('bridge:wfdetail',(_,d)=>cb(d)),
-  onCuePoints:(cb)=>ipcRenderer.on('bridge:cuepoints',(_,d)=>cb(d)),
-  onBeatGrid:(cb)=>ipcRenderer.on('bridge:beatgrid',(_,d)=>cb(d)),
-  onSongStructure:(cb)=>ipcRenderer.on('bridge:songstruct',(_,d)=>cb(d)),
-  onAlbumArt:(cb)=>ipcRenderer.on('bridge:albumart',(_,d)=>cb(d)),
-  onTrackMeta:(cb)=>ipcRenderer.on('bridge:trackmeta',(_,d)=>cb(d)),
+  onStatus:(cb)=>_on('bridge:status',cb),
+  onTcnetNode:(cb)=>_on('tcnet:node',cb),
+  onCDJStatus:(cb)=>_on('bridge:cdj',cb),
+  onDJMStatus:(cb)=>_on('bridge:djm',cb),
+  onDevices:(cb)=>_on('pdjl:devices',cb),
+  onInterfaces:(cb)=>_on('net:interfaces',cb),
+  onDJMMeter:(cb)=>_on('bridge:djmmeter',cb),
+  onWaveformPreview:(cb)=>_on('bridge:wfpreview',cb),
+  onWaveformDetail:(cb)=>_on('bridge:wfdetail',cb),
+  onCuePoints:(cb)=>_on('bridge:cuepoints',cb),
+  onBeatGrid:(cb)=>_on('bridge:beatgrid',cb),
+  onSongStructure:(cb)=>_on('bridge:songstruct',cb),
+  onAlbumArt:(cb)=>_on('bridge:albumart',cb),
+  onTrackMeta:(cb)=>_on('bridge:trackmeta',cb),
   refreshMeta:()=>ipcRenderer.invoke('bridge:refreshMeta'),
   requestArtwork:(d)=>ipcRenderer.invoke('bridge:requestArtwork',d),
   setVirtualArt:(slot,jpegBase64)=>ipcRenderer.invoke('bridge:setVirtualArt',{slot,jpegBase64}),
@@ -61,7 +75,7 @@ contextBridge.exposeInMainWorld('bridge',{
   checkFFmpeg:()=>ipcRenderer.invoke('bridge:checkFFmpeg'),
   decodeAudio:(filePath,slot)=>ipcRenderer.invoke('bridge:decodeAudio',{filePath,slot}),
   cleanupTemp:(tempPath)=>ipcRenderer.invoke('bridge:cleanupTemp',{tempPath}),
-  onAudioProgress:(cb)=>ipcRenderer.on('bridge:audioProgress',(_,d)=>cb(d)),
-  onQuitting:(cb)=>ipcRenderer.on('app:quitting',()=>cb()),
+  onAudioProgress:(cb)=>_on('bridge:audioProgress',cb),
+  onQuitting:(cb)=>_onArgless('app:quitting',cb),
   getCpuUsage:()=>ipcRenderer.invoke('bridge:cpuUsage'),
 });
