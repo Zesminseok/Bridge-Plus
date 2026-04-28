@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8"><title>BRIDGE+ | Professional DJ Bridge</title>
 <!-- CSP — Electron 환경 보안. unsafe-inline 유지 (inline style/handler 용). unsafe-eval 제거 (사용처 없음 검증 완료).
-     외부 origin 차단, data:/blob: 허용 (album art / audio blob). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob: bridge-audio:; img-src 'self' data: blob: bridge-audio:; media-src 'self' data: blob: bridge-audio:; connect-src 'self' data: blob: bridge-audio:; font-src 'self' data:;">
+     외부 origin 원칙적 차단 + Google Fonts (Material Symbols / Inter / JetBrains Mono / VT323 / DM Mono / Space Grotesk) 만 명시 허용.
+       fonts.googleapis.com — CSS @import / <link rel=stylesheet>
+       fonts.gstatic.com    — woff2 폰트 파일 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob: bridge-audio:; img-src 'self' data: blob: bridge-audio:; media-src 'self' data: blob: bridge-audio:; connect-src 'self' data: blob: bridge-audio: https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;">
 <!-- MONO 테마 (E/F/G 레이아웃) 전용 폰트 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
