@@ -54,13 +54,8 @@ SETUP-GUIDE.md
 AGENTS.md
 CLAUDE.md
 
-# pcap 분석 / 캡처 도구 (reverse-engineering 방법론 노출)
-tools/pcap-replay.js
-tools/capture-*.sh
-tools/cleanup-*.sh
-tools/cleanup-*.bat
-tools/build-win-*.sh
-tools/electron_analyze_*.js
+# tools/ — 개발 전용. 빌드/배포에 직접 필요 없음 (rename-stub 도 dist:win 이 단순화됨).
+tools/
 
 # Development screenshots / scratch images (root + docs)
 /grid-*.png

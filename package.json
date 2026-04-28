@@ -8,8 +8,7 @@
     "headless": "node bridge-core.js --demo",
     "test": "for f in tests/*.test.js; do node \"$f\" || exit 1; done; echo '✓ all tests passed'",
     "dist:mac": "electron-builder --mac --x64 --arm64",
-    "dist:win": "electron-builder --win --x64 --config.directories.output=/tmp/bridge-plus-build && node tools/rename-stub.js",
-    "dist:win:local": "bash tools/build-win-local.sh",
+    "dist:win": "electron-builder --win --x64",
     "dist:all": "electron-builder -mw",
     "pack": "electron-builder --dir"
   },
