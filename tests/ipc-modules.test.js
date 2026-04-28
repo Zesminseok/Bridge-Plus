@@ -239,6 +239,153 @@ test('bpm-analysis: detectAudioStart — returns sample-position ms above -69dB 
   assert.ok(ms >= 480 && ms <= 520, `should detect onset around 500ms, got ${ms.toFixed(1)}`);
 });
 
+// ─── Security: IPC input validation ────────────────────────────────────
+
+test('security: ipc-bridge-simple rejects out-of-range layer index', () => {
+  const { registerBridgeSimpleIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-simple'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: (ch, fn) => { handlers[ch] = fn; } };
+  let touched = false;
+  const fakeBridge = { updateLayer: () => { touched = true; }, faders: [0,0,0,0] };
+  registerBridgeSimpleIpc(fakeIpc, () => fakeBridge);
+  // 음수, 8 이상, NaN, string — 모두 reject.
+  for (const bad of [-1, 8, 100, NaN, 'evil', null, undefined, 1.5]) {
+    const r = handlers['bridge:updateLayer'](null, { i: bad, data: {} });
+    assert.strictEqual(r.ok, false, `i=${bad} should be rejected`);
+  }
+  assert.strictEqual(touched, false, 'bridge.updateLayer must NOT be called for invalid input');
+  // 합법 index — OK.
+  const r2 = handlers['bridge:updateLayer'](null, { i: 0, data: {} });
+  assert.strictEqual(r2.ok, true);
+  assert.strictEqual(touched, true);
+});
+
+test('security: ipc-bridge-simple setVirtualArt rejects oversized base64 (DoS prevention)', () => {
+  const { registerBridgeSimpleIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-simple'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: (ch, fn) => { handlers[ch] = fn; } };
+  let setArtCalled = false;
+  registerBridgeSimpleIpc(fakeIpc, () => ({ setVirtualArt: () => { setArtCalled = true; } }));
+  // 8MB base64 string (>5MB cap × 1.4 = ~7MB) — reject.
+  const huge = 'A'.repeat(8 * 1024 * 1024);
+  const r = handlers['bridge:setVirtualArt'](null, { slot: 0, jpegBase64: huge });
+  assert.strictEqual(r.ok, false, 'oversized art should be rejected');
+  assert.strictEqual(setArtCalled, false, 'setVirtualArt must NOT be called');
+});
+
+test('security: ipc-bridge-simple registerVirtualDeck rejects oversized model name', () => {
+  const { registerBridgeSimpleIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-simple'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: (ch, fn) => { handlers[ch] = fn; } };
+  registerBridgeSimpleIpc(fakeIpc, () => ({ registerVirtualDeck: () => {} }));
+  const longName = 'X'.repeat(100);
+  const r = handlers['bridge:registerVirtualDeck'](null, { slot: 0, model: longName });
+  assert.strictEqual(r.ok, false, 'long model name should be rejected');
+});
+
+test('security: ipc-app validates app metadata (no input → no crash)', () => {
+  // ipc-app 은 input parameter 없는 handler 만 — sanity check 만.
+  const { registerAppIpc } = require(path.join(__dirname, '..', 'main', 'ipc-app'));
+  const handles = new Set();
+  const fakeIpc = { handle: (ch) => handles.add(ch), on: () => {} };
+  registerAppIpc(fakeIpc, {
+    app: { getAppMetrics: () => [] },
+    appRoot: '/tmp',
+    cleanupSvc: { runCleanup: async () => ({}) },
+  });
+  assert.ok(handles.size === 3, 'should register 3 handlers');
+});
+
+// ─── Security: CSP meta + escape coverage ──────────────────────────────
+
+test('security: CSP meta tag present (Electron-friendly, blocks remote origin)', () => {
+  const fs = require('fs');
+  const renderer = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  assert.match(renderer, /<meta\s+http-equiv="Content-Security-Policy"/, 'CSP meta tag missing');
+  assert.match(renderer, /default-src\s+'self'/, 'CSP default-src should be self');
+  assert.match(renderer, /img-src[^"]*data:[^"]*blob:/, 'CSP img-src should allow data + blob');
+});
+
+test('security: device list escapes PDJL packet data (XSS prevention)', () => {
+  const fs = require('fs');
+  const renderer = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  // renderPDJL 내 d.name/ip/type 은 _escHtml 통과해야 (외부 패킷 source).
+  assert.match(renderer, /_escHtml\(d\.type\)/, 'PDJL device type should be escaped');
+  assert.match(renderer, /_escHtml\(d\.name/, 'PDJL device name should be escaped');
+  assert.match(renderer, /_escHtml\(d\.ip\)/, 'PDJL device ip should be escaped');
+  // renderTcnet 도 동일.
+  assert.match(renderer, /_escHtml\(n\.name\)/, 'TCNet node name should be escaped');
+  assert.match(renderer, /_escHtml\(n\.ip\)/, 'TCNet node ip should be escaped');
+});
+
+// ─── pdjl/network.js — interface helpers ───────────────────────────────
+
+test('pdjl/network: exports interface helpers', () => {
+  const mod = require(path.join(__dirname, '..', 'pdjl', 'network'));
+  assert.strictEqual(typeof mod.getAllInterfaces, 'function');
+  assert.strictEqual(typeof mod.interfaceSignature, 'function');
+  assert.strictEqual(typeof mod.sanitizeInterfaceSelection, 'function');
+  assert.strictEqual(typeof mod.detectBroadcastFor, 'function');
+  assert.strictEqual(typeof mod.pdjlBroadcastTargets, 'function');
+});
+
+test('pdjl/network: getAllInterfaces returns lo0 + system interfaces', () => {
+  const { getAllInterfaces } = require(path.join(__dirname, '..', 'pdjl', 'network'));
+  const ifs = getAllInterfaces();
+  assert.ok(ifs.length >= 1, 'at least lo0 should be present');
+  const lo = ifs.find(i => i.address === '127.0.0.1');
+  assert.ok(lo, 'lo0 entry should be present');
+  assert.strictEqual(lo.internal, true);
+});
+
+test('pdjl/network: sanitizeInterfaceSelection filters invalid', () => {
+  const { sanitizeInterfaceSelection } = require(path.join(__dirname, '..', 'pdjl', 'network'));
+  const fakeIfs = [{ address: '192.168.1.10' }, { address: '127.0.0.1' }];
+  assert.strictEqual(sanitizeInterfaceSelection('auto', fakeIfs), null);
+  assert.strictEqual(sanitizeInterfaceSelection('0.0.0.0', fakeIfs), null);
+  assert.strictEqual(sanitizeInterfaceSelection('', fakeIfs), null);
+  assert.strictEqual(sanitizeInterfaceSelection('192.168.1.10', fakeIfs), '192.168.1.10');
+  assert.strictEqual(sanitizeInterfaceSelection('192.168.99.99', fakeIfs), null); // not in list
+  assert.strictEqual(sanitizeInterfaceSelection('127.0.0.1', fakeIfs), '127.0.0.1');
+});
+
+// ─── renderer/util-html.js — XSS 방지 escape ────────────────────────────
+
+test('util-html: _escHtml escapes <>"\'& correctly', () => {
+  const { _escHtml } = require(path.join(__dirname, '..', 'renderer', 'util-html'));
+  assert.strictEqual(_escHtml('<script>alert(1)</script>'), '&lt;script&gt;alert(1)&lt;/script&gt;');
+  assert.strictEqual(_escHtml('hello "world"'), 'hello &quot;world&quot;');
+  assert.strictEqual(_escHtml("a&b<c>d'e"), 'a&amp;b&lt;c&gt;d&#39;e');
+  assert.strictEqual(_escHtml(null), '');
+  assert.strictEqual(_escHtml(undefined), '');
+  assert.strictEqual(_escHtml(123), '123');
+  // Realistic PDJL device name attack — img onerror injection.
+  // 핵심: raw `<` 가 escape 되어 HTML parser 가 tag 로 인식 못 함.
+  const malicious = '<img src=x onerror="alert(\'xss\')">';
+  const safe = _escHtml(malicious);
+  assert.ok(!safe.includes('<img'), 'should not contain raw <img tag (escaped to &lt;img)');
+  assert.ok(!safe.includes('"alert'), 'should not contain raw "alert (quote escaped)');
+  assert.ok(safe.startsWith('&lt;'), 'should start with escaped <');
+});
+
+// ─── renderer/pcm-decode.js ─────────────────────────────────────────────
+
+test('pcm-decode: exports _getPcmWorker + _decodePcmFor', () => {
+  const mod = require(path.join(__dirname, '..', 'renderer', 'pcm-decode'));
+  assert.strictEqual(typeof mod._getPcmWorker, 'function');
+  assert.strictEqual(typeof mod._decodePcmFor, 'function');
+});
+
+test('pcm-decode: _decodePcmFor returns early on null/hw deck', async () => {
+  const { _decodePcmFor } = require(path.join(__dirname, '..', 'renderer', 'pcm-decode'));
+  // Null deck — should not throw.
+  await _decodePcmFor(null, 0);
+  // HW deck — should not start decode.
+  const hwDeck = { type: 'hw', _audioBlob: null };
+  await _decodePcmFor(hwDeck, 0);
+  assert.strictEqual(hwDeck._pcmPromise, undefined, 'HW deck should not get _pcmPromise set');
+});
+
 // ─── main/ipc-license.js ────────────────────────────────────────────────
 
 // ─── main/audio-decode.js ───────────────────────────────────────────────
@@ -370,4 +517,138 @@ test('ipc-license: exports registerLicenseIpc + tolerates null service', () => {
   };
   mod.registerLicenseIpc(fakeIpc, fakeSvc);
   assert.ok(handles.size > 0, 'should register at least one license handler');
+});
+
+// ─── SECURITY regression: ipc-bridge-simple input validation ─────────────
+
+test('ipc-bridge-simple: setVirtualArt rejects oversized base64', async () => {
+  const { registerBridgeSimpleIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-simple'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  const fakeBridge = { setVirtualArt: () => { throw new Error('should not be called'); } };
+  registerBridgeSimpleIpc(fakeIpc, () => fakeBridge);
+  // 5MB cap → base64 길이 ceil(5MB/3)*4 ≈ 6_990_508. 그 이상 길이 = 거부.
+  const tooBig = 'A'.repeat(7_000_000);
+  const res = await handlers['bridge:setVirtualArt'](null, { slot: 0, jpegBase64: tooBig });
+  assert.strictEqual(res.ok, false, 'oversized base64 should be rejected');
+});
+
+test('ipc-bridge-simple: rebindTCNet rejects unknown bind addr', async () => {
+  const { registerBridgeSimpleIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-simple'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  let called = false;
+  const fakeBridge = {
+    rebindTCNet: async () => { called = true; },
+    getAllInterfaces: () => [{ address: '192.168.1.10' }],
+  };
+  registerBridgeSimpleIpc(fakeIpc, () => fakeBridge);
+  const res = await handlers['bridge:rebindTCNet'](null, { addr: '8.8.8.8' });
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(called, false, 'rebind should not run for unknown addr');
+});
+
+test('ipc-bridge-simple: rebindTCNet accepts auto and enumerated addr', async () => {
+  const { registerBridgeSimpleIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-simple'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  const calls = [];
+  const fakeBridge = {
+    rebindTCNet: async (a) => { calls.push(a); },
+    getAllInterfaces: () => [{ address: '192.168.1.10' }],
+  };
+  registerBridgeSimpleIpc(fakeIpc, () => fakeBridge);
+  const r1 = await handlers['bridge:rebindTCNet'](null, { addr: 'auto' });
+  const r2 = await handlers['bridge:rebindTCNet'](null, { addr: '192.168.1.10' });
+  assert.strictEqual(r1.ok, true);
+  assert.strictEqual(r2.ok, true);
+  assert.deepStrictEqual(calls, ['auto', '192.168.1.10']);
+});
+
+test('ipc-bridge-simple: setTCNetMode whitelist (auto/client/server only)', async () => {
+  const { registerBridgeSimpleIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-simple'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  let lastMode = null;
+  const fakeBridge = { setTCNetMode: (m) => { lastMode = m; } };
+  registerBridgeSimpleIpc(fakeIpc, () => fakeBridge);
+  const bad = await handlers['bridge:setTCNetMode'](null, { mode: 'evil' });
+  assert.strictEqual(bad.ok, false);
+  assert.strictEqual(lastMode, null);
+  const good = await handlers['bridge:setTCNetMode'](null, { mode: 'server' });
+  assert.strictEqual(good.ok, true);
+  assert.strictEqual(lastMode, 'server');
+});
+
+// ─── SECURITY regression: ipc-artnet input validation ────────────────────
+
+test('ipc-artnet: start rejects malformed destIp', async () => {
+  const { registerArtnetIpc } = require(path.join(__dirname, '..', 'main', 'ipc-artnet'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  let started = false;
+  const fakeArtnet = { setFps: () => {}, start: async () => { started = true; return { ok: true }; } };
+  registerArtnetIpc(fakeIpc, fakeArtnet);
+  const res = await handlers['artnet:start'](null, { destIp: 'not.an.ip', destPort: 6454 });
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(started, false);
+});
+
+test('ipc-artnet: setDmx truncates oversized payload to 512 bytes', () => {
+  const { registerArtnetIpc } = require(path.join(__dirname, '..', 'main', 'ipc-artnet'));
+  const listeners = {};
+  const fakeIpc = { handle: () => {}, on: (ch, fn) => { listeners[ch] = fn; } };
+  let lastBuf = null;
+  const fakeArtnet = { setDmx: (buf) => { lastBuf = buf; } };
+  registerArtnetIpc(fakeIpc, fakeArtnet);
+  const huge = new Uint8Array(2048).fill(7);
+  listeners['artnet:setDmx'](null, { data: huge, universe: 0 });
+  assert.ok(lastBuf, 'setDmx should be called');
+  assert.strictEqual(lastBuf.length, 512, 'payload should be capped to 512 bytes');
+});
+
+// ─── SECURITY regression: audio-decode path traversal ────────────────────
+
+test('audio-decode: rejects unsupported extension', async () => {
+  const { registerAudioDecodeIpc } = require(path.join(__dirname, '..', 'main', 'audio-decode'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  registerAudioDecodeIpc(fakeIpc, { getWin: () => null });
+  const res = await handlers['bridge:decodeAudio'](null, { filePath: '/etc/passwd', slot: 0 });
+  assert.strictEqual(res.ok, false);
+  assert.ok(/unsupported/i.test(res.err));
+});
+
+test('audio-decode: rejects symlink', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const { registerAudioDecodeIpc } = require(path.join(__dirname, '..', 'main', 'audio-decode'));
+  const handlers = {};
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  registerAudioDecodeIpc(fakeIpc, { getWin: () => null });
+  // /etc/passwd 를 가리키는 .mp3 symlink 만들어 거부 확인.
+  const link = path.join(os.tmpdir(), `bridge_test_${Date.now()}.mp3`);
+  try { fs.unlinkSync(link); } catch (_) {}
+  fs.symlinkSync('/etc/passwd', link);
+  try {
+    const res = await handlers['bridge:decodeAudio'](null, { filePath: link, slot: 0 });
+    assert.strictEqual(res.ok, false);
+    assert.ok(/symlink|denied/i.test(res.err));
+  } finally {
+    try { fs.unlinkSync(link); } catch (_) {}
+  }
+});
+
+// ─── pcm-decode worker error drain ───────────────────────────────────────
+
+test('pcm-decode: worker fatal error drains pending jobs', () => {
+  // pcm-decode 는 browser global (Worker, AudioContext) 의존이지만,
+  // _getPcmWorker 의 error 핸들러 동작만 isolate 해서 검증.
+  const fs = require('fs');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'pcm-decode.js'), 'utf8');
+  // drain 로직이 source 에 있는지 (회귀 가드 — 향후 누가 이 핸들러를 줄여도 잡힘).
+  assert.ok(/_pcmJobs\.values\(\)/.test(src), 'fatal handler should iterate _pcmJobs');
+  assert.ok(/_pcmJobs\.clear\(\)/.test(src), 'fatal handler should clear _pcmJobs');
+  assert.ok(/_pcmWorker\s*=\s*null/.test(src), 'fatal handler should reset _pcmWorker');
+  assert.ok(/_pcmPromise\s*=\s*null/.test(src), 'fatal handler should reset deck _pcmPromise');
 });

@@ -13,7 +13,15 @@ function registerBridgeIfaceIpc(ipcMain, { getBridge, sendInterfaces, sendArtTim
     return { ok: true, interfaces: ifaces };
   });
 
+  // SECURITY: renderer 가 임의 IP/port 로 UDP timecode 패킷을 보내지 못하게 검증.
   ipcMain.handle('bridge:artTimeCode', (_, { ip, port, hh, mm, ss, ff, type }) => {
+    if (typeof ip !== 'string' || ip.length > 15 || !/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return { ok: false, err: 'invalid ip' };
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return { ok: false, err: 'invalid port' };
+    if (!Number.isInteger(hh) || hh < 0 || hh > 23) return { ok: false, err: 'invalid hh' };
+    if (!Number.isInteger(mm) || mm < 0 || mm > 59) return { ok: false, err: 'invalid mm' };
+    if (!Number.isInteger(ss) || ss < 0 || ss > 59) return { ok: false, err: 'invalid ss' };
+    if (!Number.isInteger(ff) || ff < 0 || ff > 59) return { ok: false, err: 'invalid ff' };
+    if (!Number.isInteger(type) || type < 0 || type > 3) return { ok: false, err: 'invalid type' };
     sendArtTimeCode(ip, port, hh, mm, ss, ff, type);
     return { ok: true };
   });

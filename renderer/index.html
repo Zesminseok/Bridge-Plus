@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8"><title>BRIDGE+ | Professional DJ Bridge</title>
+<!-- CSP — Electron 환경 보안 strengthening. 'unsafe-inline'/'unsafe-eval' 은 현재 inline style/event handler 사용 위해 허용.
+     외부 origin 차단 (default-src 'self') — 악의적 remote script 로드 방지.
+     data:/blob: 허용 (album art base64, audio blob URL).
+     bridge-audio: custom protocol (decoded WAV stream — bypassCSP=true 라 영향 없지만 명시). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: bridge-audio:; img-src 'self' data: blob: bridge-audio:; media-src 'self' data: blob: bridge-audio:; connect-src 'self' data: blob: bridge-audio:; font-src 'self' data:;">
 <!-- MONO 테마 (E/F/G 레이아웃) 전용 폰트 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1637,9 +1642,11 @@ body[data-layout="observatory"] .obs-dk .dk-tc-time,
 body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
 
 </style>
+<script src="./util-html.js"></script>
 <script src="./i18n.js"></script>
 <script src="./id3-parser.js"></script>
 <script src="./bpm-analysis.js"></script>
+<script src="./pcm-decode.js"></script>
 <script src="./waveform-color.js"></script>
 <script src="./waveform-strip.js"></script>
 <script src="./waveform-gl.js"></script>
@@ -2242,81 +2249,7 @@ function _drawCueMarker(ctx, style, cx, topM, H2, color, isMemory, hotCueNum, fo
   }
   ctx.restore();
 }
-// Virtual deck PCM 파이프라인 — Web Worker 기반 (메인 스레드 0% blocking, 다른 코어에서 실행).
-// 1) decodeAudioData (메인, 브라우저 내부 워커 활용) → AudioBuffer
-// 2) 채널 Float32Array transfer → pcm-worker
-// 3) Worker: mono mix + 22kHz peak-preserving 다운샘플 → PCM 자체 보관 (deckId 키)
-// 4) Worker: 캐시 빌드 시 OffscreenCanvas 에 그리고 ImageBitmap transfer → 메인 drawImage
-// 5) 메인은 메타데이터만 보유 (sampleRate/durationMs/totalSamples), samples 는 worker 보관
-let _pcmWorker = null;
-let _pcmJobCounter = 0;
-const _pcmJobs = new Map();
-function _getPcmWorker(){
-  if(_pcmWorker) return _pcmWorker;
-  try{
-    _pcmWorker = new Worker('pcm-worker.js');
-  }catch(err){
-    console.warn('[pcm-worker] init failed:', err?.message||err);
-    _pcmWorker = null;
-    return null;
-  }
-  _pcmWorker.addEventListener('message', (e)=>{
-    const msg = e.data;
-    const job = _pcmJobs.get(msg.jobId);
-    if(!job) return;
-    _pcmJobs.delete(msg.jobId);
-    const d = job.deck;
-    if(!d) return;
-    if(msg.type === 'pcm'){
-      // Stale token (트랙 변경) — 결과 폐기
-      if(d._loadToken !== job.token){
-        d._pcmPromise = null;
-        return;
-      }
-      // ds samples 가 worker 에서 transfer 되어 main 소유. 라이브 렌더 매 프레임 사용.
-      d._pcm = {samples: msg.samples, sampleRate: msg.sampleRate, durationMs: msg.durationMs};
-      d._pcmPromise = null;
-      d._wfDirty = true;
-    } else if(msg.type === 'error'){
-      console.warn('[pcm-worker]', msg.error);
-      if(job.kind === 'pcm') d._pcmPromise = null;
-    }
-  });
-  _pcmWorker.addEventListener('error', (e)=>console.warn('[pcm-worker] fatal', e?.message||e));
-  return _pcmWorker;
-}
-async function _decodePcmFor(d, slot){
-  if(!d||d.type==='hw'||d._pcm||d._pcmPromise||!d._audioBlob)return;
-  const w = _getPcmWorker();
-  if(!w) return;
-  const token = d._loadToken||0;
-  d._pcmPromise = {pending:true};
-  try{
-    const ac = new (window.AudioContext||window.webkitAudioContext)();
-    const ab = await d._audioBlob.arrayBuffer();
-    const buf = await ac.decodeAudioData(ab);
-    ac.close();
-    if(d._loadToken !== token){d._pcmPromise = null; return;}
-    if(buf.duration > 600){console.warn('[PCM] track > 10min, skip'); d._pcmPromise = null; return;}
-    const nch = buf.numberOfChannels;
-    // 채널 데이터 복사 후 transfer (AudioBuffer 의 view 는 transfer 불가)
-    const channels = [];
-    for(let c=0;c<nch;c++) channels.push(new Float32Array(buf.getChannelData(c)));
-    const transferList = channels.map(ch => ch.buffer);
-    const jobId = ++_pcmJobCounter;
-    const deckId = `s${slot}_${token}`;
-    _pcmJobs.set(jobId, {deck:d, kind:'pcm', token, deckId});
-    w.postMessage({
-      type:'downsample', jobId, deckId,
-      channels, sampleRate: buf.sampleRate,
-      durationMs: buf.duration*1000, targetRate: 22050
-    }, transferList);
-    // _pcmPromise 는 worker 응답 처리 시 null 로 해제됨
-  }catch(e){
-    console.warn('[PCM] decode failed:', e.message);
-    d._pcmPromise = null;
-  }
-}
+// _getPcmWorker / _decodePcmFor → renderer/pcm-decode.js (Phase 4.16). 글로벌 lexical env 호환.
 // rgbWfFine (2pass 1200Hz 분석) 은 비활성 — 1pass rgbWf 만 사용. 시각 차이 무시 가능.
 // 트랙당 1.7MB 메모리 + 1-3s worker CPU + strip rebuild + PCM 재디코드 비용 절감.
 function _paintPartialWaveform(slot,d){
@@ -2980,18 +2913,9 @@ function _aiffToWav(ab){
 // separately so waveform generation spreads load instead of spiking the main thread.
 // buildRGBWaveform → renderer/waveform-analysis.js (Phase 2.5)
 
-// CDJ-3000 color waveform: nibble → RGB
-// Color encoding from CDJ extended status packets
-function _cdjColorToRGB(c){
-  const map=[
-    [0,0,0],[1,.12,.12],[1,.5,.05],[1,.95,.05],[.1,1,.1],[.1,1,1],
-    [.15,.35,1],[.65,.1,1],[.55,.55,.55],[.85,.05,.05],[.95,.5,.05],[.85,.85,.05],
-    [.05,.65,.05],[.05,.65,.65],[.3,.05,1],[.75,.05,.75]
-  ];
-  return map[c&0xF]||[0,0,0];
-}
-// Direct CDJ color code → vivid RGB for HW waveform display
-// Matches CDJ-2000NXS2/CDJ-3000 hardware waveform palette
+// Direct CDJ color code → vivid RGB for HW waveform display.
+// Matches CDJ-2000NXS2/CDJ-3000 hardware waveform palette (8-color, c & 7).
+// (이전 16-color nibble version 은 dead code — JS hoisting 으로 항상 이 정의가 winner 였음. 제거.)
 function _cdjColorToRGB(c){
   const palette = [
     [0.12, 0.12, 0.20],  // 0: dark gray (silence)
@@ -5305,7 +5229,7 @@ function loadFile(slot,f){
       const res=await window.bridge.decodeAudio(f.path||f.name,slot).catch(e=>({ok:false,err:e.message}));
       if(!res.ok){
         const stEl=document.getElementById('did'+slot);
-        if(stEl)stEl.innerHTML=`<span style="color:var(--red);font:600 9px var(--mn)">변환 실패: ${res.err.slice(0,60)}</span>`;
+        if(stEl)stEl.innerHTML=`<span style="color:var(--red);font:600 9px var(--mn)">변환 실패: ${_escHtml(String(res.err||'').slice(0,60))}</span>`;
         return;
       }
       if(d._tempPath){window.bridge.cleanupTemp(d._tempPath);}
@@ -6448,7 +6372,8 @@ function renderPDJL(){
   if(hwDevs.length){
     if(devLabelEl)devLabelEl.style.display='';
     devListEl.style.display='';
-    devListEl.innerHTML=`<div class="tbl"><div class="tblh" style="grid-template-columns:1fr 2fr 2fr auto">${['TYPE','NAME','IP',''].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>${hwDevs.map(d=>`<div class="tblr" style="grid-template-columns:1fr 2fr 2fr auto"><div><span class="bd ${d.type==='CDJ'?'bb':d.type==='DJM'?'bp':'bm'}">${d.type}</span></div><div style="font:400 11px var(--mn);color:var(--tx)">${d.name||'—'}</div><div style="font:400 10px var(--mn);color:var(--tx3)">${d.ip}</div><div><span class="dot dpu" style="background:var(--grn)"></span></div></div>`).join('')}</div>`;
+    // SECURITY: PDJL packet 의 device name/ip 가 외부 신뢰 불가 source → escape 필수 (XSS 방지).
+    devListEl.innerHTML=`<div class="tbl"><div class="tblh" style="grid-template-columns:1fr 2fr 2fr auto">${['TYPE','NAME','IP',''].map(h=>`<div style="font:500 9px var(--sn);color:var(--tx3)">${h}</div>`).join('')}</div>${hwDevs.map(d=>`<div class="tblr" style="grid-template-columns:1fr 2fr 2fr auto"><div><span class="bd ${d.type==='CDJ'?'bb':d.type==='DJM'?'bp':'bm'}">${_escHtml(d.type)}</span></div><div style="font:400 11px var(--mn);color:var(--tx)">${_escHtml(d.name||'—')}</div><div style="font:400 10px var(--mn);color:var(--tx3)">${_escHtml(d.ip)}</div><div><span class="dot dpu" style="background:var(--grn)"></span></div></div>`).join('')}</div>`;
   }else{
     if(devLabelEl)devLabelEl.style.display='none';
     devListEl.style.display='none';
@@ -6464,7 +6389,7 @@ function renderTcnet(){
     <div class="tbl">
       <div class="tblh" style="grid-template-columns:140px 80px 1fr 120px">${['NODE','TYPE','VENDOR / DEVICE','IP'].map(h=>`<div style="font:600 10px var(--sn);color:var(--tx3);letter-spacing:.04em">${h}</div>`).join('')}</div>
       <div class="tblr" style="grid-template-columns:140px 80px 1fr 120px"><div style="font:500 11px var(--mn);color:var(--tx)">${TC_NAME||'BRIDGE+'}</div><div><span class="bd bg">SERVER</span></div><div style="font:400 11px var(--mn);color:var(--tx3)">BRIDGE+</div><div style="font:400 11px var(--mn);color:var(--tx3)">active</div></div>
-      ${nodes.map(n=>{const vendorStr=(n.vendor&&n.device)?(n.vendor===n.device?n.vendor:n.vendor+' '+n.device):(n.vendor||n.device||'—');return`<div class="tblr" style="grid-template-columns:140px 80px 1fr 120px"><div style="font:500 11px var(--mn);color:var(--tx)">${n.name}</div><div><span class="bd ${n.type===2?'bg':'bb'}">${n.type===2?'SERVER':'Client'}</span></div><div style="font:400 11px var(--mn);color:var(--tx3)">${vendorStr}</div><div style="font:400 11px var(--mn);color:var(--tx3)">${n.ip}</div></div>`;}).join('')}
+      ${nodes.map(n=>{const vendorStr=(n.vendor&&n.device)?(n.vendor===n.device?n.vendor:n.vendor+' '+n.device):(n.vendor||n.device||'—');return`<div class="tblr" style="grid-template-columns:140px 80px 1fr 120px"><div style="font:500 11px var(--mn);color:var(--tx)">${_escHtml(n.name)}</div><div><span class="bd ${n.type===2?'bg':'bb'}">${n.type===2?'SERVER':'Client'}</span></div><div style="font:400 11px var(--mn);color:var(--tx3)">${_escHtml(vendorStr)}</div><div style="font:400 11px var(--mn);color:var(--tx3)">${_escHtml(n.ip)}</div></div>`;}).join('')}
       ${nodes.length===0?'<div style="padding:9px 12px;color:var(--tx3);font:400 11px var(--sn)">Arena 미감지 — Arena에서 TCNet 활성화하세요</div>':''}
     </div>
     <div class="sl mt">통계</div>
