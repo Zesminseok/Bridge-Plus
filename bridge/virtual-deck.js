@@ -57,6 +57,8 @@ function sendVirtualCDJStatus(core, playerNum, trackId, bpm){
     PDJL.MAGIC.copy(pkt, 0);
     pkt[0x0A] = PDJL.CDJ;
     pkt[0x0B] = 0x00;
+    // Identifier required for compatibility with existing equipment.
+    // See pdjl/packets.js disclaimer for trademark and reverse-engineering notice.
     const nm = 'TCS-SHOWKONTROL';
     Buffer.from(nm,'ascii').copy(pkt, 0x0C, 0, 15);
     pkt[0x20] = 0x03; pkt[0x21] = playerNum & 0xFF;

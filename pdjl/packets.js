@@ -1,5 +1,11 @@
-// Pro DJ Link 패킷 빌더 — bridge-core.js 에서 추출 (Phase 4.8 modularization).
-// 순수 함수 + 상수 (네트워크/소켓 의존성 없음).
+// Pro DJ Link compatible packet builders.
+//
+// DISCLAIMER: BRIDGE+ is an independent third-party application created via
+// observation of network traffic and publicly available compatibility
+// information. It is NOT affiliated with, endorsed by, or sponsored by
+// AlphaTheta Corporation or any related entity. Identifier strings used
+// below are required only for compatibility with existing equipment and
+// are not used in user-facing branding contexts.
 
 const PDJL = {
   MAGIC: Buffer.from([0x51,0x73,0x70,0x74,0x31,0x57,0x6D,0x4A,0x4F,0x4C]),
@@ -53,13 +59,13 @@ function buildPdjlBridgeClaimPacket(annIP, annMAC, seqN=1, deviceId=5, platform=
   p[0x23]=0x32;
   for(let i=0;i<4;i++) p[0x24+i]=cIP[i]||0;
   for(let i=0;i<6;i++) p[0x28+i]=cMAC[i]||0;
-  // pcap 확정: Pioneer 공식 브리지 claim byte 0x2E checksum
+  // Set the claim checksum byte to the observed compatible value.
   //   Mac/Win 공통 공식: MAC[5] XOR (0x57 + seqN)
   //   예: MAC[5]=0xB2, seqN=1 → 0xB2^0x58 = 0xEA (win-bridge.pcapng 일치)
   //   (0424_.pcapng 의 다른 공식은 세션마다 달라 신뢰 불가 — 과거 정상 동작 공식 유지)
   p[0x2E]=((cMAC[5]||0) ^ ((0x57 + seqN) & 0xFF)) & 0xFF;
   p[0x2F]=seqN&0xFF;
-  // pcap 확정: Pioneer 공식 브리지 claim byte 0x30 = deviceId (Mac/Windows 동일)
+  // Set claim byte 0x30 to deviceId (observed compatible value, Mac/Windows 동일).
   p[0x30]=deviceId&0xFF;
   p[0x31]=0x00;
   return p;
@@ -81,7 +87,7 @@ function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=proc
   p[0x25]=0x00;
   for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
   for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
-  // pcap 확정: keepalive byte 0x30
+  // Keepalive byte 0x30 — observed compatible value.
   //   Mac (ceo_2): 0x07, (0424_/mac_pioneer): 0x08 — 세션마다 변동
   //   Windows (fullcap4): 0x08
   // 가장 최근 mac_pioneer (DJM 작동 확정) + Win = 0x08 → 통일.
@@ -98,7 +104,7 @@ function buildDjmSubscribePacket(platform=process.platform){
   Buffer.from(pdjlBridgeName(platform),'ascii').copy(p,11,0,15);
   p[31]=0x01;
   p[32]=0x00;
-  // pcap 확정: 0x57 subscribe byte 33 bitmask
+  // Use the subscribe capability mask expected by target devices.
   //   Mac    (ceo_2):    0xE1 (fader + VU + onair)
   //   Windows (fullcap4): 0xFF (전체 subscribe)
   p[33]=platform==='darwin' ? 0xE1 : 0xFF;

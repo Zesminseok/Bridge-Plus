@@ -110,8 +110,8 @@ function parsePDJL(msg, hints){
     };
   }
   // ── DJM Mixer Status ──
-  // Type 0x29: flat 56-byte layout (DJM-2000NXS, legacy)
-  // Type 0x39: block 248-byte layout (DJM-900NXS2, V10, A9)
+  // Type 0x29: flat 56-byte layout (legacy mixers)
+  // Type 0x39: block-style 248-byte layout (current generation, including V10/A9)
   if(type===PDJL.DJM2 && msg.length>=0x24){
     // Type 0x29 — flat layout
     // rekordbox/NXS-GW 가 fake 0x29 브로드캐스트 → 쓰레기값 원천 차단
@@ -147,8 +147,7 @@ function parsePDJL(msg, hints){
       }
       return null;
     }
-    // Type 0x39 — 248-byte layout (DJM-900NXS2/A9/V10)
-    // V10/A9 계열 추가 오프셋
+    // Block-style 248B layout — V10/A9 firmware adds extra channel fields.
     // Per-channel block (stride 0x18):
     //   +0 InputSource  +1 Trim  +2 Comp(V10)  +3 HI  +4 MID  +5 LoMid(V10)
     //   +6 LO  +7 Color  +8 Send(V10)  +9 CUE  +10 CueB(A9/V10)  +11 Fader  +12 XF Assign
@@ -388,11 +387,12 @@ function parsePDJL(msg, hints){
     return{kind:'announce',name,playerNum,isDjmType};
   }
   // CDJ-3000 Absolute Position (type 0x0b, port 50001, ~60B, ~30Hz pairs)
-  // CDJ-3000 sends PAIRS: 1) real data (byte[33]=player 1-6), 2) garbage (byte[33]>=0x80)
-  // Filter by player number range
-  // Offsets: [38-39] trackLen(s) uint16BE, [40-43] playhead(ms), [44-47] pitch, [56-59] bpm*10
-  // Note: bytes[36-37] are separate fields (not part of trackLength).
-  // Only bytes[38-39] as uint16BE give correct duration across all CDJ-3000 units.
+  // Compact position packet — current-gen players send pairs:
+  //   1) real frame (byte[33] = player 1-6)
+  //   2) garbage frame (byte[33] >= 0x80) — filter by player range.
+  // Offsets: [38-39] trackLen(s) uint16BE, [40-43] playhead(ms),
+  //          [44-47] pitch, [56-59] bpm×10.
+  // bytes[36-37] are separate fields; only [38-39] uint16BE gives correct duration.
   // CDJ-3000 Precise Position (type 0x0b, exactly 60B, port 50001)
   // IMPORTANT: NXS2 also sends type 0x0b with different structure — filter by name field
   if(type===0x0b && msg.length>=60){

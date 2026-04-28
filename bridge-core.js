@@ -1094,9 +1094,8 @@ class BridgeCore {
     // macOS: port 50000 RX 소켓(0.0.0.0) 공유 — BSD 커널이 라우팅 테이블로
     //        올바른 NIC 자동 선택하므로 문제 없음.
     // Windows: 0.0.0.0 바인드 소켓에서 브로드캐스트 송신 시 기본 경로 NIC로만
-    //          나감. Pioneer LINK 포트가 별도 이더넷(예: 169.254.x, 192.168.x)
+    //          나감. LINK 포트가 별도 이더넷(예: 169.254.x, 192.168.x)
     //          이면 패킷이 DJM에 도달 못함. 전용 TX 소켓을 pdjlIP에 바인드해야 함.
-    //          (참조: ProDJLinkInput.h:375-416 "PLATFORM-SPECIFIC binding")
     if(process.platform==='win32'){
       this._pdjlAnnSock = this._pdjlSocketByPort?.[50000] || this._pdjlSockets?.[0] || null;
       if(!this._pdjlAnnSock){
@@ -1217,7 +1216,8 @@ class BridgeCore {
     console.log(`[PDJL] annSock ready (shared=${!!this._pdjlSockets?.[0]}) ip=${pdjlIP} allBCs=[${allBCs.join(',')}]`);
 
     // 95B dbserver keepalive — UNICAST to CDJs only (not broadcast!)
-    // CDJ-3000이 "PIONEER DJ CORP" / "PRODJLINK BRIDGE" 문자열을 검증하므로 필수
+    // 95B keepalive — newer device firmware verifies the compatibility strings,
+    // so they are required even for non-vendor implementations.
     // CRITICAL: DJM must NOT see this packet (player=5 conflicts with bridge player=0xF9)
     this._dbKaSock = dgram.createSocket({type:'udp4',reuseAddr:true});
     this._dbKaSock.on('error',()=>{});
@@ -1307,7 +1307,7 @@ class BridgeCore {
       }
     };
     // 타이밍 설계: join 완료(≈6.6s) → keepalive 시작 → 추가 3s 뒤 첫 subscribe (경합 방지)
-    // Pioneer 공식 브리지는 0x57 을 단 1번만 보냄 (pcap 확정, 0424_.pcapng).
+    // Send the mixer subscribe packet once, with a delayed retry only if needed.
     // 반복 subscribe 는 DJM 상태를 교란할 수 있어 제거. 15초 뒤 0x39/0x58 모두
     // 미수신일 때만 1회 재시도 fallback.
     setTimeout(sendDjmSub, 9700);

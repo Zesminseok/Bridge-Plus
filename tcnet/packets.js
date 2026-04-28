@@ -25,7 +25,7 @@ const TC = {
   DT_MIXER:   0x96,
 };
 
-// TCNet V3.5.1B LayerStatus values
+// TCNet V3.5 LayerStatus values (publicly published spec).
 const STATE = { IDLE:0, PLAYING:3, LOOPING:4, PAUSED:5, STOPPED:6, CUEDOWN:7, PLATTERDOWN:8, FFWD:9, FFRV:10, HOLD:11 };
 function toTCNetState(s){ return s || 0; }
 

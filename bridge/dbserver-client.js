@@ -658,8 +658,8 @@ async function dbserverBeatGrid(core, ip, slot, trackId, playerNum, trackType){
         }
       }
       if(bgData&&bgData.length>20){
-        // Beat grid format: 20-byte header + 16-byte entries (LITTLE ENDIAN)
-        // Entry: beat_within_bar(2B LE) + tempo(2B LE, BPM×100) + time_ms(4B LE) + 8B unknown
+        // Beat grid format: 20-byte header + 16-byte entries (little-endian).
+        // Entry: beat_within_bar(2B) + tempo(2B, BPM×100) + time_ms(4B) + 8B padding.
         const hdrSize=20;
         const entrySize=16;
         const numEntries=Math.floor((bgData.length-hdrSize)/entrySize);
@@ -739,18 +739,18 @@ async function dbserverSongStructure(core, ip, slot, trackId, playerNum, trackTy
         return;
       }
       const body = anlzData.slice(pssiStart, pssiEnd);
-      // PSSI body layout (big-endian):
-      //  0:  "PSSI"
-      //  4:  u4 len_header
-      //  8:  u4 len_tag
-      // 12:  u4 len_entry_bytes (or padding)
+      // PSSI body layout (big-endian, observed format):
+      //  0:  "PSSI" magic
+      //  4:  u4 header length
+      //  8:  u4 tag length
+      // 12:  u4 entry-bytes length (or padding)
       // 16:  u2 mood_high          (1=intro, 2=up, 3=down, 5=chorus, 6=outro)
-      // 18:  u2 entry_count
-      // 20:  u2 raw_mood           (>20 이면 XOR 난독화 적용)
-      // 22:  u2 end_beat
-      // 24:  u2 bank               (하이레벨 뱅크 기호)
+      // 18:  u2 entry count
+      // 20:  u2 raw mood           (>20 → XOR 난독화 적용)
+      // 22:  u2 end beat
+      // 24:  u2 bank
       // 26:  u2 padding
-      // 28:  entries[ ] 24B each
+      // 28+: 24-byte phrase entries
       if(body.length<32){
         return;
       }

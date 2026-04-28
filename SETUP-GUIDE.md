@@ -348,7 +348,7 @@ let demoMode = typeof window.bridge === 'undefined';
 if (demoMode) {
   console.log('Demo mode — Electron bridge API not available');
   state.layers = [
-    { state:1, timecodeMs:54230, bpm:128.0, pitch:0.0, trackName:'Strobe', artistName:'deadmau5' },
+    { state:1, timecodeMs:54230, bpm:128.0, pitch:0.0, trackName:'Demo Track', artistName:'Demo Artist' },
     { state:1, timecodeMs:127800, bpm:126.0, pitch:-2.1, trackName:'Opus', artistName:'Eric Prydz' },
     null, null
   ];

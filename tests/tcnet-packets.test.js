@@ -195,18 +195,18 @@ test('PDJL bridge hello matches hardware-capture layout', () => {
 });
 
 test('PDJL bridge claim uses device id at byte 0x31', () => {
-  const pkt = core.buildPdjlBridgeClaimPacket('169.254.56.19', 'c8:4d:44:24:13:b2', 1, 5, 'darwin');
+  const pkt = core.buildPdjlBridgeClaimPacket('169.254.1.10', '02:00:00:00:00:01', 1, 5, 'darwin');
   assert.strictEqual(pkt[0x0A], 0x02);
   assert.strictEqual(pkt[0x30], 0x05);
   assert.strictEqual(pkt[0x31], 0x00);
-  assert.strictEqual(pkt.slice(0x24, 0x28).toString('hex'), 'a9fe3813');
-  assert.strictEqual(pkt.slice(0x28, 0x2e).toString('hex'), 'c84d442413b2');
+  assert.strictEqual(pkt.slice(0x24, 0x28).toString('hex'), 'a9fe010a');
+  assert.strictEqual(pkt.slice(0x28, 0x2e).toString('hex'), '020000000001');
 });
 
 test('PDJL bridge keepalive matches official bridge capture role bytes', () => {
   // identity byte (0x24): MAC 에서 derived (pdjlIdentityByteFromMac). 플랫폼별 fixed 가 아닌 deterministic.
   // byte 0x30=0x08 (mac_pioneer + fullcap4 일치), 0x34=playerNum, 0x35=0x20 device-type role.
-  const pkt = core.buildPdjlBridgeKeepalivePacket('169.254.56.19', 'c8:4d:44:24:13:b2', 5, 'darwin');
+  const pkt = core.buildPdjlBridgeKeepalivePacket('169.254.1.10', '02:00:00:00:00:01', 5, 'darwin');
   assert.strictEqual(pkt.length, 54);
   assert.strictEqual(pkt[0x0A], 0x06);
   // identity byte 결정은 MAC 함수 결과 — 0 / 0xFF 가 아닌 정상값이면 통과.
@@ -218,9 +218,9 @@ test('PDJL bridge keepalive matches official bridge capture role bytes', () => {
 });
 
 test('Windows dbserver keepalive uses TCS-SHOWKONTROL name (Pioneer pcap-verified)', () => {
-  // mac_pioneer.pcap: Pioneer 공식 95B keepalive 도 'TCS-SHOWKONTROL' 사용
+  // 95B keepalive identity must match the compatibility fixture for device recognition.
   // (이전엔 'BRIDGE+' 사용했으나 CDJ 가 dbserver 인식 못 해 cue/meta 미수신 가능성)
-  const pkt = core.buildDbServerKeepalivePacket('169.254.56.19', 'c8:4d:44:24:13:b2', 5, 'win32');
+  const pkt = core.buildDbServerKeepalivePacket('169.254.1.10', '02:00:00:00:00:01', 5, 'win32');
   assert.strictEqual(pkt.length, 95);
   assert.strictEqual(pkt[0x0A], 0x06);
   assert.strictEqual(pkt.toString('ascii', 0x0C, 0x1B).replace(/\0+$/,''), 'TCS-SHOWKONTROL');
@@ -228,8 +228,8 @@ test('Windows dbserver keepalive uses TCS-SHOWKONTROL name (Pioneer pcap-verifie
   assert.strictEqual(pkt[0x21], 0x01);
   assert.strictEqual(pkt[0x23], 0x36);
   assert.strictEqual(pkt[0x24], 0x05);
-  assert.strictEqual(pkt.slice(0x26, 0x2c).toString('hex'), 'c84d442413b2');
-  assert.strictEqual(pkt.slice(0x2c, 0x30).toString('hex'), 'a9fe3813');
+  assert.strictEqual(pkt.slice(0x26, 0x2c).toString('hex'), '020000000001');
+  assert.strictEqual(pkt.slice(0x2c, 0x30).toString('hex'), 'a9fe010a');
   assert.strictEqual(pkt[0x35], 0x64);
   assert.strictEqual(pkt.toString('ascii', 54, 69), 'PIONEER DJ CORP');
   assert.strictEqual(pkt.toString('ascii', 74, 90), 'PRODJLINK BRIDGE');
