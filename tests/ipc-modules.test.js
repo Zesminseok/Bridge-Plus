@@ -791,6 +791,26 @@ test('preload.js: on* 함수가 listener remover 클로저 반환 (누수 방지
   assert.ok(directOnCalls === 2, `expected exactly 2 ipcRenderer.on (inside _on helpers), got ${directOnCalls}`);
 });
 
+// ─── BridgeCore split — bridge/beat-anchor.js ──────────────────────────
+
+test('beat-anchor: nxs2BeatCountToMs converts beat count to ms', () => {
+  const { nxs2BeatCountToMs } = require(path.join(__dirname, '..', 'bridge', 'beat-anchor'));
+  assert.strictEqual(nxs2BeatCountToMs(120, 120), 60000);  // 120 beats @ 120 BPM = 60s
+  assert.strictEqual(nxs2BeatCountToMs(0, 120), 0);
+  assert.strictEqual(nxs2BeatCountToMs(120, 0), 0);
+  assert.strictEqual(nxs2BeatCountToMs(null, 120), 0);
+  assert.strictEqual(nxs2BeatCountToMs('abc', 120), 0);
+});
+
+test('beat-anchor: shouldKeepPredictedBeatAnchor half-beat jitter window', () => {
+  const { shouldKeepPredictedBeatAnchor } = require(path.join(__dirname, '..', 'bridge', 'beat-anchor'));
+  // 120 BPM → halfBeat = 30000/120 = 250ms
+  assert.strictEqual(shouldKeepPredictedBeatAnchor(1000, 1100, 120), true);   // 100ms diff < 250ms
+  assert.strictEqual(shouldKeepPredictedBeatAnchor(1000, 1300, 120), false);  // 300ms diff > 250ms
+  assert.strictEqual(shouldKeepPredictedBeatAnchor(1000, 1100, 120, true), false); // reverse 거부
+  assert.strictEqual(shouldKeepPredictedBeatAnchor(0, 1000, 120), false);     // predicted=0 거부
+});
+
 // ─── pcm-decode worker error drain ───────────────────────────────────────
 
 test('pcm-decode: worker fatal error drains pending jobs', () => {

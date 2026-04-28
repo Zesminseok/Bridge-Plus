@@ -132,22 +132,8 @@ const BLANK_JPEG = (() => {
   }
 })();
 
-function nxs2BeatCountToMs(beatCount, bpm){
-  const bn = Number(beatCount) || 0;
-  const b = Number(bpm) || 0;
-  if(!(bn > 0) || !(b > 0)) return 0;
-  return Math.round(bn * 60000 / b);
-}
-
-function shouldKeepPredictedBeatAnchor(predictedMs, beatMs, bpm, isReverse=false){
-  const predicted = Number(predictedMs) || 0;
-  const anchored = Number(beatMs) || 0;
-  const trackBpm = Number(bpm) || 0;
-  if(!(predicted > 0) || !(anchored > 0) || isReverse) return false;
-  const delta = Math.abs(anchored - predicted);
-  const halfBeatMs = trackBpm > 0 ? Math.max(120, 30000 / trackBpm) : 250;
-  return delta < halfBeatMs;
-}
+// nxs2BeatCountToMs / shouldKeepPredictedBeatAnchor → bridge/beat-anchor.js (Phase 5.1)
+const { nxs2BeatCountToMs, shouldKeepPredictedBeatAnchor } = require('./bridge/beat-anchor');
 
 // BridgeCore
 // ─────────────────────────────────────────────
