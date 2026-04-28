@@ -303,11 +303,30 @@ test('deck UI repaint is throttled separately from TCNet tick', () => {
   // 사용자 선호: '웨이브폼은 디스플레이 리프레시, 나머지는 30프레임'.
   const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
   assert.match(source, /const _DECK_UI_TICK_MS\s*=\s*1000\s*\/\s*30/, 'deck UI throttle should be 30fps');
-  // outer rAF 는 시간 gate 없이 호출 — 디스플레이 refresh 자동 sync.
-  assert.match(source, /function _rafTick\(\)\{\s*requestAnimationFrame\(_rafTick\);\s*tick\(\);/, 'outer rAF should follow display refresh');
-  // 회귀 가드 — _TICK_MS 시간 gate 가 다시 들어오지 않았는지.
+  // outer rAF 본문에 시간 gate (1000/120 등) 가 다시 들어오지 않았는지.
   assert.ok(!/const _TICK_MS\s*=/.test(source), '_TICK_MS gate 가 다시 추가됨 (rAF 네이티브 속도 회귀)');
+  // _rafTick 안에서 requestAnimationFrame + tick() 호출 — idle 체크 후 풀레이트 경로 보존.
+  assert.match(source, /function _rafTick\(\)\{[\s\S]{0,400}requestAnimationFrame\(_rafTick\);[\s\S]{0,40}tick\(\);/);
   assert.match(source, /const shouldPaintDeckUi=deckUiVisible&&\(now-_lastDeckUiPaint>=_DECK_UI_TICK_MS\)/, 'deck UI gate');
+});
+
+test('idle downshift — 3s idle 후 10Hz timer + IPC/입력으로 upshift', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  // 핵심 상수
+  assert.match(source, /const _IDLE_THRESHOLD_MS = 3000/);
+  assert.match(source, /const _IDLE_TICK_MS = 100/);  // 10Hz downshift
+  // bumpActivity helper — IPC + 입력 모두 호출
+  assert.match(source, /function bumpActivity\(\)/);
+  assert.match(source, /window\.addEventListener\(ev, bumpActivity, \{ capture: true, passive: true \}\)/);
+  // 핵심 IPC 핸들러에 bumpActivity 호출
+  for(const handler of ['onCDJStatus','onDJMStatus','onWaveformPreview','onWaveformDetail','onCuePoints','onBeatGrid','onSongStructure','onAlbumArt','onTrackMeta']){
+    const idx = source.indexOf(`window.bridge.${handler}?.(d=>{`);
+    assert.ok(idx >= 0, `${handler} 핸들러 누락`);
+    // 핸들러 본문 첫 1-3줄 안에 bumpActivity 가 있어야
+    const next = source.indexOf('\n  });', idx);
+    const body = source.slice(idx, next);
+    assert.ok(body.includes('bumpActivity()'), `${handler} 핸들러에 bumpActivity 호출 누락`);
+  }
 });
 
 test('deck VU repaint is throttled separately from waveform redraw', () => {

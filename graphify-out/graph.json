@@ -15879,8 +15879,8 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L93",
       "weight": 1.0,
-      "_src": "virtual_deck_sendvirtualcdjstatus",
-      "_tgt": "main_push",
+      "_src": "main_push",
+      "_tgt": "virtual_deck_sendvirtualcdjstatus",
       "source": "main_push",
       "target": "virtual_deck_sendvirtualcdjstatus"
     },

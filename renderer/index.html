@@ -6362,11 +6362,52 @@ function tick(){
 //   - 144/240Hz 외부 디스플레이 → 144/240fps
 // 웨이브폼만 outer rAF 속도. _DECK_UI_TICK_MS / _DECK_VU_TICK_MS / _MIXER_TICK_MS 는
 // 안쪽에서 30fps 로 throttle → CPU 절약.
+//
+// 자동 idle downshift (Codex 설계):
+//   - 3s idle 지속 시 rAF → 10Hz setTimeout 으로 다운시프트
+//   - upshift 트리거: CDJ/DJM 상태, waveform/cue/structure, 사용자 입력
+//   - upshift 후 2s 풀레이트 hold (히스테리시스 — 트랙 로드 burst 흡수)
+//   - 화면이 일시적으로 안 움직여도 timecode/clock/header 는 10Hz 로 갱신 가능
+let _lastActivityT = performance.now();
+let _idleMode = false;     // true → 10Hz timer, false → rAF
+let _idleTimer = null;     // setTimeout handle
+const _IDLE_THRESHOLD_MS = 3000; // idle 지속 시 downshift
+const _FULL_RATE_HOLD_MS = 2000; // upshift 후 풀레이트 유지 최소 시간
+const _IDLE_TICK_MS = 100;       // 10Hz downshift rate
+
+function bumpActivity(){
+  _lastActivityT = performance.now();
+  if(_idleMode){
+    _idleMode = false;
+    if(_idleTimer){ clearTimeout(_idleTimer); _idleTimer = null; }
+    requestAnimationFrame(_rafTick);  // upshift 즉시 재진입
+  }
+}
+
 function _rafTick(){
+  const now = performance.now();
+  // 풀레이트 hold 기간이 지났고 idle threshold 도 넘었으면 downshift.
+  // hold (2s) 가 idle (3s) 보다 짧으므로 단일 비교: now-_lastActivityT 가 idle 지속 시간.
+  if(!_idleMode && now - _lastActivityT > _IDLE_THRESHOLD_MS){
+    _idleMode = true;
+    _idleTimer = setTimeout(_idleTick, _IDLE_TICK_MS);
+    tick(); // 마지막 한 번
+    return; // rAF 재진입 안 함
+  }
   requestAnimationFrame(_rafTick);
   tick();
 }
+function _idleTick(){
+  if(!_idleMode) return; // bumpActivity 가 이미 정리함
+  tick();
+  _idleTimer = setTimeout(_idleTick, _IDLE_TICK_MS);
+}
 requestAnimationFrame(_rafTick);
+
+// 사용자 입력 → 즉시 upshift. capture 단계에서 잡아 모든 핸들러보다 먼저 실행.
+['mousemove','mousedown','keydown','wheel','touchstart','touchmove'].forEach(ev=>{
+  window.addEventListener(ev, bumpActivity, { capture: true, passive: true });
+});
 
 // Header element cache — updateHeader 매 tick (60fps) × 10 getElementById = 600/sec.
 // 캐시 후 isConnected 검증으로 stale 시 fallback (DOM 재생성 대비).
@@ -7085,6 +7126,7 @@ if(E){
     }
   });
   window.bridge.onCDJStatus?.(d=>{
+    bumpActivity();  // HW 상태 변경 → 풀레이트 upshift
     const{layerIndex,status}=d;
     // Beat packet (0x28) — update beatInBar for display
     if(status._beatPacket){
@@ -7285,6 +7327,7 @@ if(E){
   });
   // HW waveform preview from CDJ / dbserver
   window.bridge.onWaveformPreview?.(d=>{
+    bumpActivity();
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
     const pts=d.pts instanceof Uint8Array?null:d.pts;
@@ -7326,6 +7369,7 @@ if(E){
   });
   // HW album art from CDJ dbserver
   window.bridge.onAlbumArt?.(d=>{
+    bumpActivity();
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk)return;
     dk.art=d.art||null;
@@ -7353,6 +7397,7 @@ if(E){
   });
   // HW cue points from dbserver (memory cues + hot cues)
   window.bridge.onCuePoints?.(d=>{
+    bumpActivity();
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk)return;
     dk.cuePoints=d.cues;
@@ -7360,6 +7405,7 @@ if(E){
   });
   // Beat grid from dbserver (0x2204)
   window.bridge.onBeatGrid?.(d=>{
+    bumpActivity();
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk)return;
     dk._beatGrid=d.beats; // [{beatInBar, bpm, timeMs}]
@@ -7369,6 +7415,7 @@ if(E){
   });
   // PSSI Song Structure (rekordbox 프레이즈 분석) — 상단 프레이즈 바 표시용
   window.bridge.onSongStructure?.(d=>{
+    bumpActivity();
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk)return;
     dk._songStructure={phrases:d.phrases||[], endMs:d.endMs||0, mood:d.mood||0};
@@ -7376,6 +7423,7 @@ if(E){
   });
   // HW detail waveform from dbserver (renderer waveform rate — for zoom display)
   window.bridge.onWaveformDetail?.(d=>{
+    bumpActivity();
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
     const pts=d.pts instanceof Uint8Array?null:d.pts;
@@ -7420,6 +7468,7 @@ if(E){
   });
   // Track metadata from dbserver (title, artist, album, key, etc.)
   window.bridge.onTrackMeta?.(d=>{
+    bumpActivity();
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk)return;
     if(d.title)dk.tn=d.title;
@@ -7447,6 +7496,7 @@ if(E){
     const _sepEl=(dk._els&&dk._els.dtsep&&dk._els.dtsep.isConnected)?dk._els.dtsep:document.getElementById('dtsep'+li);if(_sepEl)_sepEl.style.display='';
   });
   window.bridge.onDJMStatus?.(d=>{
+    bumpActivity();
     _markMixerDirty();
     if(d.hasRealFaders!=null)_djmHasRealFaders=d.hasRealFaders;
     const f=d.channel||d.faders||[];  // bridge sends d.channel (d.faders was a bug)
