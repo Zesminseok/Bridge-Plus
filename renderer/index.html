@@ -4188,8 +4188,9 @@ function renderDecks(){
   // DOM rebuild 직전 — 모든 stale 참조/캐시 무효화. (Codex stale-DOM audit 적용)
   // 옛 DOM 참조나 paint-cache key 가 남아있으면 새 DOM 에 BPM/웨이브폼/state 가
   // 안 그려져 빈 화면처럼 보이는 회귀 발생.
-  for(let i=0;i<DECKS.length;i++){
-    const d=DECKS[i]; if(!d) continue;
+  // DECKS 는 Object — Object.values 로 순회 (DECKS.length 는 undefined).
+  for(const d of Object.values(DECKS)){
+    if(!d) continue;
     // DOM element / canvas context 캐시 (옛 DOM 노드 → detached)
     d._els=null;
     d.wovCtx=null; d.wovCtx2=null;
@@ -4279,9 +4280,11 @@ function renderDecks(){
   // 강제 BPM 즉시 페인트 — DOM rebuild 직후 첫 tick 까지 기다리지 않고
   // bindDeck 으로 캐시된 새 wfbpm 요소에 바로 innerHTML 쓰기. layout 전환 시
   // BPM 정보가 사라져 보이는 회귀 차단.
-  for(let i=0;i<DECKS.length;i++){
-    const d=DECKS[i]; if(!d) continue;
-    const el=document.getElementById('wfbpm'+i);
+  // (DECKS 는 Object 라 .length 로 순회하면 0 — Object.entries 사용 필수.)
+  for(const [slotKey, d] of Object.entries(DECKS)){
+    if(!d) continue;
+    const slot=Number(slotKey);
+    const el=document.getElementById('wfbpm'+slot);
     if(!el) continue;
     const hasBpm=d.bpm>0;
     const pp=(d.pitch!==undefined)?d.pitch:(hasBpm&&d.baseBpm&&d.baseBpm>0?((d.bpm-d.baseBpm)/d.baseBpm*100):0);

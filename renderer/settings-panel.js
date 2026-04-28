@@ -304,8 +304,9 @@ function renderSettings(){
     document.body.dataset.layout=cfg.layout;
     // Layout 변경 = DOM rebuild → 모든 paint-cache key 무효화 (BPM/타이틀/모델 등 재렌더 강제)
     try{
+      // DECKS 는 Object — Object.values 로 순회. 직접 for...of 는 동작 안 함.
       if(typeof DECKS !== 'undefined'){
-        for(const d of DECKS){
+        for(const d of Object.values(DECKS)){
           if(!d) continue;
           d._lastBpmKey = null; d._lastHwlKey = null; d._lastBgKey = null;
           d._lastDidKey = null; d._lastDrawKey = null; d._lastFillKey = null;
