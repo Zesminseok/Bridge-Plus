@@ -280,7 +280,11 @@ test('bridge forwards DJM stereo master meter peaks to renderer', () => {
 
 test('dbserver follow-up requests are staggered instead of firing all at once', () => {
   const source = fs.readFileSync(corePath, 'utf8');
-  assert.strictEqual(source.includes('_scheduleDbFollowUps(ip, slot, trackId, playerNum, tt, meta.artworkId||0);'), true);
+  // Phase 5.3c: _dbserverMetadata 본문이 bridge/dbserver-client.js 로 이동.
+  // _scheduleDbFollowUps 호출은 모듈 측에서 core._scheduleDbFollowUps 로 트리거.
+  const cliSource = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'dbserver-client.js'), 'utf8');
+  assert.strictEqual(cliSource.includes('core._scheduleDbFollowUps(ip, slot, trackId, playerNum, tt, meta.artworkId||0);'), true);
+  // defer 호출 자체는 _scheduleDbFollowUps 본체 (여전히 bridge-core.js) 안.
   assert.strictEqual(source.includes('defer(520, ()=>this._dbserverWaveformDetail(ip, slot, trackId, playerNum, trackType));'), true);
   assert.strictEqual(source.includes('defer(1640, ()=>this._dbserverBeatGrid(ip, slot, trackId, playerNum, trackType));'), true);
 });

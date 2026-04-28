@@ -12,27 +12,48 @@ function test(name, fn){
 // ─── bridge-core.js — dbserver TCP session reuse ───────────────────────
 
 test('bridge-core: dbserver methods use session acquisition instead of direct connect', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
-  assert.match(src, /async _dbAcquire\(ip, spoofPlayer\)\{/);
+  // Phase 5.3b/5.3c: 본문은 bridge/dbserver-client.js, BridgeCore 는 wrapper.
+  // BridgeCore 측면에서는 _dbAcquire 가 pool 로 위임됨을 확인.
+  const coreSrc = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
+  assert.match(coreSrc, /_dbAcquire\(ip, spoofPlayer\)\{ return this\._dbPool\.acquire\(ip, spoofPlayer\); \}/);
+  // wrapper 들이 모두 _dbcli.X 로 위임
   for(const name of [
-    '_dbserverMetadata',
-    '_dbserverWaveform',
-    '_dbserverWaveformDetail',
-    '_dbserverWaveformNxs2',
-    '_dbserverCuePointsExt',
-    '_dbserverCuePointsNxs2',
-    '_dbserverCuePointsStd',
-    '_dbserverBeatGrid',
-    '_dbserverSongStructure',
-    '_dbserverArtwork',
+    'dbserverMetadata',
+    'dbserverWaveform',
+    'dbserverWaveformDetail',
+    'dbserverWaveformNxs2',
+    'dbserverCuePointsExt',
+    'dbserverCuePointsNxs2',
+    'dbserverCuePointsStd',
+    'dbserverBeatGrid',
+    'dbserverSongStructure',
+    'dbserverArtwork',
   ]){
-    const start = src.indexOf(`async ${name}(`);
-    assert.ok(start >= 0, `${name} missing`);
-    const next = src.indexOf('\n  async ', start + 1);
-    const body = src.slice(start, next > start ? next : src.indexOf('\n}', start));
-    assert.ok(body.includes('this._dbAcquire(ip, spoofPlayer)'), `${name} should acquire pooled session`);
-    assert.strictEqual(body.includes('this._dbConnect(ip, spoofPlayer)'), false, `${name} should not open direct TCP session`);
+    assert.ok(coreSrc.includes(`_dbcli.${name}(this,`), `bridge-core 에 _dbcli.${name} wrapper 누락`);
+  }
+
+  // 모듈 측 — 각 함수가 acquire/release/invalidate triplet 보존
+  const cliSrc = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'dbserver-client.js'), 'utf8');
+  for(const name of [
+    'dbserverMetadata',
+    'dbserverWaveform',
+    'dbserverWaveformDetail',
+    'dbserverWaveformNxs2',
+    'dbserverCuePointsExt',
+    'dbserverCuePointsNxs2',
+    'dbserverCuePointsStd',
+    'dbserverBeatGrid',
+    'dbserverSongStructure',
+    'dbserverArtwork',
+  ]){
+    const start = cliSrc.indexOf(`function ${name}(`);
+    assert.ok(start >= 0, `${name} 모듈에 누락`);
+    const next = cliSrc.indexOf('\nfunction ', start + 1);
+    const body = cliSrc.slice(start, next > start ? next : cliSrc.length);
+    assert.ok(body.includes('core._dbAcquire('), `${name} should acquire pooled session via core._dbAcquire`);
     assert.ok(body.includes('session.release()'), `${name} should release pooled session`);
+    assert.ok(body.includes('session.invalidate()'), `${name} should invalidate on error`);
+    assert.strictEqual(body.includes('core._dbConnect('), false, `${name} should not open direct TCP session`);
   }
 });
 
