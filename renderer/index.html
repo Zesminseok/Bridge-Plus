@@ -4168,13 +4168,21 @@ function ensureHWDeck(playerNum){
 
 // ════ Deck rendering ═════════════════════════════════
 function renderDecks(){
-  // DOM rebuild 직전 — 모든 deck paint-cache key 무효화 + DOM element 캐시도 클리어.
-  // _els 캐시가 옛 DOM 참조를 들고 있으면 새 DOM 에 BPM/타이틀이 안 그려짐.
+  // DOM rebuild 직전 — 모든 stale 참조/캐시 무효화. (Codex stale-DOM audit 적용)
+  // 옛 DOM 참조나 paint-cache key 가 남아있으면 새 DOM 에 BPM/웨이브폼/state 가
+  // 안 그려져 빈 화면처럼 보이는 회귀 발생.
   for(let i=0;i<DECKS.length;i++){
     const d=DECKS[i]; if(!d) continue;
+    // DOM element / canvas context 캐시 (옛 DOM 노드 → detached)
+    d._els=null;
+    d.wovCtx=null; d.wovCtx2=null;
+    // Paint-cache keys (값 비교로 redraw skip 하는 게이트)
     d._lastBpmKey=null; d._lastHwlKey=null; d._lastBgKey=null;
     d._lastDidKey=null; d._lastDrawKey=null; d._lastFillKey=null; d._lastMcKey=null;
-    d._els=null; // 옛 DOM 참조 — 다음 tick 이 document.getElementById 로 새로 fetch
+    d._lastDstAttr=null; d._lastPlState=null;
+    d._lastWfProgPx=null; d._lastWfZoom=null; d._lastProgPx=null;
+    d._wfDirty=true;  // 강제 redraw — wfNeedsDraw 게이트 통과
+    d._ovTick=0;
   }
   const slots=getUsedSlots();
   const hwS=slots.filter(s=>DECKS[s].type==='hw');
@@ -4251,6 +4259,22 @@ function renderDecks(){
   if(hwS.length===0&&hwSecLabel)hwSecLabel.style.display='none';
   renderOutLayers();
   updateHeader();
+  // 강제 BPM 즉시 페인트 — DOM rebuild 직후 첫 tick 까지 기다리지 않고
+  // bindDeck 으로 캐시된 새 wfbpm 요소에 바로 innerHTML 쓰기. layout 전환 시
+  // BPM 정보가 사라져 보이는 회귀 차단.
+  for(let i=0;i<DECKS.length;i++){
+    const d=DECKS[i]; if(!d) continue;
+    const el=document.getElementById('wfbpm'+i);
+    if(!el) continue;
+    const hasBpm=d.bpm>0;
+    const pp=(d.pitch!==undefined)?d.pitch:(hasBpm&&d.baseBpm&&d.baseBpm>0?((d.bpm-d.baseBpm)/d.baseBpm*100):0);
+    const _bpmFmt=(v)=>{const int=Math.floor(v),dec=((v-int)*10+0.5|0)%10;return`${int}<span style="font-size:0.7em;opacity:0.7">.${dec}</span>`;};
+    if(hasBpm){
+      const ps=Math.abs(pp)<0.05?'±0.00%':(pp>0?'+':'')+pp.toFixed(2)+'%';
+      const baseVal=(d.baseBpm&&d.baseBpm>0)?d.baseBpm:d.bpm;
+      el.innerHTML=`<span style="font:600 14px var(--mn);color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap">${_bpmFmt(baseVal)}</span><span style="font:500 11px var(--mn);color:var(--tx3);white-space:nowrap">${ps}</span><span class="dk-bpm-cur">${_bpmFmt(d.bpm)}<span style="font:400 9px var(--mn);color:var(--tx3);margin-left:2px">BPM</span></span>`;
+    }
+  }
 }
 
 /* Layout dispatcher — cfg.layout 에 따라 deckHTML 변형 선택 */
