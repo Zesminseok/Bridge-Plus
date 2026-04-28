@@ -51,7 +51,31 @@ function movingAverage(src, kernel) {
   return out;
 }
 
+// SECURITY: postMessage 입력 검증 — compromised renderer / malformed message 가
+// Infinity / NaN / 음수 / 과도한 채널 수로 CPU·메모리 DoS 시키지 못하게 차단.
+const _RGBWF_MAX_SAMPLES = 600 * 192000;   // 600s × 192kHz
+const _RGBWF_MAX_CHANNELS = 8;
+
 function analyzeWf({ jobId, channels, sampleRate, durationMs, targetDurMs, targetRate, shapeMode, cutoffs, releases, smooth }) {
+  // 입력 검증 (early throw → caller postMessage error 응답으로 처리됨)
+  if (!Array.isArray(channels) || channels.length === 0 || channels.length > _RGBWF_MAX_CHANNELS) {
+    throw new Error('invalid channels');
+  }
+  if (!(channels[0] instanceof Float32Array)) throw new Error('channels must be Float32Array');
+  const _firstLen = channels[0].length;
+  if (!Number.isFinite(_firstLen) || _firstLen <= 0 || _firstLen > _RGBWF_MAX_SAMPLES) {
+    throw new Error('invalid sample length');
+  }
+  for (let _c = 0; _c < channels.length; _c++) {
+    if (!(channels[_c] instanceof Float32Array) || channels[_c].length !== _firstLen) {
+      throw new Error('channel length mismatch');
+    }
+  }
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0 || sampleRate > 192000) throw new Error('invalid sampleRate');
+  if (!Number.isFinite(durationMs) || durationMs <= 0 || durationMs > 6 * 60 * 60 * 1000) throw new Error('invalid durationMs');
+  if (!Number.isFinite(targetRate) || targetRate <= 0 || targetRate > sampleRate) throw new Error('invalid targetRate');
+  if (targetDurMs != null && (!Number.isFinite(targetDurMs) || targetDurMs <= 0)) throw new Error('invalid targetDurMs');
+
   // 4-band 정의 — 각 band 의 upper edge frequency. message 의 cutoffs 가 오면 override (theme-specific 분석).
   // Project default = 3band 튜너 도출 값.
   const _ct = cutoffs || {};

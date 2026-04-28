@@ -498,7 +498,7 @@ function createWindow(){
     minWidth:900,minHeight:680,show:false,
     backgroundColor:'#111318',titleBarStyle:'hiddenInset',
     autoHideMenuBar:true, menuBarVisible:false,
-    webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false},
+    webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,webSecurity:true},
   });
   try{ win.setMenuBarVisibility(false); }catch(_){}
   // Show splash while loading
@@ -590,6 +590,23 @@ audioDecode.registerAudioDecodeIpc(ipcMain, { getWin: ()=>win });
 // App-level / cleanup IPC → main/ipc-app.js (Phase 3.9)
 const _cleanupSvc = require('./main/cleanup');
 require('./main/ipc-app').registerAppIpc(ipcMain, { app, appRoot: __dirname, cleanupSvc: _cleanupSvc });
+
+// SECURITY: web-contents-created 중앙 가드 — 모든 webContents 에 deny-by-default 정책.
+// renderer 가 compromise 되거나 향후 개발 시 의도치 않은 외부 navigation/popup 차단.
+app.on('web-contents-created', (_e, contents) => {
+  // 새 창 / window.open / target=_blank 모두 거부.
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  // file:// 외부 네비게이션 거부 (앱 내부 file:// 만 허용).
+  contents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('file://')) event.preventDefault();
+  });
+  // <webview> 태그가 우연히 추가돼도 nodeIntegration / preload 비활성화.
+  contents.on('will-attach-webview', (_event, webPreferences) => {
+    webPreferences.preload = undefined;
+    webPreferences.nodeIntegration = false;
+    webPreferences.contextIsolation = true;
+  });
+});
 
 app.whenReady().then(()=>{_registerBridgeAudioProtocol();createWindow();});
 let _cleaned=false,_quitting=false;

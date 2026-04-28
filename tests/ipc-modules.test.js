@@ -742,6 +742,37 @@ test('audio-decode: rejects symlink', async () => {
   }
 });
 
+// ─── SECURITY: worker postMessage 입력 검증 ──────────────────────────
+
+test('pcm-worker: input validation guards present', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'pcm-worker.js'), 'utf8');
+  assert.match(src, /_MAX_SAMPLES/);
+  assert.match(src, /_MAX_CHANNELS/);
+  assert.match(src, /Array\.isArray\(channels\)/);
+  assert.match(src, /channels\[0\] instanceof Float32Array/);
+  assert.match(src, /Number\.isFinite\(sampleRate\)/);
+});
+
+test('rgbwf-worker: input validation guards present', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'rgbwf-worker.js'), 'utf8');
+  assert.match(src, /_RGBWF_MAX_SAMPLES/);
+  assert.match(src, /_RGBWF_MAX_CHANNELS/);
+  assert.match(src, /Array\.isArray\(channels\)/);
+  assert.match(src, /Number\.isFinite\(sampleRate\)/);
+  assert.match(src, /Number\.isFinite\(durationMs\)/);
+});
+
+// ─── SECURITY: main.js web-contents-created 가드 ───────────────────────
+
+test('main.js: web-contents-created deny-by-default guards present', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+  assert.match(src, /web-contents-created/);
+  assert.match(src, /setWindowOpenHandler/);
+  assert.match(src, /will-navigate/);
+  assert.match(src, /will-attach-webview/);
+  assert.match(src, /webSecurity:\s*true/);
+});
+
 // ─── pcm-decode worker error drain ───────────────────────────────────────
 
 test('pcm-decode: worker fatal error drains pending jobs', () => {
