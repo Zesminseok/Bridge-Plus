@@ -745,73 +745,9 @@ class BridgeCore {
     return new Promise((resolve, reject) => {
       const sock = dgram.createSocket({type:'udp4', reuseAddr:true});
       this.lPortSocket = sock;
-      sock.on('message',(msg,rinfo)=>{
-        if(msg.length<TC.H) return;
-        if(msg[4]!==0x54||msg[5]!==0x43||msg[6]!==0x4E) return;
-        // NID + ownPorts + name 3중 방어 (TCNet 패킷 loop 차단)
-        if(msg[0]===TC.NID[0] && msg[1]===TC.NID[1]) return;
-        const type = msg[7];
-        const name = msg.slice(8,16).toString('ascii').replace(/\0/g,'').trim();
-        if(name.toUpperCase().startsWith('BRIDGE')) return;
-        if(this._ownPorts && this._ownPorts.has(rinfo.port) &&
-           (rinfo.address===this.localAddr || rinfo.address==='127.0.0.1')) return;
-
-        // Only log first occurrence of each type from each source
-        const lk=name+type;
-        if(!this._lPortDbg)this._lPortDbg={};
-        if(!this._lPortDbg[lk]){this._lPortDbg[lk]=true;try{console.log(`[TCNet] lPort ${name} type=0x${type.toString(16)} from ${rinfo.address}:${rinfo.port}`);}catch(_){}}
-
-        if(type===TC.OPTIN){
-          const body = msg.slice(TC.H);
-          const lPort = body.length>=4 ? body.readUInt16LE(2) : 0;
-          const vendor = body.length>=40 ? body.slice(8,24).toString('ascii').replace(/\0/g,'').trim() : '';
-          const device = body.length>=40 ? body.slice(24,40).toString('ascii').replace(/\0/g,'').trim() : '';
-          const key = name+'@'+rinfo.address;
-          // SECURITY: cap + TTL eviction (tcnet-handler 와 같은 보호)
-          const isNew = registerTCNetNode(this, key, {name,vendor,device,type:msg[17],ip:rinfo.address,port:rinfo.port,lPort,lastSeen:Date.now()});
-          if(isNew){
-            console.log(`[TCNet] lPort OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor} device=${device}`);
-            // Re-send artwork to newly connected node (delayed to allow node registration)
-            setTimeout(()=>this._resendAllArtwork(), 500);
-          }
-          this.onNodeDiscovered?.(this.nodes[key]);
-        }
-        // Register any Arena-like node even without OptIn (Arena sends APP/0x1e/0x14 but NOT OptIn)
-        if(type!==TC.OPTIN && !name.toUpperCase().startsWith('BRIDGE')){
-          const key = name+'@'+rinfo.address;
-          if(!this.nodes[key]){
-            const isNew = registerTCNetNode(this, key, {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()});
-            if(isNew){
-              console.log(`[TCNet] lPort auto-register ${name}@${rinfo.address} lPort=${rinfo.port} (from type=0x${type.toString(16)})`);
-              setTimeout(()=>this._resendAllArtwork(), 500);
-              this.onNodeDiscovered?.(this.nodes[key]);
-            }
-          } else {
-            this.nodes[key].lastSeen = Date.now();
-          }
-        }
-        if(type===TC.APP){
-          const body = msg.slice(TC.H);
-          const lPort = body.length>=22 ? body.readUInt16LE(20) : rinfo.port;
-          const key = name+'@'+rinfo.address;
-          if(this.nodes[key]) this.nodes[key].lPort = lPort || rinfo.port;
-          if(!this._lPortDbg['app_'+rinfo.address]){this._lPortDbg['app_'+rinfo.address]=true;console.log(`[TCNet] lPort APP from ${name} → ${rinfo.address}:${rinfo.port} lPort=${lPort}`);}
-          try{ this.txSocket?.send(mkAppResp(this.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
-        }
-        if(type===0x14){
-          const body = msg.slice(TC.H);
-          const layerReq = body[0]||0;  // 1-based
-          const reqType = body[1]||0;
-          const li = layerReq - 1;  // 0-indexed
-          const layerData = (li >= 0 && li < this.layers.length) ? this.layers[li] : null;
-          // MetaReq logs suppressed (too frequent)
-          const metaPkt = mkDataMeta(layerReq, layerData);
-          this._uc(metaPkt, rinfo.port, rinfo.address);
-          const faderVal = this.faders ? (this.faders[li] || 0) : 0;
-          const metricsPkt = mkDataMetrics(layerReq, layerData, faderVal);
-          this._uc(metricsPkt, rinfo.port, rinfo.address);
-          // MetaResp log suppressed (too frequent);
-        }
+      // lPort handler → bridge/tcnet-handler.js (Phase 5.7).
+      sock.on('message', (msg, rinfo) => {
+        _tcRx.handleTCNetLPortMsg(this, { TC, mkDataMeta, mkDataMetrics, mkAppResp }, msg, rinfo);
       });
       sock.on('error',(e)=>{
         console.warn(`[TCNet] lPort error: ${e.message}`);

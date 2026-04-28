@@ -972,9 +972,9 @@ test('tcnet-handler: handleTCNetMsg export 단일 함수', () => {
 
 test('PERF: tcnet-handler — body slice 제거 + scratch 재사용', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'tcnet-handler.js'), 'utf8');
-  // 0xC8 MixerData 핸들러에 inline slice 가 사라짐
-  assert.ok(!/if\(type===TC\.DATA && msg\.length>=TC\.H\+2\)\{[\s\S]*?msg\.slice\(TC\.H\)/.test(src),
-    'MixerData branch 에 msg.slice(TC.H) 가 남음');
+  // 0xC8 MixerData 핸들러는 msg[TC.H+offset] 직접 read 사용 (slice 회피).
+  assert.match(src, /const dataType = msg\[TC\.H\];/);
+  assert.match(src, /const masterAudio = msg\[TC\.H\+37\];/);
   // scratch 재사용 — _getMixerScratch helper
   assert.match(src, /_getMixerScratch\(core\)/);
   assert.match(src, /sc\.chAudio\[ch\]\s*=/);

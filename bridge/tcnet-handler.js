@@ -186,4 +186,80 @@ function handleTCNetMsg(core, deps, msg, rinfo, label){
   }
 }
 
-module.exports = { handleTCNetMsg, registerTCNetNode, TCNET_MAX_NODES, TCNET_NODE_TTL_MS };
+// lPort RX 전용 핸들러 — listener port socket 에 도착하는 OPTIN/APP/0x14.
+// 차이점 vs handleTCNetMsg:
+//   - log prefix '[TCNet] lPort ...' (메인 RX 와 구분)
+//   - 신규 노드 등록 시 500ms 지연 후 artwork 재전송 (새로 들어온 Arena 동기화)
+//   - DT_MIXER (0xC8) 분기 없음 — lPort 에는 안 옴
+function handleTCNetLPortMsg(core, deps, msg, rinfo){
+  const { TC, mkDataMeta, mkDataMetrics, mkAppResp } = deps;
+
+  if(msg.length<TC.H) return;
+  if(msg[4]!==0x54||msg[5]!==0x43||msg[6]!==0x4E) return;
+  if(msg[0]===TC.NID[0] && msg[1]===TC.NID[1]) return;
+  const type = msg[7];
+  if(_startsWithBridgeCI(msg, 8)) return;
+  if(core._ownPorts && core._ownPorts.has(rinfo.port) &&
+     (rinfo.address===core.localAddr || rinfo.address==='127.0.0.1')) return;
+  const name = _readName8(msg, 8);
+
+  // Only log first occurrence of each type from each source
+  const lk = name+type;
+  if(!core._lPortDbg) core._lPortDbg = {};
+  if(!core._lPortDbg[lk]){
+    core._lPortDbg[lk] = true;
+    try{ console.log(`[TCNet] lPort ${name} type=0x${type.toString(16)} from ${rinfo.address}:${rinfo.port}`); }catch(_){}
+  }
+
+  if(type===TC.OPTIN){
+    const body = msg.slice(TC.H);
+    const lPort = body.length>=4 ? body.readUInt16LE(2) : 0;
+    const vendor = body.length>=40 ? body.slice(8,24).toString('ascii').replace(/\0/g,'').trim() : '';
+    const device = body.length>=40 ? body.slice(24,40).toString('ascii').replace(/\0/g,'').trim() : '';
+    const key = name+'@'+rinfo.address;
+    const isNew = registerTCNetNode(core, key, {name,vendor,device,type:msg[17],ip:rinfo.address,port:rinfo.port,lPort,lastSeen:Date.now()});
+    if(isNew){
+      console.log(`[TCNet] lPort OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor} device=${device}`);
+      setTimeout(()=>core._resendAllArtwork(), 500);
+    }
+    core.onNodeDiscovered?.(core.nodes[key]);
+  }
+  // Register any Arena-like node even without OptIn (Arena sends APP/0x1e/0x14 but NOT OptIn)
+  if(type!==TC.OPTIN){
+    const key = name+'@'+rinfo.address;
+    if(!core.nodes[key]){
+      const isNew = registerTCNetNode(core, key, {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()});
+      if(isNew){
+        console.log(`[TCNet] lPort auto-register ${name}@${rinfo.address} lPort=${rinfo.port} (from type=0x${type.toString(16)})`);
+        setTimeout(()=>core._resendAllArtwork(), 500);
+        core.onNodeDiscovered?.(core.nodes[key]);
+      }
+    } else {
+      core.nodes[key].lastSeen = Date.now();
+    }
+  }
+  if(type===TC.APP){
+    const lPort = msg.length>=TC.H+22 ? msg.readUInt16LE(TC.H+20) : rinfo.port;
+    const key = name+'@'+rinfo.address;
+    if(core.nodes[key]) core.nodes[key].lPort = lPort || rinfo.port;
+    if(!core._lPortDbg['app_'+rinfo.address]){
+      core._lPortDbg['app_'+rinfo.address] = true;
+      console.log(`[TCNet] lPort APP from ${name} → ${rinfo.address}:${rinfo.port} lPort=${lPort}`);
+    }
+    try{ core.txSocket?.send(mkAppResp(core.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
+  }
+  if(type===0x14){
+    // PERF: msg.slice(TC.H) 회피 — 직접 read.
+    const layerReq = msg.length>=TC.H+1 ? msg[TC.H] : 0;  // 1-based (lPort 변형: layerReq=byte0, reqType=byte1)
+    const reqType = msg.length>=TC.H+2 ? msg[TC.H+1] : 0;
+    const li = layerReq - 1;
+    const layerData = (li >= 0 && li < core.layers.length) ? core.layers[li] : null;
+    const metaPkt = mkDataMeta(layerReq, layerData);
+    core._uc(metaPkt, rinfo.port, rinfo.address);
+    const faderVal = core.faders ? (core.faders[li] || 0) : 0;
+    const metricsPkt = mkDataMetrics(layerReq, layerData, faderVal);
+    core._uc(metricsPkt, rinfo.port, rinfo.address);
+  }
+}
+
+module.exports = { handleTCNetMsg, handleTCNetLPortMsg, registerTCNetNode, TCNET_MAX_NODES, TCNET_NODE_TTL_MS };
