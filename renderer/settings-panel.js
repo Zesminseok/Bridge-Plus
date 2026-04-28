@@ -35,16 +35,16 @@ function renderSettings(){
     <div class="sgr">
       <div class="srw"><span class="srl" data-i18n="lbl_language">Language</span><select class="ss" id="langSel">${langOpts}</select></div>
     </div>
-    <div class="sl">덱 레이아웃</div>
+    <div class="sl" data-i18n="set_deck_layout">덱 레이아웃</div>
     <div class="sgr">
-      <div class="srw"><span class="srl">레이아웃 테마</span><select class="ss" id="layoutSel">
+      <div class="srw"><span class="srl" data-i18n="set_layout_theme">레이아웃 테마</span><select class="ss" id="layoutSel">
         <option value="tower" ${cfg.layout==='tower'?'selected':''}>Tower</option>
         <option value="row" ${cfg.layout==='row'?'selected':''}>Row</option>
         <option value="card" ${cfg.layout==='card'?'selected':''}>Simple</option>
         <option value="observatory" ${cfg.layout==='observatory'?'selected':''}>Observatory</option>
       </select></div>
     </div>
-    <div class="sl">웨이브폼 설정</div>
+    <div class="sl" data-i18n="set_waveform">웨이브폼 설정</div>
     <div class="sgr">
       <div class="srw"><span class="srl">Theme</span><select class="ss" id="wfThemeSel"><option value="3band" ${wfTheme==='3band'?'selected':''}>3 Band</option><option value="rgb" ${wfTheme==='rgb'?'selected':''}>RGB</option><option value="mono" ${wfTheme==='mono'?'selected':''}>Mono</option></select></div>
       <div class="srw"><span class="srl">Sharpness</span><div style="display:flex;align-items:center;gap:6px"><input type="range" id="wfSharpnessSl" min="0" max="1" step="0.05" value="${wfSharpness}" title="0=sharp 1=legacy 3-tap smoothing" style="width:120px"><span id="wfSharpnessLbl" style="font:400 10px var(--mn);color:var(--tx3);width:32px;text-align:right">${wfSharpness.toFixed(2)}</span></div></div>
@@ -80,7 +80,7 @@ function renderSettings(){
         <option value="stripe" ${wfCueStyle==='stripe'?'selected':''}>Stripe — 컬러 띠</option>
       </select></div>
     </div>
-    <div class="sl">라이선스</div>
+    <div class="sl" data-i18n="set_license">라이선스</div>
     <div class="sgr">
       <div class="srw"><span class="srl">상태</span><span id="licStatusBadge" class="srv" style="color:var(--ylw)">TEST BUILD</span></div>
       <div class="srw"><span class="srl">이메일</span><input id="licEmail" type="email" autocomplete="off" placeholder="user@example.com" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:190px;text-align:right"></div>
@@ -88,19 +88,19 @@ function renderSettings(){
       <div class="srw"><span class="srl">관리</span><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="mode-btn" id="btnLicActivate" style="height:24px;padding:0 10px">Activate</button><button class="mode-btn" id="btnLicRefresh" style="height:24px;padding:0 10px">Refresh</button><button class="mode-btn" id="btnLicDeactivate" style="height:24px;padding:0 10px">Deactivate</button></div></div>
       <div class="srw"><span class="srl">메시지</span><span id="licStatusDetail" class="srv" style="max-width:260px;text-align:right;color:var(--tx3)">License system disabled in test builds.</span></div>
     </div>
-    <div class="sl">TCNet 설정</div>
+    <div class="sl" data-i18n="set_tcnet">TCNet 설정</div>
     <div class="sgr">
       <div class="srw"><span class="srl">Node Name <span style="font:400 9px var(--mn);color:var(--tx4)">(%%=자동번호, 최대8자)</span></span><input type="text" value="${cfg.nm}" data-cfg="nm" placeholder="Bridge%%" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:110px;text-align:right" maxlength="9"></div>
       <div class="srw"><span class="srl">TCNet 인터페이스</span><select class="ss" data-cfg="tcnetIface">${ifaceOpts(allIfaces,'tcnetIface')}</select></div>
       <div class="srw"><span class="srl">Frame Rate</span><select class="ss" data-cfg="fps">${['24','25','29.97','30'].map(o=>`<option ${cfg.fps===o?'selected':''}>${o}</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">TCNet 모드</span><select class="ss" data-cfg="tcnetMode">${[['auto','Auto'],['server','Server'],['client','Client']].map(([v,l])=>`<option value="${v}" ${cfg.tcnetMode===v?'selected':''}>${l}</option>`).join('')}</select></div>
     </div>
-    <div class="sl">Pro DJ Link 설정</div>
+    <div class="sl" data-i18n="set_pdjl">Pro DJ Link 설정</div>
     <div class="sgr">
       <div class="srw"><span class="srl">Pro DJ Link 인터페이스</span><select class="ss" data-cfg="pdjlIface">${ifaceOpts(allIfaces,'pdjlIface')}</select></div>
       <div class="srw"><span class="srl">인터페이스 목록</span><button class="mode-btn" id="btnIfaceRefresh" style="height:24px;padding:0 10px">새로고침</button></div>
     </div>
-    <div class="sl">오디오 출력</div>
+    <div class="sl" data-i18n="set_audio_out">오디오 출력</div>
     <div class="sgr">
       <div class="srw"><span class="srl">출력 장치</span><select class="ss" data-cfg="ao" style="max-width:200px"><option value="">시스템 기본</option>${devOpts}</select></div>
       <div class="srw"><span class="srl">출력 채널</span><div style="display:flex;align-items:center;gap:6px"><select class="ss" data-cfg="aoChPair" style="max-width:120px" disabled><option>감지 중…</option></select><span id="aoChAutoLbl" style="font:400 9px var(--mn);color:var(--grn);display:none">AUTO</span></div></div>
@@ -112,7 +112,7 @@ function renderSettings(){
         인터페이스·모드 변경은 실시간 적용됩니다.
       </div>
     </div>
-    <div class="sl mt">SMPTE 타임코드 출력</div>
+    <div class="sl mt" data-i18n="set_smpte">SMPTE 타임코드 출력</div>
     <div class="sgr">
       <div class="srw"><span class="srl">프레임레이트</span><select class="ss" data-cfg="tcFps">${['24','25','29.97','30'].map(o=>`<option value="${o}" ${cfg.tcFps===o?'selected':''}>${o} fps</option>`).join('')}</select></div>
       <div class="srw"><span class="srl">레이턴시 보정</span><div style="display:flex;align-items:center;gap:6px"><input type="number" step="1" min="-5000" max="5000" value="${cfg.tcOffsetMs|0}" data-cfg="tcOffsetMs" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:90px;text-align:right"><span style="font:400 10px var(--mn);color:var(--tx3)">ms (LTC/MTC/Art-Net 공통, + 면 TC 앞섬)</span></div></div>

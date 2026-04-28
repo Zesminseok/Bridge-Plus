@@ -791,10 +791,12 @@ select.ss:focus{border-color:rgba(160,160,255,.4)}
 /* ═════════ LAYOUT VARIANTS CSS (독립 스코프) ═══════════════════ */
 /* ═══════════════════════════════════════════════════════════════ */
 
-/* ═════════ THEME: MONO (E/F/G 레이아웃 공통) — SEMANTIC 토큰만 override ═════════ */
+/* ═════════ THEME: MONO — 모든 레이아웃 공통 글로벌 UI (사이드바/헤더/설정 패널). ═════════
+   덱 영역만 layout 별 다른 스타일링. */
 body[data-layout="row"],
 body[data-layout="tower"],
-body[data-layout="card"]{
+body[data-layout="card"],
+body[data-layout="observatory"]{
   /* SEMANTIC — 의미 토큰 재정의로 전체 앱 색/폰트 전환 */
   --color-bg-app:var(--c-mono-800);
   --color-bg-surface:var(--c-mono-700);
@@ -856,23 +858,27 @@ body[data-layout="card"]{
   --red:var(--color-accent);--pur:var(--color-accent);--org:var(--color-accent);
   --sn:var(--font-body);--mn:var(--font-numeric);--lb:var(--font-label);
 }
-/* 로고 gradient 도 MONO 오렌지로 */
+/* 로고 gradient — MONO 오렌지로 (모든 레이아웃 공통) */
 body[data-layout="row"] .li,
 body[data-layout="tower"] .li,
-body[data-layout="card"] .li{background:linear-gradient(135deg,#a34418,#ff6b2c);color:#fff}
+body[data-layout="card"] .li,
+body[data-layout="observatory"] .li{background:linear-gradient(135deg,#a34418,#ff6b2c);color:#fff}
 /* Sidebar ON 상태 색도 오렌지로 */
 body[data-layout="row"] .sbi.on,
 body[data-layout="tower"] .sbi.on,
-body[data-layout="card"] .sbi.on{background:rgba(255,107,44,.1);color:#ff6b2c}
+body[data-layout="card"] .sbi.on,
+body[data-layout="observatory"] .sbi.on{background:rgba(255,107,44,.1);color:#ff6b2c}
 /* Header/status 도트 */
 body[data-layout="row"] .hdr .dot,
 body[data-layout="tower"] .hdr .dot,
-body[data-layout="card"] .hdr .dot{background:var(--key)}
+body[data-layout="card"] .hdr .dot,
+body[data-layout="observatory"] .hdr .dot{background:var(--key)}
 /* 선택 상자 focus */
 body[data-layout="row"] select.ss:focus,
 body[data-layout="tower"] select.ss:focus,
-body[data-layout="card"] select.ss:focus{border-color:rgba(255,107,44,.4)}
-/* 전역 border-radius 0 — MONO 테마의 핵심 특징 (각진 UI) */
+body[data-layout="card"] select.ss:focus,
+body[data-layout="observatory"] select.ss:focus{border-color:rgba(255,107,44,.4)}
+/* 전역 border-radius 0 — MONO 테마의 핵심 특징 (각진 UI). Observatory 는 deck-row 만 적용 */
 body[data-layout="row"] *,
 body[data-layout="tower"] *,
 body[data-layout="card"] *{border-radius:0!important}
@@ -1706,15 +1712,15 @@ body[data-layout="observatory"] .obs-dk .dshim{display:none!important}
 
 <div class="app-body">
 <aside class="sidebar" id="sidebar">
-  <button class="sbi on" data-t="link" title="DECKS"><span class="sbi-ic material-symbols-outlined">tune</span><span class="sbi-lb">DECKS</span></button>
-  <button class="sbi" data-t="mixer" title="MIXER"><span class="sbi-ic material-symbols-outlined">equalizer</span><span class="sbi-lb">MIXER</span></button>
-  <button class="sbi" data-t="history" title="HISTORY"><span class="sbi-ic material-symbols-outlined">history</span><span class="sbi-lb">HIST</span></button>
-  <button class="sbi" data-t="pdjl" title="PRO DJ LINK"><span class="sbi-ic material-symbols-outlined">device_hub</span><span class="sbi-lb">PDJL</span></button>
-  <button class="sbi" data-t="tcnet" title="TCNet"><span class="sbi-ic material-symbols-outlined">lan</span><span class="sbi-lb">TCNET</span></button>
-  <button class="sbi" data-t="artnet" title="Art-Net (disabled)" style="display:none"><span class="sbi-ic material-symbols-outlined">router</span><span class="sbi-lb">ARTNET</span></button>
-  <button class="sbi" data-t="ablink" title="Ableton Link"><span class="sbi-ic material-symbols-outlined">graphic_eq</span><span class="sbi-lb">LINK</span></button>
+  <button class="sbi on" data-t="link" title="DECKS"><span class="sbi-ic material-symbols-outlined">tune</span><span class="sbi-lb" data-i18n="sb_decks">DECKS</span></button>
+  <button class="sbi" data-t="mixer" title="MIXER"><span class="sbi-ic material-symbols-outlined">equalizer</span><span class="sbi-lb" data-i18n="sb_mixer">MIXER</span></button>
+  <button class="sbi" data-t="history" title="HISTORY"><span class="sbi-ic material-symbols-outlined">history</span><span class="sbi-lb" data-i18n="sb_history">HIST</span></button>
+  <button class="sbi" data-t="pdjl" title="PRO DJ LINK"><span class="sbi-ic material-symbols-outlined">device_hub</span><span class="sbi-lb" data-i18n="sb_pdjl">PDJL</span></button>
+  <button class="sbi" data-t="tcnet" title="TCNet"><span class="sbi-ic material-symbols-outlined">lan</span><span class="sbi-lb" data-i18n="sb_tcnet">TCNET</span></button>
+  <button class="sbi" data-t="artnet" title="Art-Net (disabled)" style="display:none"><span class="sbi-ic material-symbols-outlined">router</span><span class="sbi-lb" data-i18n="sb_artnet">ARTNET</span></button>
+  <button class="sbi" data-t="ablink" title="Ableton Link"><span class="sbi-ic material-symbols-outlined">graphic_eq</span><span class="sbi-lb" data-i18n="sb_link">LINK</span></button>
   <div class="sbi-spacer"></div>
-  <button class="sbi" data-t="settings" title="SETTINGS"><span class="sbi-ic material-symbols-outlined">settings</span><span class="sbi-lb">SET</span></button>
+  <button class="sbi" data-t="settings" title="SETTINGS"><span class="sbi-ic material-symbols-outlined">settings</span><span class="sbi-lb" data-i18n="sb_settings">SET</span></button>
 </aside>
 <div class="content-area">
 
@@ -4164,12 +4170,13 @@ function ensureHWDeck(playerNum){
 
 // ════ Deck rendering ═════════════════════════════════
 function renderDecks(){
-  // DOM rebuild 직전 — 모든 deck paint-cache key 무효화. 캐시가 남아있으면
-  // BPM/타이틀/모델 등 다음 tick 에서 동일 key 라 판단해 새 DOM 에 다시 안 쓰임.
+  // DOM rebuild 직전 — 모든 deck paint-cache key 무효화 + DOM element 캐시도 클리어.
+  // _els 캐시가 옛 DOM 참조를 들고 있으면 새 DOM 에 BPM/타이틀이 안 그려짐.
   for(let i=0;i<DECKS.length;i++){
     const d=DECKS[i]; if(!d) continue;
     d._lastBpmKey=null; d._lastHwlKey=null; d._lastBgKey=null;
     d._lastDidKey=null; d._lastDrawKey=null; d._lastFillKey=null; d._lastMcKey=null;
+    d._els=null; // 옛 DOM 참조 — 다음 tick 이 document.getElementById 로 새로 fetch
   }
   const slots=getUsedSlots();
   const hwS=slots.filter(s=>DECKS[s].type==='hw');
