@@ -129,6 +129,8 @@ const _dborch = require('./bridge/dbserver-orchestrator');
 // TCNet inbound handler → bridge/tcnet-handler.js (Phase 5.5)
 const _tcRx = require('./bridge/tcnet-handler');
 const { registerTCNetNode } = _tcRx;
+// TCNet outbound senders → bridge/tcnet-sender.js (Phase 5.6)
+const _tcTx = require('./bridge/tcnet-sender');
 const _vd = require('./bridge/virtual-deck');
 
 // BLANK_JPEG → bridge/virtual-deck.js (Phase 5.2). 두 모듈에서 중복 로드 방지.
@@ -657,186 +659,22 @@ class BridgeCore {
     console.log(`[TCNet] mode ${prev} → ${mode} NodeType=0x${TC.NTYPE.toString(16)}`);
   }
 
-  /**
-   * Send to broadcast + own IP unicast + 127.0.0.1
-   * (covers Arena on same machine regardless of which interface it binds to)
-   */
-  _send(buf, port){
-    if(!this.running||!this.txSocket) return;
-    // ── Unicast mode: only send to discovered Arena nodes ──
-    if(this.tcnetUnicast && !this.isLocalMode){
-      const sent=new Set();
-      for(const node of Object.values(this.nodes)){
-        if(Date.now()-node.lastSeen > 15000 || sent.has(node.ip)) continue;
-        sent.add(node.ip);
-        try{ this.txSocket.send(buf, 0, buf.length, port, node.ip); }catch(_){}
-      }
-      // allIfaces: also send unicast to each node IP from every NIC
-      if(this.tcnetAllIfaces){
-        for(const iface of getAllInterfaces()){
-          if(iface.internal) continue;
-          for(const ip of sent){
-            try{ this.txSocket.send(buf, 0, buf.length, port, ip); }catch(_){}
-          }
-        }
-      }
-      try{ this.txSocket.send(buf, 0, buf.length, port, '127.0.0.1'); }catch(_){}
-      return;
-    }
-    // ── Broadcast mode (default) ──
-    try{ this.txSocket.send(buf, 0, buf.length, port, this.broadcastAddr); }catch(_){}
-    if(!this.isLocalMode){
-      if(!this.tcnetBindAddr || this.tcnetBindAddr==='auto' || this.tcnetBindAddr==='0.0.0.0'){
-        const sent=new Set([this.broadcastAddr]);
-        for(const iface of getAllInterfaces()){
-          if(!iface.internal && iface.broadcast && !sent.has(iface.broadcast)){
-            sent.add(iface.broadcast);
-            try{ this.txSocket.send(buf, 0, buf.length, port, iface.broadcast); }catch(_){}
-          }
-        }
-      } else if(this.broadcastAddr!=='255.255.255.255'){
-        try{ this.txSocket.send(buf, 0, buf.length, port, '255.255.255.255'); }catch(_){}
-      }
-      // dataSocket (bound 0.0.0.0)로 나머지 인터페이스 브로드캐스트 — DJM이 link-local에서도 TCNet 수신하도록
-      if(this._dataSocket){
-        const mainBC=this.broadcastAddr;
-        for(const iface of getAllInterfaces()){
-          if(!iface.internal && iface.broadcast && iface.broadcast!==mainBC && iface.broadcast!=='127.255.255.255'){
-            try{ this._dataSocket.send(buf, 0, buf.length, port, iface.broadcast); }catch(_){}
-          }
-        }
-      }
-      if(this.localAddr){
-        try{ this.txSocket.send(buf, 0, buf.length, port, this.localAddr); }catch(_){}
-      }
-      try{ this.txSocket.send(buf, 0, buf.length, port, '127.0.0.1'); }catch(_){}
-    }
-  }
-  _uc(buf, port, ip){
-    if(!this.running||!ip||!port) return;
-    // Use dedicated _dataSocket for DATA responses
-    const sock = this._dataSocket || this.txSocket;
-    if(!sock) return;
-    try{ sock.send(buf, 0, buf.length, port, ip); }catch(_){}
-  }
-
-  /** Unicast to all known Arena nodes at the given port. */
-  _sendToArenas(buf, port){
-    if(!this.running||!this.txSocket) return;
-    for(const node of Object.values(this.nodes)){
-      if(Date.now()-node.lastSeen > 15000) continue;
-      try{ this.txSocket.send(buf, 0, buf.length, port, node.ip); }catch(_){}
-    }
-  }
-
-  /** Send to each Arena's listener port (lPort from OptIn body[2-3]). */
-  _sendToArenasLPort(buf){
-    if(!this.running||!this.txSocket) return;
-    for(const node of Object.values(this.nodes)){
-      if(Date.now()-node.lastSeen > 15000) continue;
-      if(!node.lPort) continue;
-      try{ this.txSocket.send(buf, 0, buf.length, node.lPort, node.ip); }catch(_){}
-      if(!this.isLocalMode){try{ this.txSocket.send(buf, 0, buf.length, node.lPort, '127.0.0.1'); }catch(_){}}
-    }
-  }
-
-  /** Send DATA packets via dedicated _dataSocket to Arena lPort. */
-  _sendDataToArenas(buf){
-    const sock = this._dataSocket || this.txSocket;
-    if(!this.running || !sock) return;
-    for(const node of Object.values(this.nodes)){
-      if(Date.now()-node.lastSeen > 15000) continue;
-      if(!node.lPort) continue;
-      try{ sock.send(buf, 0, buf.length, node.lPort, node.ip); }catch(_){}
-      if(!this.isLocalMode){try{ sock.send(buf, 0, buf.length, node.lPort, '127.0.0.1'); }catch(_){}}
-    }
-    // Also broadcast on DATA port as fallback
-    try{ sock.send(buf, 0, buf.length, TC.P_DATA, this.broadcastAddr); }catch(_){}
-  }
-
-  /** Send LowResArtwork (0xCC) packets for a layer. Splits JPEG into MTU-safe chunks. */
-  _sendArtwork(layerIdx, jpegBuf){
-    if(!jpegBuf || !this.running) return;
-    const packets = mkLowResArtwork(layerIdx, jpegBuf);
-    for(const pkt of packets){
-      this._sendDataToArenas(pkt);
-    }
-  }
-
-  /** Re-send all stored artwork to all connected nodes.
-   *  Called when a new node joins (e.g., Arena reconnects) to ensure artwork is up-to-date. */
-  _resendAllArtwork(){
-    if(!this.running) return;
-    let count = 0;
-    for(let i = 0; i < 8; i++){
-      const buf = this._virtualArt[i];
-      if(buf && buf.length > 100){  // skip BLANK_JPEG
-        // Stagger sends to avoid UDP packet loss (50ms between layers)
-        setTimeout(()=>this._sendArtwork(i + 1, buf), count * 50);
-        count++;
-      }
-    }
-    if(count > 0) console.log(`[TCNet-ART] resending ${count} artwork(s) to new node`);
-  }
-
-  /**
-   * DATA cycle (24 packets): Phase 1 (0-7) MetricsData per layer,
-   * Phase 2 (8-15) MetaData per layer, Phase 3 (16-23) MetricsData again.
-   * Empty layers are skipped; MetaData is cached by trackId+names.
-   */
-  _sendDataCycle(){
-    if(!this.running) return;
-
-    const idx = this._dataLayerIdx;
-    let pkt;
-
-    if(idx < 8){
-      const layerIdx = idx + 1, li = idx;
-      const layerData = this.layers[li] || null;
-      if(!layerData){this._dataLayerIdx=(idx+1)%24;return;}
-      const faderVal = this.faders ? (this.faders[li] || 0) : 0;
-      pkt = mkDataMetrics(layerIdx, layerData, faderVal);
-    } else if(idx < 16){
-      const layerIdx = (idx - 8) + 1, li = layerIdx - 1;
-      const layerData = this.layers[li] || null;
-      if(!layerData){this._dataLayerIdx=(idx+1)%24;return;}
-      // cache MetaData packet by track identity; rebuild only when track changes
-      const metaKey = `${layerData.trackId||0}_${layerData.trackName||''}_${layerData.artistName||''}`;
-      if(this._metaCache && this._metaCache[li] && this._metaCache[li].key === metaKey){
-        pkt = this._metaCache[li].pkt;
-      } else {
-        pkt = mkDataMeta(layerIdx, layerData);
-        if(!this._metaCache) this._metaCache = new Array(8).fill(null);
-        this._metaCache[li] = {key:metaKey, pkt};
-      }
-    } else {
-      const layerIdx = (idx - 16) + 1, li = layerIdx - 1;
-      const layerData = this.layers[li] || null;
-      if(!layerData){this._dataLayerIdx=(idx+1)%24;return;}
-      const faderVal = this.faders ? (this.faders[li] || 0) : 0;
-      pkt = mkDataMetrics(layerIdx, layerData, faderVal);
-    }
-
-    // Send via dedicated _dataSocket
-    this._sendDataToArenas(pkt);
-
-    this._dataLayerIdx = (idx + 1) % 24;
-    this.packetCount++;
-  }
-
-  _sendOptIn(){
-    const n = Math.max(1, Object.keys(this.nodes).length + 1);
-    const pkt = mkOptIn(this.listenerPort, Math.floor((Date.now()-this.startTime)/1000), n);
-    this._send(pkt, TC.P_BC);
-    this._sendToArenas(pkt, TC.P_BC);
-    this._sendToArenasLPort(pkt);
-  }
-
-  _sendStatus(){
-    const pkt = mkStatus(this.listenerPort, this.devices, this.layers, this.faders, this.hwMode);
-    this._send(pkt, TC.P_BC);
-    this._sendToArenas(pkt, TC.P_BC);
-    this._sendToArenasLPort(pkt);
+  // TCNet outbound senders → bridge/tcnet-sender.js (Phase 5.6). 1줄 wrapper.
+  _send(buf, port){ return _tcTx.send(this, this._tcDeps(), buf, port); }
+  _uc(buf, port, ip){ return _tcTx.uc(this, buf, port, ip); }
+  _sendToArenas(buf, port){ return _tcTx.sendToArenas(this, buf, port); }
+  _sendToArenasLPort(buf){ return _tcTx.sendToArenasLPort(this, buf); }
+  _sendDataToArenas(buf){ return _tcTx.sendDataToArenas(this, this._tcDeps(), buf); }
+  _sendArtwork(layerIdx, jpegBuf){ return _tcTx.sendArtwork(this, this._tcDeps(), layerIdx, jpegBuf); }
+  _resendAllArtwork(){ return _tcTx.resendAllArtwork(this, this._tcDeps()); }
+  _sendDataCycle(){ return _tcTx.sendDataCycle(this, this._tcDeps()); }
+  _sendOptIn(){ return _tcTx.sendOptIn(this, this._tcDeps()); }
+  _sendStatus(){ return _tcTx.sendStatus(this, this._tcDeps()); }
+  // shared deps object — 매번 새로 만드는 객체 할당 회피 (lazy memoize).
+  _tcDeps(){
+    return this.__tcDeps || (this.__tcDeps = {
+      TC, mkLowResArtwork, mkDataMeta, mkDataMetrics, mkOptIn, mkStatus, getAllInterfaces,
+    });
   }
 
   // ── TCNet inbound handler → bridge/tcnet-handler.js (Phase 5.5). 1줄 wrapper.

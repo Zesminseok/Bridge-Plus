@@ -1026,6 +1026,30 @@ test('bridge-core: _handleTCNetMsg 는 wrapper (Phase 5.5)', () => {
   assert.ok(!wrapper.includes('TC.DT_MIXER'), '_handleTCNetMsg wrapper 안에 inline DT_MIXER 분기가 남음');
 });
 
+// ─── Phase 5.6 — TCNet outbound senders ──────────────────────────────
+
+test('tcnet-sender: 10 함수 + NODE_FRESH_MS export', () => {
+  const mod = require(path.join(__dirname, '..', 'bridge', 'tcnet-sender'));
+  ['send','uc','sendToArenas','sendToArenasLPort','sendDataToArenas',
+   'sendArtwork','resendAllArtwork','sendDataCycle','sendOptIn','sendStatus'].forEach(n => {
+    assert.strictEqual(typeof mod[n], 'function', `missing helper: ${n}`);
+  });
+  assert.strictEqual(mod.NODE_FRESH_MS, 15000);
+});
+
+test('bridge-core: TCNet send 10 메서드는 wrapper (Phase 5.6)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
+  for(const fn of ['send','sendToArenas','sendToArenasLPort','sendDataToArenas',
+                   'sendArtwork','resendAllArtwork','sendDataCycle','sendOptIn','sendStatus']){
+    assert.ok(src.includes(`return _tcTx.${fn}(`), `bridge-core 에 _tcTx.${fn} wrapper 누락`);
+  }
+  // _tcDeps lazy memoize
+  assert.match(src, /this\.__tcDeps \|\| \(this\.__tcDeps = \{/);
+  // 회귀 가드 — Object.values\(this\.nodes\) 직접 순회가 본문에 남지 않았는지
+  assert.ok(!/_send\(buf, port\)\{[\s\S]{0,400}for\(const node of Object\.values\(this\.nodes\)\)/.test(src),
+    'bridge-core 의 _send 본문에 inline node 순회가 남음');
+});
+
 // ─── 보안 점검 회귀 테스트 (Codex audit findings) ──────────────────────
 
 test('SEC: tcnet-handler — cap + TTL eviction 으로 무제한 노드 등록 방지', () => {
