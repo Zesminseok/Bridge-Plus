@@ -46,6 +46,22 @@ docs/
 # 외부 spec PDF / 참고자료
 *.pdf
 
+# 내부 빌드/캡처 분석 산출물
+.codex-artifacts/
+
+# 개발용 셋업 가이드 (사용자는 README 만)
+SETUP-GUIDE.md
+AGENTS.md
+CLAUDE.md
+
+# pcap 분석 / 캡처 도구 (reverse-engineering 방법론 노출)
+tools/pcap-replay.js
+tools/capture-*.sh
+tools/cleanup-*.sh
+tools/cleanup-*.bat
+tools/build-win-*.sh
+tools/electron_analyze_*.js
+
 # Development screenshots / scratch images (root + docs)
 /grid-*.png
 /observatory-*.png
