@@ -956,6 +956,32 @@ test('bridge-core: orchestrator 진입점 4 메서드는 wrapper (Phase 5.4)', (
   assert.ok(!/defer\(180, \(\)=>this\._dbserverWaveform\(ip/.test(src), 'bridge-core 에 defer 호출이 남음');
 });
 
+// ─── BridgeCore split — Phase 5.5 TCNet inbound handler ──────────────
+
+test('tcnet-handler: handleTCNetMsg export 단일 함수', () => {
+  const mod = require(path.join(__dirname, '..', 'bridge', 'tcnet-handler'));
+  assert.strictEqual(typeof mod.handleTCNetMsg, 'function');
+  // self-defense 가드 보존 — magic 'TCN' / Node ID / BRIDGE prefix / own port
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'tcnet-handler.js'), 'utf8');
+  assert.match(src, /msg\[4\]!==0x54\|\|msg\[5\]!==0x43\|\|msg\[6\]!==0x4E/);
+  assert.match(src, /msg\[0\]===TC\.NID\[0\] && msg\[1\]===TC\.NID\[1\]/);
+  assert.match(src, /name\.toUpperCase\(\)\.startsWith\('BRIDGE'\)/);
+  assert.match(src, /core\._ownPorts && core\._ownPorts\.has\(rinfo\.port\)/);
+});
+
+test('bridge-core: _handleTCNetMsg 는 wrapper (Phase 5.5)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
+  assert.match(src, /_handleTCNetMsg\(msg, rinfo, label\)\{[\s\S]*?return _tcRx\.handleTCNetMsg\(this, \{ TC, mkDataMeta, mkDataMetrics, mkAppResp \}, msg, rinfo, label\)/);
+  // 회귀 가드 — _handleTCNetMsg 본체가 다시 inline 으로 돌아오지 않았는지.
+  // (별도의 _startListenerPortRx 안 inline 핸들러는 다른 코드 경로 — 변경 안 함)
+  const start = src.indexOf('_handleTCNetMsg(msg, rinfo, label)');
+  const end = src.indexOf('\n  ', start + 1);
+  const wrapper = src.slice(start, end > start ? end : start + 200);
+  // wrapper 길이가 한 줄짜리 — TC.OPTIN 같은 inline 디스패치 키워드 없어야 함
+  assert.ok(!wrapper.includes('TC.OPTIN'), '_handleTCNetMsg wrapper 안에 inline TCNet OPTIN 분기가 남음');
+  assert.ok(!wrapper.includes('TC.DT_MIXER'), '_handleTCNetMsg wrapper 안에 inline DT_MIXER 분기가 남음');
+});
+
 // ─── pcm-decode worker error drain ───────────────────────────────────────
 
 test('pcm-decode: worker fatal error drains pending jobs', () => {

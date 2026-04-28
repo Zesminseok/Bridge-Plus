@@ -1,12 +1,12 @@
 # Graph Report - /Users/zes2021/Documents/claude_projects/bridge-clone  (2026-04-29)
 
 ## Corpus Check
-- 59 files · ~350,350 words
+- 60 files · ~350,930 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 967 nodes · 1435 edges · 68 communities detected
-- Extraction: 82% EXTRACTED · 18% INFERRED · 0% AMBIGUOUS · INFERRED: 259 edges (avg confidence: 0.8)
+- 969 nodes · 1441 edges · 67 communities detected
+- Extraction: 82% EXTRACTED · 18% INFERRED · 0% AMBIGUOUS · INFERRED: 265 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -77,11 +77,10 @@
 - [[_COMMUNITY_Community 64|Community 64]]
 - [[_COMMUNITY_Community 65|Community 65]]
 - [[_COMMUNITY_Community 66|Community 66]]
-- [[_COMMUNITY_Community 67|Community 67]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `BridgeCore` - 84 edges
-2. `push()` - 51 edges
+2. `push()` - 52 edges
 3. `TCNet Link Specification V3.5.1B (02/03/2022)` - 33 edges
 4. `ArtnetEngine` - 26 edges
 5. `Player 1 Row — Daft Punk — Children Of The Night` - 17 edges
@@ -123,68 +122,68 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.05
-Nodes (42): analyzeBPM(), detectAudioStart(), _dbgLog(), _resolveDbgLogPath(), _dbgLog(), dbserverArtwork(), dbserverBeatGrid(), dbserverCuePoints() (+34 more)
+Cohesion: 0.03
+Nodes (28): nxs2BeatCountToMs(), shouldKeepPredictedBeatAnchor(), BridgeCore, _dbgLog(), _resolveDbgLogPath(), parseDbRequest(), test(), _isIPv4() (+20 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.03
-Nodes (23): gcPlayers(), getActualPitch(), getFaderPitch(), getVuPeak(), getVuPeakNorm(), handleBeatPacket(), handleDJMStatusPacket(), handleKeepalivePacket() (+15 more)
+Cohesion: 0.06
+Nodes (38): analyzeBPM(), detectAudioStart(), _findByNameUnix(), _findByNameWin(), _findByPortUnix(), _findByPortWin(), isProtected(), _killUnix() (+30 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.06
-Nodes (13): BridgeCore, detectBroadcastFor(), getAllInterfaces(), _getHWPortMap(), pdjlBroadcastTargets(), _runNetSetup(), findVirtualArt(), handleVDbRequest() (+5 more)
+Cohesion: 0.03
+Nodes (23): gcPlayers(), getActualPitch(), getFaderPitch(), getVuPeak(), getVuPeakNorm(), handleBeatPacket(), handleDJMStatusPacket(), handleKeepalivePacket() (+15 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
 Nodes (57): dbserver artwork TCP 12523, DJM 0x39 EQ byte offset calibration (live test), EQ knob arc (12 o'clock Boost/Cut), IPC channels (bridge:wfpreview, bridge:albumart, bridge:requestArtwork, bridge:tcmixervu), TCNet MixerData DataType150 reception, v0.6.0 CDJ waveform preview + artwork, v0.7.0 BRIDGE+ Onyx Studio design, v0.8.0 DJM-900NXS2 Mixer Parsing + TCNet VU (+49 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.05
-Nodes (45): dysentery (Java by Deep-Symmetry), prolink-connect (JS by EvanPurkhiser), Pioneer DJ Pro DJ Link Bridge, Showkontrol / Beatkontrol (TC Supply), node-tcnet library (TypeScript TCNet impl), Rationale: documented TCNet protocol over reverse-engineered Pro DJ Link, node-tcnet README, dev@eiglive.com contact (+37 more)
+Cohesion: 0.07
+Nodes (12): ArtnetEngine, createWindow(), doQuit(), getLocalIp(), LinkBridge, loadBounds(), saveBounds(), sendArtTimeCode() (+4 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.07
-Nodes (21): nxs2BeatCountToMs(), shouldKeepPredictedBeatAnchor(), test(), _isIPv4(), buildBridgeNotifyPacket(), buildDbServerKeepalivePacket(), buildDjmSubscribePacket(), buildPdjlBridgeClaimPacket() (+13 more)
+Cohesion: 0.05
+Nodes (45): dysentery (Java by Deep-Symmetry), prolink-connect (JS by EvanPurkhiser), Pioneer DJ Pro DJ Link Bridge, Showkontrol / Beatkontrol (TC Supply), node-tcnet library (TypeScript TCNet impl), Rationale: documented TCNet protocol over reverse-engineered Pro DJ Link, node-tcnet README, dev@eiglive.com contact (+37 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.06
 Nodes (38): AFTER · 리파인 Label, Artist — Title: Daft Punk — Children Of The Night, Artwork Tile — HOMEWORK (orange thumbnail), BEFORE · 현재 Label, BPM Display 128.00 BPM (orange pill), BPM Meta — 124.00 · +3.23% · 8A, CDJ-3000 Model Tag, EQ Knobs HI/MID/LO (three stacked) (+30 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.09
-Nodes (11): ArtnetEngine, createWindow(), doQuit(), getLocalIp(), loadBounds(), saveBounds(), sendArtTimeCode(), sendInterfaces() (+3 more)
-
-### Community 8 - "Community 8"
 Cohesion: 0.1
 Nodes (22): applyDom(), detectSystemLang(), getSavedPref(), setLang(), t(), bind(), paintStatus(), refresh() (+14 more)
 
-### Community 9 - "Community 9"
+### Community 8 - "Community 8"
 Cohesion: 0.12
 Nodes (6): OverviewGL, WaveformGL, _wglIsPackedWaveform(), _wglPoolRow(), _wglWaveformLength(), _wglWritePoint()
 
-### Community 10 - "Community 10"
+### Community 9 - "Community 9"
 Cohesion: 0.12
 Nodes (20): clamp01(), dot(), mix(), monoColor(), rgbTraceColor(), sat(), bandHeights(), clamp() (+12 more)
 
-### Community 11 - "Community 11"
+### Community 10 - "Community 10"
 Cohesion: 0.1
 Nodes (25): AFTER card (리파인된), Artist meta: Daft Punk · HOMEWORK (11px), BEFORE card (before state), BPM block 128.00 · pitch +3.23% · 8A key, CDJ-3000 device tag, Header: F · CARD · 히어로 아트 360px, Header actions: 패딩 통일 · pnum 확대 · 타이틀 위치 swap, Hero artwork — orange gradient 360px (+17 more)
 
-### Community 12 - "Community 12"
+### Community 11 - "Community 11"
 Cohesion: 0.09
 Nodes (23): confidence_score=0.86, Deck card — PLAYER 01 CDJ-3000X orange hero, Deck1 vertical channel fader (FADER 100), Deck1 header: PLAYER 01 · CDJ-3000X · PLAY/SYNC/MASTER/ON AIR badges, Deck1 channel strip knobs: TRIM / HI / MID / LOW / COLOR, Deck1 meta row: REM 04:10 · CUE 0:32.1 · LOOP — · SLIP OFF, Deck1 timecode 01:24:18 · BPM 128.00 · +0.0% · 128.00 orig · SA, Deck1 track title: Children Of The Night — Daft Punk · Homework (Remastered) (+15 more)
 
-### Community 13 - "Community 13"
+### Community 12 - "Community 12"
 Cohesion: 0.1
 Nodes (22): BRIDGE+ PRO DJ LINK application (idle state), Korean prompt banner: 'START를 눌러 TCNet을 시작하세요', Hint text: 'CDJ 연결 시 자동 감지됩니다' (auto-detect on CDJ connect), Dark theme with orange accent color palette, DECK MODE toggle: VIRTUAL | HARDWARE (HARDWARE selected), Empty central deck/content canvas (no decks rendered, pre-START), Top header with B+ logo, BRIDGE+ title, PRO DJ LINK subtitle, Application idle/pre-start state (TCNet not yet started) (+14 more)
 
+### Community 13 - "Community 13"
+Cohesion: 0.18
+Nodes (12): dbArg4(), dbBinary(), dbBuildArtResponse(), dbBuildMenuItem(), dbBuildMsg(), dbNum1(), dbNum2(), dbNum4() (+4 more)
+
 ### Community 14 - "Community 14"
-Cohesion: 0.11
-Nodes (21): Deck A BPM 128.00, Deck B BPM 119.00, Dark theme with per-deck accent colors, Deck A row (orange), Deck B row (blue), Header bar — 'ROW · 가로 풀폭', Layout pattern — horizontal full-width deck rows, Deck A mini controls cluster (+13 more)
+Cohesion: 0.2
+Nodes (15): buildHdr(), mkAppResp(), mkDataMeta(), mkDataMetrics(), mkLowResArtwork(), mkMetadataResp(), mkMixerData(), mkNotification() (+7 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.22
-Nodes (14): buildHdr(), mkAppResp(), mkDataMeta(), mkDataMetrics(), mkLowResArtwork(), mkMetadataResp(), mkMixerData(), mkNotification() (+6 more)
+Cohesion: 0.11
+Nodes (21): Deck A BPM 128.00, Deck B BPM 119.00, Dark theme with per-deck accent colors, Deck A row (orange), Deck B row (blue), Header bar — 'ROW · 가로 풀폭', Layout pattern — horizontal full-width deck rows, Deck A mini controls cluster (+13 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.16
@@ -227,63 +226,63 @@ Cohesion: 0.41
 Nodes (11): _mxBuildBody(), _mxClearCache(), _mxDetectProfile(), _mxEl(), _mxEnsureAuxKnobs(), _mxKnobSVG(), _mxKnobUpdate(), _mxMountKnob() (+3 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.35
-Nodes (11): _findByNameUnix(), _findByNameWin(), _findByPortUnix(), _findByPortWin(), isProtected(), _killUnix(), _killWin(), _pidNameUnix() (+3 more)
-
-### Community 27 - "Community 27"
 Cohesion: 0.18
 Nodes (11): Blank/white render - possible rendering failure, BPM readout (inferred), Deck module (inferred), DJ Bridge UI context, Horizontal row-oriented deck layout, refine-row.png screenshot (appears blank/white), Row layout variant (refinement), Phase meter (inferred) (+3 more)
 
-### Community 28 - "Community 28"
-Cohesion: 0.29
-Nodes (1): LinkBridge
+### Community 27 - "Community 27"
+Cohesion: 0.38
+Nodes (9): buildBridgeNotifyPacket(), buildDbServerKeepalivePacket(), buildDjmSubscribePacket(), buildPdjlBridgeClaimPacket(), buildPdjlBridgeHelloPacket(), buildPdjlBridgeKeepalivePacket(), pdjlBridgeAnnounceId(), pdjlBridgeName() (+1 more)
 
-### Community 29 - "Community 29"
+### Community 28 - "Community 28"
 Cohesion: 0.33
 Nodes (5): _histAddEntry(), _histFinalizeOnAir(), _histOnAirChange(), _histOnNewTrack(), renderHistory()
 
-### Community 30 - "Community 30"
+### Community 29 - "Community 29"
 Cohesion: 0.36
 Nodes (8): analyze(), _bq(), buildHtml(), decodeWav(), _mkBQ(), _mkHP(), rgbTraceColor(), smoothEnv()
 
-### Community 31 - "Community 31"
+### Community 30 - "Community 30"
 Cohesion: 0.25
 Nodes (1): FakeBridgeCore
 
-### Community 32 - "Community 32"
+### Community 31 - "Community 31"
 Cohesion: 0.52
 Nodes (6): analyzeWf(), _bq(), _mkBQ(), _mkHP(), movingAverage(), smoothEnv()
 
-### Community 33 - "Community 33"
+### Community 32 - "Community 32"
 Cohesion: 0.57
 Nodes (6): _findAIFFId3(), _id3ApplyTextFrame(), _id3DecodeText(), _id3DecodeTxxx(), _id3ParseBpm(), readID3Tags()
 
-### Community 34 - "Community 34"
+### Community 33 - "Community 33"
 Cohesion: 0.48
 Nodes (1): LTCProcessor
 
-### Community 35 - "Community 35"
+### Community 34 - "Community 34"
 Cohesion: 0.29
 Nodes (7): Bottom transport/status bar spanning full width — fine tick-marks timeline, small status chips/icons, muted dark background, 2x2 deck grid (4 decks): 'Children Of The Night', 'Around The World (Guam Bapt…)', 'Technologic', 'Something About Us' — each with track title, deck meta row, waveform overview with amber/teal/green/purple accents, large monospaced timecode (e.g. 01:24:18, 00:48:04, 00:16:00, 00:00:00), BPM readout (128/125/…), knob/level indicators cluster, Right-side Mixer column with vertical channel VU bars (6 channels) in green/amber gradient, 'Crossfade' label with horizontal slider, 'Session Log' list of labeled events/tracks, Atelier — Editorial Studio Dark full-page layout (dark warm-neutral theme, brand 'Bridge' wordmark top-left, top utility bar with Warehouse/Room 01 session label and tempo/beat indicators), Color palette: deep charcoal/near-black background (#0f0d0b-ish), warm ivory text, amber/gold primary accent, secondary per-deck hue (teal, green, violet) — editorial studio dark aesthetic, Large editorial timecode typography — monospace HH:MM:SS, amber/gold tint on black, dominant visual anchor of each deck card, Waveform style: full-width per-deck mini overview with colored frequency bands (warm amber/orange for deck1, cyan-teal for deck2, green for deck3, violet/purple for deck4) on near-black panel with subtle grid
 
-### Community 36 - "Community 36"
+### Community 35 - "Community 35"
 Cohesion: 0.6
 Nodes (3): deactivate(), getStatus(), refresh()
 
-### Community 37 - "Community 37"
+### Community 36 - "Community 36"
 Cohesion: 0.4
 Nodes (5): BridgeClone class (TCNet sender), Electron bootstrap (main.js + preload.js), prolink-connect integration (Stage 3), renderer/index.html GUI scaffold, Resolume Arena Pioneer DJ TCNet reception
 
-### Community 38 - "Community 38"
+### Community 37 - "Community 37"
 Cohesion: 0.4
 Nodes (5): Card layout variant, Matrix/Row layout variant, Tower layout variant, Refine Preview - spacing/alignment/font/title compare, BRIDGE+ Layout Variants (Tower/Card/Matrix)
 
-### Community 39 - "Community 39"
+### Community 38 - "Community 38"
 Cohesion: 0.67
 Nodes (2): _packColorHeightPtsForIpc(), _packWaveformForIpc()
 
-### Community 40 - "Community 40"
+### Community 39 - "Community 39"
 Cohesion: 0.5
+Nodes (0): 
+
+### Community 40 - "Community 40"
+Cohesion: 0.67
 Nodes (0): 
 
 ### Community 41 - "Community 41"
@@ -292,11 +291,11 @@ Nodes (0):
 
 ### Community 42 - "Community 42"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (3): 3x2 Deck Grid Layout, Proposal A - Compact Pro, 56px Icon Sidebar (LIVE/MIX/PDJL/TCNET/ARTNET/LINK)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.67
-Nodes (3): 3x2 Deck Grid Layout, Proposal A - Compact Pro, 56px Icon Sidebar (LIVE/MIX/PDJL/TCNET/ARTNET/LINK)
+Cohesion: 1.0
+Nodes (0): 
 
 ### Community 44 - "Community 44"
 Cohesion: 1.0
@@ -340,19 +339,19 @@ Nodes (0):
 
 ### Community 54 - "Community 54"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (2): Proposal C - Minimal Tactical (light theme), 3-column body layout (260/flex/320)
 
 ### Community 55 - "Community 55"
 Cohesion: 1.0
-Nodes (2): Proposal C - Minimal Tactical (light theme), 3-column body layout (260/flex/320)
+Nodes (2): Information priority: Timecode > Waveform > Track ID > BPM > others, Proposal G - Timecode First (Monolith) information hierarchy
 
 ### Community 56 - "Community 56"
 Cohesion: 1.0
-Nodes (2): Information priority: Timecode > Waveform > Track ID > BPM > others, Proposal G - Timecode First (Monolith) information hierarchy
+Nodes (2): Preview Develop - G.ROW + Waveform 2-band + Beat Ring + Knob Arc, Preview v2 - TOWER/CARD/ROW developed with channel strip + fader
 
 ### Community 57 - "Community 57"
 Cohesion: 1.0
-Nodes (2): Preview Develop - G.ROW + Waveform 2-band + Beat Ring + Knob Arc, Preview v2 - TOWER/CARD/ROW developed with channel strip + fader
+Nodes (0): 
 
 ### Community 58 - "Community 58"
 Cohesion: 1.0
@@ -368,98 +367,94 @@ Nodes (0):
 
 ### Community 61 - "Community 61"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): v0.5.0 Initial release
 
 ### Community 62 - "Community 62"
 Cohesion: 1.0
-Nodes (1): v0.5.0 Initial release
+Nodes (1): graphify workflow rules
 
 ### Community 63 - "Community 63"
 Cohesion: 1.0
-Nodes (1): graphify workflow rules
+Nodes (1): PDJL key facts (ports, broadcast, header, BPM encoding)
 
 ### Community 64 - "Community 64"
 Cohesion: 1.0
-Nodes (1): PDJL key facts (ports, broadcast, header, BPM encoding)
+Nodes (1): Default Album Artwork Placeholder (Vinyl Disc)
 
 ### Community 65 - "Community 65"
 Cohesion: 1.0
-Nodes (1): Default Album Artwork Placeholder (Vinyl Disc)
-
-### Community 66 - "Community 66"
-Cohesion: 1.0
 Nodes (1): Default Album Art (Vinyl/CD Placeholder)
 
-### Community 67 - "Community 67"
+### Community 66 - "Community 66"
 Cohesion: 1.0
 Nodes (1): Default Album Art (Vinyl Record Placeholder)
 
 ## Knowledge Gaps
 - **243 isolated node(s):** `EQ knob arc (12 o'clock Boost/Cut)`, `v0.7.0 BRIDGE+ Onyx Studio design`, `v0.5.0 Initial release`, `renderer/index.html GUI scaffold`, `prolink-connect integration (Stage 3)` (+238 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 44`** (2 nodes): `jsString()`, `electron_analyze_waveform.js`
+- **Thin community `Community 43`** (2 nodes): `jsString()`, `electron_analyze_waveform.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 45`** (2 nodes): `test()`, `dbserver.test.js`
+- **Thin community `Community 44`** (2 nodes): `test()`, `dbserver.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 46`** (2 nodes): `test()`, `pdjl-packets.test.js`
+- **Thin community `Community 45`** (2 nodes): `test()`, `pdjl-packets.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 47`** (2 nodes): `test()`, `pdjl-parser.test.js`
+- **Thin community `Community 46`** (2 nodes): `test()`, `pdjl-parser.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 48`** (2 nodes): `test()`, `license-service.test.js`
+- **Thin community `Community 47`** (2 nodes): `test()`, `license-service.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 49`** (2 nodes): `test()`, `metadata-bpm.test.js`
+- **Thin community `Community 48`** (2 nodes): `test()`, `metadata-bpm.test.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 50`** (2 nodes): `registerLicenseIpc()`, `ipc-license.js`
+- **Thin community `Community 49`** (2 nodes): `registerLicenseIpc()`, `ipc-license.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 51`** (2 nodes): `registerLinkIpc()`, `ipc-link.js`
+- **Thin community `Community 50`** (2 nodes): `registerLinkIpc()`, `ipc-link.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 52`** (2 nodes): `registerBridgeIfaceIpc()`, `ipc-bridge-iface.js`
+- **Thin community `Community 51`** (2 nodes): `registerBridgeIfaceIpc()`, `ipc-bridge-iface.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 53`** (2 nodes): `registerAppIpc()`, `ipc-app.js`
+- **Thin community `Community 52`** (2 nodes): `registerAppIpc()`, `ipc-app.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 54`** (2 nodes): `registerBridgeSimpleIpc()`, `ipc-bridge-simple.js`
+- **Thin community `Community 53`** (2 nodes): `registerBridgeSimpleIpc()`, `ipc-bridge-simple.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 55`** (2 nodes): `Proposal C - Minimal Tactical (light theme)`, `3-column body layout (260/flex/320)`
+- **Thin community `Community 54`** (2 nodes): `Proposal C - Minimal Tactical (light theme)`, `3-column body layout (260/flex/320)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 56`** (2 nodes): `Information priority: Timecode > Waveform > Track ID > BPM > others`, `Proposal G - Timecode First (Monolith) information hierarchy`
+- **Thin community `Community 55`** (2 nodes): `Information priority: Timecode > Waveform > Track ID > BPM > others`, `Proposal G - Timecode First (Monolith) information hierarchy`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 57`** (2 nodes): `Preview Develop - G.ROW + Waveform 2-band + Beat Ring + Knob Arc`, `Preview v2 - TOWER/CARD/ROW developed with channel strip + fader`
+- **Thin community `Community 56`** (2 nodes): `Preview Develop - G.ROW + Waveform 2-band + Beat Ring + Knob Arc`, `Preview v2 - TOWER/CARD/ROW developed with channel strip + fader`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 58`** (1 nodes): `pcm-worker.js`
+- **Thin community `Community 57`** (1 nodes): `pcm-worker.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 59`** (1 nodes): `gen-test-tones.js`
+- **Thin community `Community 58`** (1 nodes): `gen-test-tones.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 60`** (1 nodes): `rename-stub.js`
+- **Thin community `Community 59`** (1 nodes): `rename-stub.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 61`** (1 nodes): `gen-sweep-clean.js`
+- **Thin community `Community 60`** (1 nodes): `gen-sweep-clean.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (1 nodes): `v0.5.0 Initial release`
+- **Thin community `Community 61`** (1 nodes): `v0.5.0 Initial release`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (1 nodes): `graphify workflow rules`
+- **Thin community `Community 62`** (1 nodes): `graphify workflow rules`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 64`** (1 nodes): `PDJL key facts (ports, broadcast, header, BPM encoding)`
+- **Thin community `Community 63`** (1 nodes): `PDJL key facts (ports, broadcast, header, BPM encoding)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 65`** (1 nodes): `Default Album Artwork Placeholder (Vinyl Disc)`
+- **Thin community `Community 64`** (1 nodes): `Default Album Artwork Placeholder (Vinyl Disc)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 66`** (1 nodes): `Default Album Art (Vinyl/CD Placeholder)`
+- **Thin community `Community 65`** (1 nodes): `Default Album Art (Vinyl/CD Placeholder)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 67`** (1 nodes): `Default Album Art (Vinyl Record Placeholder)`
+- **Thin community `Community 66`** (1 nodes): `Default Album Art (Vinyl Record Placeholder)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `push()` connect `Community 0` to `Community 2`, `Community 5`, `Community 7`, `Community 8`, `Community 15`, `Community 26`, `Community 29`, `Community 30`?**
-  _High betweenness centrality (0.104) - this node is a cross-community bridge._
-- **Why does `BridgeCore` connect `Community 2` to `Community 0`, `Community 5`, `Community 15`?**
-  _High betweenness centrality (0.071) - this node is a cross-community bridge._
-- **Why does `DbServerPool` connect `Community 0` to `Community 1`?**
+- **Why does `push()` connect `Community 1` to `Community 0`, `Community 4`, `Community 7`, `Community 13`, `Community 14`, `Community 28`, `Community 29`?**
+  _High betweenness centrality (0.106) - this node is a cross-community bridge._
+- **Why does `BridgeCore` connect `Community 0` to `Community 1`, `Community 13`, `Community 14`?**
+  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+- **Why does `DbServerPool` connect `Community 13` to `Community 1`, `Community 2`?**
   _High betweenness centrality (0.061) - this node is a cross-community bridge._
-- **Are the 50 inferred relationships involving `push()` (e.g. with `_dbgLog()` and `._handleTCNetMsg()`) actually correct?**
-  _`push()` has 50 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 51 inferred relationships involving `push()` (e.g. with `_dbgLog()` and `._startPDJLRx()`) actually correct?**
+  _`push()` has 51 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `EQ knob arc (12 o'clock Boost/Cut)`, `v0.7.0 BRIDGE+ Onyx Studio design`, `v0.5.0 Initial release` to the rest of the system?**
   _243 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
-- **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._
+- **Should `Community 1` be split into smaller, more focused modules?**
+  _Cohesion score 0.06 - nodes in this community are weakly interconnected._

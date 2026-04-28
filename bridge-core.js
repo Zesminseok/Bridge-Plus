@@ -126,6 +126,8 @@ const { DbServerPool } = require('./bridge/dbserver-pool');
 const _dbcli = require('./bridge/dbserver-client');
 // dbserver orchestrator → bridge/dbserver-orchestrator.js (Phase 5.4)
 const _dborch = require('./bridge/dbserver-orchestrator');
+// TCNet inbound handler → bridge/tcnet-handler.js (Phase 5.5)
+const _tcRx = require('./bridge/tcnet-handler');
 const _vd = require('./bridge/virtual-deck');
 
 // BLANK_JPEG → bridge/virtual-deck.js (Phase 5.2). 두 모듈에서 중복 로드 방지.
@@ -836,101 +838,9 @@ class BridgeCore {
     this._sendToArenasLPort(pkt);
   }
 
-  // ── TCNet 메시지 핸들러 (공통) ────────────────
+  // ── TCNet inbound handler → bridge/tcnet-handler.js (Phase 5.5). 1줄 wrapper.
   _handleTCNetMsg(msg, rinfo, label){
-    if(msg.length<TC.H) return;
-    if(msg[4]!==0x54||msg[5]!==0x43||msg[6]!==0x4E) return;
-    // 1차 방어: Node ID 일치 → 자기 자신이 보낸 패킷 (NNAME 변경에도 견고)
-    if(msg[0]===TC.NID[0] && msg[1]===TC.NID[1]) return;
-    const type = msg[7];
-    const name = msg.slice(8,16).toString('ascii').replace(/\0/g,'').trim();
-    // 2차 방어: 이름 prefix (역호환 + 다른 Bridge 인스턴스 방지)
-    if(name.toUpperCase().startsWith('BRIDGE')) return;
-    // 3차 방어: 송신 포트가 우리 소켓이면 loop
-    if(this._ownPorts && this._ownPorts.has(rinfo.port) &&
-       (rinfo.address===this.localAddr || rinfo.address==='127.0.0.1')) return;
-
-    if(type===TC.OPTIN){
-      const body = msg.slice(TC.H);
-      const lPort = body.length>=4 ? body.readUInt16LE(2) : 0;
-      const vendor = body.length>=40 ? body.slice(8,24).toString('ascii').replace(/\0/g,'').trim() : '';
-      const device = body.length>=40 ? body.slice(24,40).toString('ascii').replace(/\0/g,'').trim() : '';
-      const key = name+'@'+rinfo.address;
-      const isNew = !this.nodes[key];
-      this.nodes[key] = {name,vendor,device,type:msg[17],ip:rinfo.address,port:rinfo.port,lPort,lastSeen:Date.now()};
-      if(isNew) console.log(`[${label}] OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor}`);
-      this.onNodeDiscovered?.(this.nodes[key]);
-    }
-    // Auto-register non-Bridge nodes that send any TCNet packet (Arena may skip OptIn)
-    if(type!==TC.OPTIN && !name.toUpperCase().startsWith('BRIDGE')){
-      const key = name+'@'+rinfo.address;
-      if(!this.nodes[key]){
-        this.nodes[key] = {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()};
-        console.log(`[${label}] auto-register ${name}@${rinfo.address} lPort=${rinfo.port}`);
-        this.onNodeDiscovered?.(this.nodes[key]);
-      } else {
-        this.nodes[key].lastSeen = Date.now();
-      }
-    }
-    if(type===TC.APP){
-      if(!this._lPortDbg)this._lPortDbg={};
-      if(!this._lPortDbg['txapp_'+rinfo.address]){this._lPortDbg['txapp_'+rinfo.address]=true;console.log(`[${label}] APP from ${name} → ${rinfo.address}:${rinfo.port}`);}
-      const body = msg.slice(TC.H);
-      const lPort = body.length>=22 ? body.readUInt16LE(20) : rinfo.port;
-      const key = name+'@'+rinfo.address;
-      if(this.nodes[key]) this.nodes[key].lPort = lPort || rinfo.port;
-      try{ this.txSocket?.send(mkAppResp(this.listenerPort),0,62,rinfo.port,rinfo.address); }catch(_){}
-    }
-    // 0x14 MetadataRequest — Arena asks for track metadata on a layer
-    // body: [dataType, layer(1-based)]; reply with requested Data payload.
-    if(type===0x14){
-      const body = msg.slice(TC.H);
-      const reqType = body.length>=1 ? body[0] : 0;
-      const layerReq = body.length>=2 ? body[1] : 0;  // 1-based
-      const li = layerReq - 1;  // convert to 0-indexed
-      const layerData = (li >= 0 && li < this.layers.length) ? this.layers[li] : null;
-      // MetaReq logs suppressed (too frequent)
-      const faderVal = this.faders ? (this.faders[li] || 0) : 0;
-      if(reqType===TC.DT_META){
-        this._uc(mkDataMeta(layerReq, layerData), rinfo.port, rinfo.address);
-      }else if(reqType===TC.DT_METRICS){
-        this._uc(mkDataMetrics(layerReq, layerData, faderVal), rinfo.port, rinfo.address);
-      }else{
-        this._uc(mkDataMeta(layerReq, layerData), rinfo.port, rinfo.address);
-        this._uc(mkDataMetrics(layerReq, layerData, faderVal), rinfo.port, rinfo.address);
-      }
-      // MetaResp log suppressed (too frequent, causes FPS drop)
-    }
-    // 0xC8 Data Packet — parse incoming MixerData (DataType 150) for VU meters
-    // Audio Level = real-time channel VU (0-255, pulses with music)
-    if(type===TC.DATA && msg.length>=TC.H+2){
-      const body = msg.slice(TC.H);
-      const dataType = body[0];
-      if(dataType===TC.DT_MIXER && body.length>=246){
-        // Master Audio Level: body+37 (byte 61), Master Fader: body+38 (byte 62)
-        const masterAudio = body[37];
-        const masterFader = body[38];
-        // Cross Fader: body+75 (byte 99)
-        const xfader = body[75];
-        // Per-channel blocks: body offset = 101 + ch*24 (byte 125 + ch*24), 6 channels max
-        const chAudio=[],chFader=[],chCueA=[],chCueB=[],chXfAssign=[];
-        for(let ch=0;ch<6;ch++){
-          const off=101+ch*24;
-          chAudio.push(off+1<body.length?body[off+1]:0);     // Audio Level (VU, 0-255)
-          chFader.push(off+2<body.length?body[off+2]:0);     // Fader Level (position)
-          chCueA.push(off+11<body.length?body[off+11]:0);    // CUE A (0=off, 1=on)
-          chCueB.push(off+12<body.length?body[off+12]:0);    // CUE B (0=off, 1=on)
-          chXfAssign.push(off+13<body.length?body[off+13]:0);// Crossfader Assign (0=THRU,1=A,2=B)
-        }
-        // Throttled log: once every 2s
-        const now=Date.now();
-        if(!this._tcMixerLogAt||now-this._tcMixerLogAt>2000){
-          this._tcMixerLogAt=now;
-          try{console.log(`[TCNet] MixerData from=${rinfo.address} masterAudio=${masterAudio} chAudio=[${chAudio}] cueA=[${chCueA}] xfAssign=[${chXfAssign}]`);}catch(_){}
-        }
-        this.onTCMixerVU?.({masterAudio,masterFader,xfader,chAudio,chFader,chCueA,chCueB,chXfAssign,from:rinfo.address});
-      }
-    }
+    return _tcRx.handleTCNetMsg(this, { TC, mkDataMeta, mkDataMetrics, mkAppResp }, msg, rinfo, label);
   }
 
   // ── TCNet RX ────────────────────────────────
