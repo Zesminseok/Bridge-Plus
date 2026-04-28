@@ -1088,7 +1088,7 @@ body[data-layout="tower"] .tw-bpm .dk-key-box{font-size:14px;height:28px;padding
 body[data-layout="tower"] .tw-bpm .dphs{display:flex;gap:3px;width:100%;max-width:100%;height:14px;margin-top:2px}
 body[data-layout="tower"] .tw-bpm .dphs-seg{flex:1;border:1px solid var(--tx4);background:transparent;position:relative;overflow:hidden}
 body[data-layout="tower"] .tw-bpm .dphs-fill{position:absolute;inset:0;background:var(--key);opacity:0;transition:opacity .06s}
-body[data-layout="tower"] .tw-dk .dvu-strip{flex-direction:row;width:100%;height:auto;padding:6px 7px;gap:6px;background:rgba(255,107,44,.045);border:1px solid rgba(255,107,44,.2);border-radius:3px}
+body[data-layout="tower"] .tw-dk .dvu-strip{flex-direction:row;width:100%;height:auto;padding:6px 7px;gap:6px;background:transparent;border:1px solid rgba(255,107,44,.2);border-radius:3px}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-ch{flex-direction:row;gap:5px;align-items:center;flex:1;min-width:0}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hbar{flex:1;height:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,107,44,.18);position:relative;overflow:hidden;width:auto;min-height:0}
 body[data-layout="tower"] .tw-dk .dvu-strip .dvu-hfill{position:absolute;top:0;bottom:0;left:0;right:auto;width:var(--vu-level,0);height:100%}
@@ -1121,7 +1121,7 @@ body[data-layout="card"] .deck-row{display:grid!important;grid-template-columns:
 }
 
 /* 덱 카드 컨테이너 — 라운딩 최소화 (사용자 요청: "라운딩 빼줘") */
-body[data-layout="card"] .dk.cd-dk{display:flex!important;flex-direction:column!important;gap:12px!important;padding:14px!important;border:1px solid var(--bdr)!important;border-radius:0!important;background:var(--bg-lowest)!important;min-width:0!important;overflow:hidden!important;box-sizing:border-box!important}
+body[data-layout="card"] .dk.cd-dk{display:flex!important;flex-direction:column!important;gap:12px!important;padding:14px!important;border:1px solid var(--bdr)!important;border-radius:0!important;background:var(--bg2)!important;min-width:0!important;overflow:hidden!important;box-sizing:border-box!important}
 /* Card 빈 덱 placeholder 가운데 정렬 */
 body[data-layout="card"] .dk.cd-dk[data-st="empty"]{min-height:280px}
 body[data-layout="card"] .dk.cd-dk[data-st="empty"] .ddz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
@@ -2061,11 +2061,14 @@ if(!cfg.layout||cfg.layout==='default'){cfg.layout='tower';try{localStorage.setI
 // Apply layout theme to body (data-layout attribute drives all theme-scoped CSS)
 try{document.body.dataset.layout=cfg.layout;}catch(_){}
 try{document.body.dataset.platform=window.bridge?.platform||'';}catch(_){}
-// i18n 변경 시 동적 컴포넌트 재렌더 (덱/믹서/설정 마크업 안의 t() 호출 결과 갱신)
+// i18n 변경 시 동적 컴포넌트 재렌더 (덱/믹서/설정 마크업 안의 t() 호출 결과 갱신).
+// 재렌더 후 applyDom() 다시 호출 — 새 HTML 의 data-i18n 라벨도 번역 적용.
 window.addEventListener('i18n-changed',()=>{
   try{ if(typeof renderDecks==='function') renderDecks(); }catch(_){}
   try{ if(curTab==='mixer'&&typeof updateMixer==='function') updateMixer(); }catch(_){}
   try{ if(curTab==='settings'&&typeof renderSettings==='function') renderSettings(); }catch(_){}
+  // 새로 렌더된 마크업의 data-i18n 라벨 번역 (renderSettings 가 Korean fallback 으로 innerHTML 만듦)
+  try{ window.BridgeI18n?.applyDom(); }catch(_){}
 });
 function _wfReadLS(k,def){try{const v=localStorage.getItem(k);return v==null?def:v;}catch(_){return def;}}
 function _wfWriteLS(k,v){try{localStorage.setItem(k,String(v));}catch(_){}}

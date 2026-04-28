@@ -400,4 +400,7 @@ function renderSettings(){
           + '그 후 BRIDGE+ 를 재시작하세요.');
     }
   };
+  // 새로 렌더된 settings panel HTML 의 data-i18n 라벨 번역 적용.
+  // (innerHTML 이 fallback 한국어로 그려졌으니 현재 언어로 재변환 필요.)
+  try{ window.BridgeI18n?.applyDom(el); }catch(_){}
 }
