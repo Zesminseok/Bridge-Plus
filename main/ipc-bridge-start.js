@@ -3,6 +3,26 @@
 // setter/getter 형식으로 deps injection.
 'use strict';
 
+function _packColorHeightPtsForIpc(pts) {
+  if (!Array.isArray(pts) || pts.length === 0) return pts;
+  const packed = new Uint8Array(pts.length * 2);
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    if (!p || !Number.isInteger(p.color) || !Number.isInteger(p.height)) return pts;
+    if (p.color < 0 || p.color > 15 || p.height < 0 || p.height > 255) return pts;
+    const o = i * 2;
+    packed[o] = p.color;
+    packed[o + 1] = p.height;
+  }
+  return packed;
+}
+
+function _packWaveformForIpc(wf) {
+  if (!wf || !Array.isArray(wf.pts)) return wf;
+  const pts = _packColorHeightPtsForIpc(wf.pts);
+  return pts === wf.pts ? wf : { ...wf, pts };
+}
+
 function registerBridgeStartIpc(ipcMain, deps) {
   const {
     setBridge, getBridge,
@@ -79,8 +99,8 @@ function registerBridgeStartIpc(ipcMain, deps) {
         );
         _send('pdjl:devices', active);
       };
-      newBridge.onWaveformPreview = (pn, wf) => _send('bridge:wfpreview', { playerNum: pn, ...wf });
-      newBridge.onWaveformDetail  = (pn, wf) => _send('bridge:wfdetail',  { playerNum: pn, ...wf });
+      newBridge.onWaveformPreview = (pn, wf) => _send('bridge:wfpreview', { playerNum: pn, ..._packWaveformForIpc(wf) });
+      newBridge.onWaveformDetail  = (pn, wf) => _send('bridge:wfdetail',  { playerNum: pn, ..._packWaveformForIpc(wf) });
       newBridge.onCuePoints       = (pn, cues) => _send('bridge:cuepoints', { playerNum: pn, cues });
       newBridge.onBeatGrid        = (pn, bg) => _send('bridge:beatgrid', { playerNum: pn, ...bg });
       newBridge.onSongStructure   = (pn, ss) => _send('bridge:songstruct', { playerNum: pn, ...ss });
@@ -107,4 +127,4 @@ function registerBridgeStartIpc(ipcMain, deps) {
   });
 }
 
-module.exports = { registerBridgeStartIpc };
+module.exports = { registerBridgeStartIpc, _packColorHeightPtsForIpc, _packWaveformForIpc };

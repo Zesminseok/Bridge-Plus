@@ -2928,6 +2928,38 @@ function _cdjColorToRGB(c){
   ];
   return palette[c & 7];
 }
+function _hwPackedPts(pts){return pts instanceof Uint8Array&&pts.length%2===0;}
+function _hwPtsLen(pts){return _hwPackedPts(pts)?(pts.length/2):(pts?pts.length:0);}
+function _hwColorHeightToRgbWf(pts,heightDivisor){
+  const n=_hwPtsLen(pts);
+  const out=new Array(n);
+  const div=heightDivisor||31;
+  if(_hwPackedPts(pts)){
+    for(let i=0;i<n;i++){
+      const o=i*2;
+      const [r,g,b]=_cdjColorToRGB(pts[o]);
+      const h=pts[o+1]/div;
+      out[i]={r,g,b,h,mn:-h,mx:h};
+    }
+    return out;
+  }
+  for(let i=0;i<n;i++){
+    const p=pts[i]||{};
+    const [r,g,b]=_cdjColorToRGB(p.color);
+    const h=(p.height||0)/div;
+    out[i]={r,g,b,h,mn:-h,mx:h};
+  }
+  return out;
+}
+function _hwPackedPtsToObjects(pts){
+  if(!_hwPackedPts(pts))return pts;
+  const n=pts.length/2,out=new Array(n);
+  for(let i=0;i<n;i++){
+    const o=i*2;
+    out[i]={color:pts[o],height:pts[o+1]};
+  }
+  return out;
+}
 
 // ═══ HW waveform color renderer (자체 구현, PWV7 디코더) ═══════════════
 // HW(CDJ) 덱은 rekordbox에서 분석된 PWV5/PWV7 데이터를 받는다.
@@ -7253,15 +7285,19 @@ if(E){
   window.bridge.onWaveformPreview?.(d=>{
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
-    if(d.pts&&d.pts.length>0){
+    const pts=d.pts instanceof Uint8Array?null:d.pts;
+    const ptsLen=_hwPtsLen(d.pts);
+    if(d.pts&&ptsLen>0){
       if(d.pwv7||d.wfType==='pwv7'){
-        dk.rgbWf=d.pts.map(p=>{
+        const objPts=pts||_hwPackedPtsToObjects(d.pts);
+        dk.rgbWf=objPts.map(p=>{
           const h=Math.max(p.low||0,p.mid||0,p.hi||0)/255;
           return{h,mn:-h,mx:h,r:(p.low||0)/255,g:(p.mid||0)/255,b:(p.hi||0)/255};
         });
         dk._pwv7=true;dk.wfCapability='pwv7';
       } else if(d.wfType==='nxs2_3band'||d.wfType==='mono'){
-        dk.rgbWf=d.pts.map(p=>{
+        const objPts=pts||_hwPackedPtsToObjects(d.pts);
+        dk.rgbWf=objPts.map(p=>{
           const h=Math.max(p.low||0,p.mid||0,p.hi||0,(p.height||0)/31);
           return{r:0,g:0,b:0,h,mn:-h,mx:h};
         });
@@ -7272,20 +7308,12 @@ if(E){
         dk._hwWfSegs[d.seg]=d.pts;
         const segs=Object.keys(dk._hwWfSegs).map(Number).sort((a,b)=>a-b);
         const allPts=[];
-        for(const s of segs) allPts.push(...dk._hwWfSegs[s]);
-        dk.rgbWf=allPts.map(p=>{
-          const [r,g,b]=_cdjColorToRGB(p.color);
-          const h=p.height/255;
-          return{r,g,b,h,mn:-h,mx:h};
-        });
+        for(const s of segs) allPts.push(..._hwColorHeightToRgbWf(dk._hwWfSegs[s],255));
+        dk.rgbWf=allPts;
         dk._pwv7=false;dk.wfCapability='blue';
       } else {
         // dbserver preview waveform: {height:0-31, color:0-7} → direct RGB
-        dk.rgbWf=d.pts.map(p=>{
-          const [r,g,b]=_cdjColorToRGB(p.color);
-          const h=p.height/31;
-          return{r,g,b,h,mn:-h,mx:h};
-        });
+        dk.rgbWf=_hwColorHeightToRgbWf(d.pts,31);
         dk._pwv7=false;dk.wfCapability='blue';
       }
       // Don't override duration if we have a real value from metadata
@@ -7348,10 +7376,13 @@ if(E){
   window.bridge.onWaveformDetail?.(d=>{
     const li=d.playerNum-1;
     const dk=DECKS[li];if(!dk||dk.type!=='hw')return;
-    if(d.pts&&d.pts.length>0){
+    const pts=d.pts instanceof Uint8Array?null:d.pts;
+    const ptsLen=_hwPtsLen(d.pts);
+    if(d.pts&&ptsLen>0){
       if(d.pwv7||d.wfType==='pwv7'){
         // PWV7 3-band: raw bass/mid/treble bytes (0-255 each)
-        dk.rgbWfDetail=d.pts.map(p=>{
+        const objPts=pts||_hwPackedPtsToObjects(d.pts);
+        dk.rgbWfDetail=objPts.map(p=>{
           const h=Math.max(p.low||0,p.mid||0,p.hi||0)/255;
           return{h,mn:-h,mx:h,r:(p.low||0)/255,g:(p.mid||0)/255,b:(p.hi||0)/255};
         });
@@ -7359,31 +7390,29 @@ if(E){
       } else if(d.wfType==='nxs2_3band'){
         // NXS2 3-band: low/mid/hi 각 band 진폭을 r/g/b 로 매핑 → shader 가 RGB 색상 합성.
         // 이전엔 r=g=b=0 으로 두어 모든 sample 이 단색(파랑)으로 보이던 버그 수정.
-        dk.rgbWfDetail=d.pts.map(p=>{
+        const objPts=pts||_hwPackedPtsToObjects(d.pts);
+        dk.rgbWfDetail=objPts.map(p=>{
           const r=p.low||0, g=p.mid||0, b=p.hi||0;
           const h=Math.max(r,g,b,(p.height||0)/31);
           return{r,g,b,h,mn:-h,mx:h};
         });
         dk._pwv7=true;dk.wfCapability='pwv7'; // 3-band 처리는 PWV7 와 동일
       } else if(d.wfType==='mono'){
-        dk.rgbWfDetail=d.pts.map(p=>{
+        const objPts=pts||_hwPackedPtsToObjects(d.pts);
+        dk.rgbWfDetail=objPts.map(p=>{
           const h=Math.max(p.low||0,p.mid||0,p.hi||0,(p.height||0)/31);
           return{r:0,g:0,b:0,h,mn:-h,mx:h};
         });
         dk._pwv7=false;dk.wfCapability='blue';
       } else {
         // Standard 1-byte encoding: 5-bit height + 3-bit color → direct RGB
-        dk.rgbWfDetail=d.pts.map(p=>{
-          const [r,g,b]=_cdjColorToRGB(p.color);
-          const h=p.height/31;
-          return{r,g,b,h,mn:-h,mx:h};
-        });
+        dk.rgbWfDetail=_hwColorHeightToRgbWf(d.pts,31);
         dk._pwv7=false;dk.wfCapability='blue';
       }
       // Duration from detail waveform: PWV7/HW is 150 segments per second.
-      const detailDur=Math.round(d.pts.length/HW_WF_\u{52}ATE*1000);
+      const detailDur=Math.round(ptsLen/HW_WF_\u{52}ATE*1000);
       if(!dk.dur||dk.dur<=0||Math.abs(dk.dur-detailDur)>5000) dk.dur=detailDur;
-      console.log(`[UI] P${d.playerNum} detail waveform: ${d.pts.length}pts (${Math.round(detailDur/1000)}s)`);
+      console.log(`[UI] P${d.playerNum} detail waveform: ${ptsLen}pts (${Math.round(detailDur/1000)}s)`);
       _scheduleHwWaveformRefresh(li, d.wfType==='nxs2_3band'?420:320);
     }
   });

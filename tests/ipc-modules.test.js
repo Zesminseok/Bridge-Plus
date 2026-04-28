@@ -502,6 +502,71 @@ test('ipc-bridge-start: stop calls bridge.stop and clearIv', async () => {
   assert.deepStrictEqual(r, { ok: true });
 });
 
+test('ipc-bridge-start: packs color/height waveform pts before IPC send', () => {
+  const { registerBridgeStartIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-start'));
+  const handlers = {};
+  const sent = [];
+  let bridgeInstance = null;
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  const fakeWin = {
+    isDestroyed: () => false,
+    webContents: { send: (ch, d) => sent.push({ ch, d }) },
+  };
+  class FakeBridgeCore {
+    constructor(){ bridgeInstance = this; this.running = false; }
+    start(){}
+    stop(){}
+  }
+  registerBridgeStartIpc(fakeIpc, {
+    setBridge: () => {}, getBridge: () => null,
+    setIfaceSig: () => {},
+    getIv: () => null, clearIv: () => {},
+    getWin: () => fakeWin,
+    BridgeCore: FakeBridgeCore,
+    getAllInterfaces: () => [], interfaceSignature: () => '',
+    push: () => {},
+  });
+  handlers['bridge:start'](null, {});
+  bridgeInstance.onWaveformDetail(2, { pts: [{ color: 1, height: 31 }, { color: 15, height: 255 }], wfType: 'detail' });
+  assert.strictEqual(sent.length, 1);
+  assert.strictEqual(sent[0].ch, 'bridge:wfdetail');
+  assert.ok(sent[0].d.pts instanceof Uint8Array, 'pts should be packed Uint8Array');
+  assert.deepStrictEqual([...sent[0].d.pts], [1, 31, 15, 255]);
+  assert.strictEqual(sent[0].d.playerNum, 2);
+  assert.strictEqual(sent[0].d.wfType, 'detail');
+});
+
+test('ipc-bridge-start: leaves incompatible waveform point shapes unpacked', () => {
+  const { registerBridgeStartIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-start'));
+  const handlers = {};
+  const sent = [];
+  let bridgeInstance = null;
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  const fakeWin = {
+    isDestroyed: () => false,
+    webContents: { send: (ch, d) => sent.push({ ch, d }) },
+  };
+  class FakeBridgeCore {
+    constructor(){ bridgeInstance = this; this.running = false; }
+    start(){}
+    stop(){}
+  }
+  registerBridgeStartIpc(fakeIpc, {
+    setBridge: () => {}, getBridge: () => null,
+    setIfaceSig: () => {},
+    getIv: () => null, clearIv: () => {},
+    getWin: () => fakeWin,
+    BridgeCore: FakeBridgeCore,
+    getAllInterfaces: () => [], interfaceSignature: () => '',
+    push: () => {},
+  });
+  handlers['bridge:start'](null, {});
+  const pts = [{ low: 0.2, mid: 0.4, hi: 0.8 }];
+  bridgeInstance.onWaveformDetail(1, { pts, wfType: 'nxs2_3band' });
+  assert.strictEqual(sent[0].ch, 'bridge:wfdetail');
+  assert.strictEqual(sent[0].d.pts, pts);
+});
+
 test('ipc-license: exports registerLicenseIpc + tolerates null service', () => {
   const mod = require(path.join(__dirname, '..', 'main', 'ipc-license'));
   assert.strictEqual(typeof mod.registerLicenseIpc, 'function');
