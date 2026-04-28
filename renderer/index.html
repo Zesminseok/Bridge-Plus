@@ -905,25 +905,31 @@ body[data-layout="row"] .dk[data-st="cue"],
 body[data-layout="tower"] .dk[data-st="cue"],
 body[data-layout="card"] .dk[data-st="cue"]{border-color:rgba(255,204,102,.28);background:var(--bg2)}
 
-/* Header / 사이드바 / 탭 / bbar 톤 통일 */
+/* Header / 사이드바 / 탭 / bbar 톤 통일 (모든 layout 공통 — 글로벌 UI) */
 body[data-layout="row"] .hdr,
 body[data-layout="tower"] .hdr,
-body[data-layout="card"] .hdr{background:var(--bg);border-bottom:1px solid var(--bdr)}
+body[data-layout="card"] .hdr,
+body[data-layout="observatory"] .hdr{background:var(--bg);border-bottom:1px solid var(--bdr)}
 body[data-layout="row"] .sidebar,
 body[data-layout="tower"] .sidebar,
-body[data-layout="card"] .sidebar{background:var(--bg-lowest);border-right:1px solid var(--bdr)}
+body[data-layout="card"] .sidebar,
+body[data-layout="observatory"] .sidebar{background:var(--bg-lowest);border-right:1px solid var(--bdr)}
 body[data-layout="row"] .tabs,
 body[data-layout="tower"] .tabs,
-body[data-layout="card"] .tabs{background:var(--bg-lowest);border-bottom:1px solid var(--bdr)}
+body[data-layout="card"] .tabs,
+body[data-layout="observatory"] .tabs{background:var(--bg-lowest);border-bottom:1px solid var(--bdr)}
 body[data-layout="row"] .bbar,
 body[data-layout="tower"] .bbar,
-body[data-layout="card"] .bbar{background:var(--bg-lowest);border-top:1px solid var(--bdr)}
+body[data-layout="card"] .bbar,
+body[data-layout="observatory"] .bbar{background:var(--bg-lowest);border-top:1px solid var(--bdr)}
 body[data-layout="row"] .tab.on,
 body[data-layout="tower"] .tab.on,
-body[data-layout="card"] .tab.on{color:var(--key)}
+body[data-layout="card"] .tab.on,
+body[data-layout="observatory"] .tab.on{color:var(--key)}
 body[data-layout="row"] .tab.on::after,
 body[data-layout="tower"] .tab.on::after,
-body[data-layout="card"] .tab.on::after{background:var(--key)}
+body[data-layout="card"] .tab.on::after,
+body[data-layout="observatory"] .tab.on::after{background:var(--key)}
 
 /* 버튼 톤 (transport, sync, master) — 기존 violet/green 하드코드 → accent 오렌지 */
 body[data-layout="row"] .dkbtn.dkplay,
@@ -967,10 +973,12 @@ body[data-layout="card"] .dphs-seg:nth-child(1).on .dphs-fill{background:#fff}
 /* 설정/mixer/tcnet 각 섹션 panel 톤도 bg2 기반 */
 body[data-layout="row"] .sgr,
 body[data-layout="tower"] .sgr,
-body[data-layout="card"] .sgr{background:var(--bg2);border:1px solid var(--bdr)}
+body[data-layout="card"] .sgr,
+body[data-layout="observatory"] .sgr{background:var(--bg2);border:1px solid var(--bdr)}
 body[data-layout="row"] .sl,
 body[data-layout="tower"] .sl,
-body[data-layout="card"] .sl{color:var(--tx3)}
+body[data-layout="card"] .sl,
+body[data-layout="observatory"] .sl{color:var(--tx3)}
 
 /* ═════════ ROW 레이아웃 — 1 덱 1 풀폭 행, 세로 스크롤 ═════════ */
 body[data-layout="row"] .deck-row{flex-direction:column;gap:10px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 160px);padding-right:4px}
