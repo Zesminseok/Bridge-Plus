@@ -208,7 +208,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/preload.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_preload_js",
-      "community": 39,
+      "community": 40,
       "norm_label": "preload.js"
     },
     {
@@ -217,7 +217,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/preload.js",
       "source_location": "L6",
       "id": "preload_on",
-      "community": 39,
+      "community": 40,
       "norm_label": "_on()"
     },
     {
@@ -226,7 +226,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/preload.js",
       "source_location": "L11",
       "id": "preload_onargless",
-      "community": 39,
+      "community": 40,
       "norm_label": "_onargless()"
     },
     {
@@ -280,7 +280,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_bridge_core_js",
-      "community": 6,
+      "community": 1,
       "norm_label": "bridge-core.js"
     },
     {
@@ -289,7 +289,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
       "source_location": "L17",
       "id": "bridge_core_resolvedbglogpath",
-      "community": 6,
+      "community": 1,
       "norm_label": "_resolvedbglogpath()"
     },
     {
@@ -298,7 +298,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
       "source_location": "L48",
       "id": "bridge_core_dbglogflush",
-      "community": 6,
+      "community": 1,
       "norm_label": "_dbglogflush()"
     },
     {
@@ -307,545 +307,545 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
       "source_location": "L54",
       "id": "bridge_core_dbglog",
-      "community": 6,
+      "community": 1,
       "norm_label": "_dbglog()"
     },
     {
       "label": "BridgeCore",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L144",
+      "source_location": "L146",
       "id": "bridge_core_bridgecore",
-      "community": 1,
+      "community": 0,
       "norm_label": "bridgecore"
     },
     {
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L145",
+      "source_location": "L147",
       "id": "bridge_core_bridgecore_constructor",
-      "community": 1,
+      "community": 0,
       "norm_label": ".constructor()"
     },
     {
       "label": "._shouldLogRate()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L203",
+      "source_location": "L205",
       "id": "bridge_core_bridgecore_shouldlograte",
-      "community": 1,
+      "community": 0,
       "norm_label": "._shouldlograte()"
     },
     {
       "label": "._resolveBroadcast()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L221",
+      "source_location": "L223",
       "id": "bridge_core_bridgecore_resolvebroadcast",
-      "community": 1,
+      "community": 0,
       "norm_label": "._resolvebroadcast()"
     },
     {
       "label": ".start()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L243",
+      "source_location": "L245",
       "id": "bridge_core_bridgecore_start",
-      "community": 1,
+      "community": 0,
       "norm_label": ".start()"
     },
     {
       "label": ".setTCNetUnicast()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L374",
+      "source_location": "L376",
       "id": "bridge_core_bridgecore_settcnetunicast",
-      "community": 1,
+      "community": 0,
       "norm_label": ".settcnetunicast()"
     },
     {
       "label": ".stop()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L380",
+      "source_location": "L382",
       "id": "bridge_core_bridgecore_stop",
-      "community": 1,
+      "community": 0,
       "norm_label": ".stop()"
     },
     {
       "label": ".startDJMCapture()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L474",
+      "source_location": "L476",
       "id": "bridge_core_bridgecore_startdjmcapture",
-      "community": 1,
+      "community": 0,
       "norm_label": ".startdjmcapture()"
     },
     {
       "label": ".stopDJMCapture()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L483",
+      "source_location": "L485",
       "id": "bridge_core_bridgecore_stopdjmcapture",
-      "community": 1,
+      "community": 0,
       "norm_label": ".stopdjmcapture()"
     },
     {
       "label": ".rebindTCNet()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L490",
+      "source_location": "L492",
       "id": "bridge_core_bridgecore_rebindtcnet",
-      "community": 1,
+      "community": 0,
       "norm_label": ".rebindtcnet()"
     },
     {
       "label": "._findLocalIfaceForRemote()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L534",
+      "source_location": "L537",
       "id": "bridge_core_bridgecore_findlocalifaceforremote",
-      "community": 1,
+      "community": 0,
       "norm_label": "._findlocalifaceforremote()"
     },
     {
       "label": "._isLinkLocalIp()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L553",
+      "source_location": "L538",
       "id": "bridge_core_bridgecore_islinklocalip",
-      "community": 1,
+      "community": 0,
       "norm_label": "._islinklocalip()"
     },
     {
       "label": "._pickAutoPdjlIface()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L557",
+      "source_location": "L539",
       "id": "bridge_core_bridgecore_pickautopdjliface",
-      "community": 1,
+      "community": 0,
       "norm_label": "._pickautopdjliface()"
     },
     {
       "label": "._shouldDelayWinAutoPdjl()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L571",
+      "source_location": "L540",
       "id": "bridge_core_bridgecore_shoulddelaywinautopdjl",
-      "community": 1,
+      "community": 0,
       "norm_label": "._shoulddelaywinautopdjl()"
     },
     {
       "label": ".handleInterfacesChanged()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L578",
+      "source_location": "L544",
       "id": "bridge_core_bridgecore_handleinterfaceschanged",
-      "community": 1,
+      "community": 0,
       "norm_label": ".handleinterfaceschanged()"
     },
     {
       "label": "._autoSelectPdjlForRemote()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L587",
+      "source_location": "L553",
       "id": "bridge_core_bridgecore_autoselectpdjlforremote",
-      "community": 1,
+      "community": 0,
       "norm_label": "._autoselectpdjlforremote()"
     },
     {
       "label": ".rebindPDJL()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L608",
+      "source_location": "L574",
       "id": "bridge_core_bridgecore_rebindpdjl",
-      "community": 1,
+      "community": 0,
       "norm_label": ".rebindpdjl()"
     },
     {
       "label": ".setTCNetMode()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L653",
+      "source_location": "L619",
       "id": "bridge_core_bridgecore_settcnetmode",
-      "community": 1,
+      "community": 0,
       "norm_label": ".settcnetmode()"
     },
     {
       "label": "._send()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L663",
+      "source_location": "L629",
       "id": "bridge_core_bridgecore_send",
-      "community": 1,
+      "community": 0,
       "norm_label": "._send()"
     },
     {
       "label": "._uc()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L664",
+      "source_location": "L630",
       "id": "bridge_core_bridgecore_uc",
-      "community": 5,
+      "community": 6,
       "norm_label": "._uc()"
     },
     {
       "label": "._sendToArenas()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L665",
+      "source_location": "L631",
       "id": "bridge_core_bridgecore_sendtoarenas",
-      "community": 5,
+      "community": 6,
       "norm_label": "._sendtoarenas()"
     },
     {
       "label": "._sendToArenasLPort()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L666",
+      "source_location": "L632",
       "id": "bridge_core_bridgecore_sendtoarenaslport",
-      "community": 1,
+      "community": 0,
       "norm_label": "._sendtoarenaslport()"
     },
     {
       "label": "._sendDataToArenas()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L667",
+      "source_location": "L633",
       "id": "bridge_core_bridgecore_senddatatoarenas",
-      "community": 5,
+      "community": 0,
       "norm_label": "._senddatatoarenas()"
     },
     {
       "label": "._sendArtwork()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L668",
+      "source_location": "L634",
       "id": "bridge_core_bridgecore_sendartwork",
-      "community": 5,
+      "community": 6,
       "norm_label": "._sendartwork()"
     },
     {
       "label": "._resendAllArtwork()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L669",
+      "source_location": "L635",
       "id": "bridge_core_bridgecore_resendallartwork",
-      "community": 5,
+      "community": 0,
       "norm_label": "._resendallartwork()"
     },
     {
       "label": "._sendDataCycle()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L670",
+      "source_location": "L636",
       "id": "bridge_core_bridgecore_senddatacycle",
-      "community": 5,
+      "community": 6,
       "norm_label": "._senddatacycle()"
     },
     {
       "label": "._sendOptIn()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L671",
+      "source_location": "L637",
       "id": "bridge_core_bridgecore_sendoptin",
-      "community": 5,
+      "community": 0,
       "norm_label": "._sendoptin()"
     },
     {
       "label": "._sendStatus()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L672",
+      "source_location": "L638",
       "id": "bridge_core_bridgecore_sendstatus",
-      "community": 5,
+      "community": 0,
       "norm_label": "._sendstatus()"
     },
     {
       "label": "._tcDeps()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L674",
+      "source_location": "L640",
       "id": "bridge_core_bridgecore_tcdeps",
-      "community": 5,
+      "community": 0,
       "norm_label": "._tcdeps()"
     },
     {
       "label": "._handleTCNetMsg()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L681",
+      "source_location": "L647",
       "id": "bridge_core_bridgecore_handletcnetmsg",
-      "community": 5,
+      "community": 6,
       "norm_label": "._handletcnetmsg()"
     },
     {
       "label": "._startTCNetRx()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L692",
+      "source_location": "L658",
       "id": "bridge_core_bridgecore_starttcnetrx",
-      "community": 1,
+      "community": 0,
       "norm_label": "._starttcnetrx()"
     },
     {
       "label": "._startListenerPortRx()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L744",
+      "source_location": "L710",
       "id": "bridge_core_bridgecore_startlistenerportrx",
-      "community": 1,
+      "community": 0,
       "norm_label": "._startlistenerportrx()"
     },
     {
       "label": "._startPDJLRx()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L786",
+      "source_location": "L752",
       "id": "bridge_core_bridgecore_startpdjlrx",
-      "community": 1,
+      "community": 0,
       "norm_label": "._startpdjlrx()"
     },
     {
       "label": "._startPDJLAnnounce()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L822",
+      "source_location": "L788",
       "id": "bridge_core_bridgecore_startpdjlannounce",
-      "community": 1,
+      "community": 0,
       "norm_label": "._startpdjlannounce()"
     },
     {
       "label": "._onPDJL()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1139",
+      "source_location": "L1105",
       "id": "bridge_core_bridgecore_onpdjl",
-      "community": 6,
+      "community": 5,
       "norm_label": "._onpdjl()"
     },
     {
       "label": ".updateLayer()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1878",
+      "source_location": "L1844",
       "id": "bridge_core_bridgecore_updatelayer",
-      "community": 1,
+      "community": 0,
       "norm_label": ".updatelayer()"
     },
     {
       "label": ".removeLayer()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1911",
+      "source_location": "L1877",
       "id": "bridge_core_bridgecore_removelayer",
-      "community": 1,
+      "community": 0,
       "norm_label": ".removelayer()"
     },
     {
       "label": ".setHWMode()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1912",
+      "source_location": "L1878",
       "id": "bridge_core_bridgecore_sethwmode",
-      "community": 1,
+      "community": 0,
       "norm_label": ".sethwmode()"
     },
     {
       "label": ".registerVirtualDeck()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1915",
+      "source_location": "L1881",
       "id": "bridge_core_bridgecore_registervirtualdeck",
-      "community": 1,
+      "community": 0,
       "norm_label": ".registervirtualdeck()"
     },
     {
       "label": ".unregisterVirtualDeck()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1916",
+      "source_location": "L1882",
       "id": "bridge_core_bridgecore_unregistervirtualdeck",
-      "community": 1,
+      "community": 0,
       "norm_label": ".unregistervirtualdeck()"
     },
     {
       "label": "._syncVirtualDevices()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1917",
+      "source_location": "L1883",
       "id": "bridge_core_bridgecore_syncvirtualdevices",
-      "community": 1,
+      "community": 0,
       "norm_label": "._syncvirtualdevices()"
     },
     {
       "label": ".getActiveNodes()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1922",
+      "source_location": "L1888",
       "id": "bridge_core_bridgecore_getactivenodes",
-      "community": 1,
+      "community": 0,
       "norm_label": ".getactivenodes()"
     },
     {
       "label": ".getActiveDevices()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1923",
+      "source_location": "L1889",
       "id": "bridge_core_bridgecore_getactivedevices",
-      "community": 1,
+      "community": 0,
       "norm_label": ".getactivedevices()"
     },
     {
       "label": ".getPDJLPort()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1924",
+      "source_location": "L1890",
       "id": "bridge_core_bridgecore_getpdjlport",
-      "community": 1,
+      "community": 0,
       "norm_label": ".getpdjlport()"
     },
     {
       "label": ".nodeName()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1925",
+      "source_location": "L1891",
       "id": "bridge_core_bridgecore_nodename",
-      "community": 1,
+      "community": 0,
       "norm_label": ".nodename()"
     },
     {
       "label": ".setVirtualArt()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1934",
+      "source_location": "L1900",
       "id": "bridge_core_bridgecore_setvirtualart",
-      "community": 1,
+      "community": 0,
       "norm_label": ".setvirtualart()"
     },
     {
       "label": "._sendVirtualCDJStatus()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1941",
+      "source_location": "L1907",
       "id": "bridge_core_bridgecore_sendvirtualcdjstatus",
-      "community": 1,
+      "community": 0,
       "norm_label": "._sendvirtualcdjstatus()"
     },
     {
       "label": "._pushArtToResolume()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1944",
+      "source_location": "L1910",
       "id": "bridge_core_bridgecore_pusharttoresolume",
-      "community": 1,
+      "community": 0,
       "norm_label": "._pusharttoresolume()"
     },
     {
       "label": "._startVirtualDbServer()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1946",
+      "source_location": "L1912",
       "id": "bridge_core_bridgecore_startvirtualdbserver",
-      "community": 1,
+      "community": 0,
       "norm_label": "._startvirtualdbserver()"
     },
     {
       "label": "._parseDbRequest()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1949",
+      "source_location": "L1915",
       "id": "bridge_core_bridgecore_parsedbrequest",
-      "community": 0,
+      "community": 1,
       "norm_label": "._parsedbrequest()"
     },
     {
       "label": "._handleVDbRequest()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1951",
+      "source_location": "L1917",
       "id": "bridge_core_bridgecore_handlevdbrequest",
-      "community": 1,
+      "community": 0,
       "norm_label": "._handlevdbrequest()"
     },
     {
       "label": "._findArtByTrackId()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1953",
+      "source_location": "L1919",
       "id": "bridge_core_bridgecore_findartbytrackid",
-      "community": 1,
+      "community": 0,
       "norm_label": "._findartbytrackid()"
     },
     {
       "label": "._findVirtualArt()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1955",
+      "source_location": "L1921",
       "id": "bridge_core_bridgecore_findvirtualart",
-      "community": 1,
+      "community": 0,
       "norm_label": "._findvirtualart()"
     },
     {
       "label": "._dbBuildMenuItem()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1957",
+      "source_location": "L1923",
       "id": "bridge_core_bridgecore_dbbuildmenuitem",
-      "community": 1,
+      "community": 0,
       "norm_label": "._dbbuildmenuitem()"
     },
     {
       "label": "._dbBuildArtResponse()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1958",
+      "source_location": "L1924",
       "id": "bridge_core_bridgecore_dbbuildartresponse",
-      "community": 1,
+      "community": 0,
       "norm_label": "._dbbuildartresponse()"
     },
     {
       "label": ".requestMetadata()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1970",
+      "source_location": "L1936",
       "id": "bridge_core_bridgecore_requestmetadata",
-      "community": 6,
+      "community": 5,
       "norm_label": ".requestmetadata()"
     },
     {
       "label": ".refreshAllMetadata()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1973",
+      "source_location": "L1939",
       "id": "bridge_core_bridgecore_refreshallmetadata",
-      "community": 1,
+      "community": 0,
       "norm_label": ".refreshallmetadata()"
     },
     {
       "label": ".requestArtwork()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1974",
+      "source_location": "L1940",
       "id": "bridge_core_bridgecore_requestartwork",
-      "community": 1,
+      "community": 0,
       "norm_label": ".requestartwork()"
     },
     {
       "label": "._scheduleDbFollowUps()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1977",
+      "source_location": "L1943",
       "id": "bridge_core_bridgecore_scheduledbfollowups",
-      "community": 0,
+      "community": 1,
       "norm_label": "._scheduledbfollowups()"
     },
     {
       "label": "._dbNum1()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1983",
+      "source_location": "L1949",
       "id": "bridge_core_bridgecore_dbnum1",
       "community": 12,
       "norm_label": "._dbnum1()"
@@ -854,7 +854,7 @@
       "label": "._dbNum2()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1984",
+      "source_location": "L1950",
       "id": "bridge_core_bridgecore_dbnum2",
       "community": 12,
       "norm_label": "._dbnum2()"
@@ -863,7 +863,7 @@
       "label": "._dbNum4()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1985",
+      "source_location": "L1951",
       "id": "bridge_core_bridgecore_dbnum4",
       "community": 12,
       "norm_label": "._dbnum4()"
@@ -872,16 +872,16 @@
       "label": "._dbBinary()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1986",
+      "source_location": "L1952",
       "id": "bridge_core_bridgecore_dbbinary",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbbinary()"
     },
     {
       "label": "._dbStr()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1987",
+      "source_location": "L1953",
       "id": "bridge_core_bridgecore_dbstr",
       "community": 12,
       "norm_label": "._dbstr()"
@@ -890,34 +890,34 @@
       "label": "._dbArg4()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1988",
+      "source_location": "L1954",
       "id": "bridge_core_bridgecore_dbarg4",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbarg4()"
     },
     {
       "label": "._dbRMST()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1989",
+      "source_location": "L1955",
       "id": "bridge_core_bridgecore_dbrmst",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbrmst()"
     },
     {
       "label": "._dbBuildMsg()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1990",
+      "source_location": "L1956",
       "id": "bridge_core_bridgecore_dbbuildmsg",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbbuildmsg()"
     },
     {
       "label": "._dbCleanupSessions()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1993",
+      "source_location": "L1959",
       "id": "bridge_core_bridgecore_dbcleanupsessions",
       "community": 0,
       "norm_label": "._dbcleanupsessions()"
@@ -926,34 +926,34 @@
       "label": "._dbAcquire()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1994",
+      "source_location": "L1960",
       "id": "bridge_core_bridgecore_dbacquire",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbacquire()"
     },
     {
       "label": "._dbReadResponse()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1997",
+      "source_location": "L1963",
       "id": "bridge_core_bridgecore_dbreadresponse",
-      "community": 0,
+      "community": 12,
       "norm_label": "._dbreadresponse()"
     },
     {
       "label": "._dbReadFullResponse()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1998",
+      "source_location": "L1964",
       "id": "bridge_core_bridgecore_dbreadfullresponse",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbreadfullresponse()"
     },
     {
       "label": "._dbReadField()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1999",
+      "source_location": "L1965",
       "id": "bridge_core_bridgecore_dbreadfield",
       "community": 12,
       "norm_label": "._dbreadfield()"
@@ -962,117 +962,117 @@
       "label": "._dbParseItems()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2000",
+      "source_location": "L1966",
       "id": "bridge_core_bridgecore_dbparseitems",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbparseitems()"
     },
     {
       "label": "._dbserverMetadata()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2003",
+      "source_location": "L1969",
       "id": "bridge_core_bridgecore_dbservermetadata",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbservermetadata()"
     },
     {
       "label": "._dbserverWaveform()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2004",
+      "source_location": "L1970",
       "id": "bridge_core_bridgecore_dbserverwaveform",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbserverwaveform()"
     },
     {
       "label": "._dbserverWaveformDetail()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2005",
+      "source_location": "L1971",
       "id": "bridge_core_bridgecore_dbserverwaveformdetail",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbserverwaveformdetail()"
     },
     {
       "label": "._dbserverWaveformNxs2()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2006",
+      "source_location": "L1972",
       "id": "bridge_core_bridgecore_dbserverwaveformnxs2",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbserverwaveformnxs2()"
     },
     {
       "label": "._dbserverCuePoints()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2007",
+      "source_location": "L1973",
       "id": "bridge_core_bridgecore_dbservercuepoints",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbservercuepoints()"
     },
     {
       "label": "._dbserverCuePointsExt()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2008",
+      "source_location": "L1974",
       "id": "bridge_core_bridgecore_dbservercuepointsext",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbservercuepointsext()"
     },
     {
       "label": "._dbserverCuePointsNxs2()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2009",
+      "source_location": "L1975",
       "id": "bridge_core_bridgecore_dbservercuepointsnxs2",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbservercuepointsnxs2()"
     },
     {
       "label": "._dbserverCuePointsStd()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2010",
+      "source_location": "L1976",
       "id": "bridge_core_bridgecore_dbservercuepointsstd",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbservercuepointsstd()"
     },
     {
       "label": "._dbserverBeatGrid()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2011",
+      "source_location": "L1977",
       "id": "bridge_core_bridgecore_dbserverbeatgrid",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbserverbeatgrid()"
     },
     {
       "label": "._dbserverSongStructure()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2012",
+      "source_location": "L1978",
       "id": "bridge_core_bridgecore_dbserversongstructure",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbserversongstructure()"
     },
     {
       "label": "._dbserverArtwork()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2013",
+      "source_location": "L1979",
       "id": "bridge_core_bridgecore_dbserverartwork",
-      "community": 0,
+      "community": 1,
       "norm_label": "._dbserverartwork()"
     },
     {
       "label": "._phraseKindMeta()",
       "file_type": "code",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2014",
+      "source_location": "L1980",
       "id": "bridge_core_bridgecore_phrasekindmeta",
-      "community": 0,
+      "community": 1,
       "norm_label": "._phrasekindmeta()"
     },
     {
@@ -1405,7 +1405,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main.js",
       "source_location": "L375",
       "id": "main_linkbridge_setenabled",
-      "community": 0,
+      "community": 3,
       "norm_label": ".setenabled()"
     },
     {
@@ -1495,7 +1495,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main.js",
       "source_location": "L543",
       "id": "main_push",
-      "community": 0,
+      "community": 1,
       "norm_label": "push()"
     },
     {
@@ -1918,7 +1918,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/waveform-gl.js",
       "source_location": "L583",
       "id": "waveform_gl_overviewgl_destroy",
-      "community": 0,
+      "community": 1,
       "norm_label": ".destroy()"
     },
     {
@@ -1963,7 +1963,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/util-html.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_renderer_util_html_js",
-      "community": 6,
+      "community": 5,
       "norm_label": "util-html.js"
     },
     {
@@ -1972,7 +1972,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/util-html.js",
       "source_location": "L8",
       "id": "util_html_eschtml",
-      "community": 6,
+      "community": 5,
       "norm_label": "_eschtml()"
     },
     {
@@ -1981,7 +1981,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/util-html.js",
       "source_location": "L16",
       "id": "util_html_safeimgsrc",
-      "community": 6,
+      "community": 5,
       "norm_label": "_safeimgsrc()"
     },
     {
@@ -1990,7 +1990,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/pcm-decode.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_renderer_pcm_decode_js",
-      "community": 0,
+      "community": 1,
       "norm_label": "pcm-decode.js"
     },
     {
@@ -1999,7 +1999,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/pcm-decode.js",
       "source_location": "L12",
       "id": "pcm_decode_getpcmworker",
-      "community": 0,
+      "community": 1,
       "norm_label": "_getpcmworker()"
     },
     {
@@ -2008,7 +2008,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/pcm-decode.js",
       "source_location": "L56",
       "id": "pcm_decode_decodepcmfor",
-      "community": 0,
+      "community": 1,
       "norm_label": "_decodepcmfor()"
     },
     {
@@ -2062,7 +2062,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/waveform-analysis.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_renderer_waveform_analysis_js",
-      "community": 0,
+      "community": 1,
       "norm_label": "waveform-analysis.js"
     },
     {
@@ -2071,7 +2071,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/waveform-analysis.js",
       "source_location": "L10",
       "id": "waveform_analysis_getrgbwfworker",
-      "community": 0,
+      "community": 1,
       "norm_label": "_getrgbwfworker()"
     },
     {
@@ -2080,7 +2080,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/waveform-analysis.js",
       "source_location": "L48",
       "id": "waveform_analysis_buildrgbwaveform",
-      "community": 0,
+      "community": 1,
       "norm_label": "buildrgbwaveform()"
     },
     {
@@ -2152,7 +2152,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/pcm-worker.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_renderer_pcm_worker_js",
-      "community": 56,
+      "community": 57,
       "norm_label": "pcm-worker.js"
     },
     {
@@ -2413,7 +2413,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/bpm-analysis.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_renderer_bpm_analysis_js",
-      "community": 0,
+      "community": 38,
       "norm_label": "bpm-analysis.js"
     },
     {
@@ -2422,7 +2422,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/bpm-analysis.js",
       "source_location": "L7",
       "id": "bpm_analysis_normalizeanalyzedbpm",
-      "community": 0,
+      "community": 38,
       "norm_label": "_normalizeanalyzedbpm()"
     },
     {
@@ -2431,7 +2431,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/bpm-analysis.js",
       "source_location": "L14",
       "id": "bpm_analysis_detectaudiostart",
-      "community": 0,
+      "community": 38,
       "norm_label": "detectaudiostart()"
     },
     {
@@ -2440,7 +2440,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/renderer/bpm-analysis.js",
       "source_location": "L25",
       "id": "bpm_analysis_analyzebpm",
-      "community": 0,
+      "community": 38,
       "norm_label": "analyzebpm()"
     },
     {
@@ -2782,7 +2782,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tools/gen-test-tones.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tools_gen_test_tones_js",
-      "community": 57,
+      "community": 58,
       "norm_label": "gen-test-tones.js"
     },
     {
@@ -2791,7 +2791,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/tools/rename-stub.js",
       "source_location": "L1",
       "id": "users_zes2021_library_cloudstorage_dropbox_claude_projects_bridge_clone_tools_rename_stub_js",
-      "community": 58,
+      "community": 59,
       "norm_label": "rename-stub.js"
     },
     {
@@ -2800,7 +2800,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/tools/electron_analyze_waveform.js",
       "source_location": "L1",
       "id": "users_zes2021_library_cloudstorage_dropbox_claude_projects_bridge_clone_tools_electron_analyze_waveform_js",
-      "community": 42,
+      "community": 43,
       "norm_label": "electron_analyze_waveform.js"
     },
     {
@@ -2809,7 +2809,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/tools/electron_analyze_waveform.js",
       "source_location": "L12",
       "id": "electron_analyze_waveform_jsstring",
-      "community": 42,
+      "community": 43,
       "norm_label": "jsstring()"
     },
     {
@@ -2962,7 +2962,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tools/gen-sweep-clean.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tools_gen_sweep_clean_js",
-      "community": 59,
+      "community": 60,
       "norm_label": "gen-sweep-clean.js"
     },
     {
@@ -2971,7 +2971,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tcnet_packets_js",
-      "community": 5,
+      "community": 6,
       "norm_label": "packets.js"
     },
     {
@@ -2980,7 +2980,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L30",
       "id": "packets_totcnetstate",
-      "community": 5,
+      "community": 6,
       "norm_label": "totcnetstate()"
     },
     {
@@ -2989,7 +2989,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L60",
       "id": "packets_u32",
-      "community": 5,
+      "community": 6,
       "norm_label": "u32()"
     },
     {
@@ -2998,7 +2998,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L61",
       "id": "packets_clamp8",
-      "community": 5,
+      "community": 6,
       "norm_label": "clamp8()"
     },
     {
@@ -3007,7 +3007,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L63",
       "id": "packets_writeutf32le",
-      "community": 5,
+      "community": 6,
       "norm_label": "_writeutf32le()"
     },
     {
@@ -3016,7 +3016,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L75",
       "id": "packets_buildhdr",
-      "community": 5,
+      "community": 6,
       "norm_label": "buildhdr()"
     },
     {
@@ -3025,7 +3025,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L90",
       "id": "packets_mkoptin",
-      "community": 5,
+      "community": 6,
       "norm_label": "mkoptin()"
     },
     {
@@ -3034,7 +3034,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L105",
       "id": "packets_mkstatus",
-      "community": 5,
+      "community": 6,
       "norm_label": "mkstatus()"
     },
     {
@@ -3043,7 +3043,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L142",
       "id": "packets_mktime",
-      "community": 5,
+      "community": 6,
       "norm_label": "mktime()"
     },
     {
@@ -3052,7 +3052,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L201",
       "id": "packets_mkappresp",
-      "community": 5,
+      "community": 6,
       "norm_label": "mkappresp()"
     },
     {
@@ -3061,7 +3061,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L211",
       "id": "packets_mkmetadataresp",
-      "community": 5,
+      "community": 6,
       "norm_label": "mkmetadataresp()"
     },
     {
@@ -3070,7 +3070,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L229",
       "id": "packets_mkdatametrics",
-      "community": 5,
+      "community": 6,
       "norm_label": "mkdatametrics()"
     },
     {
@@ -3079,7 +3079,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L257",
       "id": "packets_mkmixerdata",
-      "community": 5,
+      "community": 6,
       "norm_label": "mkmixerdata()"
     },
     {
@@ -3088,7 +3088,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L285",
       "id": "packets_mkdatameta",
-      "community": 5,
+      "community": 6,
       "norm_label": "mkdatameta()"
     },
     {
@@ -3097,7 +3097,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L302",
       "id": "packets_mknotification",
-      "community": 5,
+      "community": 6,
       "norm_label": "mknotification()"
     },
     {
@@ -3106,7 +3106,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tcnet/packets.js",
       "source_location": "L310",
       "id": "packets_mklowresartwork",
-      "community": 5,
+      "community": 6,
       "norm_label": "mklowresartwork()"
     },
     {
@@ -3115,7 +3115,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_bridge_dbserver_client_js",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbserver-client.js"
     },
     {
@@ -3124,7 +3124,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L9",
       "id": "dbserver_client_resolvedbglogpath",
-      "community": 0,
+      "community": 1,
       "norm_label": "_resolvedbglogpath()"
     },
     {
@@ -3133,7 +3133,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L40",
       "id": "dbserver_client_dbglogflush",
-      "community": 0,
+      "community": 1,
       "norm_label": "_dbglogflush()"
     },
     {
@@ -3142,7 +3142,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L46",
       "id": "dbserver_client_dbglog",
-      "community": 0,
+      "community": 1,
       "norm_label": "_dbglog()"
     },
     {
@@ -3151,7 +3151,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L63",
       "id": "dbserver_client_dbservermetadata",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbservermetadata()"
     },
     {
@@ -3160,7 +3160,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L152",
       "id": "dbserver_client_dbserverwaveform",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbserverwaveform()"
     },
     {
@@ -3169,7 +3169,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L190",
       "id": "dbserver_client_dbserverwaveformdetail",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbserverwaveformdetail()"
     },
     {
@@ -3178,7 +3178,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L234",
       "id": "dbserver_client_dbserverwaveformnxs2",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbserverwaveformnxs2()"
     },
     {
@@ -3187,7 +3187,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L302",
       "id": "dbserver_client_dbservercuepoints",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbservercuepoints()"
     },
     {
@@ -3196,7 +3196,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L331",
       "id": "dbserver_client_dbservercuepointsext",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbservercuepointsext()"
     },
     {
@@ -3205,7 +3205,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L404",
       "id": "dbserver_client_dbservercuepointsnxs2",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbservercuepointsnxs2()"
     },
     {
@@ -3214,7 +3214,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L584",
       "id": "dbserver_client_dbservercuepointsstd",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbservercuepointsstd()"
     },
     {
@@ -3223,7 +3223,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L636",
       "id": "dbserver_client_dbserverbeatgrid",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbserverbeatgrid()"
     },
     {
@@ -3232,7 +3232,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L700",
       "id": "dbserver_client_dbserversongstructure",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbserversongstructure()"
     },
     {
@@ -3241,7 +3241,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L820",
       "id": "dbserver_client_dbserverartwork",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbserverartwork()"
     },
     {
@@ -3250,7 +3250,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-client.js",
       "source_location": "L855",
       "id": "dbserver_client_phrasekindmeta",
-      "community": 0,
+      "community": 1,
       "norm_label": "phrasekindmeta()"
     },
     {
@@ -3259,7 +3259,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-pool.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_bridge_dbserver_pool_js",
-      "community": 12,
+      "community": 0,
       "norm_label": "dbserver-pool.js"
     },
     {
@@ -3268,7 +3268,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-pool.js",
       "source_location": "L12",
       "id": "dbserver_pool_dbserverpool",
-      "community": 12,
+      "community": 0,
       "norm_label": "dbserverpool"
     },
     {
@@ -3277,7 +3277,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-pool.js",
       "source_location": "L13",
       "id": "dbserver_pool_dbserverpool_constructor",
-      "community": 12,
+      "community": 0,
       "norm_label": ".constructor()"
     },
     {
@@ -3304,7 +3304,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-pool.js",
       "source_location": "L89",
       "id": "dbserver_pool_dbserverpool_acquire",
-      "community": 12,
+      "community": 1,
       "norm_label": ".acquire()"
     },
     {
@@ -3313,7 +3313,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-pool.js",
       "source_location": "L157",
       "id": "dbserver_pool_dbserverpool_size",
-      "community": 12,
+      "community": 0,
       "norm_label": ".size()"
     },
     {
@@ -3322,7 +3322,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-orchestrator.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_bridge_dbserver_orchestrator_js",
-      "community": 0,
+      "community": 1,
       "norm_label": "dbserver-orchestrator.js"
     },
     {
@@ -3331,7 +3331,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-orchestrator.js",
       "source_location": "L12",
       "id": "dbserver_orchestrator_requestmetadata",
-      "community": 0,
+      "community": 1,
       "norm_label": "requestmetadata()"
     },
     {
@@ -3340,7 +3340,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-orchestrator.js",
       "source_location": "L34",
       "id": "dbserver_orchestrator_refreshallmetadata",
-      "community": 0,
+      "community": 1,
       "norm_label": "refreshallmetadata()"
     },
     {
@@ -3349,7 +3349,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-orchestrator.js",
       "source_location": "L46",
       "id": "dbserver_orchestrator_requestartwork",
-      "community": 0,
+      "community": 1,
       "norm_label": "requestartwork()"
     },
     {
@@ -3358,7 +3358,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/dbserver-orchestrator.js",
       "source_location": "L63",
       "id": "dbserver_orchestrator_scheduledbfollowups",
-      "community": 0,
+      "community": 1,
       "norm_label": "scheduledbfollowups()"
     },
     {
@@ -3367,7 +3367,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_bridge_tcnet_handler_js",
-      "community": 5,
+      "community": 6,
       "norm_label": "tcnet-handler.js"
     },
     {
@@ -3376,7 +3376,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
       "source_location": "L18",
       "id": "tcnet_handler_startswithbridgeci",
-      "community": 5,
+      "community": 6,
       "norm_label": "_startswithbridgeci()"
     },
     {
@@ -3385,7 +3385,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
       "source_location": "L28",
       "id": "tcnet_handler_readname8",
-      "community": 5,
+      "community": 6,
       "norm_label": "_readname8()"
     },
     {
@@ -3394,7 +3394,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
       "source_location": "L39",
       "id": "tcnet_handler_getmixerscratch",
-      "community": 5,
+      "community": 6,
       "norm_label": "_getmixerscratch()"
     },
     {
@@ -3403,7 +3403,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
       "source_location": "L56",
       "id": "tcnet_handler_registertcnetnode",
-      "community": 5,
+      "community": 6,
       "norm_label": "registertcnetnode()"
     },
     {
@@ -3412,7 +3412,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
       "source_location": "L88",
       "id": "tcnet_handler_handletcnetmsg",
-      "community": 5,
+      "community": 6,
       "norm_label": "handletcnetmsg()"
     },
     {
@@ -3421,8 +3421,53 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-handler.js",
       "source_location": "L194",
       "id": "tcnet_handler_handletcnetlportmsg",
-      "community": 5,
+      "community": 6,
       "norm_label": "handletcnetlportmsg()"
+    },
+    {
+      "label": "network-helpers.js",
+      "file_type": "code",
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L1",
+      "id": "users_zes2021_documents_claude_projects_bridge_clone_bridge_network_helpers_js",
+      "community": 0,
+      "norm_label": "network-helpers.js"
+    },
+    {
+      "label": "isLinkLocalIp()",
+      "file_type": "code",
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L6",
+      "id": "network_helpers_islinklocalip",
+      "community": 0,
+      "norm_label": "islinklocalip()"
+    },
+    {
+      "label": "findLocalIfaceForRemote()",
+      "file_type": "code",
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L11",
+      "id": "network_helpers_findlocalifaceforremote",
+      "community": 0,
+      "norm_label": "findlocalifaceforremote()"
+    },
+    {
+      "label": "pickAutoPdjlIface()",
+      "file_type": "code",
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L33",
+      "id": "network_helpers_pickautopdjliface",
+      "community": 0,
+      "norm_label": "pickautopdjliface()"
+    },
+    {
+      "label": "shouldDelayWinAutoPdjl()",
+      "file_type": "code",
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L48",
+      "id": "network_helpers_shoulddelaywinautopdjl",
+      "community": 0,
+      "norm_label": "shoulddelaywinautopdjl()"
     },
     {
       "label": "beat-anchor.js",
@@ -3430,7 +3475,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/beat-anchor.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_bridge_beat_anchor_js",
-      "community": 6,
+      "community": 5,
       "norm_label": "beat-anchor.js"
     },
     {
@@ -3439,7 +3484,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/beat-anchor.js",
       "source_location": "L8",
       "id": "beat_anchor_nxs2beatcounttoms",
-      "community": 6,
+      "community": 5,
       "norm_label": "nxs2beatcounttoms()"
     },
     {
@@ -3448,7 +3493,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/beat-anchor.js",
       "source_location": "L17",
       "id": "beat_anchor_shouldkeeppredictedbeatanchor",
-      "community": 6,
+      "community": 5,
       "norm_label": "shouldkeeppredictedbeatanchor()"
     },
     {
@@ -3457,7 +3502,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_bridge_virtual_deck_js",
-      "community": 1,
+      "community": 0,
       "norm_label": "virtual-deck.js"
     },
     {
@@ -3466,7 +3511,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L17",
       "id": "virtual_deck_registervirtualdeck",
-      "community": 1,
+      "community": 0,
       "norm_label": "registervirtualdeck()"
     },
     {
@@ -3475,7 +3520,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L31",
       "id": "virtual_deck_unregistervirtualdeck",
-      "community": 1,
+      "community": 0,
       "norm_label": "unregistervirtualdeck()"
     },
     {
@@ -3484,7 +3529,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L40",
       "id": "virtual_deck_setvirtualart",
-      "community": 0,
+      "community": 1,
       "norm_label": "setvirtualart()"
     },
     {
@@ -3493,7 +3538,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L52",
       "id": "virtual_deck_sendvirtualcdjstatus",
-      "community": 1,
+      "community": 0,
       "norm_label": "sendvirtualcdjstatus()"
     },
     {
@@ -3502,7 +3547,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L114",
       "id": "virtual_deck_startvirtualdbserver",
-      "community": 1,
+      "community": 0,
       "norm_label": "startvirtualdbserver()"
     },
     {
@@ -3511,7 +3556,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L200",
       "id": "virtual_deck_handlevdbrequest",
-      "community": 1,
+      "community": 0,
       "norm_label": "handlevdbrequest()"
     },
     {
@@ -3520,7 +3565,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L257",
       "id": "virtual_deck_findvirtualart",
-      "community": 1,
+      "community": 0,
       "norm_label": "findvirtualart()"
     },
     {
@@ -3529,7 +3574,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L266",
       "id": "virtual_deck_findartbytrackid",
-      "community": 1,
+      "community": 0,
       "norm_label": "findartbytrackid()"
     },
     {
@@ -3538,7 +3583,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/virtual-deck.js",
       "source_location": "L280",
       "id": "virtual_deck_pusharttoresolume",
-      "community": 1,
+      "community": 0,
       "norm_label": "pusharttoresolume()"
     },
     {
@@ -3547,7 +3592,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_bridge_tcnet_sender_js",
-      "community": 5,
+      "community": 6,
       "norm_label": "tcnet-sender.js"
     },
     {
@@ -3556,7 +3601,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L13",
       "id": "tcnet_sender_send",
-      "community": 5,
+      "community": 6,
       "norm_label": "send()"
     },
     {
@@ -3565,7 +3610,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L66",
       "id": "tcnet_sender_uc",
-      "community": 5,
+      "community": 6,
       "norm_label": "uc()"
     },
     {
@@ -3574,7 +3619,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L74",
       "id": "tcnet_sender_sendtoarenas",
-      "community": 5,
+      "community": 6,
       "norm_label": "sendtoarenas()"
     },
     {
@@ -3583,7 +3628,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L83",
       "id": "tcnet_sender_sendtoarenaslport",
-      "community": 5,
+      "community": 6,
       "norm_label": "sendtoarenaslport()"
     },
     {
@@ -3592,7 +3637,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L94",
       "id": "tcnet_sender_senddatatoarenas",
-      "community": 5,
+      "community": 6,
       "norm_label": "senddatatoarenas()"
     },
     {
@@ -3601,7 +3646,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L108",
       "id": "tcnet_sender_sendartwork",
-      "community": 5,
+      "community": 6,
       "norm_label": "sendartwork()"
     },
     {
@@ -3610,7 +3655,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L118",
       "id": "tcnet_sender_resendallartwork",
-      "community": 5,
+      "community": 0,
       "norm_label": "resendallartwork()"
     },
     {
@@ -3619,7 +3664,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L133",
       "id": "tcnet_sender_senddatacycle",
-      "community": 5,
+      "community": 6,
       "norm_label": "senddatacycle()"
     },
     {
@@ -3628,7 +3673,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L168",
       "id": "tcnet_sender_sendoptin",
-      "community": 5,
+      "community": 6,
       "norm_label": "sendoptin()"
     },
     {
@@ -3637,7 +3682,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/tcnet-sender.js",
       "source_location": "L177",
       "id": "tcnet_sender_sendstatus",
-      "community": 5,
+      "community": 6,
       "norm_label": "sendstatus()"
     },
     {
@@ -3646,7 +3691,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/dbserver.test.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tests_dbserver_test_js",
-      "community": 43,
+      "community": 44,
       "norm_label": "dbserver.test.js"
     },
     {
@@ -3655,7 +3700,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/dbserver.test.js",
       "source_location": "L7",
       "id": "dbserver_test_test",
-      "community": 43,
+      "community": 44,
       "norm_label": "test()"
     },
     {
@@ -3664,7 +3709,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/tcnet-packets.test.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tests_tcnet_packets_test_js",
-      "community": 6,
+      "community": 5,
       "norm_label": "tcnet-packets.test.js"
     },
     {
@@ -3673,7 +3718,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/tcnet-packets.test.js",
       "source_location": "L11",
       "id": "tcnet_packets_test_test",
-      "community": 6,
+      "community": 5,
       "norm_label": "test()"
     },
     {
@@ -3682,7 +3727,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/tcnet-packets.test.js",
       "source_location": "L22",
       "id": "tcnet_packets_test_loadprivatebuilders",
-      "community": 6,
+      "community": 5,
       "norm_label": "loadprivatebuilders()"
     },
     {
@@ -3691,7 +3736,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/tcnet-packets.test.js",
       "source_location": "L44",
       "id": "tcnet_packets_test_makerequest",
-      "community": 6,
+      "community": 5,
       "norm_label": "makerequest()"
     },
     {
@@ -3700,7 +3745,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/waveform-shader.test.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tests_waveform_shader_test_js",
-      "community": 6,
+      "community": 5,
       "norm_label": "waveform-shader.test.js"
     },
     {
@@ -3709,7 +3754,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/waveform-shader.test.js",
       "source_location": "L7",
       "id": "waveform_shader_test_test",
-      "community": 6,
+      "community": 5,
       "norm_label": "test()"
     },
     {
@@ -3718,7 +3763,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/waveform-shader.test.js",
       "source_location": "L21",
       "id": "waveform_shader_test_shaderconst",
-      "community": 6,
+      "community": 5,
       "norm_label": "shaderconst()"
     },
     {
@@ -3799,7 +3844,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/waveform-color.test.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tests_waveform_color_test_js",
-      "community": 40,
+      "community": 41,
       "norm_label": "waveform-color.test.js"
     },
     {
@@ -3808,7 +3853,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/waveform-color.test.js",
       "source_location": "L6",
       "id": "waveform_color_test_test",
-      "community": 40,
+      "community": 41,
       "norm_label": "test()"
     },
     {
@@ -3817,7 +3862,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/waveform-color.test.js",
       "source_location": "L14",
       "id": "waveform_color_test_colorcategory",
-      "community": 40,
+      "community": 41,
       "norm_label": "colorcategory()"
     },
     {
@@ -3826,7 +3871,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/pdjl-packets.test.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tests_pdjl_packets_test_js",
-      "community": 44,
+      "community": 45,
       "norm_label": "pdjl-packets.test.js"
     },
     {
@@ -3835,7 +3880,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/pdjl-packets.test.js",
       "source_location": "L7",
       "id": "pdjl_packets_test_test",
-      "community": 44,
+      "community": 45,
       "norm_label": "test()"
     },
     {
@@ -3844,7 +3889,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/pdjl-parser.test.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tests_pdjl_parser_test_js",
-      "community": 45,
+      "community": 46,
       "norm_label": "pdjl-parser.test.js"
     },
     {
@@ -3853,7 +3898,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/pdjl-parser.test.js",
       "source_location": "L7",
       "id": "pdjl_parser_test_test",
-      "community": 45,
+      "community": 46,
       "norm_label": "test()"
     },
     {
@@ -3862,7 +3907,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/tests/interfaces.test.js",
       "source_location": "L1",
       "id": "users_zes2021_library_cloudstorage_dropbox_claude_projects_bridge_clone_tests_interfaces_test_js",
-      "community": 6,
+      "community": 5,
       "norm_label": "interfaces.test.js"
     },
     {
@@ -3871,7 +3916,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/tests/interfaces.test.js",
       "source_location": "L6",
       "id": "interfaces_test_test",
-      "community": 6,
+      "community": 5,
       "norm_label": "test()"
     },
     {
@@ -3880,7 +3925,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/tests/license-service.test.js",
       "source_location": "L1",
       "id": "users_zes2021_library_cloudstorage_dropbox_claude_projects_bridge_clone_tests_license_service_test_js",
-      "community": 46,
+      "community": 47,
       "norm_label": "license-service.test.js"
     },
     {
@@ -3889,7 +3934,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/tests/license-service.test.js",
       "source_location": "L6",
       "id": "license_service_test_test",
-      "community": 46,
+      "community": 47,
       "norm_label": "test()"
     },
     {
@@ -3898,7 +3943,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/metadata-bpm.test.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tests_metadata_bpm_test_js",
-      "community": 47,
+      "community": 48,
       "norm_label": "metadata-bpm.test.js"
     },
     {
@@ -3907,7 +3952,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/metadata-bpm.test.js",
       "source_location": "L7",
       "id": "metadata_bpm_test_test",
-      "community": 47,
+      "community": 48,
       "norm_label": "test()"
     },
     {
@@ -3916,7 +3961,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/vu-strip.test.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_tests_vu_strip_test_js",
-      "community": 6,
+      "community": 5,
       "norm_label": "vu-strip.test.js"
     },
     {
@@ -3925,7 +3970,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/tests/vu-strip.test.js",
       "source_location": "L9",
       "id": "vu_strip_test_test",
-      "community": 6,
+      "community": 5,
       "norm_label": "test()"
     },
     {
@@ -3934,7 +3979,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/dbserver-io.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_pdjl_dbserver_io_js",
-      "community": 0,
+      "community": 12,
       "norm_label": "dbserver-io.js"
     },
     {
@@ -3943,7 +3988,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/dbserver-io.js",
       "source_location": "L13",
       "id": "dbserver_io_dbreadresponse",
-      "community": 0,
+      "community": 12,
       "norm_label": "dbreadresponse()"
     },
     {
@@ -3952,7 +3997,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/dbserver-io.js",
       "source_location": "L42",
       "id": "dbserver_io_dbreadfullresponse",
-      "community": 0,
+      "community": 12,
       "norm_label": "dbreadfullresponse()"
     },
     {
@@ -4060,7 +4105,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/dbserver.js",
       "source_location": "L89",
       "id": "dbserver_parsedbrequest",
-      "community": 0,
+      "community": 1,
       "norm_label": "parsedbrequest()"
     },
     {
@@ -4087,7 +4132,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_pdjl_packets_js",
-      "community": 6,
+      "community": 5,
       "norm_label": "packets.js"
     },
     {
@@ -4096,7 +4141,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L22",
       "id": "packets_pdjlbridgeannounceid",
-      "community": 6,
+      "community": 5,
       "norm_label": "pdjlbridgeannounceid()"
     },
     {
@@ -4105,7 +4150,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L26",
       "id": "packets_pdjlidentitybytefrommac",
-      "community": 6,
+      "community": 5,
       "norm_label": "pdjlidentitybytefrommac()"
     },
     {
@@ -4114,7 +4159,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L30",
       "id": "packets_pdjlbridgename",
-      "community": 6,
+      "community": 5,
       "norm_label": "pdjlbridgename()"
     },
     {
@@ -4123,7 +4168,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L34",
       "id": "packets_buildpdjlbridgehellopacket",
-      "community": 6,
+      "community": 5,
       "norm_label": "buildpdjlbridgehellopacket()"
     },
     {
@@ -4132,7 +4177,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L48",
       "id": "packets_buildpdjlbridgeclaimpacket",
-      "community": 6,
+      "community": 5,
       "norm_label": "buildpdjlbridgeclaimpacket()"
     },
     {
@@ -4141,7 +4186,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L74",
       "id": "packets_buildpdjlbridgekeepalivepacket",
-      "community": 6,
+      "community": 5,
       "norm_label": "buildpdjlbridgekeepalivepacket()"
     },
     {
@@ -4150,7 +4195,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L100",
       "id": "packets_builddjmsubscribepacket",
-      "community": 6,
+      "community": 5,
       "norm_label": "builddjmsubscribepacket()"
     },
     {
@@ -4159,7 +4204,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L117",
       "id": "packets_builddbserverkeepalivepacket",
-      "community": 6,
+      "community": 5,
       "norm_label": "builddbserverkeepalivepacket()"
     },
     {
@@ -4168,7 +4213,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L138",
       "id": "packets_buildbridgenotifypacket",
-      "community": 6,
+      "community": 5,
       "norm_label": "buildbridgenotifypacket()"
     },
     {
@@ -4177,7 +4222,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L155",
       "id": "packets_haspdjlmagic",
-      "community": 6,
+      "community": 5,
       "norm_label": "haspdjlmagic()"
     },
     {
@@ -4186,7 +4231,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/packets.js",
       "source_location": "L161",
       "id": "packets_readpdjlnamefield",
-      "community": 6,
+      "community": 5,
       "norm_label": "readpdjlnamefield()"
     },
     {
@@ -4195,7 +4240,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/parser.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_pdjl_parser_js",
-      "community": 6,
+      "community": 5,
       "norm_label": "parser.js"
     },
     {
@@ -4204,7 +4249,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/parser.js",
       "source_location": "L9",
       "id": "parser_parsepdjl",
-      "community": 6,
+      "community": 5,
       "norm_label": "parsepdjl()"
     },
     {
@@ -4213,7 +4258,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/network.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_pdjl_network_js",
-      "community": 1,
+      "community": 0,
       "norm_label": "network.js"
     },
     {
@@ -4222,7 +4267,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/network.js",
       "source_location": "L11",
       "id": "network_runnetsetup",
-      "community": 1,
+      "community": 0,
       "norm_label": "_runnetsetup()"
     },
     {
@@ -4231,7 +4276,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/network.js",
       "source_location": "L16",
       "id": "network_gethwportmap",
-      "community": 1,
+      "community": 0,
       "norm_label": "_gethwportmap()"
     },
     {
@@ -4240,7 +4285,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/network.js",
       "source_location": "L36",
       "id": "network_getallinterfaces",
-      "community": 1,
+      "community": 0,
       "norm_label": "getallinterfaces()"
     },
     {
@@ -4258,7 +4303,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/network.js",
       "source_location": "L58",
       "id": "network_sanitizeinterfaceselection",
-      "community": 1,
+      "community": 0,
       "norm_label": "sanitizeinterfaceselection()"
     },
     {
@@ -4267,7 +4312,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/network.js",
       "source_location": "L64",
       "id": "network_detectbroadcastfor",
-      "community": 1,
+      "community": 0,
       "norm_label": "detectbroadcastfor()"
     },
     {
@@ -4276,7 +4321,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/pdjl/network.js",
       "source_location": "L76",
       "id": "network_pdjlbroadcasttargets",
-      "community": 1,
+      "community": 0,
       "norm_label": "pdjlbroadcasttargets()"
     },
     {
@@ -4285,7 +4330,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/ipc-license.js",
       "source_location": "L1",
       "id": "users_zes2021_library_cloudstorage_dropbox_claude_projects_bridge_clone_main_ipc_license_js",
-      "community": 48,
+      "community": 49,
       "norm_label": "ipc-license.js"
     },
     {
@@ -4294,7 +4339,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/ipc-license.js",
       "source_location": "L4",
       "id": "ipc_license_registerlicenseipc",
-      "community": 48,
+      "community": 49,
       "norm_label": "registerlicenseipc()"
     },
     {
@@ -4339,7 +4384,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-link.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_main_ipc_link_js",
-      "community": 49,
+      "community": 50,
       "norm_label": "ipc-link.js"
     },
     {
@@ -4348,7 +4393,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-link.js",
       "source_location": "L5",
       "id": "ipc_link_registerlinkipc",
-      "community": 49,
+      "community": 50,
       "norm_label": "registerlinkipc()"
     },
     {
@@ -4357,7 +4402,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L1",
       "id": "users_zes2021_library_cloudstorage_dropbox_claude_projects_bridge_clone_main_cleanup_js",
-      "community": 0,
+      "community": 1,
       "norm_label": "cleanup.js"
     },
     {
@@ -4366,7 +4411,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L47",
       "id": "cleanup_isprotected",
-      "community": 0,
+      "community": 1,
       "norm_label": "isprotected()"
     },
     {
@@ -4375,7 +4420,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L53",
       "id": "cleanup_safe",
-      "community": 0,
+      "community": 1,
       "norm_label": "_safe()"
     },
     {
@@ -4384,7 +4429,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L58",
       "id": "cleanup_findbynameunix",
-      "community": 0,
+      "community": 1,
       "norm_label": "_findbynameunix()"
     },
     {
@@ -4393,7 +4438,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L77",
       "id": "cleanup_pidnameunix",
-      "community": 0,
+      "community": 1,
       "norm_label": "_pidnameunix()"
     },
     {
@@ -4402,7 +4447,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L83",
       "id": "cleanup_findbyportunix",
-      "community": 0,
+      "community": 1,
       "norm_label": "_findbyportunix()"
     },
     {
@@ -4411,7 +4456,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L98",
       "id": "cleanup_killunix",
-      "community": 0,
+      "community": 1,
       "norm_label": "_killunix()"
     },
     {
@@ -4420,7 +4465,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L105",
       "id": "cleanup_findbynamewin",
-      "community": 0,
+      "community": 1,
       "norm_label": "_findbynamewin()"
     },
     {
@@ -4429,7 +4474,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L121",
       "id": "cleanup_pidnamewin",
-      "community": 0,
+      "community": 1,
       "norm_label": "_pidnamewin()"
     },
     {
@@ -4438,7 +4483,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L128",
       "id": "cleanup_findbyportwin",
-      "community": 0,
+      "community": 1,
       "norm_label": "_findbyportwin()"
     },
     {
@@ -4447,7 +4492,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L147",
       "id": "cleanup_killwin",
-      "community": 0,
+      "community": 1,
       "norm_label": "_killwin()"
     },
     {
@@ -4456,7 +4501,7 @@
       "source_file": "/Users/zes2021/Library/CloudStorage/Dropbox/claude_projects/bridge-clone/main/cleanup.js",
       "source_location": "L154",
       "id": "cleanup_runcleanup",
-      "community": 0,
+      "community": 1,
       "norm_label": "runcleanup()"
     },
     {
@@ -4465,7 +4510,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-bridge-iface.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_main_ipc_bridge_iface_js",
-      "community": 50,
+      "community": 51,
       "norm_label": "ipc-bridge-iface.js"
     },
     {
@@ -4474,7 +4519,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-bridge-iface.js",
       "source_location": "L6",
       "id": "ipc_bridge_iface_registerbridgeifaceipc",
-      "community": 50,
+      "community": 51,
       "norm_label": "registerbridgeifaceipc()"
     },
     {
@@ -4483,7 +4528,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-app.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_main_ipc_app_js",
-      "community": 51,
+      "community": 52,
       "norm_label": "ipc-app.js"
     },
     {
@@ -4492,7 +4537,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-app.js",
       "source_location": "L8",
       "id": "ipc_app_registerappipc",
-      "community": 51,
+      "community": 52,
       "norm_label": "registerappipc()"
     },
     {
@@ -4501,7 +4546,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/audio-decode.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_main_audio_decode_js",
-      "community": 38,
+      "community": 39,
       "norm_label": "audio-decode.js"
     },
     {
@@ -4510,7 +4555,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/audio-decode.js",
       "source_location": "L11",
       "id": "audio_decode_findffmpeg",
-      "community": 38,
+      "community": 39,
       "norm_label": "findffmpeg()"
     },
     {
@@ -4519,7 +4564,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/audio-decode.js",
       "source_location": "L27",
       "id": "audio_decode_cleanuptempfiles",
-      "community": 38,
+      "community": 39,
       "norm_label": "cleanuptempfiles()"
     },
     {
@@ -4528,7 +4573,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/audio-decode.js",
       "source_location": "L32",
       "id": "audio_decode_registeraudiodecodeipc",
-      "community": 38,
+      "community": 39,
       "norm_label": "registeraudiodecodeipc()"
     },
     {
@@ -4537,7 +4582,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-artnet.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_main_ipc_artnet_js",
-      "community": 6,
+      "community": 5,
       "norm_label": "ipc-artnet.js"
     },
     {
@@ -4546,7 +4591,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-artnet.js",
       "source_location": "L5",
       "id": "ipc_artnet_isipv4",
-      "community": 6,
+      "community": 5,
       "norm_label": "_isipv4()"
     },
     {
@@ -4555,7 +4600,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-artnet.js",
       "source_location": "L6",
       "id": "ipc_artnet_isport",
-      "community": 6,
+      "community": 5,
       "norm_label": "_isport()"
     },
     {
@@ -4564,7 +4609,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-artnet.js",
       "source_location": "L7",
       "id": "ipc_artnet_isuniverse",
-      "community": 6,
+      "community": 5,
       "norm_label": "_isuniverse()"
     },
     {
@@ -4573,7 +4618,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-artnet.js",
       "source_location": "L8",
       "id": "ipc_artnet_isfps",
-      "community": 6,
+      "community": 5,
       "norm_label": "_isfps()"
     },
     {
@@ -4582,7 +4627,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-artnet.js",
       "source_location": "L9",
       "id": "ipc_artnet_ishz",
-      "community": 6,
+      "community": 5,
       "norm_label": "_ishz()"
     },
     {
@@ -4591,7 +4636,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-artnet.js",
       "source_location": "L12",
       "id": "ipc_artnet_registerartnetipc",
-      "community": 6,
+      "community": 5,
       "norm_label": "registerartnetipc()"
     },
     {
@@ -4600,7 +4645,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-bridge-simple.js",
       "source_location": "L1",
       "id": "users_zes2021_documents_claude_projects_bridge_clone_main_ipc_bridge_simple_js",
-      "community": 52,
+      "community": 53,
       "norm_label": "ipc-bridge-simple.js"
     },
     {
@@ -4609,7 +4654,7 @@
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/main/ipc-bridge-simple.js",
       "source_location": "L5",
       "id": "ipc_bridge_simple_registerbridgesimpleipc",
-      "community": 52,
+      "community": 53,
       "norm_label": "registerbridgesimpleipc()"
     },
     {
@@ -4699,7 +4744,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 60,
+      "community": 61,
       "norm_label": "v0.5.0 initial release",
       "id": "changelog_v050_initial_release"
     },
@@ -4855,7 +4900,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 61,
+      "community": 62,
       "norm_label": "graphify workflow rules",
       "id": "claudemd_graphify_rules"
     },
@@ -5167,7 +5212,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 62,
+      "community": 63,
       "norm_label": "pdjl key facts (ports, broadcast, header, bpm encoding)",
       "id": "pdjl_readme_key_facts"
     },
@@ -5531,7 +5576,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 41,
+      "community": 42,
       "norm_label": "proposal a - compact pro",
       "id": "doc_proposal_a_compact_pro"
     },
@@ -5544,7 +5589,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 41,
+      "community": 42,
       "norm_label": "3x2 deck grid layout",
       "id": "doc_proposal_a_3x2_deck_grid"
     },
@@ -5557,7 +5602,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 41,
+      "community": 42,
       "norm_label": "56px icon sidebar (live/mix/pdjl/tcnet/artnet/link)",
       "id": "doc_proposal_a_sidebar_nav"
     },
@@ -5622,7 +5667,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 53,
+      "community": 54,
       "norm_label": "proposal c - minimal tactical (light theme)",
       "id": "doc_proposal_c_minimal_tactical"
     },
@@ -5635,7 +5680,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 53,
+      "community": 54,
       "norm_label": "3-column body layout (260/flex/320)",
       "id": "doc_proposal_c_three_column"
     },
@@ -5687,7 +5732,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 54,
+      "community": 55,
       "norm_label": "proposal g - timecode first (monolith) information hierarchy",
       "id": "doc_proposal_g_monolith"
     },
@@ -5700,7 +5745,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 54,
+      "community": 55,
       "norm_label": "information priority: timecode > waveform > track id > bpm > others",
       "id": "doc_information_hierarchy_principle"
     },
@@ -5804,7 +5849,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 55,
+      "community": 56,
       "norm_label": "preview develop - g.row + waveform 2-band + beat ring + knob arc",
       "id": "doc_preview_develop"
     },
@@ -5817,7 +5862,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 55,
+      "community": 56,
       "norm_label": "preview v2 - tower/card/row developed with channel strip + fader",
       "id": "doc_preview_develop_v2"
     },
@@ -9215,7 +9260,7 @@
       },
       "purpose": "Fallback placeholder artwork shown when a track has no album art available in the DJ bridge UI",
       "confidence_score": 0.95,
-      "community": 63,
+      "community": 64,
       "norm_label": "default album artwork placeholder (vinyl disc)",
       "id": "default_album_artwork"
     },
@@ -10502,7 +10547,7 @@
       "dimensions_hint": "square aspect ratio",
       "purpose": "fallback/default album artwork for DJ deck UI when metadata artwork missing",
       "confidence_score": 0.95,
-      "community": 64,
+      "community": 65,
       "norm_label": "default album art (vinyl/cd placeholder)",
       "id": "default_art"
     },
@@ -10526,7 +10571,7 @@
       "shape": "circular disc centered on square canvas",
       "purpose": "fallback artwork displayed when no album/track art is available",
       "confidence_score": 0.95,
-      "community": 65,
+      "community": 66,
       "norm_label": "default album art (vinyl record placeholder)",
       "id": "default_art_png"
     }
@@ -10668,7 +10713,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L144",
+      "source_location": "L146",
       "weight": 1.0,
       "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_core_js",
       "_tgt": "bridge_core_bridgecore",
@@ -10692,7 +10737,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1248",
+      "source_location": "L1214",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_onpdjl",
       "_tgt": "bridge_core_dbglog",
@@ -10716,7 +10761,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L145",
+      "source_location": "L147",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_constructor",
@@ -10728,7 +10773,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L203",
+      "source_location": "L205",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_shouldlograte",
@@ -10740,7 +10785,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L221",
+      "source_location": "L223",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_resolvebroadcast",
@@ -10752,7 +10797,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L243",
+      "source_location": "L245",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_start",
@@ -10764,7 +10809,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L374",
+      "source_location": "L376",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_settcnetunicast",
@@ -10776,7 +10821,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L380",
+      "source_location": "L382",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_stop",
@@ -10788,7 +10833,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L474",
+      "source_location": "L476",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_startdjmcapture",
@@ -10800,7 +10845,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L483",
+      "source_location": "L485",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_stopdjmcapture",
@@ -10812,7 +10857,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L490",
+      "source_location": "L492",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_rebindtcnet",
@@ -10824,7 +10869,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L534",
+      "source_location": "L537",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_findlocalifaceforremote",
@@ -10836,7 +10881,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L553",
+      "source_location": "L538",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_islinklocalip",
@@ -10848,7 +10893,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L557",
+      "source_location": "L539",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_pickautopdjliface",
@@ -10860,7 +10905,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L571",
+      "source_location": "L540",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_shoulddelaywinautopdjl",
@@ -10872,7 +10917,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L578",
+      "source_location": "L544",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_handleinterfaceschanged",
@@ -10884,7 +10929,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L587",
+      "source_location": "L553",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_autoselectpdjlforremote",
@@ -10896,7 +10941,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L608",
+      "source_location": "L574",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_rebindpdjl",
@@ -10908,7 +10953,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L653",
+      "source_location": "L619",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_settcnetmode",
@@ -10920,7 +10965,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L663",
+      "source_location": "L629",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_send",
@@ -10932,7 +10977,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L664",
+      "source_location": "L630",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_uc",
@@ -10944,7 +10989,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L665",
+      "source_location": "L631",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_sendtoarenas",
@@ -10956,7 +11001,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L666",
+      "source_location": "L632",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_sendtoarenaslport",
@@ -10968,7 +11013,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L667",
+      "source_location": "L633",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_senddatatoarenas",
@@ -10980,7 +11025,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L668",
+      "source_location": "L634",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_sendartwork",
@@ -10992,7 +11037,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L669",
+      "source_location": "L635",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_resendallartwork",
@@ -11004,7 +11049,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L670",
+      "source_location": "L636",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_senddatacycle",
@@ -11016,7 +11061,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L671",
+      "source_location": "L637",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_sendoptin",
@@ -11028,7 +11073,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L672",
+      "source_location": "L638",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_sendstatus",
@@ -11040,7 +11085,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L674",
+      "source_location": "L640",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_tcdeps",
@@ -11052,7 +11097,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L681",
+      "source_location": "L647",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_handletcnetmsg",
@@ -11064,7 +11109,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L692",
+      "source_location": "L658",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_starttcnetrx",
@@ -11076,7 +11121,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L744",
+      "source_location": "L710",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_startlistenerportrx",
@@ -11088,7 +11133,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L786",
+      "source_location": "L752",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_startpdjlrx",
@@ -11100,7 +11145,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L822",
+      "source_location": "L788",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_startpdjlannounce",
@@ -11112,7 +11157,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1139",
+      "source_location": "L1105",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_onpdjl",
@@ -11124,7 +11169,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1878",
+      "source_location": "L1844",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_updatelayer",
@@ -11136,7 +11181,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1911",
+      "source_location": "L1877",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_removelayer",
@@ -11148,7 +11193,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1912",
+      "source_location": "L1878",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_sethwmode",
@@ -11160,7 +11205,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1915",
+      "source_location": "L1881",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_registervirtualdeck",
@@ -11172,7 +11217,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1916",
+      "source_location": "L1882",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_unregistervirtualdeck",
@@ -11184,7 +11229,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1917",
+      "source_location": "L1883",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_syncvirtualdevices",
@@ -11196,7 +11241,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1922",
+      "source_location": "L1888",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_getactivenodes",
@@ -11208,7 +11253,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1923",
+      "source_location": "L1889",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_getactivedevices",
@@ -11220,7 +11265,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1924",
+      "source_location": "L1890",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_getpdjlport",
@@ -11232,7 +11277,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1925",
+      "source_location": "L1891",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_nodename",
@@ -11244,7 +11289,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1934",
+      "source_location": "L1900",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_setvirtualart",
@@ -11256,7 +11301,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1941",
+      "source_location": "L1907",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_sendvirtualcdjstatus",
@@ -11268,7 +11313,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1944",
+      "source_location": "L1910",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_pusharttoresolume",
@@ -11280,7 +11325,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1946",
+      "source_location": "L1912",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_startvirtualdbserver",
@@ -11292,7 +11337,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1949",
+      "source_location": "L1915",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_parsedbrequest",
@@ -11304,7 +11349,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1951",
+      "source_location": "L1917",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_handlevdbrequest",
@@ -11316,7 +11361,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1953",
+      "source_location": "L1919",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_findartbytrackid",
@@ -11328,7 +11373,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1955",
+      "source_location": "L1921",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_findvirtualart",
@@ -11340,7 +11385,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1957",
+      "source_location": "L1923",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbbuildmenuitem",
@@ -11352,7 +11397,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1958",
+      "source_location": "L1924",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbbuildartresponse",
@@ -11364,7 +11409,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1970",
+      "source_location": "L1936",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_requestmetadata",
@@ -11376,7 +11421,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1973",
+      "source_location": "L1939",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_refreshallmetadata",
@@ -11388,7 +11433,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1974",
+      "source_location": "L1940",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_requestartwork",
@@ -11400,7 +11445,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1977",
+      "source_location": "L1943",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_scheduledbfollowups",
@@ -11412,7 +11457,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1983",
+      "source_location": "L1949",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbnum1",
@@ -11424,7 +11469,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1984",
+      "source_location": "L1950",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbnum2",
@@ -11436,7 +11481,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1985",
+      "source_location": "L1951",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbnum4",
@@ -11448,7 +11493,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1986",
+      "source_location": "L1952",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbbinary",
@@ -11460,7 +11505,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1987",
+      "source_location": "L1953",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbstr",
@@ -11472,7 +11517,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1988",
+      "source_location": "L1954",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbarg4",
@@ -11484,7 +11529,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1989",
+      "source_location": "L1955",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbrmst",
@@ -11496,7 +11541,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1990",
+      "source_location": "L1956",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbbuildmsg",
@@ -11508,7 +11553,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1993",
+      "source_location": "L1959",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbcleanupsessions",
@@ -11520,7 +11565,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1994",
+      "source_location": "L1960",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbacquire",
@@ -11532,7 +11577,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1997",
+      "source_location": "L1963",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbreadresponse",
@@ -11544,7 +11589,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1998",
+      "source_location": "L1964",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbreadfullresponse",
@@ -11556,7 +11601,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1999",
+      "source_location": "L1965",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbreadfield",
@@ -11568,7 +11613,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2000",
+      "source_location": "L1966",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbparseitems",
@@ -11580,7 +11625,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2003",
+      "source_location": "L1969",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbservermetadata",
@@ -11592,7 +11637,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2004",
+      "source_location": "L1970",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbserverwaveform",
@@ -11604,7 +11649,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2005",
+      "source_location": "L1971",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbserverwaveformdetail",
@@ -11616,7 +11661,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2006",
+      "source_location": "L1972",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbserverwaveformnxs2",
@@ -11628,7 +11673,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2007",
+      "source_location": "L1973",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbservercuepoints",
@@ -11640,7 +11685,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2008",
+      "source_location": "L1974",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbservercuepointsext",
@@ -11652,7 +11697,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2009",
+      "source_location": "L1975",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbservercuepointsnxs2",
@@ -11664,7 +11709,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2010",
+      "source_location": "L1976",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbservercuepointsstd",
@@ -11676,7 +11721,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2011",
+      "source_location": "L1977",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbserverbeatgrid",
@@ -11688,7 +11733,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2012",
+      "source_location": "L1978",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbserversongstructure",
@@ -11700,7 +11745,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2013",
+      "source_location": "L1979",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_dbserverartwork",
@@ -11712,7 +11757,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L2014",
+      "source_location": "L1980",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore",
       "_tgt": "bridge_core_bridgecore_phrasekindmeta",
@@ -11736,7 +11781,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L244",
+      "source_location": "L246",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_resolvebroadcast",
@@ -11748,7 +11793,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L495",
+      "source_location": "L497",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_rebindtcnet",
       "_tgt": "bridge_core_bridgecore_resolvebroadcast",
@@ -11784,7 +11829,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L321",
+      "source_location": "L323",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_startlistenerportrx",
@@ -11796,7 +11841,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L325",
+      "source_location": "L327",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_sendoptin",
@@ -11808,7 +11853,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L326",
+      "source_location": "L328",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_sendstatus",
@@ -11820,7 +11865,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L329",
+      "source_location": "L331",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_send",
@@ -11832,7 +11877,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L330",
+      "source_location": "L332",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_sendtoarenaslport",
@@ -11844,7 +11889,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L353",
+      "source_location": "L355",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_starttcnetrx",
@@ -11856,7 +11901,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L356",
+      "source_location": "L358",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_startpdjlrx",
@@ -11868,7 +11913,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L358",
+      "source_location": "L360",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_shoulddelaywinautopdjl",
@@ -11880,7 +11925,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L361",
+      "source_location": "L363",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_startpdjlannounce",
@@ -11892,7 +11937,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L364",
+      "source_location": "L366",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_start",
       "_tgt": "bridge_core_bridgecore_startvirtualdbserver",
@@ -11916,7 +11961,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L390",
+      "source_location": "L392",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_stop",
       "_tgt": "bridge_core_bridgecore_send",
@@ -11928,7 +11973,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L463",
+      "source_location": "L465",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_stop",
       "_tgt": "bridge_core_bridgecore_dbcleanupsessions",
@@ -11940,7 +11985,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L465",
+      "source_location": "L467",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_stop",
       "_tgt": "bridge_core_bridgecore_stopdjmcapture",
@@ -12000,7 +12045,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L520",
+      "source_location": "L522",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_rebindtcnet",
       "_tgt": "bridge_core_bridgecore_startlistenerportrx",
@@ -12012,7 +12057,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L527",
+      "source_location": "L529",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_rebindtcnet",
       "_tgt": "bridge_core_bridgecore_starttcnetrx",
@@ -12024,13 +12069,25 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L591",
+      "source_location": "L557",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_autoselectpdjlforremote",
       "_tgt": "bridge_core_bridgecore_findlocalifaceforremote",
       "source": "bridge_core_bridgecore_findlocalifaceforremote",
       "target": "bridge_core_bridgecore_autoselectpdjlforremote",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
+      "source_location": "L537",
+      "weight": 1.0,
+      "_src": "bridge_core_bridgecore_findlocalifaceforremote",
+      "_tgt": "network_helpers_findlocalifaceforremote",
+      "source": "bridge_core_bridgecore_findlocalifaceforremote",
+      "target": "network_helpers_findlocalifaceforremote"
     },
     {
       "relation": "calls",
@@ -12046,9 +12103,21 @@
     },
     {
       "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
+      "source_location": "L538",
+      "weight": 1.0,
+      "_src": "bridge_core_bridgecore_islinklocalip",
+      "_tgt": "network_helpers_islinklocalip",
+      "source": "bridge_core_bridgecore_islinklocalip",
+      "target": "network_helpers_islinklocalip"
+    },
+    {
+      "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L796",
+      "source_location": "L762",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_startpdjlrx",
       "_tgt": "bridge_core_bridgecore_pickautopdjliface",
@@ -12060,13 +12129,25 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L848",
+      "source_location": "L814",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_startpdjlannounce",
       "_tgt": "bridge_core_bridgecore_pickautopdjliface",
       "source": "bridge_core_bridgecore_pickautopdjliface",
       "target": "bridge_core_bridgecore_startpdjlannounce",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
+      "source_location": "L539",
+      "weight": 1.0,
+      "_src": "bridge_core_bridgecore_pickautopdjliface",
+      "_tgt": "network_helpers_pickautopdjliface",
+      "source": "bridge_core_bridgecore_pickautopdjliface",
+      "target": "network_helpers_pickautopdjliface"
     },
     {
       "relation": "calls",
@@ -12084,7 +12165,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L582",
+      "source_location": "L548",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_handleinterfaceschanged",
       "_tgt": "bridge_core_bridgecore_shoulddelaywinautopdjl",
@@ -12096,7 +12177,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L643",
+      "source_location": "L609",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_rebindpdjl",
       "_tgt": "bridge_core_bridgecore_shoulddelaywinautopdjl",
@@ -12108,7 +12189,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L795",
+      "source_location": "L761",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_startpdjlrx",
       "_tgt": "bridge_core_bridgecore_shoulddelaywinautopdjl",
@@ -12118,9 +12199,21 @@
     },
     {
       "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
+      "source_location": "L540",
+      "weight": 1.0,
+      "_src": "bridge_core_bridgecore_shoulddelaywinautopdjl",
+      "_tgt": "network_helpers_shoulddelaywinautopdjl",
+      "source": "bridge_core_bridgecore_shoulddelaywinautopdjl",
+      "target": "network_helpers_shoulddelaywinautopdjl"
+    },
+    {
+      "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L583",
+      "source_location": "L549",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_handleinterfaceschanged",
       "_tgt": "bridge_core_bridgecore_startpdjlannounce",
@@ -12132,7 +12225,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1200",
+      "source_location": "L1166",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_onpdjl",
       "_tgt": "bridge_core_bridgecore_autoselectpdjlforremote",
@@ -12144,7 +12237,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L612",
+      "source_location": "L578",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_rebindpdjl",
       "_tgt": "bridge_core_bridgecore_dbcleanupsessions",
@@ -12156,7 +12249,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L641",
+      "source_location": "L607",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_rebindpdjl",
       "_tgt": "bridge_core_bridgecore_startpdjlrx",
@@ -12168,7 +12261,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L646",
+      "source_location": "L612",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_rebindpdjl",
       "_tgt": "bridge_core_bridgecore_startpdjlannounce",
@@ -12180,7 +12273,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L663",
+      "source_location": "L629",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_send",
       "_tgt": "bridge_core_bridgecore_tcdeps",
@@ -12276,7 +12369,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L667",
+      "source_location": "L633",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_senddatatoarenas",
       "_tgt": "bridge_core_bridgecore_tcdeps",
@@ -12300,7 +12393,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L668",
+      "source_location": "L634",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_sendartwork",
       "_tgt": "bridge_core_bridgecore_tcdeps",
@@ -12312,7 +12405,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1232",
+      "source_location": "L1198",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_onpdjl",
       "_tgt": "bridge_core_bridgecore_sendartwork",
@@ -12372,7 +12465,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L669",
+      "source_location": "L635",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_resendallartwork",
       "_tgt": "bridge_core_bridgecore_tcdeps",
@@ -12396,7 +12489,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L670",
+      "source_location": "L636",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_senddatacycle",
       "_tgt": "bridge_core_bridgecore_tcdeps",
@@ -12444,7 +12537,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L671",
+      "source_location": "L637",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_sendoptin",
       "_tgt": "bridge_core_bridgecore_tcdeps",
@@ -12480,7 +12573,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L672",
+      "source_location": "L638",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_sendstatus",
       "_tgt": "bridge_core_bridgecore_tcdeps",
@@ -12648,7 +12741,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1258",
+      "source_location": "L1224",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_onpdjl",
       "_tgt": "bridge_core_bridgecore_requestmetadata",
@@ -12660,7 +12753,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1536",
+      "source_location": "L1502",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_onpdjl",
       "_tgt": "bridge_core_bridgecore_updatelayer",
@@ -12780,7 +12873,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1907",
+      "source_location": "L1873",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_updatelayer",
       "_tgt": "bridge_core_bridgecore_sendvirtualcdjstatus",
@@ -12792,7 +12885,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge-core.js",
-      "source_location": "L1911",
+      "source_location": "L1877",
       "weight": 1.0,
       "_src": "bridge_core_bridgecore_removelayer",
       "_tgt": "bridge_core_bridgecore_syncvirtualdevices",
@@ -19963,6 +20056,78 @@
       "_tgt": "tcnet_sender_send",
       "source": "tcnet_handler_handletcnetlportmsg",
       "target": "tcnet_sender_send"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_network_helpers_js",
+      "_tgt": "network_helpers_islinklocalip",
+      "source": "users_zes2021_documents_claude_projects_bridge_clone_bridge_network_helpers_js",
+      "target": "network_helpers_islinklocalip",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_network_helpers_js",
+      "_tgt": "network_helpers_findlocalifaceforremote",
+      "source": "users_zes2021_documents_claude_projects_bridge_clone_bridge_network_helpers_js",
+      "target": "network_helpers_findlocalifaceforremote",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L33",
+      "weight": 1.0,
+      "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_network_helpers_js",
+      "_tgt": "network_helpers_pickautopdjliface",
+      "source": "users_zes2021_documents_claude_projects_bridge_clone_bridge_network_helpers_js",
+      "target": "network_helpers_pickautopdjliface",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L48",
+      "weight": 1.0,
+      "_src": "users_zes2021_documents_claude_projects_bridge_clone_bridge_network_helpers_js",
+      "_tgt": "network_helpers_shoulddelaywinautopdjl",
+      "source": "users_zes2021_documents_claude_projects_bridge_clone_bridge_network_helpers_js",
+      "target": "network_helpers_shoulddelaywinautopdjl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_src": "network_helpers_findlocalifaceforremote",
+      "_tgt": "network_getallinterfaces",
+      "source": "network_helpers_findlocalifaceforremote",
+      "target": "network_getallinterfaces"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/Users/zes2021/Documents/claude_projects/bridge-clone/bridge/network-helpers.js",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_src": "network_helpers_pickautopdjliface",
+      "_tgt": "network_getallinterfaces",
+      "source": "network_helpers_pickautopdjliface",
+      "target": "network_getallinterfaces"
     },
     {
       "relation": "contains",

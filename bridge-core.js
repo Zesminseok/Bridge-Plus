@@ -131,6 +131,8 @@ const _tcRx = require('./bridge/tcnet-handler');
 const { registerTCNetNode } = _tcRx;
 // TCNet outbound senders → bridge/tcnet-sender.js (Phase 5.6)
 const _tcTx = require('./bridge/tcnet-sender');
+// Network helpers → bridge/network-helpers.js (Phase 5.9)
+const _net = require('./bridge/network-helpers');
 const _vd = require('./bridge/virtual-deck');
 
 // BLANK_JPEG → bridge/virtual-deck.js (Phase 5.2). 두 모듈에서 중복 로드 방지.
@@ -531,47 +533,11 @@ class BridgeCore {
 
   // 원격 IP 와 같은 서브넷에 속한 로컬 인터페이스를 찾음.
   // PDJL 장비(CDJ/DJM) 주소를 받아 서브넷 매칭으로 올바른 인터페이스 식별.
-  _findLocalIfaceForRemote(remoteIp){
-    if(!remoteIp) return null;
-    const parts = remoteIp.split('.').map(Number);
-    if(parts.length !== 4 || parts.some(n=>!(n>=0&&n<=255))) return null;
-    for(const iface of getAllInterfaces()){
-      if(iface.internal || !iface.netmask || !iface.address) continue;
-      if(iface.address==='127.0.0.1') continue;
-      const iIP = iface.address.split('.').map(Number);
-      const mask = iface.netmask.split('.').map(Number);
-      if(iIP.length!==4 || mask.length!==4) continue;
-      let match = true;
-      for(let i=0;i<4;i++){
-        if((iIP[i] & mask[i]) !== (parts[i] & mask[i])){ match = false; break; }
-      }
-      if(match) return iface;
-    }
-    return null;
-  }
-
-  _isLinkLocalIp(ip){
-    return typeof ip==='string' && ip.startsWith('169.254.');
-  }
-
-  _pickAutoPdjlIface(){
-    const ifaces = getAllInterfaces().filter(iface=>!iface.internal && iface.address && iface.address!=='127.0.0.1');
-    if(!ifaces.length) return null;
-    if(process.platform==='win32'){
-      const linkLocal = ifaces.find(iface=>this._isLinkLocalIp(iface.address));
-      if(linkLocal) return linkLocal;
-    }
-    if(this.localAddr){
-      const localMatch = ifaces.find(iface=>iface.address===this.localAddr);
-      if(localMatch) return localMatch;
-    }
-    return ifaces[0] || null;
-  }
-
-  _shouldDelayWinAutoPdjl(){
-    return process.platform==='win32'
-      && (!this.pdjlBindAddr || this.pdjlBindAddr==='auto' || this.pdjlBindAddr==='0.0.0.0');
-  }
+  // Network helpers → bridge/network-helpers.js (Phase 5.9). 1줄 wrapper.
+  _findLocalIfaceForRemote(remoteIp){ return _net.findLocalIfaceForRemote(remoteIp, getAllInterfaces); }
+  _isLinkLocalIp(ip){ return _net.isLinkLocalIp(ip); }
+  _pickAutoPdjlIface(){ return _net.pickAutoPdjlIface(this.localAddr, getAllInterfaces); }
+  _shouldDelayWinAutoPdjl(){ return _net.shouldDelayWinAutoPdjl(this.pdjlBindAddr); }
 
   // 원격 장비(CDJ/DJM) 최초 발견 시 해당 서브넷과 매칭되는 로컬 인터페이스로 자동 전환.
   // 사용자가 수동으로 인터페이스를 선택한 경우 무시. 한 번 매칭되면 _autoPdjlLocked 로 중복 전환 방지.

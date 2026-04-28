@@ -174,9 +174,12 @@ test('Windows PDJL sockets bind to the selected interface IP', () => {
 });
 
 test('Windows auto PDJL selection prefers link-local interfaces before TCNet localAddr', () => {
+  // Phase 5.9: 본문이 bridge/network-helpers.js 로 이동 — module 측 검증.
+  const netHelpers = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'network-helpers.js'), 'utf8');
+  assert.match(netHelpers, /function isLinkLocalIp\(ip\)\{/);
+  assert.match(netHelpers, /const linkLocal = ifaces\.find\(iface=>isLinkLocalIp\(iface\.address\)\);/);
+  // bridge-core 는 wrapper + 사용처 보존
   const source = fs.readFileSync(corePath, 'utf8');
-  assert.strictEqual(source.includes('_isLinkLocalIp(ip){'), true);
-  assert.strictEqual(source.includes("const linkLocal = ifaces.find(iface=>this._isLinkLocalIp(iface.address));"), true);
   assert.strictEqual(source.includes('const autoIface = this._pickAutoPdjlIface();'), true);
 });
 
