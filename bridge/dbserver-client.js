@@ -260,16 +260,22 @@ async function dbserverWaveformNxs2(core, ip, slot, trackId, playerNum, trackTyp
         return;
       }
       // Parse ANLZ tag structure — find PWV7 tag
+      // SECURITY: 모든 length 필드는 attacker-controlled — bounds 검사 후 사용.
+      // PWV7 max entries: 30분 트랙 * 150 entries/sec = 270k. 안전 cap 으로 65535 사용.
+      const PWV7_MAX_ENTRIES = 65535;
       let pos=0;
       while(pos<anlzData.length-12){
         const tag=anlzData.toString('ascii',pos,pos+4);
         const tHL=anlzData.readUInt32BE(pos+4);
         const tTL=anlzData.readUInt32BE(pos+8);
+        // tHL>=12 (header 자체 크기 이상), tTL>=tHL, pos+tTL 이 buffer 안에 있어야.
+        if(tHL<12 || tTL<tHL || pos+tTL>anlzData.length){ break; }
         if(tag==='PWV7'){
           const dataStart=pos+tHL;
           const dataLen=tTL-tHL;
           const entries=Math.floor(dataLen/3);
-          if(entries>10){
+          // entries 합리 범위 + dataStart+entries*3 이 buffer 안에 있어야.
+          if(entries>10 && entries<=PWV7_MAX_ENTRIES && dataStart+entries*3<=anlzData.length){
             // PWV7: 3 bytes/entry = mid, hi, low (0-255 each)
             const pts=[];
             for(let j=0;j<entries;j++){

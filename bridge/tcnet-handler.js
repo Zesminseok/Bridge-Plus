@@ -5,6 +5,42 @@
 // dep 은 명시적 주입 — `mk*` 빌더와 TC 상수는 deps 객체로 받음.
 'use strict';
 
+// SECURITY: TCNet UDP 는 인증 없이 임의 송신자가 패킷 보낼 수 있어
+//   임의 name 을 키로 하는 자동 등록이 무한 메모리 증가로 이어질 수 있음.
+//   cap 도달 시 lastSeen 가장 오래된 entry 부터 evict 후에 신규 등록.
+const TCNET_MAX_NODES = 32;
+const TCNET_NODE_TTL_MS = 30000;
+
+// 신규 노드 등록 직전 cap/TTL 강제 — bridge-core 의 _startListenerPortRx 에서도 재사용.
+function registerTCNetNode(core, key, entry){
+  const nodes = core.nodes;
+  // 이미 존재하면 update 만 (cap 영향 없음).
+  if(nodes[key]){ Object.assign(nodes[key], entry); return false; }
+  // cap 도달 시: 먼저 stale (TTL 초과) entry 제거, 그래도 차면 LRU evict.
+  const keys = Object.keys(nodes);
+  if(keys.length >= TCNET_MAX_NODES){
+    const now = Date.now();
+    let staleEvicted = 0;
+    for(const k of keys){
+      if(now - (nodes[k]?.lastSeen||0) > TCNET_NODE_TTL_MS){
+        delete nodes[k];
+        staleEvicted++;
+      }
+    }
+    if(Object.keys(nodes).length >= TCNET_MAX_NODES){
+      // LRU: 가장 오래된 lastSeen 제거.
+      let oldestKey = null, oldestSeen = Infinity;
+      for(const k of Object.keys(nodes)){
+        const ls = nodes[k]?.lastSeen||0;
+        if(ls < oldestSeen){ oldestSeen = ls; oldestKey = k; }
+      }
+      if(oldestKey) delete nodes[oldestKey];
+    }
+  }
+  nodes[key] = entry;
+  return true; // newly registered
+}
+
 // 상위 호출자가 socket / state / event callback 모두 core 에 두므로 단일 함수만 export.
 // deps: { TC, mkDataMeta, mkDataMetrics, mkAppResp }
 function handleTCNetMsg(core, deps, msg, rinfo, label){
@@ -28,8 +64,7 @@ function handleTCNetMsg(core, deps, msg, rinfo, label){
     const vendor = body.length>=40 ? body.slice(8,24).toString('ascii').replace(/\0/g,'').trim() : '';
     const device = body.length>=40 ? body.slice(24,40).toString('ascii').replace(/\0/g,'').trim() : '';
     const key = name+'@'+rinfo.address;
-    const isNew = !core.nodes[key];
-    core.nodes[key] = {name,vendor,device,type:msg[17],ip:rinfo.address,port:rinfo.port,lPort,lastSeen:Date.now()};
+    const isNew = registerTCNetNode(core, key, {name,vendor,device,type:msg[17],ip:rinfo.address,port:rinfo.port,lPort,lastSeen:Date.now()});
     if(isNew) console.log(`[${label}] OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor}`);
     core.onNodeDiscovered?.(core.nodes[key]);
   }
@@ -37,9 +72,11 @@ function handleTCNetMsg(core, deps, msg, rinfo, label){
   if(type!==TC.OPTIN && !name.toUpperCase().startsWith('BRIDGE')){
     const key = name+'@'+rinfo.address;
     if(!core.nodes[key]){
-      core.nodes[key] = {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()};
-      console.log(`[${label}] auto-register ${name}@${rinfo.address} lPort=${rinfo.port}`);
-      core.onNodeDiscovered?.(core.nodes[key]);
+      const isNew = registerTCNetNode(core, key, {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()});
+      if(isNew){
+        console.log(`[${label}] auto-register ${name}@${rinfo.address} lPort=${rinfo.port}`);
+        core.onNodeDiscovered?.(core.nodes[key]);
+      }
     } else {
       core.nodes[key].lastSeen = Date.now();
     }
@@ -103,4 +140,4 @@ function handleTCNetMsg(core, deps, msg, rinfo, label){
   }
 }
 
-module.exports = { handleTCNetMsg };
+module.exports = { handleTCNetMsg, registerTCNetNode, TCNET_MAX_NODES, TCNET_NODE_TTL_MS };

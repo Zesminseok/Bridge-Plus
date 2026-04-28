@@ -982,6 +982,37 @@ test('bridge-core: _handleTCNetMsg 는 wrapper (Phase 5.5)', () => {
   assert.ok(!wrapper.includes('TC.DT_MIXER'), '_handleTCNetMsg wrapper 안에 inline DT_MIXER 분기가 남음');
 });
 
+// ─── 보안 점검 회귀 테스트 (Codex audit findings) ──────────────────────
+
+test('SEC: tcnet-handler — cap + TTL eviction 으로 무제한 노드 등록 방지', () => {
+  const { registerTCNetNode, TCNET_MAX_NODES, TCNET_NODE_TTL_MS } =
+    require(path.join(__dirname, '..', 'bridge', 'tcnet-handler'));
+  assert.strictEqual(TCNET_MAX_NODES, 32);
+  assert.strictEqual(TCNET_NODE_TTL_MS, 30000);
+  const fakeCore = { nodes: {} };
+  // cap 까지 채우기
+  for(let i=0;i<TCNET_MAX_NODES;i++){
+    registerTCNetNode(fakeCore, `node${i}@1.1.1.${i}`, {lastSeen:Date.now()});
+  }
+  assert.strictEqual(Object.keys(fakeCore.nodes).length, TCNET_MAX_NODES);
+  // cap 초과 시 — 추가 등록 시 stale 가 없으면 LRU evict
+  const oldKey = 'node0@1.1.1.0';
+  // node0 의 lastSeen 을 가장 오래된 것으로
+  fakeCore.nodes[oldKey].lastSeen = 1;
+  registerTCNetNode(fakeCore, 'newnode@2.2.2.2', {lastSeen:Date.now()});
+  assert.strictEqual(Object.keys(fakeCore.nodes).length, TCNET_MAX_NODES);
+  assert.ok(!fakeCore.nodes[oldKey], 'LRU evict 후 가장 오래된 entry 제거');
+  assert.ok(fakeCore.nodes['newnode@2.2.2.2'], 'newnode 가 등록되어야 함');
+});
+
+test('SEC: dbserver-client PWV7 bounds — attacker-controlled length 거부', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'dbserver-client.js'), 'utf8');
+  // tHL>=12 요구 + tTL>=tHL + buffer overflow 방어 + entries cap
+  assert.match(src, /tHL<12 \|\| tTL<tHL \|\| pos\+tTL>anlzData\.length/);
+  assert.match(src, /entries<=PWV7_MAX_ENTRIES && dataStart\+entries\*3<=anlzData\.length/);
+  assert.match(src, /PWV7_MAX_ENTRIES = 65535/);
+});
+
 // ─── pcm-decode worker error drain ───────────────────────────────────────
 
 test('pcm-decode: worker fatal error drains pending jobs', () => {

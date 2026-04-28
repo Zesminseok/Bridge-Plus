@@ -128,6 +128,7 @@ const _dbcli = require('./bridge/dbserver-client');
 const _dborch = require('./bridge/dbserver-orchestrator');
 // TCNet inbound handler → bridge/tcnet-handler.js (Phase 5.5)
 const _tcRx = require('./bridge/tcnet-handler');
+const { registerTCNetNode } = _tcRx;
 const _vd = require('./bridge/virtual-deck');
 
 // BLANK_JPEG → bridge/virtual-deck.js (Phase 5.2). 두 모듈에서 중복 로드 방지.
@@ -928,8 +929,8 @@ class BridgeCore {
           const vendor = body.length>=40 ? body.slice(8,24).toString('ascii').replace(/\0/g,'').trim() : '';
           const device = body.length>=40 ? body.slice(24,40).toString('ascii').replace(/\0/g,'').trim() : '';
           const key = name+'@'+rinfo.address;
-          const isNew = !this.nodes[key];
-          this.nodes[key] = {name,vendor,device,type:msg[17],ip:rinfo.address,port:rinfo.port,lPort,lastSeen:Date.now()};
+          // SECURITY: cap + TTL eviction (tcnet-handler 와 같은 보호)
+          const isNew = registerTCNetNode(this, key, {name,vendor,device,type:msg[17],ip:rinfo.address,port:rinfo.port,lPort,lastSeen:Date.now()});
           if(isNew){
             console.log(`[TCNet] lPort OptIn: ${name}@${rinfo.address} lPort=${lPort} vendor=${vendor} device=${device}`);
             // Re-send artwork to newly connected node (delayed to allow node registration)
@@ -941,10 +942,12 @@ class BridgeCore {
         if(type!==TC.OPTIN && !name.toUpperCase().startsWith('BRIDGE')){
           const key = name+'@'+rinfo.address;
           if(!this.nodes[key]){
-            this.nodes[key] = {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()};
-            console.log(`[TCNet] lPort auto-register ${name}@${rinfo.address} lPort=${rinfo.port} (from type=0x${type.toString(16)})`);
-            setTimeout(()=>this._resendAllArtwork(), 500);
-            this.onNodeDiscovered?.(this.nodes[key]);
+            const isNew = registerTCNetNode(this, key, {name,vendor:'',device:'',type:msg[17],ip:rinfo.address,port:rinfo.port,lPort:rinfo.port,lastSeen:Date.now()});
+            if(isNew){
+              console.log(`[TCNet] lPort auto-register ${name}@${rinfo.address} lPort=${rinfo.port} (from type=0x${type.toString(16)})`);
+              setTimeout(()=>this._resendAllArtwork(), 500);
+              this.onNodeDiscovered?.(this.nodes[key]);
+            }
           } else {
             this.nodes[key].lastSeen = Date.now();
           }
