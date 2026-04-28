@@ -310,23 +310,18 @@ test('deck UI repaint is throttled separately from TCNet tick', () => {
   assert.match(source, /const shouldPaintDeckUi=deckUiVisible&&\(now-_lastDeckUiPaint>=_DECK_UI_TICK_MS\)/, 'deck UI gate');
 });
 
-test('idle downshift — 3s idle 후 10Hz timer + IPC/입력으로 upshift', () => {
+test('idle downshift — 창 가시성 기반 (visible: rAF, hidden: 1Hz)', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
-  // 핵심 상수
-  assert.match(source, /const _IDLE_THRESHOLD_MS = 3000/);
-  assert.match(source, /const _IDLE_TICK_MS = 100/);  // 10Hz downshift
-  // bumpActivity helper — IPC + 입력 모두 호출
-  assert.match(source, /function bumpActivity\(\)/);
-  assert.match(source, /window\.addEventListener\(ev, bumpActivity, \{ capture: true, passive: true \}\)/);
-  // 핵심 IPC 핸들러에 bumpActivity 호출
-  for(const handler of ['onCDJStatus','onDJMStatus','onWaveformPreview','onWaveformDetail','onCuePoints','onBeatGrid','onSongStructure','onAlbumArt','onTrackMeta']){
-    const idx = source.indexOf(`window.bridge.${handler}?.(d=>{`);
-    assert.ok(idx >= 0, `${handler} 핸들러 누락`);
-    // 핸들러 본문 첫 1-3줄 안에 bumpActivity 가 있어야
-    const next = source.indexOf('\n  });', idx);
-    const body = source.slice(idx, next);
-    assert.ok(body.includes('bumpActivity()'), `${handler} 핸들러에 bumpActivity 호출 누락`);
-  }
+  // visibility 기반 — 시간 기반 _IDLE_THRESHOLD_MS 가 사라짐 (사용자 요구)
+  assert.ok(!/const _IDLE_THRESHOLD_MS/.test(source), '_IDLE_THRESHOLD_MS 시간 idle 가 다시 추가됨');
+  // 창 hidden 시 1Hz timer
+  assert.match(source, /const _HIDDEN_TICK_MS = 1000/);
+  // visibilitychange listener
+  assert.match(source, /document\.addEventListener\('visibilitychange', _onVisibilityChange\)/);
+  // 시작 시 창 상태에 따라 분기
+  assert.match(source, /if\(document\.hidden\)\{[\s\S]{0,200}_idleMode = true/);
+  // bumpActivity 는 no-op 으로 보존 (IPC 핸들러 호출은 그대로)
+  assert.match(source, /function bumpActivity\(\)\{/);
 });
 
 test('deck VU repaint is throttled separately from waveform redraw', () => {
