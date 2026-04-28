@@ -20,15 +20,15 @@
     "tcnet",
     "prodjlink"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "devDependencies": {
     "electron": "^33.4.11",
     "electron-builder": "^26.8.1"
   },
   "build": {
-    "appId": "com.zesofficial.bridgeplus",
+    "appId": "com.zesminseok.bridgeplus",
     "productName": "BRIDGE+",
-    "copyright": "Copyright © 2026 zesofficial",
+    "copyright": "Copyright © 2026 Zes",
     "directories": {
       "output": "dist"
     },

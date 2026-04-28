@@ -38,10 +38,10 @@ function renderSettings(){
     <div class="sl">덱 레이아웃</div>
     <div class="sgr">
       <div class="srw"><span class="srl">레이아웃 테마</span><select class="ss" id="layoutSel">
-        <option value="tower" ${cfg.layout==='tower'?'selected':''}>Tower — 세로 콘솔 스트립 (가로 스크롤)</option>
-        <option value="row" ${cfg.layout==='row'?'selected':''}>Row — 1 덱 1 행 풀폭 (세로 스크롤)</option>
-        <option value="card" ${cfg.layout==='card'?'selected':''}>Simple — 미니멀 컴팩트 카드</option>
-        <option value="observatory" ${cfg.layout==='observatory'?'selected':''}>Observatory — CRT 인광 터미널 (2×2)</option>
+        <option value="tower" ${cfg.layout==='tower'?'selected':''}>Tower</option>
+        <option value="row" ${cfg.layout==='row'?'selected':''}>Row</option>
+        <option value="card" ${cfg.layout==='card'?'selected':''}>Simple</option>
+        <option value="observatory" ${cfg.layout==='observatory'?'selected':''}>Observatory</option>
       </select></div>
     </div>
     <div class="sl">웨이브폼 설정</div>
@@ -302,6 +302,17 @@ function renderSettings(){
   if(layoutSel){layoutSel.value=cfg.layout||'default';layoutSel.onchange=e=>{
     cfg.layout=e.target.value;_saveCfg();
     document.body.dataset.layout=cfg.layout;
+    // Layout 변경 = DOM rebuild → 모든 paint-cache key 무효화 (BPM/타이틀/모델 등 재렌더 강제)
+    try{
+      if(typeof DECKS !== 'undefined'){
+        for(const d of DECKS){
+          if(!d) continue;
+          d._lastBpmKey = null; d._lastHwlKey = null; d._lastBgKey = null;
+          d._lastDidKey = null; d._lastDrawKey = null; d._lastFillKey = null;
+          d._lastMcKey = null;
+        }
+      }
+    }catch(_){}
     try{renderDecks();}catch(_){}
     // Force marquee re-measure on next tick — layout change can make titles newly overflow/underflow
     document.querySelectorAll('[id^="dtn"]').forEach(el=>{delete el.dataset.mqChecked;el.classList.remove('scrolling');});

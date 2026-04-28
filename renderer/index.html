@@ -1227,12 +1227,12 @@ body[data-layout="observatory"] .dk.obs-dk:nth-last-child(-n+2){border-bottom:no
 body[data-layout="observatory"] .dk.obs-dk[data-st="play"]{border-color:var(--obs-amber-faint)!important;background:var(--obs-plate)!important}
 body[data-layout="observatory"] .dk.obs-dk[data-st="cue"]{border-color:var(--obs-amber-faint)!important;background:var(--obs-plate)!important}
 
-/* HEADER — 우측 padding 12px 로 외곽 마진 통일 (state pill 이 가장자리에 너무 붙던 문제) */
+/* HEADER — 모든 패딩 8px 통일 (다른 셀과 일관). */
 body[data-layout="observatory"] .obs-hdr{
   display:grid;
   grid-template-columns:30px 1fr min-content min-content 60px;
   gap:10px;align-items:center;
-  padding:8px 12px 8px 14px;
+  padding:8px;
   border-bottom:1px solid var(--obs-amber-faint);
 }
 /* state pill 컨테이너 — 60px 고정 박스 (외각선 항상 보이게). 내부 pill 가운데 정렬. */
@@ -1331,7 +1331,7 @@ body[data-layout="observatory"] .obs-body{
 body[data-layout="observatory"] .obs-meta{
   border-right:1px solid var(--obs-amber-faint);
   display:flex;flex-direction:column;
-  padding:8px 4px 8px 8px;gap:6px;
+  padding:8px;gap:6px;
 }
 body[data-layout="observatory"] .obs-meta .dkart{
   width:72px;height:72px;
@@ -1358,9 +1358,9 @@ body[data-layout="observatory"] .obs-meta-list .row .v{
 }
 body[data-layout="observatory"] .obs-meta-list .row .v>span{display:block;line-height:1.25;font-size:9.5px}
 
-/* CENTER — 패딩 축소로 웨이브폼 폭 확장 */
+/* CENTER — 좌우 동일 패딩 (메뉴 마진 일관성) */
 body[data-layout="observatory"] .obs-center{
-  padding:8px 8px 8px 6px;
+  padding:8px;
   display:flex;flex-direction:column;gap:6px;
   min-width:0;
 }
@@ -1475,7 +1475,7 @@ body[data-layout="observatory"] .obs-cdl svg{width:11px;height:11px;display:bloc
    UI freeze 일으킴). 고정 폰트로 안정성 우선. */
 body[data-layout="observatory"] .obs-right{
   border-left:1px solid var(--obs-amber-faint);
-  padding:8px 12px;
+  padding:8px;
   display:flex;flex-direction:column;gap:7px;
   min-width:0;
 }
