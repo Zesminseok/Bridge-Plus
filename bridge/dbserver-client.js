@@ -878,4 +878,6 @@ module.exports = {
   dbserverCuePoints, dbserverCuePointsExt, dbserverCuePointsNxs2, dbserverCuePointsStd,
   dbserverBeatGrid, dbserverSongStructure, dbserverArtwork,
   phraseKindMeta,
+  // sibling 모듈 (dbserver-orchestrator) 에서 동일 file-buffered logger 재사용.
+  _dbgLog,
 };

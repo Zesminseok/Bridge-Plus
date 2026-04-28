@@ -122,8 +122,11 @@ const _DB = require('./pdjl/dbserver');
 const _DBIO = require('./pdjl/dbserver-io');
 // TCP session pool → bridge/dbserver-pool.js (Phase 5.3b)
 const { DbServerPool } = require('./bridge/dbserver-pool');
-const _vd = require('./bridge/virtual-deck');
+// dbserver client request methods → bridge/dbserver-client.js (Phase 5.3c)
 const _dbcli = require('./bridge/dbserver-client');
+// dbserver orchestrator → bridge/dbserver-orchestrator.js (Phase 5.4)
+const _dborch = require('./bridge/dbserver-orchestrator');
+const _vd = require('./bridge/virtual-deck');
 
 // BLANK_JPEG → bridge/virtual-deck.js (Phase 5.2). 두 모듈에서 중복 로드 방지.
 const BLANK_JPEG = _vd.BLANK_JPEG;
@@ -2310,84 +2313,16 @@ class BridgeCore {
   /**
    * Request track metadata + artwork from a CDJ via dbserver protocol.
    */
+  // dbserver orchestrator → bridge/dbserver-orchestrator.js (Phase 5.4). 1줄 wrapper.
   requestMetadata(ip, slot, trackId, playerNum, force=false, trackType=1){
-    if(!ip || !trackId) return;
-    const cacheKey = `${ip}_${slot}_${trackId}`;
-    if(!this._metaReqCache) this._metaReqCache = {};
-    const now = Date.now();
-    const prev = this._metaReqCache[cacheKey];
-    const ttlMs = force ? 8000 : 30000;
-    if(prev && (now - prev.time) < ttlMs) return;
-    this._metaReqCache[cacheKey] = { time: now, force: !!force };
-    _dbgLog(`[META] P${playerNum} fetch ip=${ip} slot=${slot} tt=${trackType} tid=${trackId}`);
-    this._dbserverMetadata(ip, slot, trackId, playerNum, trackType).then(()=>{
-      _dbgLog(`[META] P${playerNum} fetch OK tid=${trackId}`);
-    }).catch(e=>{
-      _dbgLog(`[META] P${playerNum} fetch FAIL tid=${trackId}: ${e.message}`);
-      if(this._shouldLogRate(`db_meta_fail_${cacheKey}`, 10000, e.message)){
-        console.warn(`[DBSRV] metadata request failed: ${e.message}`);
-      }
-      delete this._metaReqCache[cacheKey];
-    });
+    return _dborch.requestMetadata(this, ip, slot, trackId, playerNum, force, trackType);
   }
-  // Re-request metadata for all currently loaded tracks (called after startup delay)
-  refreshAllMetadata(){
-    for(const [key,dev] of Object.entries(this.devices)){
-      if(dev.type==='CDJ' && dev.state?.trackId>0 && dev.state?.hasTrack){
-        const s=dev.state;
-        const srcDev = this.devices['cdj'+s.trackDeviceId];
-        const ip = srcDev?.ip || dev.ip;
-        this.requestMetadata(ip, s.slot||3, s.trackId, s.playerNum, true, s.trackType||1);
-      }
-    }
-  }
-
+  refreshAllMetadata(){ return _dborch.refreshAllMetadata(this); }
   requestArtwork(ip, slot, artworkId, playerNum){
-    if(!ip || !artworkId) return;
-    const cacheKey = `art_${ip}_${slot}_${artworkId}`;
-    if(this._artCache[cacheKey]){
-      this.onAlbumArt?.(playerNum, this._artCache[cacheKey]);
-      return;
-    }
-    this._dbserverArtwork(ip, slot, artworkId, playerNum, cacheKey).catch(e=>{
-      if(this._shouldLogRate(`db_art_fail_${cacheKey}`, 10000, e.message)){
-        console.warn(`[DBSRV] artwork request failed: ${e.message}`);
-      }
-    });
+    return _dborch.requestArtwork(this, ip, slot, artworkId, playerNum);
   }
-
   _scheduleDbFollowUps(ip, slot, trackId, playerNum, trackType, artworkId){
-    if(!this._dbFollowTimers) this._dbFollowTimers = {};
-    const key = `p${playerNum}`;
-    const prev = this._dbFollowTimers[key];
-    if(prev?.timers){
-      prev.timers.forEach(t=>clearTimeout(t));
-    }
-    const token = `${ip}_${slot}_${trackId}_${Date.now()}`;
-    const timers = [];
-    const alive = ()=>this._dbFollowTimers?.[key]?.token===token;
-    const defer = (delay, fn)=>{
-      const timer = setTimeout(()=>{
-        if(!alive()) return;
-        fn().catch(e=>{
-          if(this._shouldLogRate(`db_follow_fail_${playerNum}_${delay}`, 10000, e.message)){
-            console.warn(`[DBSRV] P${playerNum} follow-up failed:`, e.message);
-          }
-        });
-      }, delay);
-      timers.push(timer);
-    };
-    this._dbFollowTimers[key] = { token, timers };
-
-    if(artworkId){
-      defer(0, ()=>this._dbserverArtwork(ip, slot, artworkId, playerNum, `art_${ip}_${slot}_${artworkId}`));
-    }
-    defer(180, ()=>this._dbserverWaveform(ip, slot, trackId, playerNum, trackType));
-    defer(520, ()=>this._dbserverWaveformDetail(ip, slot, trackId, playerNum, trackType));
-    defer(920, ()=>this._dbserverWaveformNxs2(ip, slot, trackId, playerNum, trackType));
-    defer(1280, ()=>this._dbserverCuePoints(ip, slot, trackId, playerNum, trackType));
-    defer(1640, ()=>this._dbserverBeatGrid(ip, slot, trackId, playerNum, trackType));
-    defer(2320, ()=>this._dbserverSongStructure(ip, slot, trackId, playerNum, trackType));
+    return _dborch.scheduleDbFollowUps(this, ip, slot, trackId, playerNum, trackType, artworkId);
   }
 
   // ── dbserver field builders ────

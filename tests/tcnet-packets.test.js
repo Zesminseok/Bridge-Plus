@@ -279,14 +279,14 @@ test('bridge forwards DJM stereo master meter peaks to renderer', () => {
 });
 
 test('dbserver follow-up requests are staggered instead of firing all at once', () => {
-  const source = fs.readFileSync(corePath, 'utf8');
-  // Phase 5.3c: _dbserverMetadata 본문이 bridge/dbserver-client.js 로 이동.
-  // _scheduleDbFollowUps 호출은 모듈 측에서 core._scheduleDbFollowUps 로 트리거.
+  // Phase 5.4: _scheduleDbFollowUps 본문이 bridge/dbserver-orchestrator.js 로 이동.
+  // _dbserverMetadata 본문이 bridge/dbserver-client.js 에서 core._scheduleDbFollowUps 호출.
   const cliSource = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'dbserver-client.js'), 'utf8');
   assert.strictEqual(cliSource.includes('core._scheduleDbFollowUps(ip, slot, trackId, playerNum, tt, meta.artworkId||0);'), true);
-  // defer 호출 자체는 _scheduleDbFollowUps 본체 (여전히 bridge-core.js) 안.
-  assert.strictEqual(source.includes('defer(520, ()=>this._dbserverWaveformDetail(ip, slot, trackId, playerNum, trackType));'), true);
-  assert.strictEqual(source.includes('defer(1640, ()=>this._dbserverBeatGrid(ip, slot, trackId, playerNum, trackType));'), true);
+  // defer 호출은 orchestrator 모듈 본체 안에서 발생 — core.* 형태로 wrapper 재진입.
+  const orchSource = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'dbserver-orchestrator.js'), 'utf8');
+  assert.strictEqual(orchSource.includes('defer(520, ()=>core._dbserverWaveformDetail(ip, slot, trackId, playerNum, trackType));'), true);
+  assert.strictEqual(orchSource.includes('defer(1640, ()=>core._dbserverBeatGrid(ip, slot, trackId, playerNum, trackType));'), true);
 });
 
 test('virtual waveform bin rate constants exist', () => {
@@ -351,10 +351,11 @@ test('virtual PDJL status logging is throttled instead of printing every packet'
 });
 
 test('dbserver failure warnings are rate-limited to avoid repeated spam', () => {
-  const source = fs.readFileSync(corePath, 'utf8');
-  assert.strictEqual(source.includes("if(this._shouldLogRate(`db_meta_fail_${cacheKey}`, 10000, e.message)){"), true);
-  assert.strictEqual(source.includes("if(this._shouldLogRate(`db_art_fail_${cacheKey}`, 10000, e.message)){"), true);
-  assert.strictEqual(source.includes("if(this._shouldLogRate(`db_follow_fail_${playerNum}_${delay}`, 10000, e.message)){"), true);
+  // Phase 5.4: orchestrator 모듈로 이동 — core._shouldLogRate 호출.
+  const orchSource = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'dbserver-orchestrator.js'), 'utf8');
+  assert.strictEqual(orchSource.includes("if(core._shouldLogRate(`db_meta_fail_${cacheKey}`, 10000, e.message)){"), true);
+  assert.strictEqual(orchSource.includes("if(core._shouldLogRate(`db_art_fail_${cacheKey}`, 10000, e.message)){"), true);
+  assert.strictEqual(orchSource.includes("if(core._shouldLogRate(`db_follow_fail_${playerNum}_${delay}`, 10000, e.message)){"), true);
 });
 
 test('NXS2 beat count position matches beat-derived formula', () => {

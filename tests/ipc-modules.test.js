@@ -933,6 +933,29 @@ test('bridge-core: dbserver parser/IO 메서드는 wrapper (Phase 5.3a)', () => 
   assert.match(src, /_dbParseItems\(buf\)\{ return _DB\.dbParseItems\(buf\); \}/);
 });
 
+// ─── BridgeCore split — Phase 5.4 dbserver orchestrator ──────────────
+
+test('dbserver-orchestrator: 4 함수 export + dbserver-client 의 _dbgLog 재사용', () => {
+  const orch = require(path.join(__dirname, '..', 'bridge', 'dbserver-orchestrator'));
+  ['requestMetadata','refreshAllMetadata','requestArtwork','scheduleDbFollowUps'].forEach(name => {
+    assert.strictEqual(typeof orch[name], 'function', `missing helper: ${name}`);
+  });
+  // dbserver-client 가 _dbgLog 을 sibling 사용 위해 export
+  const cli = require(path.join(__dirname, '..', 'bridge', 'dbserver-client'));
+  assert.strictEqual(typeof cli._dbgLog, 'function');
+});
+
+test('bridge-core: orchestrator 진입점 4 메서드는 wrapper (Phase 5.4)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
+  assert.match(src, /requestMetadata\(ip, slot, trackId, playerNum, force=false, trackType=1\)\{[\s\S]*?return _dborch\.requestMetadata\(this/);
+  assert.match(src, /refreshAllMetadata\(\)\{ return _dborch\.refreshAllMetadata\(this\); \}/);
+  assert.match(src, /requestArtwork\(ip, slot, artworkId, playerNum\)\{[\s\S]*?return _dborch\.requestArtwork\(this/);
+  assert.match(src, /_scheduleDbFollowUps\(ip, slot, trackId, playerNum, trackType, artworkId\)\{[\s\S]*?return _dborch\.scheduleDbFollowUps\(this/);
+  // 본문 inline 정의가 사라졌는지 — 회귀 가드
+  assert.ok(!/this\._metaReqCache\[cacheKey\] = \{ time: now/.test(src), 'bridge-core 에 _metaReqCache 직접 초기화가 남음');
+  assert.ok(!/defer\(180, \(\)=>this\._dbserverWaveform\(ip/.test(src), 'bridge-core 에 defer 호출이 남음');
+});
+
 // ─── pcm-decode worker error drain ───────────────────────────────────────
 
 test('pcm-decode: worker fatal error drains pending jobs', () => {
