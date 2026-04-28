@@ -37,13 +37,41 @@ test('bridge-core: dbserver methods use session acquisition instead of direct co
 });
 
 test('bridge-core: dbserver session pool has idle TTL, invalidation, and stop cleanup', () => {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
-  assert.match(src, /this\._dbSessions\s*=\s*new Map\(\)/);
-  assert.match(src, /const DB_SESSION_IDLE_MS = 30000/);
-  assert.match(src, /sock\.once\('error', onDead\)/);
-  assert.match(src, /sock\.once\('close', onDead\)/);
-  assert.match(src, /clearTimeout\(entry\.idleTimer\)/);
-  assert.match(src, /this\._dbSessions\.clear\(\)/);
+  // Phase 5.3b: pool 본문은 bridge/dbserver-pool.js 로 이동. bridge-core 는 wrapper.
+  const coreSrc = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
+  // BridgeCore 는 pool 인스턴스화 + wrapper 만 보유
+  assert.match(coreSrc, /this\._dbPool = new DbServerPool\(/);
+  assert.match(coreSrc, /_dbCleanupSessions\(\)\{ this\._dbPool\.cleanup\(\); \}/);
+  assert.match(coreSrc, /_dbAcquire\(ip, spoofPlayer\)\{ return this\._dbPool\.acquire\(ip, spoofPlayer\); \}/);
+  // 본문 inline 정의가 더 이상 없음 (회귀 가드)
+  assert.ok(!/const DB_SESSION_IDLE_MS = 30000/.test(coreSrc), 'bridge-core 에 IDLE TTL 상수가 남음');
+  assert.ok(!/this\._dbSessions\.clear\(\)/.test(coreSrc), 'bridge-core 에 직접 _dbSessions clear 가 남음');
+
+  // Pool 모듈에 핵심 동작 보존
+  const poolSrc = fs.readFileSync(path.join(__dirname, '..', 'bridge', 'dbserver-pool.js'), 'utf8');
+  assert.match(poolSrc, /const DB_SESSION_IDLE_MS = 30000/);
+  assert.match(poolSrc, /sock\.once\('error', onDead\)/);
+  assert.match(poolSrc, /sock\.once\('close', onDead\)/);
+  assert.match(poolSrc, /clearTimeout\(entry\.idleTimer\)/);
+  assert.match(poolSrc, /this\._sessions\.clear\(\)/);
+});
+
+test('dbserver-pool: 클래스 + 종속성 주입 + size 헬퍼', () => {
+  const { DbServerPool, DB_SESSION_IDLE_MS } = require(path.join(__dirname, '..', 'bridge', 'dbserver-pool'));
+  assert.strictEqual(typeof DbServerPool, 'function');
+  assert.strictEqual(DB_SESSION_IDLE_MS, 30000);
+  // deps 누락 시 throw — 우발적 fresh DB import 방지
+  assert.throws(() => new DbServerPool(), /requires \{ DB, DBIO \}/);
+  // 정상 인스턴스화
+  const _DB = require(path.join(__dirname, '..', 'pdjl', 'dbserver'));
+  const _DBIO = require(path.join(__dirname, '..', 'pdjl', 'dbserver-io'));
+  const pool = new DbServerPool({ DB: _DB, DBIO: _DBIO });
+  assert.strictEqual(pool.size(), 0);
+  assert.strictEqual(typeof pool.acquire, 'function');
+  assert.strictEqual(typeof pool.cleanup, 'function');
+  // cleanup() 빈 풀에서 안전
+  pool.cleanup();
+  assert.strictEqual(pool.size(), 0);
 });
 
 // ─── main/ipc-link.js ──────────────────────────────────────────────────

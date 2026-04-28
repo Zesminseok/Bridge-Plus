@@ -120,6 +120,8 @@ const { parsePDJL } = require('./pdjl/parser');
 // dbserver protocol pure helpers → pdjl/dbserver.js (Phase 4.11 + 5.3a parser/IO)
 const _DB = require('./pdjl/dbserver');
 const _DBIO = require('./pdjl/dbserver-io');
+// TCP session pool → bridge/dbserver-pool.js (Phase 5.3b)
+const { DbServerPool } = require('./bridge/dbserver-pool');
 const _vd = require('./bridge/virtual-deck');
 
 // BLANK_JPEG → bridge/virtual-deck.js (Phase 5.2). 두 모듈에서 중복 로드 방지.
@@ -180,7 +182,8 @@ class BridgeCore {
     this._beatGrids = {};   // playerNum -> [{beatInBar, bpm, timeMs}]
     this._bgTrackLen = {}; // playerNum -> estimated track length ms (beat grid last beat + interval)
     this._dbConns  = {};  // ip -> net.Socket
-    this._dbSessions = new Map();  // `${ip}|${spoofPlayer}` -> pooled dbserver TCP session
+    // TCP session pool (Phase 5.3b) — `${ip}|${spoofPlayer}` 별 single socket 재사용.
+    this._dbPool = new DbServerPool({ DB: _DB, DBIO: _DBIO });
     this._virtualArt = {};  // slot -> Buffer (JPEG data for virtual deck artwork)
     this._dbSrv = null;  // virtual dbserver (TCP 12523 emulation)
     this._lastVdbTrackId = 0;  // last trackId from 0x2002 (cross-connection fallback)
@@ -2397,142 +2400,9 @@ class BridgeCore {
   _dbRMST(reqPlayer, menu, slot, trackType){ return _DB.dbRMST(reqPlayer, menu, slot, trackType); }
   _dbBuildMsg(txId, type, args){ return _DB.dbBuildMsg(txId, type, args); }
 
-  // ── TCP connection + handshake ────
-  async _dbConnect(ip, spoofPlayer){
-    const net2 = require('net');
-    // Step 1: discover actual dbserver port
-    const realPort = await new Promise((res,rej)=>{
-      const s = new net2.Socket();
-      s.setTimeout(3000);
-      s.on('error', rej);
-      s.on('timeout', ()=>{s.destroy();rej(new Error('port discovery timeout'));});
-      s.connect(12523, ip, ()=>{
-        // Send "RemoteDBServer\0" with 4-byte BE length prefix
-        // length=15: "RemoteDBServer" (14) + NUL (1)
-        const msg = Buffer.alloc(4+15);
-        msg.writeUInt32BE(15, 0);
-        msg.write('RemoteDBServer\0', 4, 'ascii');
-        s.write(msg);
-      });
-      s.once('data', d=>{
-        s.destroy();
-        if(d.length>=2) res(d.readUInt16BE(0));
-        else rej(new Error(`bad port response len=${d.length} hex=${d.toString('hex')}`));
-      });
-    });
-
-    // Step 2: connect to actual port + greeting
-    const sock = new net2.Socket();
-    // setKeepAlive(true, 5000) — TCP keepalive 5s 후 → idle 끊김 빠른 감지.
-    // setNoDelay(true) — Nagle 비활성, dbserver greeting/SETUP_REQ 작은 패킷 즉시 전송.
-    // setTimeout 5000ms 유지 — CDJ 부팅 직후 / 네트워크 jitter 시 false timeout 방지.
-    sock.setKeepAlive(true, 5000);
-    sock.setNoDelay(true);
-    sock.setTimeout(5000);
-    await new Promise((res,rej)=>{
-      sock.on('error', rej);
-      sock.on('timeout', ()=>{sock.destroy();rej(new Error('connect timeout'));});
-      sock.connect(realPort, ip, ()=>{
-        // Greeting: send NumberField(4-byte) = 1
-        sock.write(this._dbNum4(1));
-        res();
-      });
-    });
-    // Wait for greeting echo
-    await new Promise((res,rej)=>{
-      sock.once('data', d=>{
-        if(d.length>=5 && d[0]===0x11) res();
-        else rej(new Error(`bad greeting: ${d.toString('hex')}`));
-      });
-      sock.once('error', rej);
-    });
-
-    // Step 3: SETUP_REQ (type 0x0000, txId 0xfffffffe)
-    const setupMsg = this._dbBuildMsg(0xfffffffe, 0x0000, [this._dbArg4(spoofPlayer)]);
-    sock.write(setupMsg);
-    const setupResp = await this._dbReadResponse(sock);
-
-    return sock;
-  }
-
-  _dbCleanupSessions(){
-    if(!this._dbSessions) return;
-    for(const entry of this._dbSessions.values()){
-      entry.invalidated = true;
-      if(entry.idleTimer){ clearTimeout(entry.idleTimer); entry.idleTimer = null; }
-      try{ entry.sock?.destroy(); }catch(_){}
-    }
-    this._dbSessions.clear();
-  }
-
-  async _dbAcquire(ip, spoofPlayer){
-    const DB_SESSION_IDLE_MS = 30000;
-    if(!this._dbSessions) this._dbSessions = new Map();
-    const key = `${ip}|${spoofPlayer}`;
-    let entry = this._dbSessions.get(key);
-    if(!entry || entry.invalidated){
-      entry = { sock:null, mutex:Promise.resolve(), idleTimer:null, invalidated:false, connectPromise:null };
-      this._dbSessions.set(key, entry);
-      entry.connectPromise = this._dbConnect(ip, spoofPlayer).then(sock=>{
-        if(entry.invalidated){
-          try{sock.destroy();}catch(_){}
-          throw new Error('dbserver session invalidated');
-        }
-        entry.sock = sock;
-        const onDead = () => {
-          if(entry.invalidated) return;
-          entry.invalidated = true;
-          if(entry.idleTimer){ clearTimeout(entry.idleTimer); entry.idleTimer = null; }
-          if(this._dbSessions?.get(key) === entry) this._dbSessions.delete(key);
-          try{entry.sock?.destroy();}catch(_){}
-        };
-        entry.onDead = onDead;
-        sock.once('error', onDead);
-        sock.once('close', onDead);
-        return sock;
-      }).catch(err=>{
-        if(this._dbSessions?.get(key) === entry) this._dbSessions.delete(key);
-        entry.invalidated = true;
-        throw err;
-      });
-    }
-    if(!entry.sock) await entry.connectPromise;
-
-    const previous = entry.mutex.catch(()=>{});
-    let unlock = null;
-    entry.mutex = previous.then(()=>new Promise(resolve=>{ unlock = resolve; }));
-    await previous;
-
-    if(entry.invalidated || !entry.sock){
-      if(unlock) unlock();
-      return this._dbAcquire(ip, spoofPlayer);
-    }
-    if(entry.idleTimer){ clearTimeout(entry.idleTimer); entry.idleTimer = null; }
-
-    let released = false;
-    const invalidate = () => {
-      if(entry.invalidated) return;
-      entry.invalidated = true;
-      if(entry.idleTimer){ clearTimeout(entry.idleTimer); entry.idleTimer = null; }
-      if(this._dbSessions?.get(key) === entry) this._dbSessions.delete(key);
-      if(entry.onDead){
-        try{entry.sock?.removeListener('error', entry.onDead);}catch(_){}
-        try{entry.sock?.removeListener('close', entry.onDead);}catch(_){}
-      }
-      try{entry.sock?.destroy();}catch(_){}
-    };
-    const release = () => {
-      if(released) return;
-      released = true;
-      if(!entry.invalidated && this._dbSessions?.get(key) === entry){
-        if(entry.idleTimer) clearTimeout(entry.idleTimer);
-        entry.idleTimer = setTimeout(()=>invalidate(), DB_SESSION_IDLE_MS);
-        try{entry.idleTimer.unref?.();}catch(_){}
-      }
-      if(unlock) unlock();
-    };
-    return { sock:entry.sock, release, invalidate };
-  }
+  // TCP session pool → bridge/dbserver-pool.js (Phase 5.3b). 1줄 wrapper.
+  _dbCleanupSessions(){ this._dbPool.cleanup(); }
+  async _dbAcquire(ip, spoofPlayer){ return this._dbPool.acquire(ip, spoofPlayer); }
 
   // socket I/O → pdjl/dbserver-io.js, parser → pdjl/dbserver.js (Phase 5.3a).
   _dbReadResponse(sock){ return _DBIO.dbReadResponse(sock); }
