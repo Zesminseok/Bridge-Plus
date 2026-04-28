@@ -117,8 +117,9 @@ const pdjlBroadcastTargets = _NET.pdjlBroadcastTargets;
 // ─────────────────────────────────────────────
 // parsePDJL → pdjl/parser.js (Phase 4.9)
 const { parsePDJL } = require('./pdjl/parser');
-// dbserver protocol pure helpers → pdjl/dbserver.js (Phase 4.11)
+// dbserver protocol pure helpers → pdjl/dbserver.js (Phase 4.11 + 5.3a parser/IO)
 const _DB = require('./pdjl/dbserver');
+const _DBIO = require('./pdjl/dbserver-io');
 const _vd = require('./bridge/virtual-deck');
 
 // BLANK_JPEG → bridge/virtual-deck.js (Phase 5.2). 두 모듈에서 중복 로드 방지.
@@ -2533,129 +2534,11 @@ class BridgeCore {
     return { sock:entry.sock, release, invalidate };
   }
 
-  _dbReadResponse(sock){
-    return new Promise((res,rej)=>{
-      const chunks = [];
-      let totalLen = 0;
-      // SECURITY: malicious/buggy CDJ 가 무한 응답으로 메모리 폭주시키지 못하게 16MB cap.
-      // 일반 metadata 응답 < 64KB, artwork JPEG < 5MB → 16MB 면 충분.
-      const _DB_RESP_MAX = 16 * 1024 * 1024;
-      // 누수 방지: success/timeout/error 어느 경로든 listener 와 timer 모두 정리.
-      let timer = null;
-      const cleanup = () => {
-        if(timer){ clearTimeout(timer); timer = null; }
-        sock.removeListener('data', onData);
-        sock.removeListener('error', onError);
-      };
-      const onData = d => {
-        chunks.push(d);
-        totalLen += d.length;
-        if(totalLen > _DB_RESP_MAX){ cleanup(); rej(new Error('dbserver response too large')); return; }
-        const buf = Buffer.concat(chunks);
-        // NumberField format: UInt32(magic)=5 + UInt32(txId)=5 + UInt16(type)=3 + UInt8(argc)=2 + Binary(tags)=17 = 32+ bytes
-        if(buf.length >= 32){
-          cleanup();
-          res(buf);
-        }
-      };
-      const onError = e => { cleanup(); rej(e); };
-      sock.on('data', onData);
-      sock.once('error', onError);
-      timer = setTimeout(()=>{ cleanup(); rej(new Error('response timeout')); }, 5000);
-    });
-  }
-
-  _dbReadFullResponse(sock, idleMs=300){
-    return new Promise((res,rej)=>{
-      const chunks = [];
-      let totalLen = 0;
-      const _DB_RESP_MAX = 16 * 1024 * 1024; // 16MB cap (artwork/메타데이터 모두 충분)
-      let timer = null;
-      const onData = d => {
-        chunks.push(d);
-        totalLen += d.length;
-        if(totalLen > _DB_RESP_MAX){
-          if(timer) clearTimeout(timer);
-          sock.removeListener('data', onData);
-          rej(new Error('dbserver full response too large')); return;
-        }
-        // Reset idle timer on each chunk
-        if(timer) clearTimeout(timer);
-        timer = setTimeout(()=>{
-          sock.removeListener('data', onData);
-          res(Buffer.concat(chunks));
-        }, idleMs);
-      };
-      sock.on('data', onData);
-      sock.once('error', e=>{if(timer)clearTimeout(timer);rej(e);});
-      setTimeout(()=>{sock.removeListener('data',onData);if(timer)clearTimeout(timer);rej(new Error('full response timeout'));}, 8000);
-    });
-  }
-
-  // ── Read a single field from buffer at offset ────
-  _dbReadField(buf, pos){
-    if(pos>=buf.length)return null;
-    const ft=buf[pos]; pos++;
-    if(ft===0x0f){// UInt8
-      if(pos>=buf.length)return null;
-      return{type:'num',val:buf[pos],size:2};
-    }else if(ft===0x10){// UInt16
-      if(pos+1>=buf.length)return null;
-      return{type:'num',val:buf.readUInt16BE(pos),size:3};
-    }else if(ft===0x11){// UInt32
-      if(pos+3>=buf.length)return null;
-      return{type:'num',val:buf.readUInt32BE(pos),size:5};
-    }else if(ft===0x14){// Binary
-      if(pos+3>=buf.length)return null;
-      const len=buf.readUInt32BE(pos); pos+=4;
-      return{type:'blob',val:buf.slice(pos,pos+len),size:5+len};
-    }else if(ft===0x26){// String UTF-16BE
-      if(pos+3>=buf.length)return null;
-      const len=buf.readUInt32BE(pos); pos+=4;
-      const byteLen=len*2;
-      let str='';
-      for(let j=0;j<byteLen-1&&pos+j+1<buf.length;j+=2){
-        const ch=buf.readUInt16BE(pos+j);if(ch===0)break;
-        str+=String.fromCharCode(ch);
-      }
-      return{type:'str',val:str,size:5+byteLen};
-    }
-    return null;
-  }
-
-  // ── Parse metadata items from response (NumberField format) ────
-  _dbParseItems(buf){
-    const items = [];
-    let pos = 0;
-    while(pos < buf.length - 5){
-      // Scan for magic: 0x11 0x872349ae
-      if(buf[pos]!==0x11||buf.readUInt32BE(pos+1)!==0x872349ae){pos++;continue;}
-      pos+=5; // skip magic field
-      // txId: UInt32 field
-      const txF=this._dbReadField(buf,pos);if(!txF)break;pos+=txF.size;
-      // msgType: UInt16 field
-      const typeF=this._dbReadField(buf,pos);if(!typeF)break;pos+=typeF.size;
-      const msgType=typeF.val;
-      // argCount: UInt8 field
-      const cntF=this._dbReadField(buf,pos);if(!cntF)break;pos+=cntF.size;
-      const argc=cntF.val;
-      // argList: Binary field (12 bytes)
-      const listF=this._dbReadField(buf,pos);if(!listF)break;pos+=listF.size;
-      const tags=listF.val;
-      // Read arguments
-      const args = [];
-      for(let i=0;i<argc&&i<12;i++){
-        const f=this._dbReadField(buf,pos);
-        if(!f)break;
-        args.push(f);
-        pos+=f.size;
-      }
-      if(msgType===0x4101||msgType===0x4000||msgType===0x4002||msgType===0x4702||msgType===0x4e02){
-        items.push({msgType,args});
-      }
-    }
-    return items;
-  }
+  // socket I/O → pdjl/dbserver-io.js, parser → pdjl/dbserver.js (Phase 5.3a).
+  _dbReadResponse(sock){ return _DBIO.dbReadResponse(sock); }
+  _dbReadFullResponse(sock, idleMs=300){ return _DBIO.dbReadFullResponse(sock, idleMs); }
+  _dbReadField(buf, pos){ return _DB.dbReadField(buf, pos); }
+  _dbParseItems(buf){ return _DB.dbParseItems(buf); }
 
   async _dbserverMetadata(ip, slot, trackId, playerNum, trackType=1){
     // Spoof as player 7 to avoid conflict with CDJs 1-6

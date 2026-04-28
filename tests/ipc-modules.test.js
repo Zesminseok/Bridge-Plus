@@ -833,6 +833,57 @@ test('beat-anchor: shouldKeepPredictedBeatAnchor half-beat jitter window', () =>
   assert.strictEqual(shouldKeepPredictedBeatAnchor(0, 1000, 120), false);     // predicted=0 거부
 });
 
+// ─── BridgeCore split — Phase 5.3a dbserver parser/IO ──────────────────
+
+test('dbserver parser: dbReadField TLV 모든 type 파싱', () => {
+  const { dbReadField } = require(path.join(__dirname, '..', 'pdjl', 'dbserver'));
+  // UInt8 (0x0f)
+  assert.deepStrictEqual(dbReadField(Buffer.from([0x0f, 0x42]), 0), { type:'num', val:0x42, size:2 });
+  // UInt16 (0x10)
+  const b16 = Buffer.from([0x10, 0xab, 0xcd]);
+  assert.deepStrictEqual(dbReadField(b16, 0), { type:'num', val:0xabcd, size:3 });
+  // UInt32 (0x11)
+  const b32 = Buffer.from([0x11, 0x00, 0x00, 0x00, 0x99]);
+  assert.deepStrictEqual(dbReadField(b32, 0), { type:'num', val:0x99, size:5 });
+  // Binary (0x14): tag + len(4B) + data
+  const bbin = Buffer.concat([Buffer.from([0x14, 0x00, 0x00, 0x00, 0x03]), Buffer.from([1,2,3])]);
+  const fbin = dbReadField(bbin, 0);
+  assert.strictEqual(fbin.type, 'blob');
+  assert.strictEqual(fbin.size, 5+3);
+  assert.deepStrictEqual(Array.from(fbin.val), [1,2,3]);
+  // Truncated buffer → null
+  assert.strictEqual(dbReadField(Buffer.from([0x11, 0x00]), 0), null);
+});
+
+test('dbserver parser: dbParseItems 알려진 msgType 만 수집', () => {
+  const { dbParseItems, dbBuildMsg, dbArg4 } = require(path.join(__dirname, '..', 'pdjl', 'dbserver'));
+  // 알려진 msgType (0x4002 = metadata response) 빌드 후 파싱.
+  const msg = dbBuildMsg(0x1234, 0x4002, [dbArg4(0x99)]);
+  const items = dbParseItems(msg);
+  assert.strictEqual(items.length, 1);
+  assert.strictEqual(items[0].msgType, 0x4002);
+  // 알려지지 않은 msgType 은 무시.
+  const ignored = dbBuildMsg(0x1234, 0x9999, [dbArg4(0x99)]);
+  assert.strictEqual(dbParseItems(ignored).length, 0);
+});
+
+test('dbserver-io: dbReadResponse/dbReadFullResponse 함수 export', () => {
+  const io = require(path.join(__dirname, '..', 'pdjl', 'dbserver-io'));
+  assert.strictEqual(typeof io.dbReadResponse, 'function');
+  assert.strictEqual(typeof io.dbReadFullResponse, 'function');
+});
+
+test('bridge-core: dbserver parser/IO 메서드는 wrapper (Phase 5.3a)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'bridge-core.js'), 'utf8');
+  // 본문 자리에 있던 16MB cap 상수 정의가 모두 사라졌는지 (모듈로 이동)
+  assert.ok(!/const _DB_RESP_MAX = 16 \* 1024 \* 1024/.test(src), 'bridge-core 에 _DB_RESP_MAX 상수가 남아있음');
+  // wrapper 형태 확인
+  assert.match(src, /_dbReadResponse\(sock\)\{ return _DBIO\.dbReadResponse\(sock\); \}/);
+  assert.match(src, /_dbReadFullResponse\(sock, idleMs=300\)\{ return _DBIO\.dbReadFullResponse\(sock, idleMs\); \}/);
+  assert.match(src, /_dbReadField\(buf, pos\)\{ return _DB\.dbReadField\(buf, pos\); \}/);
+  assert.match(src, /_dbParseItems\(buf\)\{ return _DB\.dbParseItems\(buf\); \}/);
+});
+
 // ─── pcm-decode worker error drain ───────────────────────────────────────
 
 test('pcm-decode: worker fatal error drains pending jobs', () => {

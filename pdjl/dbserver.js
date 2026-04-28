@@ -1,5 +1,5 @@
-// dbserver protocol pure helpers — bridge-core.js 에서 추출 (Phase 4.11 modularization).
-// 메시지 빌더/파서. 소켓/캐시/state 처리는 BridgeCore 클래스 메서드에 유지.
+// dbserver protocol pure helpers — bridge-core.js 에서 추출 (Phase 4.11 + 5.3a).
+// 메시지 빌더/parser + 응답 TLV reader. 소켓 I/O 는 dbserver-io.js, 세션/캐시 state 는 BridgeCore.
 
 const DB_MAGIC = 0x872349ae;
 
@@ -115,10 +115,72 @@ function parseDbRequest(buf){
   return { txId, type, argc, args };
 }
 
+// ── Read a single TLV field from response buffer at offset ────
+// 동작 보존: bridge-core.js 의 _dbReadField 와 동일 contract (input/output 일치).
+function dbReadField(buf, pos){
+  if(pos>=buf.length)return null;
+  const ft=buf[pos]; pos++;
+  if(ft===0x0f){// UInt8
+    if(pos>=buf.length)return null;
+    return{type:'num',val:buf[pos],size:2};
+  }else if(ft===0x10){// UInt16
+    if(pos+1>=buf.length)return null;
+    return{type:'num',val:buf.readUInt16BE(pos),size:3};
+  }else if(ft===0x11){// UInt32
+    if(pos+3>=buf.length)return null;
+    return{type:'num',val:buf.readUInt32BE(pos),size:5};
+  }else if(ft===0x14){// Binary
+    if(pos+3>=buf.length)return null;
+    const len=buf.readUInt32BE(pos); pos+=4;
+    return{type:'blob',val:buf.slice(pos,pos+len),size:5+len};
+  }else if(ft===0x26){// String UTF-16BE
+    if(pos+3>=buf.length)return null;
+    const len=buf.readUInt32BE(pos); pos+=4;
+    const byteLen=len*2;
+    let str='';
+    for(let j=0;j<byteLen-1&&pos+j+1<buf.length;j+=2){
+      const ch=buf.readUInt16BE(pos+j);if(ch===0)break;
+      str+=String.fromCharCode(ch);
+    }
+    return{type:'str',val:str,size:5+byteLen};
+  }
+  return null;
+}
+
+// ── Parse multi-message dbserver response (NumberField format) ────
+// 응답에서 magic 0x872349ae 를 스캔해 알려진 msgType (0x4101/0x4000/0x4002/0x4702/0x4e02) 만 수집.
+// dbReadField 를 내부 호출 — 두 함수는 짝으로 유지.
+function dbParseItems(buf){
+  const items = [];
+  let pos = 0;
+  while(pos < buf.length - 5){
+    if(buf[pos]!==0x11||buf.readUInt32BE(pos+1)!==0x872349ae){pos++;continue;}
+    pos+=5;
+    const txF=dbReadField(buf,pos);if(!txF)break;pos+=txF.size;
+    const typeF=dbReadField(buf,pos);if(!typeF)break;pos+=typeF.size;
+    const msgType=typeF.val;
+    const cntF=dbReadField(buf,pos);if(!cntF)break;pos+=cntF.size;
+    const argc=cntF.val;
+    const listF=dbReadField(buf,pos);if(!listF)break;pos+=listF.size;
+    const args = [];
+    for(let i=0;i<argc&&i<12;i++){
+      const f=dbReadField(buf,pos);
+      if(!f)break;
+      args.push(f);
+      pos+=f.size;
+    }
+    if(msgType===0x4101||msgType===0x4000||msgType===0x4002||msgType===0x4702||msgType===0x4e02){
+      items.push({msgType,args});
+    }
+  }
+  return items;
+}
+
 module.exports = {
   DB_MAGIC,
   dbNum1, dbNum2, dbNum4, dbBinary, dbStr,
   dbArg4, dbRMST,
   dbBuildMsg, dbBuildMenuItem, dbBuildArtResponse,
   parseDbRequest,
+  dbReadField, dbParseItems,
 };
