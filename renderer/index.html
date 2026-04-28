@@ -6356,15 +6356,14 @@ function tick(){
     if(run)document.getElementById('bPk').textContent='TX: '+pk.toLocaleString();
   }
 }
-// 60fps cap via requestAnimationFrame + time gate
-let _lastTickT=0;
-// 120fps cap — 120Hz 모니터에서 웨이브폼 매끈한 스크롤. 60Hz 모니터는 rAF 가 60fps 로 자동 cap.
-// _DECK_UI_TICK_MS / _DECK_VU_TICK_MS 가 30fps 로 안에서 다시 throttle → 웨이브폼만 outer 속도.
-const _TICK_MS=1000/120; // 8.33ms target — 디스플레이 refresh 따라 자동 cap
-function _rafTick(ts){
+// rAF 네이티브 속도 — 디스플레이 refresh 에 맞춰 자동 동기화.
+//   - ProMotion 120Hz (MacBook Pro 14/16) → 120fps
+//   - 60Hz 일반 모니터 → 60fps
+//   - 144/240Hz 외부 디스플레이 → 144/240fps
+// 웨이브폼만 outer rAF 속도. _DECK_UI_TICK_MS / _DECK_VU_TICK_MS / _MIXER_TICK_MS 는
+// 안쪽에서 30fps 로 throttle → CPU 절약.
+function _rafTick(){
   requestAnimationFrame(_rafTick);
-  if(ts-_lastTickT<_TICK_MS) return;
-  _lastTickT=ts;
   tick();
 }
 requestAnimationFrame(_rafTick);
@@ -6412,7 +6411,8 @@ setInterval(async()=>{
 // ════ Mixer panel — DJM 데이터 시각화는 renderer/mixer-panel.js 로 이동 (Phase 2.4) ══
 // (_mxPeaks / _mxBuilt / _mx*함수 / updateMixer 모두 mixer-panel.js)
 let _mixerDirty=true, _lastMixerPaint=0;
-const _MIXER_TICK_MS=1000/60;
+// 30fps cap — 사용자 선호 (웨이브폼 외 모든 UI 30fps 고정).
+const _MIXER_TICK_MS=1000/30;
 const _hwWfRenderTimers={};
 function _markMixerDirty(){ _mixerDirty=true; }
 function _vuDisplayFrom255(v,gain=1.7,gamma=0.72){

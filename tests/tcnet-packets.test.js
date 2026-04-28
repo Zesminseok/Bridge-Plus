@@ -298,11 +298,15 @@ test('virtual waveform bin rate constants exist', () => {
 });
 
 test('deck UI repaint is throttled separately from TCNet tick', () => {
-  // Waveform 만 120fps (외부 _TICK_MS), 다른 deck UI 는 30fps (_DECK_UI_TICK_MS) 로 분리.
-  // 사용자 선호: '웨이브폼만큼은 FPS 120 으로, 나머지는 30프레임'.
+  // Waveform 은 outer rAF 네이티브 속도 (디스플레이 refresh 에 sync — ProMotion 120Hz, 60Hz 모니터 60fps).
+  // 다른 deck UI 는 30fps (_DECK_UI_TICK_MS).
+  // 사용자 선호: '웨이브폼은 디스플레이 리프레시, 나머지는 30프레임'.
   const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
   assert.match(source, /const _DECK_UI_TICK_MS\s*=\s*1000\s*\/\s*30/, 'deck UI throttle should be 30fps');
-  assert.match(source, /const _TICK_MS\s*=\s*1000\s*\/\s*120/, 'outer tick should be 120fps for waveform');
+  // outer rAF 는 시간 gate 없이 호출 — 디스플레이 refresh 자동 sync.
+  assert.match(source, /function _rafTick\(\)\{\s*requestAnimationFrame\(_rafTick\);\s*tick\(\);/, 'outer rAF should follow display refresh');
+  // 회귀 가드 — _TICK_MS 시간 gate 가 다시 들어오지 않았는지.
+  assert.ok(!/const _TICK_MS\s*=/.test(source), '_TICK_MS gate 가 다시 추가됨 (rAF 네이티브 속도 회귀)');
   assert.match(source, /const shouldPaintDeckUi=deckUiVisible&&\(now-_lastDeckUiPaint>=_DECK_UI_TICK_MS\)/, 'deck UI gate');
 });
 
@@ -313,9 +317,10 @@ test('deck VU repaint is throttled separately from waveform redraw', () => {
   assert.strictEqual(source.includes('if(shouldPaintDeckVu){'), true);
 });
 
-test('mixer repaint is throttled independently at 60fps', () => {
+test('mixer repaint is throttled at 30fps (사용자 선호)', () => {
+  // 웨이브폼 외 모든 UI 30fps 고정 — mixer 도 60→30fps 로 cap.
   const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
-  assert.strictEqual(source.includes('const _MIXER_TICK_MS=1000/60;'), true);
+  assert.strictEqual(source.includes('const _MIXER_TICK_MS=1000/30;'), true);
   assert.strictEqual(source.includes("if(curTab==='mixer'&&_mixerDirty){"), true);
   assert.strictEqual(source.includes('if(now-_lastMixerPaint>=_MIXER_TICK_MS){'), true);
 });
