@@ -11,13 +11,13 @@ Rules:
 <claude-mem-context>
 # Memory Context
 
-# [bridge-clone] recent context, 2026-04-29 6:11am GMT+9
+# [bridge-clone] recent context, 2026-04-29 6:30am GMT+9
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (28,774t read) | 1,051,588t work | 97% savings
+Stats: 50 obs (29,660t read) | 1,140,509t work | 97% savings
 
 ### Apr 24, 2026
 S21 Deploy GitHub Actions Windows build workflow to main branch (Apr 24 at 9:24 PM)
@@ -31,11 +31,6 @@ S77 Codex code review workflow formalized as three-stage security-first delegati
 S78 Security hardening implementation and regression test coverage following Codex three-stage review (security → code quality → optimization) (Apr 29 at 12:37 AM)
 S79 Validate security fix impact on normal operation - verify TCNet/PDJL/Art-Net whitelists allow all legitimate user workflows (Apr 29 at 12:38 AM)
 S80 Codex 보안 감사 후속 작업 - HIGH/MED 위험 수정 + PDJL parser 최적화 (Apr 29 at 12:59 AM)
-2999 3:55a 🔄 TCNet packet builders partially converted to Buffer.allocUnsafe for GC optimization
-3000 3:56a 🔄 TCNet packet builders optimized with allocUnsafe for fully-written buffers
-3001 3:57a ✅ TCNet buffer allocation optimization committed to version control
-3002 3:59a 🔵 BRIDGE+ IPC waveform payload hot path identified for optimization
-3003 " 🔵 Complete waveform pts array creation points and packed format support discovered
 3004 4:00a ✅ TDD test cases added for IPC waveform pts packing before implementation
 3005 4:01a 🟣 IPC waveform payload packing implemented with backward-compatible renderer unpacking
 3006 " 🔄 Renderer IPC waveform listeners refactored to detect and unpack Uint8Array format
@@ -81,6 +76,11 @@ S80 Codex 보안 감사 후속 작업 - HIGH/MED 위험 수정 + PDJL parser 최
 3046 5:36a 🔵 Phase 5.3 dbserver refactor correctness review: all 5 critical checks passed
 3047 5:51a 🔵 BRIDGE+ performance review identified 5 hot-path GC pressure findings in UDP and status modules
 3048 5:59a 🔵 Renderer tick architecture analyzed for idle-downshift design
+3049 6:12a 🔵 External specification reference audit completed for BRIDGE+ codebase
+3050 6:13a 🔵 Legal compliance scan initiated for BRIDGE+ v1.0.0 public GitHub beta release
+3051 " 🔵 Code comments contain packet capture analysis references documenting Pioneer protocol implementation details
+3052 6:14a 🔵 Packet capture files and trademarked protocol strings identified in legal compliance audit
+3053 " 🔵 External specification audit completed with classification of protocol documentation by risk severity
 
-Access 1052k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 1141k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

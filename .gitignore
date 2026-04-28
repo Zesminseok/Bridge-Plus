@@ -36,6 +36,19 @@ out/
 .playwright-mcp/
 atelier-*.png
 
-# Graphify cache (regenerable from source — ~386 files)
-graphify-out/cache/
+# 코드 그래프 — 개발 도구 산출물, GitHub 공개 불필요.
+graphify-out/
 .graphify_python
+
+# 내부 문서 / 모듈화 계획 / 디자인 mockup — 공개 안 함.
+docs/
+
+# 외부 spec PDF / 참고자료
+*.pdf
+
+# Development screenshots / scratch images (root + docs)
+/grid-*.png
+/observatory-*.png
+/phrase-*.png
+/wfgrid-*.png
+*.preview.png

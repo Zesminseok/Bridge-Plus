@@ -145,7 +145,7 @@ function renderSettings(){
     }).catch(()=>{});
   }
 
-  // 좀비 프로세스 정리 버튼 (Pioneer 공식 브릿지 + BRIDGE+ 좀비 + 포트 점유)
+  // 좀비 프로세스 정리 버튼 (외부 DJ Link 브릿지 + BRIDGE+ 좀비 + 포트 점유)
   const _btnCz = el.querySelector('#btnCleanupZombies');
   const _outCz = el.querySelector('#cleanupZombiesResult');
   if(_btnCz && _outCz && window.bridge?.cleanupZombies){

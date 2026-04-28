@@ -7,12 +7,28 @@ BRIDGE+ is an independent third-party application created to enable interoperabi
 The following are trademarks (or registered trademarks) of their respective owners:
 
 - **Pioneer DJ**, **CDJ**, **DJM**, **Pro DJ Link**, **rekordbox** — AlphaTheta Corporation  
-- **TCNet** — Tom Cosm Technologies (TC Supply)  
-- **Resolume Arena** — Resolume B.V.  
-- **Ableton Link** — Ableton AG  
+- **TCNet**, **ShowKontrol** — Tom Cosm Technologies (TC Supply)  
+- **Resolume Arena**, **Resolume Wire** — Resolume B.V.  
+- **Ableton Link**, **Ableton Live** — Ableton AG  
 - **Art-Net** — Artistic Licence Holdings Ltd.  
+- **grandMA** — MA Lighting Technology GmbH  
+- **QLC+** — Massimo Callegari and contributors  
+- **Wirecast** — Telestream, LLC  
 
 All trademarks are used solely for descriptive purposes related to interoperability and compatibility.
+
+---
+
+## Bundled Third-Party Assets
+
+The following bundled assets are used under their respective licenses:
+
+- **Fonts** (`renderer/fonts/`): DSEG7 Classic and Noto Sans KR — both licensed under
+  the SIL Open Font License Version 1.1. See `renderer/fonts/LICENSE.txt`.
+- **`abletonlink`** (npm dependency): Native binding for Ableton Link by 2bbb.
+  License terms in `node_modules/abletonlink/LICENSE` after install.
+- **Default placeholder artwork** (`default-album-artwork.png`, `renderer/assets/default-art.png`):
+  Simple solid-color placeholders included with this project under MIT.
 
 ---
 
@@ -54,10 +70,13 @@ BRIDGE+는 DJ 하드웨어와 비주얼/조명 소프트웨어 간의 상호운�
 다음 상표는 각 소유자의 등록 상표 또는 상표입니다:
 
 - **Pioneer DJ**, **CDJ**, **DJM**, **Pro DJ Link**, **rekordbox** — AlphaTheta Corporation  
-- **TCNet** — Tom Cosm Technologies (TC Supply)  
-- **Resolume Arena** — Resolume B.V.  
-- **Ableton Link** — Ableton AG  
+- **TCNet**, **ShowKontrol** — Tom Cosm Technologies (TC Supply)  
+- **Resolume Arena**, **Resolume Wire** — Resolume B.V.  
+- **Ableton Link**, **Ableton Live** — Ableton AG  
 - **Art-Net** — Artistic Licence Holdings Ltd.  
+- **grandMA** — MA Lighting Technology GmbH  
+- **QLC+** — Massimo Callegari 및 기여자  
+- **Wirecast** — Telestream, LLC  
 
 모든 상표는 상호운용성 및 호환성 설명을 위한 목적으로만 사용됩니다.
 
