@@ -1,0 +1,7 @@
+# 모든 소스 / 빌드 산출물 — 공개 repo 는 README + LICENSE + NOTICE + CHANGELOG 만.
+*
+!README.md
+!LICENSE
+!NOTICE.md
+!CHANGELOG.md
+!.gitignore
