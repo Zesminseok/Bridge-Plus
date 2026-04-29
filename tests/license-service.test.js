@@ -18,7 +18,7 @@ function test(name, fn){
   }
 }
 
-test('license service starts a 60 day demo window from first run', () => {
+test('license service starts a 30 day demo window from first run', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bridge-license-'));
   const storePath = path.join(dir, 'license.json');
   const first = Date.UTC(2026, 3, 1, 0, 0, 0);
@@ -32,13 +32,13 @@ test('license service starts a 60 day demo window from first run', () => {
   assert.strictEqual(status.state, 'demo');
   assert.strictEqual(status.canRun, true);
   assert.strictEqual(status.plan, 'Demo');
-  assert.strictEqual(status.daysRemaining, 60);
-  assert.strictEqual(status.demoTotalDays, 60);
+  assert.strictEqual(status.daysRemaining, 30);
+  assert.strictEqual(status.demoTotalDays, 30);
   assert.strictEqual(status.firstRunAt, new Date(first).toISOString());
-  assert.strictEqual(status.expiresAt, new Date(first + 60 * 24 * 60 * 60 * 1000).toISOString());
+  assert.strictEqual(status.expiresAt, new Date(first + 30 * 24 * 60 * 60 * 1000).toISOString());
 });
 
-test('license service expires demo after 60 days and blocks core features', () => {
+test('license service expires demo after 30 days and blocks core features', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bridge-license-'));
   const storePath = path.join(dir, 'license.json');
   const first = Date.UTC(2026, 3, 1, 0, 0, 0);
@@ -49,14 +49,14 @@ test('license service expires demo after 60 days and blocks core features', () =
 
   const expired = license.createDemoLicenseService({
     storePath,
-    now: () => first + 61 * 24 * 60 * 60 * 1000,
+    now: () => first + 31 * 24 * 60 * 60 * 1000,
   }).getStatus();
 
   assert.strictEqual(expired.enabled, true);
   assert.strictEqual(expired.state, 'expired');
   assert.strictEqual(expired.canRun, false);
   assert.strictEqual(expired.daysRemaining, 0);
-  assert.strictEqual(expired.message, '60일 데모가 종료되었습니다. 테스트 해주셔서 감사합니다.');
+  assert.strictEqual(expired.message, '30일 데모가 종료되었습니다. 테스트 해주셔서 감사합니다.');
 });
 
 test('activation rejects malformed license keys while preserving demo status', () => {

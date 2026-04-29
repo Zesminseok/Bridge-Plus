@@ -16,7 +16,7 @@ BRIDGE+ listens to compatible DJ network state and translates timing, transport,
 
 BRIDGE+ is distributed as a binary application. Certain interoperability components are not published as source code. Those components are included only to support compatibility with user-owned systems and are not presented as official, certified, or manufacturer-approved implementations.
 
-This release is a **60-day demo test build**. The demo period starts on first launch. After the demo period ends, core bridge features are disabled while the app remains available for status and license information.
+This release is a **30-day demo test build**. The demo period starts on first launch. After the demo period ends, core bridge features are disabled while the app remains available for status and license information.
 
 ---
 
@@ -87,7 +87,7 @@ BRIDGE+는 호환 DJ 네트워크 상태를 수신하고, 타이밍 / 재생 상
 
 BRIDGE+는 바이너리 애플리케이션으로 배포됩니다. 일부 상호운용성 컴포넌트는 소스 코드로 공개되지 않습니다. 해당 컴포넌트는 사용자가 소유한 시스템과의 호환성을 지원하기 위한 목적으로만 포함되며, 공식 구현, 인증 구현, 또는 제조사 승인 구현으로 표시되지 않습니다.
 
-이 릴리스는 **60일 데모 테스트 빌드**입니다. 데모 기간은 첫 실행일부터 시작됩니다. 데모 기간이 종료되면 핵심 브리지 기능은 비활성화되며, 앱은 상태 및 라이선스 정보를 확인할 수 있도록 계속 열립니다.
+이 릴리스는 **30일 데모 테스트 빌드**입니다. 데모 기간은 첫 실행일부터 시작됩니다. 데모 기간이 종료되면 핵심 브리지 기능은 비활성화되며, 앱은 상태 및 라이선스 정보를 확인할 수 있도록 계속 열립니다.
 
 ### 주요 기능
 

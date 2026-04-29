@@ -5,7 +5,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const DEMO_TOTAL_DAYS = 60;
+const DEMO_TOTAL_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LICENSE_PREFIX = 'BPLUS1';
 const DEFAULT_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----

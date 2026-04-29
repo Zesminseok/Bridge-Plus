@@ -10,11 +10,11 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 1.0.0.10 — 2026-04-29
 
-60-day demo evaluation build. Full feature set, time-limited from first run.
+30-day demo evaluation build. Full feature set, time-limited from first run.
 
 ### Changed
 
-- **데모 기간 30일 → 60일** — 더 긴 평가 기간 제공
+- **데모 기간 30일** — 첫 실행일부터 30일간 테스트 가능
 - **버전 명명** — `-demo` 접미사 제거, `1.0.0.10` 형식으로 통일 (semver `1.0.0` + 빌드 카운터 `10`)
 - **Desktop 디버그 로그 disable** — production 빌드에서 `~/Desktop/bridge-debug.log` 생성 시도 제거 (macOS 데스크톱 폴더 권한 프롬프트 회피)
 
