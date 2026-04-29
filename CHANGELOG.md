@@ -8,6 +8,29 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.0.0-demo.0 — 2026-04-29
+
+Demo build — 30-day evaluation. Full feature set, time-limited from first run.
+
+### New / Improved
+
+- **전체 i18n 커버리지** — 6 언어 (en/ko/ja/es/de/fr), 사이드바 / 설정 / 히스토리 / 믹서 / 데크 placeholder / 스플래시 / alert 메시지 모두 포함
+- **`renderSettings` 후 자동 번역 재적용** — i18n 변경 시 동적으로 렌더되는 마크업도 즉시 번역
+- **DECKS Object 순회 critical fix** — BPM force-write 가 0번 실행되던 버그 수정 (테마 전환 시 BPM 사라짐 해결)
+- **Card 덱 배경 통일** — `--bg-lowest` → `--bg2` (Tower / Row 와 일관)
+- **Observatory 자연 높이** — `grid-auto-rows: min-content` 로 컨텐츠 기반 자동 높이
+- **Observatory 글로벌 UI 통일** — 사이드바 / 헤더 / 설정 패널은 모든 layout 공통
+- **Tower 빈 덱 + 버튼** — 자연스러운 dashed border + "+" 아이콘 + 텍스트
+- **macOS / Windows 네이티브 빌드** — `abletonlink` C++ binding 포함
+
+### Build artifacts
+
+- `BRIDGE+-1.0.0.00_demo-mac-x64.dmg` / `-arm64.dmg` (Intel / Apple Silicon)
+- `.zip` 버전 동시 제공
+- `BRIDGE+-1.0.0.00_demo-win-x64.exe` (Windows portable)
+
+---
+
 ## 1.0.0-beta.0 — 2026-04-29
 
 First public beta release.
