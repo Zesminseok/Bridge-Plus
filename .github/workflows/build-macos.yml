@@ -1,0 +1,56 @@
+name: Build macOS
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: macos-13
+          - arch: arm64
+            runner: macos-14
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules for Electron
+        run: npx electron-rebuild --force --arch=${{ matrix.arch }}
+
+      - name: Verify abletonlink.node built
+        run: |
+          found="$(find node_modules/abletonlink -name '*.node' -print)"
+          if [ -z "$found" ]; then
+            echo "abletonlink.node not found after rebuild" >&2
+            exit 1
+          fi
+          echo "$found"
+
+      - name: Package macOS ${{ matrix.arch }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --mac --${{ matrix.arch }} --publish never
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: BRIDGE-Plus-macos-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.blockmap
+            dist/latest*.yml
+          if-no-files-found: error

@@ -36,6 +36,11 @@
     },
     "npmRebuild": false,
     "asar": true,
+    "asarUnpack": [
+      "**/*.node",
+      "node_modules/abletonlink/build/Release/**",
+      "node_modules/abletonlink/bin/**"
+    ],
     "artifactName": "${productName}-1.0.0.10-${os}-${arch}.${ext}",
     "files": [
       "main.js",
@@ -100,7 +105,7 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
           "arch": [
             "x64"
           ]

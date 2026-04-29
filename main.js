@@ -532,10 +532,26 @@ function createWindow(){
   try{ win.setMenuBarVisibility(false); }catch(_){}
   // Show splash while loading
   showSplash(_splashT('start_msg'), _splashT('start_sub'));
-  win.once('ready-to-show',()=>{
-    win.show();
+  let didShowMain=false;
+  const showMainWindow=(reason)=>{
+    if(didShowMain||!win||win.isDestroyed())return;
+    didShowMain=true;
+    console.log(`[WIN] showing main window (${reason})`);
+    try{win.show();}catch(e){console.warn('[WIN] show error:',e.message);}
     setTimeout(()=>{if(splash&&!splash.isDestroyed())splash.destroy();splash=null;},1500);
+  };
+  win.once('ready-to-show',()=>{
+    showMainWindow('ready-to-show');
   });
+  win.webContents.once('did-finish-load',()=>{
+    sendInterfaces('startup');
+    setTimeout(()=>showMainWindow('did-finish-load fallback'),250);
+  });
+  win.webContents.once('did-fail-load',(_event,errorCode,errorDescription,validatedURL)=>{
+    console.warn('[WIN] did-fail-load:',errorCode,errorDescription,validatedURL);
+    showMainWindow('did-fail-load fallback');
+  });
+  setTimeout(()=>showMainWindow('startup timeout fallback'),8000).unref?.();
   // Save bounds on move/resize (debounced) and on close
   let _saveTmr;
   const debounceSave=()=>{clearTimeout(_saveTmr);_saveTmr=setTimeout(saveBounds,500);};
@@ -544,7 +560,6 @@ function createWindow(){
   win.on('close',()=>saveBounds());
   const p=path.join(__dirname,'renderer','index.html');
   win.loadFile(fs.existsSync(p)?p:path.join(__dirname,'index.html'));
-  win.webContents.once('did-finish-load',()=>sendInterfaces('startup'));
   startInterfaceWatcher();
 }
 

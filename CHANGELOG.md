@@ -35,7 +35,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `BRIDGE+-1.0.0.10-mac-x64.dmg` / `-mac-arm64.dmg` (Intel / Apple Silicon)
 - `.zip` 버전 동시 제공
-- `BRIDGE+-1.0.0.10-win-x64.exe` (Windows portable)
+- `BRIDGE+-1.0.0.10-win-x64.exe` (Windows installer)
 
 ---
 
@@ -86,6 +86,6 @@ First public beta release.
 ### Build
 
 - Electron 33+ / Node.js 18+
-- macOS x64/arm64 (DMG·ZIP), Windows x64 (portable)
+- macOS x64/arm64 (DMG·ZIP), Windows x64 (installer)
 - 네이티브 의존성: `abletonlink` (`node-gyp` 빌드 필요)
 - npm 패키지 매니저
