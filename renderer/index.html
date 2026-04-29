@@ -402,7 +402,7 @@ body[data-layout="card"] .dvu-fader .dvu-hbar{cursor:ew-resize}
 /* Tower 모드: addDeckBtn 은 vtRow 안 마지막 자식 (JS 가 이동).
    다른 테마처럼 + 아이콘 + 텍스트 함께 보이게. 덱이 없을 땐 덱 카드 크기와 동일. */
 body[data-layout="tower"] #vtRow > #addDeckBtn{
-  flex:0 0 auto;width:110px;min-width:110px;min-height:520px;align-self:stretch;
+  flex:0 0 110px!important;width:110px;min-width:110px;height:calc(100vh - 230px);min-height:620px;max-height:980px;align-self:flex-start;
   padding:18px 10px;margin:0;
   display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   border:1.5px dashed var(--bdr2);background:0;
@@ -1048,9 +1048,9 @@ body[data-layout="row"] .rw-ddz{padding:40px;text-align:center}
 
 /* ═════════ TOWER 레이아웃 — 200px 세로 컬럼, 가로 스크롤 ═════════ */
 body[data-layout="tower"] .deck-row{flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding-bottom:8px;align-items:flex-start;max-width:100%}
-body[data-layout="tower"] .dk.tw-dk{width:310px;min-width:310px;flex-shrink:0;padding:10px 10px 9px;display:flex;flex-direction:column;gap:9px;border-radius:6px}
+body[data-layout="tower"] .dk.tw-dk{width:310px;min-width:310px;max-width:310px;flex:0 0 310px!important;height:calc(100vh - 230px);min-height:620px;max-height:980px;padding:10px 10px 9px;display:flex;flex-direction:column;gap:9px;border-radius:6px;box-sizing:border-box}
 /* Tower 빈 덱은 add-deck 버튼과 동일 폭/높이 — 트랙 로드 전 placeholder. */
-body[data-layout="tower"] .dk.tw-dk[data-st="empty"]{min-height:520px;align-self:stretch}
+body[data-layout="tower"] .dk.tw-dk[data-st="empty"]{height:calc(100vh - 230px);min-height:620px;max-height:980px;align-self:flex-start}
 body[data-layout="tower"] .dk.tw-dk[data-st="empty"] .ddz.tw-ddz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
 body[data-layout="tower"] .tw-head{display:flex;align-items:center;gap:8px;padding:2px 0 6px;border-bottom:1px solid var(--bdr);min-height:26px}
 body[data-layout="tower"] .tw-head-top{display:flex;align-items:center;gap:6px;height:22px;flex:0 0 auto}
@@ -4147,6 +4147,9 @@ function appendVirtualDeckDom(slot){
   if(d.audioChs>2)_buildVuStrip(slot,d.audioChs);
   if(_expandedSlot===slot)deckEl.classList.add('dk-wide');
   _refreshVirtualAddDeckButton();
+  if((document.body.dataset.layout||'')==='tower'){
+    requestAnimationFrame(()=>deckEl.scrollIntoView({block:'nearest',inline:'nearest'}));
+  }
   renderOutLayers();
   updateHeader();
   return true;
