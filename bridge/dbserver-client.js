@@ -1,64 +1,8 @@
 'use strict';
 // Phase 5.3c — dbserver client helpers extracted from bridge-core.js
-const os    = require('os');
-const path  = require('path');
-const fs    = require('fs');
 
-// 디버그 로그 — Desktop 우선, CloudStorage 동기화 폴더면 tmpdir 폴백.
-// freeze 회피: ① console.log 사용 안 함 ② Desktop 이 CloudStorage 로 redirect 되어 있으면 skip.
-function _resolveDbgLogPath(){
-  const home = os.homedir();
-  // CloudStorage(Dropbox/iCloud/OneDrive) 동기화 폴더는 write 마다 동기화 → freeze 유발. 회피.
-  const isCloudSynced = (p) => {
-    try{
-      const real = fs.realpathSync(path.dirname(p));
-      return /CloudStorage|Dropbox|iCloud|com~apple~CloudDocs|OneDrive/.test(real);
-    }catch(_){ return false; }
-  };
-  // 1순위: Desktop (사용자 접근성). 동기화 폴더이거나 실패하면 tmpdir 로 폴백.
-  const candidates = [
-    path.join(home, 'Desktop', 'bridge-debug.log'),
-    path.join(home, '바탕 화면', 'bridge-debug.log'),
-    path.join(os.tmpdir(), 'bridge-debug.log'),
-  ];
-  for(const p of candidates){
-    try{
-      const dir = path.dirname(p);
-      fs.mkdirSync(dir, { recursive: true });
-      // CloudStorage 동기화 폴더는 skip
-      if(isCloudSynced(p)) continue;
-      fs.writeFileSync(p, '');
-      return p;
-    }catch(_){}
-  }
-  return null;
-}
-const _DBG_LOG_PATH = _resolveDbgLogPath();
-let _dbgLogInited = false;
-let _dbgLogQueue = [];
-let _dbgLogFlushScheduled = false;
-function _dbgLogFlush(){
-  if(!_DBG_LOG_PATH || _dbgLogQueue.length===0){ _dbgLogFlushScheduled=false; return; }
-  const chunk = _dbgLogQueue.join('');
-  _dbgLogQueue = [];
-  fs.appendFile(_DBG_LOG_PATH, chunk, ()=>{ _dbgLogFlushScheduled=false; });
-}
-function _dbgLog(msg){
-  // console.log 제거 — Electron production 빌드에서 stdout 파이프 버퍼 풀(64KB) 시 동기 블록 → UI freeze.
-  if(!_DBG_LOG_PATH) return;
-  try{
-    if(!_dbgLogInited){
-      // 초기 헤더 비동기 write — sync 사용 안 함.
-      _dbgLogQueue.push(`=== BRIDGE+ debug log — started ${new Date().toISOString()} ===\nlog path: ${_DBG_LOG_PATH}\n`);
-      _dbgLogInited = true;
-    }
-    _dbgLogQueue.push(`[${new Date().toISOString()}] ${msg}\n`);
-    if(!_dbgLogFlushScheduled){
-      _dbgLogFlushScheduled = true;
-      setImmediate(_dbgLogFlush);
-    }
-  }catch(_){}
-}
+// 디버그 로그 — 배포 빌드에서 disable. Desktop/tmpdir 등 어떤 경로에도 쓰지 않음.
+function _dbgLog(_msg){ /* no-op */ }
 
 async function dbserverMetadata(core, ip, slot, trackId, playerNum, trackType=1){
     // Spoof as player 7 to avoid conflict with CDJs 1-6

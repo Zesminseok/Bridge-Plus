@@ -8,12 +8,20 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## 1.0.0-demo.0 — 2026-04-29
+## 1.0.0.10 — 2026-04-29
 
-Demo build — 30-day evaluation. Full feature set, time-limited from first run.
+60-day demo evaluation build. Full feature set, time-limited from first run.
+
+### Changed
+
+- **데모 기간 30일 → 60일** — 더 긴 평가 기간 제공
+- **버전 명명** — `-demo` 접미사 제거, `1.0.0.10` 형식으로 통일 (semver `1.0.0` + 빌드 카운터 `10`)
+- **Desktop 디버그 로그 disable** — production 빌드에서 `~/Desktop/bridge-debug.log` 생성 시도 제거 (macOS 데스크톱 폴더 권한 프롬프트 회피)
 
 ### New / Improved
 
+- **앱 아이콘** — B+ 마크 적용 (DMG / EXE / 윈도우 / Dock / 스플래시)
+- **macOS Ad-hoc 서명** — Gatekeeper "손상됨" 메시지 회피 (우클릭 → 열기 1회로 통과)
 - **전체 i18n 커버리지** — 6 언어 (en/ko/ja/es/de/fr), 사이드바 / 설정 / 히스토리 / 믹서 / 데크 placeholder / 스플래시 / alert 메시지 모두 포함
 - **`renderSettings` 후 자동 번역 재적용** — i18n 변경 시 동적으로 렌더되는 마크업도 즉시 번역
 - **DECKS Object 순회 critical fix** — BPM force-write 가 0번 실행되던 버그 수정 (테마 전환 시 BPM 사라짐 해결)
@@ -25,9 +33,9 @@ Demo build — 30-day evaluation. Full feature set, time-limited from first run.
 
 ### Build artifacts
 
-- `BRIDGE+-1.0.0.00_demo-mac-x64.dmg` / `-arm64.dmg` (Intel / Apple Silicon)
+- `BRIDGE+-1.0.0.10-mac-x64.dmg` / `-mac-arm64.dmg` (Intel / Apple Silicon)
 - `.zip` 버전 동시 제공
-- `BRIDGE+-1.0.0.00_demo-win-x64.exe` (Windows portable)
+- `BRIDGE+-1.0.0.10-win-x64.exe` (Windows portable)
 
 ---
 

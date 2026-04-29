@@ -115,7 +115,7 @@ button,select,input,canvas{-webkit-app-region:no-drag;font-family:var(--sn)}
 body[data-platform="darwin"] .hdr{padding-left:80px}
 .hdr .btn,.hdr select,.hdr input,.hdr span[id]{-webkit-app-region:no-drag}
 .logo{display:flex;align-items:center;gap:10px}
-.li{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--key2),var(--key));display:flex;align-items:center;justify-content:center;font:800 11px var(--mn);color:#1a1a3d}
+.li{width:28px;height:28px;border-radius:6px;display:block;flex-shrink:0;background-size:contain;background-repeat:no-repeat;background-position:center;background-image:url('assets/app-icon.png');font-size:0;color:transparent}
 .tabs{display:flex;padding:0 20px;border-bottom:1px solid var(--bdr);background:var(--bg-lowest);flex-shrink:0;height:36px}
 .tab{padding:0 14px;font:600 10px var(--lb);letter-spacing:.1em;cursor:pointer;border:none;background:0;color:rgba(226,226,232,.4);position:relative;transition:color .15s;text-transform:uppercase;height:100%;display:flex;align-items:center}
 .tab:hover{color:var(--tx2)}.tab.on{color:var(--key)}
@@ -873,10 +873,7 @@ body[data-layout="observatory"]{
   --sn:var(--font-body);--mn:var(--font-numeric);--lb:var(--font-label);
 }
 /* 로고 gradient — MONO 오렌지로 (모든 레이아웃 공통) */
-body[data-layout="row"] .li,
-body[data-layout="tower"] .li,
-body[data-layout="card"] .li,
-body[data-layout="observatory"] .li{background:linear-gradient(135deg,#a34418,#ff6b2c);color:#fff}
+/* layout 별 .li tint 제거 — 아이콘 이미지 그대로 사용. */
 /* Sidebar ON 상태 색도 오렌지로 */
 body[data-layout="row"] .sbi.on,
 body[data-layout="tower"] .sbi.on,

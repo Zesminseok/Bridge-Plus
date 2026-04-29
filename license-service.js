@@ -5,7 +5,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const DEMO_TOTAL_DAYS = 30;
+const DEMO_TOTAL_DAYS = 60;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LICENSE_PREFIX = 'BPLUS1';
 const DEFAULT_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
@@ -200,7 +200,7 @@ function createDemoLicenseService(options={}){
       lastCheckedAt: toIso(now),
       message: canRun
         ? `Demo build: ${daysRemaining} day${daysRemaining===1?'':'s'} remaining.`
-        : '30일 데모가 종료되었습니다. 테스트 해주셔서 감사합니다.',
+        : `${DEMO_TOTAL_DAYS}일 데모가 종료되었습니다. 테스트 해주셔서 감사합니다.`,
     };
   }
 

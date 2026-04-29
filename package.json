@@ -1,6 +1,6 @@
 {
   "name": "bridge-plus",
-  "version": "1.0.0-demo.10",
+  "version": "1.0.0",
   "description": "BRIDGE+ — independent interoperability tool for compatible DJ, visual, lighting, and timecode workflows",
   "main": "main.js",
   "scripts": {
@@ -29,12 +29,14 @@
     "appId": "com.zesminseok.bridgeplus",
     "productName": "BRIDGE+",
     "copyright": "Copyright © 2026 Zesminseok",
+    "icon": "build/icon.png",
+    "afterSign": "scripts/after-sign-adhoc.js",
     "directories": {
       "output": "dist"
     },
     "npmRebuild": false,
     "asar": true,
-    "artifactName": "${productName}-1.0.0.10-demo-${os}-${arch}.${ext}",
+    "artifactName": "${productName}-1.0.0.10-${os}-${arch}.${ext}",
     "files": [
       "main.js",
       "main/**/*",
