@@ -5,9 +5,23 @@
 (function(){
   'use strict';
 
+  function tr(key,fallback){
+    return window.t ? window.t(key,fallback) : fallback;
+  }
+
   function statusText(st){
-    if(!st)return 'License status unavailable';
-    if(st.state==='disabled')return st.message||'License system disabled in test builds.';
+    if(!st)return tr('lic_status_unavailable','License status unavailable');
+    if(st.state==='demo'){
+      const days = Number.isFinite(st.daysRemaining) ? st.daysRemaining : null;
+      const suffix = days==null ? '' : ` · ${days}${tr('lic_days_remaining_suffix',' days remaining')}`;
+      return `${tr('lic_demo_build','Demo build')}${suffix}`;
+    }
+    if(st.state==='expired')return tr('lic_demo_expired','30일 데모가 종료되었습니다. 테스트 해주셔서 감사합니다.');
+    if(st.state==='licensed'){
+      const plan = st.plan ? ` · ${st.plan}` : '';
+      const who = st.name && st.email ? ` · ${st.name} <${st.email}>` : '';
+      return `${tr('lic_licensed','Licensed')}${plan}${who}`;
+    }
     return `${st.state||'unknown'}${st.plan?' · '+st.plan:''}`;
   }
 
@@ -15,15 +29,15 @@
     const badge=document.getElementById('licStatusBadge');
     const detail=document.getElementById('licStatusDetail');
     if(badge){
-      badge.textContent=st?.enabled?'ACTIVE':'TEST BUILD';
-      badge.style.color=st?.enabled?'var(--grn)':'var(--ylw)';
+      badge.textContent=st?.state==='expired'?'DEMO EXPIRED':(st?.state==='demo'?'DEMO':'LICENSED');
+      badge.style.color=st?.state==='expired'?'var(--red)':(st?.state==='demo'?'var(--ylw)':'var(--grn)');
     }
     if(detail)detail.textContent=statusText(st);
   }
 
   async function refresh(){
     try{paintStatus(await window.bridge?.licenseGetStatus?.());}
-    catch(_){paintStatus({state:'disabled',message:'License system unavailable in this build.'});}
+    catch(_){paintStatus({state:'disabled',message:tr('lic_system_unavailable','License system unavailable in this build.')});}
   }
 
   // settings 패널 렌더 후 호출 — root = settings root element
@@ -33,8 +47,10 @@
     const licSerial=rootEl.querySelector('#licSerial');
     const licMsg=rootEl.querySelector('#licStatusDetail');
     const showResult=(r)=>{
-      paintStatus(r?.status||r);
-      if(licMsg&&r?.message)licMsg.textContent=r.message;
+      const st=r?.status||r;
+      paintStatus(st);
+      if(licMsg&&r?.ok===false&&r?.message)licMsg.textContent=r.message;
+      else if(licMsg)licMsg.textContent=statusText(st);
     };
     rootEl.querySelector('#btnLicActivate')?.addEventListener('click',async()=>
       showResult(await window.bridge?.licenseActivate?.(licEmail?.value||'',licSerial?.value||'')));

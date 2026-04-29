@@ -51,19 +51,15 @@ function renderSettings(){
       <div class="srw"><span class="srl" data-i18n="set_playhead">플레이헤드 위치</span><select class="ss" id="wfCenterSel"><option value="center" ${cfg.wfCenter==='center'?'selected':''}>${(window.t?window.t('lbl_position_center','중앙 (Center)'):'중앙 (Center)')}</option><option value="left" ${cfg.wfCenter==='left'?'selected':''}>${(window.t?window.t('lbl_position_left','좌측 (Left 25%)'):'좌측 (Left 25%)')}</option></select></div>
       <div class="srw"><span class="srl" data-i18n="set_beatgrid_overview">비트 그리드 — 오버뷰</span><select class="ss" id="wfBeatStyleOverviewSel">
         <option value="none" ${wfBeatStyleOverview==='none'?'selected':''}>${(window.t?window.t('opt_none','없음'):'없음')}</option>
-        <option value="phrase" ${wfBeatStyleOverview==='phrase'?'selected':''}>${(window.t?window.t('opt_phrase_only_16','Phrase 만 (16비트)'):'Phrase 만 (16비트)')}</option>
-        <option value="balanced" ${wfBeatStyleOverview==='balanced'?'selected':''}>${(window.t?window.t('opt_beatgrid_balanced','균형 (다운비트 + Phrase)'):'균형 (다운비트 + Phrase)')}</option>
-        <option value="detailed" ${wfBeatStyleOverview==='detailed'?'selected':''}>${(window.t?window.t('opt_beatgrid_detailed','상세 (모든 비트)'):'상세 (모든 비트)')}</option>
-        <option value="phrase-band" ${wfBeatStyleOverview==='phrase-band'?'selected':''}>${(window.t?window.t('opt_phrase_band','Phrase 강조 (밴드)'):'Phrase 강조 (밴드)')}</option>
-        <option value="hybrid" ${wfBeatStyleOverview==='hybrid'?'selected':''}>${(window.t?window.t('opt_hybrid','하이브리드'):'하이브리드')}</option>
+        <option value="bar" ${wfBeatStyleOverview==='bar'?'selected':''}>${(window.t?window.t('opt_beatgrid_bar','4비트마다'):'4비트마다')}</option>
+        <option value="beat" ${wfBeatStyleOverview==='beat'?'selected':''}>${(window.t?window.t('opt_beatgrid_beat','1비트 + 4비트마다'):'1비트 + 4비트마다')}</option>
+        <option value="half" ${wfBeatStyleOverview==='half'?'selected':''}>${(window.t?window.t('opt_beatgrid_half','1/2비트 + 1비트 + 4비트마다'):'1/2비트 + 1비트 + 4비트마다')}</option>
       </select></div>
       <div class="srw"><span class="srl" data-i18n="set_beatgrid_detail">비트 그리드 — 디테일</span><select class="ss" id="wfBeatStyleDetailSel">
         <option value="none" ${wfBeatStyleDetail==='none'?'selected':''}>${(window.t?window.t('opt_none','없음'):'없음')}</option>
-        <option value="phrase" ${wfBeatStyleDetail==='phrase'?'selected':''}>${(window.t?window.t('opt_phrase_only_16','Phrase 만 (16비트)'):'Phrase 만 (16비트)')}</option>
-        <option value="balanced" ${wfBeatStyleDetail==='balanced'?'selected':''}>${(window.t?window.t('opt_beatgrid_balanced','균형 (다운비트 + Phrase)'):'균형 (다운비트 + Phrase)')}</option>
-        <option value="detailed" ${wfBeatStyleDetail==='detailed'?'selected':''}>${(window.t?window.t('opt_beatgrid_detailed','상세 (모든 비트)'):'상세 (모든 비트)')}</option>
-        <option value="phrase-band" ${wfBeatStyleDetail==='phrase-band'?'selected':''}>${(window.t?window.t('opt_phrase_band','Phrase 강조 (밴드)'):'Phrase 강조 (밴드)')}</option>
-        <option value="hybrid" ${wfBeatStyleDetail==='hybrid'?'selected':''}>${(window.t?window.t('opt_hybrid','하이브리드'):'하이브리드')}</option>
+        <option value="bar" ${wfBeatStyleDetail==='bar'?'selected':''}>${(window.t?window.t('opt_beatgrid_bar','4비트마다'):'4비트마다')}</option>
+        <option value="beat" ${wfBeatStyleDetail==='beat'?'selected':''}>${(window.t?window.t('opt_beatgrid_beat','1비트 + 4비트마다'):'1비트 + 4비트마다')}</option>
+        <option value="half" ${wfBeatStyleDetail==='half'?'selected':''}>${(window.t?window.t('opt_beatgrid_half','1/2비트 + 1비트 + 4비트마다'):'1/2비트 + 1비트 + 4비트마다')}</option>
       </select></div>
       <div class="srw"><span class="srl" data-i18n="set_phrase">Phrase 표시</span><select class="ss" id="wfPhraseStyleSel">
         <option value="none" ${wfPhraseStyle==='none'?'selected':''}>${(window.t?window.t('opt_none','없음'):'없음')}</option>
@@ -82,11 +78,11 @@ function renderSettings(){
     </div>
     <div class="sl" data-i18n="set_license">라이선스</div>
     <div class="sgr">
-      <div class="srw"><span class="srl" data-i18n="set_status">상태</span><span id="licStatusBadge" class="srv" style="color:var(--ylw)">TEST BUILD</span></div>
+      <div class="srw"><span class="srl" data-i18n="set_status">상태</span><span id="licStatusBadge" class="srv" style="color:var(--ylw)">DEMO</span></div>
       <div class="srw"><span class="srl" data-i18n="set_email">이메일</span><input id="licEmail" type="email" autocomplete="off" placeholder="user@example.com" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:190px;text-align:right"></div>
-      <div class="srw"><span class="srl" data-i18n="set_serial">시리얼 코드</span><input id="licSerial" type="text" autocomplete="off" placeholder="BRIDGE-XXXX-XXXX" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:190px;text-align:right"></div>
-      <div class="srw"><span class="srl" data-i18n="set_manage">관리</span><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="mode-btn" id="btnLicActivate" style="height:24px;padding:0 10px">Activate</button><button class="mode-btn" id="btnLicRefresh" style="height:24px;padding:0 10px">Refresh</button><button class="mode-btn" id="btnLicDeactivate" style="height:24px;padding:0 10px">Deactivate</button></div></div>
-      <div class="srw"><span class="srl" data-i18n="set_message">메시지</span><span id="licStatusDetail" class="srv" style="max-width:260px;text-align:right;color:var(--tx3)">License system disabled in test builds.</span></div>
+      <div class="srw"><span class="srl" data-i18n="set_serial">라이선스 키</span><input id="licSerial" type="password" autocomplete="off" spellcheck="false" placeholder="BPLUS1.••••••.••••••" style="background:rgba(255,255,255,.06);border:1px solid var(--bdr2);border-radius:5px;padding:3px 7px;color:var(--tx);font:400 11px var(--mn);outline:none;width:190px;text-align:right"></div>
+      <div class="srw"><span class="srl" data-i18n="set_manage">관리</span><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="mode-btn" id="btnLicActivate" data-i18n="btn_activate" style="height:24px;padding:0 10px">활성화</button><button class="mode-btn" id="btnLicRefresh" data-i18n="btn_refresh" style="height:24px;padding:0 10px">새로고침</button><button class="mode-btn" id="btnLicDeactivate" data-i18n="btn_deactivate" style="height:24px;padding:0 10px">비활성화</button></div></div>
+      <div class="srw"><span class="srl" data-i18n="set_message">메시지</span><span id="licStatusDetail" class="srv" style="max-width:260px;text-align:right;color:var(--tx3)">${(window.t?window.t('lic_demo_build','Demo build'):'Demo build')} · 30${(window.t?window.t('lic_days_remaining_suffix',' days remaining'):' days remaining')}</span></div>
     </div>
     <div class="sl" data-i18n="set_tcnet">TCNet 설정</div>
     <div class="sgr">

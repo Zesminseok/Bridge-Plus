@@ -1,7 +1,7 @@
 {
-  "name": "pro-dj-link-bridge-plus",
-  "version": "1.0.0-beta.0",
-  "description": "BRIDGE+ — independent interoperability tool bridging compatible DJ hardware to visual and lighting software",
+  "name": "bridge-plus",
+  "version": "1.0.0-demo.0",
+  "description": "BRIDGE+ — independent interoperability tool for compatible DJ, visual, lighting, and timecode workflows",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -13,12 +13,12 @@
     "pack": "electron-builder --dir"
   },
   "keywords": [
-    "pioneer",
-    "cdj",
-    "djm",
+    "dj",
+    "lighting",
+    "timecode",
     "resolume",
     "tcnet",
-    "prodjlink"
+    "artnet"
   ],
   "license": "Apache-2.0",
   "devDependencies": {
@@ -28,11 +28,13 @@
   "build": {
     "appId": "com.zesminseok.bridgeplus",
     "productName": "BRIDGE+",
-    "copyright": "Copyright © 2026 Zes",
+    "copyright": "Copyright © 2026 Zesminseok",
     "directories": {
       "output": "dist"
     },
     "npmRebuild": false,
+    "asar": true,
+    "artifactName": "${productName}-1.0.0.00_demo-${os}-${arch}.${ext}",
     "files": [
       "main.js",
       "main/**/*",
@@ -46,9 +48,18 @@
       "default-album-artwork.png",
       "LICENSE",
       "NOTICE.md",
+      "!**/*.map",
+      "!**/*.pcap",
       "!**/*.pcapng",
+      "!**/*.cap",
+      "!**/*.har",
+      "!**/*.log",
       "!**/*.tgz",
       "!**/*.pdf",
+      "!captures/**",
+      "!research/**",
+      "!analysis/**",
+      "!graphify-out/**",
       "!.codex-artifacts/**",
       "!tools/**",
       "!tests/**",

@@ -79,7 +79,7 @@ class WaveformGL {
     if (!gl) throw new Error('WebGL2 not available');
     this.canvas = canvas;
     this.gl = gl;
-    gl.clearColor(0.067, 0.075, 0.094, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
     this._wfTex = null;
     this._wfLen = 0;
     this._wfDurMs = 1;
@@ -419,6 +419,7 @@ class OverviewGL {
       mode: gl.getUniformLocation(this._prog, 'u_mode'),
       theme: gl.getUniformLocation(this._prog, 'uTheme'),
       sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
+      gridBand: gl.getUniformLocation(this._prog, 'uGridBand'),
     };
   }
 
@@ -439,6 +440,7 @@ class OverviewGL {
           mode: gl.getUniformLocation(this._prog, 'u_mode'),
           theme: gl.getUniformLocation(this._prog, 'uTheme'),
           sharpness: gl.getUniformLocation(this._prog, 'uSharpness'),
+          gridBand: gl.getUniformLocation(this._prog, 'uGridBand'),
         };
       } catch(e) { console.warn('[WGL] ovgl recover failed:', e.message); return; }
     }
@@ -474,12 +476,13 @@ class OverviewGL {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
-  draw(pos, mode, sharpness = 0, theme = 0) {
+  draw(pos, mode, sharpness = 0, theme = 0, gridBand = 0.24) {
     if (!this._wfTex) return;
     if (!this.gl.isProgram(this._prog)) { this._prog = null; this._wfTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
-    const drawKey = `${cv.width}x${cv.height}|${pos}|${mode}|${sharpness}|${theme}`;
+    const gb = Math.max(0, Math.min(0.4, gridBand || 0));
+    const drawKey = `${cv.width}x${cv.height}|${pos}|${mode}|${sharpness}|${theme}|${gb}`;
     if (!this._dirty && this._lastDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._prog);
@@ -492,6 +495,7 @@ class OverviewGL {
     gl.uniform1i(this._locs.mode, mode | 0);
     gl.uniform1i(this._locs.theme, theme | 0);
     gl.uniform1f(this._locs.sharpness, Math.max(0, Math.min(1, sharpness || 0)));
+    if (this._locs.gridBand) gl.uniform1f(this._locs.gridBand, gb);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this._dirty = false;
     this._lastDrawKey = drawKey;
@@ -537,13 +541,14 @@ class OverviewGL {
     this._stripDirty = true;
   }
 
-  drawStrip(pos) {
+  drawStrip(pos, gridBand = 0.24) {
     if (!this._stripTex) return;
     if (!this.gl.isProgram(this._stripProg)) { this._stripProg = null; this._stripTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
     const partialFrac = this._stripPartialFrac || 1.0;
-    const drawKey = `${cv.width}x${cv.height}|${pos}|${partialFrac}`;
+    const gb = Math.max(0, Math.min(0.4, gridBand || 0));
+    const drawKey = `${cv.width}x${cv.height}|${pos}|${partialFrac}|${gb}`;
     if (!this._stripDirty && this._stripDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._stripProg);
@@ -554,6 +559,7 @@ class OverviewGL {
     gl.uniform1f(this._stripLocs.pos, pos);
     gl.uniform2f(this._stripLocs.res, cv.width, cv.height);
     if (this._stripLocs.partialFrac) gl.uniform1f(this._stripLocs.partialFrac, partialFrac);
+    if (this._stripLocs.gridBand) gl.uniform1f(this._stripLocs.gridBand, gb);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this._stripDirty = false;
     this._stripDrawKey = drawKey;
@@ -577,6 +583,7 @@ class OverviewGL {
       pos: gl.getUniformLocation(this._stripProg, 'u_pos'),
       res: gl.getUniformLocation(this._stripProg, 'u_res'),
       partialFrac: gl.getUniformLocation(this._stripProg, 'u_partialFrac'),
+      gridBand: gl.getUniformLocation(this._stripProg, 'uGridBand'),
     };
   }
 
@@ -843,10 +850,11 @@ uniform vec2  u_res;
 uniform int   u_mode;
 uniform int   uTheme;
 uniform float uSharpness;
+uniform float uGridBand;
 out vec4 fragColor;
 
-const vec4 BG        = vec4(0.035, 0.040, 0.055, 1.0);
-const vec4 BG_PLAYED = vec4(0.050, 0.055, 0.075, 1.0);
+const vec4 BG        = vec4(0.020, 0.025, 0.035, 1.0);
+const vec4 BG_PLAYED = vec4(0.030, 0.035, 0.050, 1.0);
 // detail 셰이더와 정확히 동일 팔레트.
 const vec3 C_LOW = vec3(0.137, 0.392, 0.941);  // BLUE — bass
 const vec3 C_MID = vec3(0.706, 0.373, 0.098);  // BROWN — mid
@@ -910,9 +918,10 @@ vec4 cr4(vec4 p0, vec4 p1, vec4 p2, vec4 p3, float t) {
 
 void main() {
   float W = u_res.x, H = u_res.y;
-  // 반파 영역 — strip 셰이더와 동일 범위 유지 (axis=18%, top=92%).
-  float axisY = H * 0.18;
-  float topLimit = H * 0.92;
+  float gridBand = clamp(uGridBand, 0.0, 0.4);
+  // Grid on: bottom band reserved for beat ticks. Grid off: waveform uses full height.
+  float axisY = H * gridBand;
+  float topLimit = H * 0.98;
   float t = gl_FragCoord.x / W;
 
   float curX = u_pos * W;
@@ -1048,17 +1057,19 @@ uniform sampler2D u_strip;
 uniform float u_pos;
 uniform vec2  u_res;
 uniform float u_partialFrac;
+uniform float uGridBand;
 out vec4 fragColor;
 
-const vec3 BG        = vec3(0.035, 0.040, 0.055);
-const vec3 BG_PLAYED = vec3(0.050, 0.055, 0.075);
+const vec3 BG        = vec3(0.020, 0.025, 0.035);
+const vec3 BG_PLAYED = vec3(0.030, 0.035, 0.050);
 
 void main() {
   float W = u_res.x, H = u_res.y;
   float yG = gl_FragCoord.y;
-  // axis 위쪽으로만 envelope 펼침 (반파).
-  float axisY = H * 0.18;
-  float topLimit = H * 0.92;
+  // Grid on: bottom band reserved for beat ticks. Grid off: waveform uses full height.
+  float gridBand = clamp(uGridBand, 0.0, 0.4);
+  float axisY = H * gridBand;
+  float topLimit = H * 0.98;
 
   float curX = u_pos * W;
   if (abs(gl_FragCoord.x - curX) < 0.8) { fragColor = vec4(1.0); return; }

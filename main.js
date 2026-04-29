@@ -590,6 +590,7 @@ require('./main/ipc-bridge-start').registerBridgeStartIpc(ipcMain, {
   getAllInterfaces,
   interfaceSignature,
   push,
+  licenseService,
 });
 // Bridge simple IPC → main/ipc-bridge-simple.js (Phase 3.10)
 require('./main/ipc-bridge-simple').registerBridgeSimpleIpc(ipcMain, ()=>bridge);

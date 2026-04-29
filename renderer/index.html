@@ -172,9 +172,9 @@ body[data-platform="darwin"] .hdr{padding-left:80px}
 /* 빈 덱: 트랙 로드 전이라도 .ddz 안내 문구 가운데 정렬. */
 .dk[data-st="empty"]{display:flex;flex-direction:column}
 .dk[data-st="empty"] .ddz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.dk[data-st="play"]{background:rgba(26,27,36,.97);border-color:rgba(74,225,131,.18)}.dk[data-st="cue"]{background:rgba(26,27,36,.97);border-color:rgba(239,194,10,.15)}.dk.dov{border-color:rgba(164,201,255,.25)!important}
+.dk[data-st="play"],.dk[data-st="scratch"]{background:rgba(26,27,36,.97);border-color:rgba(74,225,131,.18)}.dk[data-st="cue"]{background:rgba(26,27,36,.97);border-color:rgba(239,194,10,.15)}.dk.dov{border-color:rgba(164,201,255,.25)!important}
 .dshim{height:2px;opacity:0;background:var(--grn)}
-.dk[data-st="play"] .dshim{opacity:.6}
+.dk[data-st="play"] .dshim,.dk[data-st="scratch"] .dshim{opacity:.6}
 .dk[data-st="cue"] .dshim{opacity:.4;background:var(--ylw2)}
 .dtop{padding:8px 13px 8px}
 .dhd{display:flex;align-items:center;margin-bottom:5px;gap:4px;justify-content:space-between}
@@ -185,10 +185,10 @@ body[data-platform="darwin"] .hdr{padding-left:80px}
 .dbadge{font:600 9px var(--mn);padding:2px 6px;border-radius:999px;letter-spacing:.06em}
 .dbadge.br{background:rgba(255,80,80,.12);color:var(--red);border:1px solid rgba(255,80,80,.2)}
 .dbadge.br.off{background:rgba(60,60,80,.25);color:rgba(120,100,120,.5);border:1px solid rgba(80,60,80,.2);animation:none;box-shadow:none}
-.dtc{font:300 31px var(--font-timecode,var(--seg));color:var(--tx4);letter-spacing:.02em;transition:color .2s;white-space:nowrap;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+.dtc{font:300 33px var(--font-timecode,var(--seg));color:var(--tx4);letter-spacing:.02em;transition:color .2s;white-space:nowrap;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 .dk[data-st="play"] .dtc,.dk[data-st="scratch"] .dtc{color:var(--tx)}
 /* Overview: slim full-track waveform bar */
-.dwov{height:14px;margin:0 0 6px;background:var(--waveform-bg,var(--bg-lowest));border:1px solid var(--waveform-border,rgba(135,135,255,.18));border-radius:3px;overflow:hidden;cursor:crosshair;position:relative}
+.dwov{height:18px;margin:0 0 5px;background:#05070a;border:1px solid var(--waveform-border,rgba(135,135,255,.18));border-radius:3px;overflow:hidden;cursor:crosshair;position:relative}
 .dwov canvas{width:100%;height:100%;display:block}
 /* waveform analysis progress bar — buildRGBWaveform 1pass 진행 표시.
    가로 바 (전체 높이) + 진행 비율만큼 우측 분석 안 된 영역 위로 shimmer 띠 + 퍼센트 텍스트.
@@ -209,9 +209,10 @@ body[data-platform="darwin"] .hdr{padding-left:80px}
 @keyframes dwov-prog-pulse{0%,100%{opacity:.7}50%{opacity:1}}
 .dwov-prog{animation:dwov-prog-pulse 1.2s ease-in-out infinite}
 /* Zoom: scrolling RGB waveform + beat grid */
-.dwz{height:64px;margin:0 0 4px;background:var(--waveform-bg,var(--bg-lowest));border-radius:6px;overflow:hidden;cursor:grab;position:relative;border:1px solid var(--waveform-border,var(--bdr))}
+.dwz{height:76px;margin:0 0 3px;background:var(--waveform-bg,var(--bg-lowest));border-radius:6px;overflow:hidden;cursor:grab;position:relative;border:1px solid var(--waveform-border,var(--bdr))}
 .dwz:active{cursor:grabbing}
-.dwov canvas,.dwz canvas{background:var(--waveform-bg,var(--bg-lowest))!important}
+.dwov canvas{background:#05070a!important}
+.dwz canvas{background:var(--waveform-bg,var(--bg-lowest))!important}
 .dwov canvas.dwov-overlay,.dwz canvas[id^="wzov"]{background:transparent!important}
 .dwz canvas{flex:1;height:100%;display:block;min-width:0}
 .wf-key{position:absolute;top:4px;right:8px;font:700 14px var(--mn);color:var(--key);pointer-events:none;z-index:2;background:rgba(12,14,18,.75);padding:2px 8px;border-radius:4px}
@@ -234,12 +235,12 @@ body[data-platform="darwin"] .hdr{padding-left:80px}
 .dk-body{display:flex;flex-direction:row;align-items:stretch;padding:0 8px 10px;gap:8px}
 
 /* SECTION 1 — Waveform panel + VU (cyan bordered) */
-.dk-wf-wrap{display:flex;flex-direction:row;flex:1;min-width:0;height:96px;gap:0}
+.dk-wf-wrap{display:flex;flex-direction:row;flex:1;min-width:0;height:112px;gap:0}
 .dk-wf-area{display:flex;flex-direction:row;flex:1;min-width:0;border:1px solid rgba(135,135,255,.1);border-radius:6px 0 0 6px;overflow:hidden;border-right:none}
-.dk-wf-area .dkart{border-radius:0;border:none;border-right:1px solid rgba(135,135,255,.06);width:96px;min-height:96px;aspect-ratio:1;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-lowest)}
+.dk-wf-area .dkart{border-radius:0;border:none;border-right:1px solid rgba(135,135,255,.06);width:112px;min-height:112px;aspect-ratio:1;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-lowest)}
 .dk-wf-col{display:flex;flex-direction:column;flex:1;min-width:0}
-.dk-wf-col .dwov{height:16px;margin:0;border-radius:0;border-bottom:1px solid rgba(135,135,255,.1);background:rgba(5,8,12,.8);position:relative}
-.dk-wf-col .dwov canvas{display:block;width:100%;height:100%;background:var(--waveform-bg,var(--bg-lowest))}
+.dk-wf-col .dwov{height:22px;margin:0;border-radius:0;border-bottom:1px solid rgba(135,135,255,.1);background:#05070a;position:relative}
+.dk-wf-col .dwov canvas{display:block;width:100%;height:100%;background:#05070a!important}
 .dk-wf-col .dwov canvas.dwov-overlay{background:transparent!important}
 .dk-wf-col .dwz-row{flex:1;margin:0;height:auto}
 .dk-wf-col .dwz-row .dwz{border-radius:0;border:none;height:100%;margin:0}
@@ -294,7 +295,7 @@ body[data-platform="darwin"] .hdr{padding-left:80px}
 .dkbtn.dklyr-b{border-color:rgba(255,126,179,.18);color:rgba(255,126,179,.4)}
 .dkbtn.dklyr-b.ac{border-color:#ff7eb3;color:#ff7eb3;background:rgba(255,126,179,.15)}
 /* Waveform + VU side-by-side row */
-.dwz-row{display:flex;flex-direction:row;gap:0;margin:0;height:68px}
+.dwz-row{display:flex;flex-direction:row;gap:0;margin:0;height:80px}
 .dwz-row .dwz{flex:1;min-width:0;margin:0;height:100%;border-radius:6px 0 0 6px}
 /* VU strip: right side of waveform, channels side-by-side, bars vertical */
 .dvu-strip{display:flex;flex-direction:row;gap:2px;align-items:stretch;width:28px;flex-shrink:0;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1);border-left:none;border-radius:0 6px 6px 0;padding:3px 3px 3px 2px}
@@ -326,7 +327,8 @@ body[data-layout="card"] .dvu-fader .dvu-hbar{cursor:ew-resize}
 .dktn-phs{display:flex;flex-direction:row;align-items:center;gap:3px;flex-shrink:0}
 /* Zoom overlay buttons — bottom-right horizontal to avoid bar-counter overlap */
 .dzoom-btns{position:absolute;right:5px;bottom:5px;display:flex;flex-direction:row;gap:2px;z-index:2;pointer-events:none}
-.dzb{pointer-events:auto;padding:0;width:18px;height:15px;border-radius:2px;font:600 10px var(--mn);cursor:pointer;border:1px solid rgba(255,107,44,.28);background:rgba(8,8,8,.62);color:rgba(255,255,255,.72);transition:all .1s;display:flex;align-items:center;justify-content:center;line-height:1}
+.dzb{pointer-events:auto;padding:0;width:20px;min-width:20px;height:15px;border-radius:2px;font:600 10px var(--mn);cursor:pointer;border:1px solid rgba(255,107,44,.28);background:rgba(8,8,8,.62);color:rgba(255,255,255,.72);transition:all .1s;display:flex;align-items:center;justify-content:center;line-height:1}
+.dzb[data-a="zoom-rst"]{width:30px;min-width:30px}
 .dzb:hover{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)}
 /* Eject button — separate, full-width */
 .dje{padding:5px 13px;border-top:1px solid var(--bg3)}
@@ -400,7 +402,7 @@ body[data-layout="card"] .dvu-fader .dvu-hbar{cursor:ew-resize}
 /* Tower 모드: addDeckBtn 은 vtRow 안 마지막 자식 (JS 가 이동).
    다른 테마처럼 + 아이콘 + 텍스트 함께 보이게. 덱이 없을 땐 덱 카드 크기와 동일. */
 body[data-layout="tower"] #vtRow > #addDeckBtn{
-  flex:0 0 auto;width:270px;min-width:270px;min-height:520px;align-self:stretch;
+  flex:0 0 auto;width:310px;min-width:310px;min-height:520px;align-self:stretch;
   padding:24px;margin:0;
   display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   border:1.5px dashed var(--bdr2);background:0;
@@ -903,7 +905,10 @@ body[data-layout="tower"] .dk,
 body[data-layout="card"] .dk{border-color:rgba(70,70,70,.3);background:var(--bg2)}
 body[data-layout="row"] .dk[data-st="play"],
 body[data-layout="tower"] .dk[data-st="play"],
-body[data-layout="card"] .dk[data-st="play"]{border-color:rgba(255,107,44,.35);background:var(--bg2)}
+body[data-layout="card"] .dk[data-st="play"],
+body[data-layout="row"] .dk[data-st="scratch"],
+body[data-layout="tower"] .dk[data-st="scratch"],
+body[data-layout="card"] .dk[data-st="scratch"]{border-color:rgba(255,107,44,.35);background:var(--bg2)}
 body[data-layout="row"] .dk[data-st="cue"],
 body[data-layout="tower"] .dk[data-st="cue"],
 body[data-layout="card"] .dk[data-st="cue"]{border-color:rgba(255,204,102,.28);background:var(--bg2)}
@@ -952,7 +957,10 @@ body[data-layout="tower"] .dbadge.bm,
 body[data-layout="card"] .dbadge.bm{color:var(--tx3);border:1px solid var(--bdr2)}
 body[data-layout="row"] .dk[data-st="play"] .dbadge.bm,
 body[data-layout="tower"] .dk[data-st="play"] .dbadge.bm,
-body[data-layout="card"] .dk[data-st="play"] .dbadge.bm{color:var(--key);background:rgba(255,107,44,.1);border-color:rgba(255,107,44,.35)}
+body[data-layout="card"] .dk[data-st="play"] .dbadge.bm,
+body[data-layout="row"] .dk[data-st="scratch"] .dbadge.bm,
+body[data-layout="tower"] .dk[data-st="scratch"] .dbadge.bm,
+body[data-layout="card"] .dk[data-st="scratch"] .dbadge.bm{color:var(--key);background:rgba(255,107,44,.1);border-color:rgba(255,107,44,.35)}
 body[data-layout="row"] .dk[data-st="cue"] .dbadge.bm,
 body[data-layout="tower"] .dk[data-st="cue"] .dbadge.bm,
 body[data-layout="card"] .dk[data-st="cue"] .dbadge.bm{color:var(--ylw);background:rgba(255,204,102,.1);border-color:rgba(255,204,102,.35)}
@@ -997,21 +1005,21 @@ body[data-layout="row"] .rw-title-inline{flex:1;min-width:0;display:flex;align-i
 body[data-layout="row"] .rw-title-inline > span[id^="dta"]{font:500 12px var(--sn);color:var(--tx3);flex-shrink:0;max-width:40%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body[data-layout="row"] .rw-title-inline > span[id^="dtn"]{font:600 13px var(--sn);color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Row 덱 높이 180→135px (SMPTE 분리 + tail 빈여백 제거). 6열: art|wf|VU|EQ|tail|smpte */
-body[data-layout="row"] .rw-body{display:grid;grid-template-columns:135px minmax(0,1fr) var(--vu-w,40px) 36px max-content auto;grid-template-rows:135px;gap:10px;align-items:stretch}
+body[data-layout="row"] .rw-body{display:grid;grid-template-columns:150px minmax(0,1fr) var(--vu-w,40px) 36px max-content auto;grid-template-rows:150px;gap:10px;align-items:stretch}
 /* Virtual 덱 (EQ 없음): EQ 열 제거, tail 4열, smpte 5열 */
-body[data-layout="row"] .rw-body.no-eq{grid-template-columns:135px minmax(0,1fr) var(--vu-w,40px) max-content auto;gap:10px}
+body[data-layout="row"] .rw-body.no-eq{grid-template-columns:150px minmax(0,1fr) var(--vu-w,40px) max-content auto;gap:10px}
 body[data-layout="row"] .rw-body.no-eq .rw-tail{grid-column:4}
 body[data-layout="row"] .rw-body.no-eq .rw-smpte-col{grid-column:5}
-body[data-layout="row"] .rw-art-wrap{grid-column:1;width:135px;height:135px}
+body[data-layout="row"] .rw-art-wrap{grid-column:1;width:150px;height:150px}
 body[data-layout="row"] .rw-art-wrap .dkart{width:100%;height:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--bdr)}
 body[data-layout="row"] .rw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block}
 body[data-layout="row"] .rw-wf-wrap{grid-column:2;display:flex;flex-direction:column;gap:4px;min-width:0}
 /* Row 오버뷰 28px + 하단 4px 마진 / 디테일은 flex:1 로 자동 채움 */
-body[data-layout="row"] .rw-wf-wrap .dwov{height:28px;border-radius:4px;margin:0 0 4px 0}
+body[data-layout="row"] .rw-wf-wrap .dwov{height:34px;border-radius:4px;margin:0 0 3px 0}
 body[data-layout="row"] .rw-wf-wrap .dwz-row{flex:1;min-height:0}
 body[data-layout="row"] .rw-wf-wrap .dwz{height:100%;border-radius:4px;margin:0}
 /* Row VU strip — L/R/F 균등 폭 + 좌우 padding 동일 (좌우 미세 차 제거) */
-body[data-layout="row"] .rw-body .dvu-strip{grid-column:3;width:100%;height:135px;flex-direction:row;border-radius:4px;padding:3px;gap:3px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1)}
+body[data-layout="row"] .rw-body .dvu-strip{grid-column:3;width:100%;height:150px;flex-direction:row;border-radius:4px;padding:3px;gap:3px;background:var(--bg-lowest);border:1px solid rgba(135,135,255,.1)}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-ch{flex-direction:column;gap:3px;align-items:center;flex:1 1 0;min-width:0}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-hbar{width:100%;flex:1;height:auto;min-height:0;background:var(--bg);border:1px solid var(--bdr);position:relative;overflow:hidden}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-hfill{position:absolute;bottom:0;left:0;right:0;top:auto;width:auto;height:var(--vu-level,0)}
@@ -1019,10 +1027,11 @@ body[data-layout="row"] .rw-body .dvu-strip .dvu-lbl{font:700 7px var(--mn);colo
 body[data-layout="row"] .rw-body .dvu-strip.dvu-multi .dvu-hbar{width:100%}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-fader{flex:1 1 0;min-width:0}
 body[data-layout="row"] .rw-body .dvu-strip .dvu-fader .dvu-hbar{width:100%}
-body[data-layout="row"] .rw-body .deq-strip{grid-column:4;width:48px;height:135px;flex-direction:column;padding:6px 2px;gap:10px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.12);border-radius:4px}
-body[data-layout="row"] .rw-tail{grid-column:5;display:flex;flex-direction:column;align-items:flex-end;gap:4px;height:135px;min-width:0}
+body[data-layout="row"] .rw-body .deq-strip{grid-column:4;width:48px;height:150px;flex-direction:column;padding:6px 2px;gap:10px;justify-content:space-around;background:var(--bg-lowest);border:1px solid rgba(124,111,205,.12);border-radius:4px}
+body[data-layout="row"] .rw-tail{grid-column:5;display:flex;flex-direction:column;align-items:flex-end;gap:4px;height:150px;min-width:0}
 /* SMPTE 열 — 세로 스택 M/A/B (135px 풀 높이) + tail 와 세로 구분선 */
-body[data-layout="row"] .rw-smpte-col{grid-column:6;display:flex;flex-direction:column;gap:5px;height:135px;justify-content:flex-start;min-width:54px;padding-left:8px;border-left:1px solid var(--bdr2)}
+body[data-layout="row"] .rw-smpte-col{grid-column:6;display:flex;flex-direction:column;gap:5px;height:150px;justify-content:flex-start;min-width:54px;padding-left:8px;border-left:1px solid var(--bdr2)}
+body[data-layout="row"] .rw-head .dksm{display:inline-flex!important}
 body[data-layout="row"] .rw-smpte-col .rw-smpte-lbl{font:700 8px var(--mn);color:var(--tx3);letter-spacing:.18em;line-height:1;flex:0 0 auto}
 body[data-layout="row"] .rw-smpte-col .rw-smpte-master{width:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:1.2 1 0;border-radius:4px;font-size:11px;letter-spacing:.06em;min-height:0}
 body[data-layout="row"] .rw-smpte-col .rw-smpte-ab-stack{display:flex;flex-direction:column;gap:5px;flex:2 1 0;min-height:0}
@@ -1042,7 +1051,7 @@ body[data-layout="row"] .rw-ddz{padding:40px;text-align:center}
 
 /* ═════════ TOWER 레이아웃 — 200px 세로 컬럼, 가로 스크롤 ═════════ */
 body[data-layout="tower"] .deck-row{flex-direction:row;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;padding-bottom:8px;align-items:flex-start;max-width:100%}
-body[data-layout="tower"] .dk.tw-dk{width:270px;min-width:270px;flex-shrink:0;padding:10px 10px 9px;display:flex;flex-direction:column;gap:9px;border-radius:6px}
+body[data-layout="tower"] .dk.tw-dk{width:310px;min-width:310px;flex-shrink:0;padding:10px 10px 9px;display:flex;flex-direction:column;gap:9px;border-radius:6px}
 /* Tower 빈 덱은 add-deck 버튼과 동일 폭/높이 — 트랙 로드 전 placeholder. */
 body[data-layout="tower"] .dk.tw-dk[data-st="empty"]{min-height:520px}
 body[data-layout="tower"] .dk.tw-dk[data-st="empty"] .ddz.tw-ddz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
@@ -1058,6 +1067,9 @@ body[data-layout="tower"] .tw-art-wrap .dkart{width:100%;height:100%;border-radi
 body[data-layout="tower"] .tw-art-wrap .dkart img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.78)}
 /* SYNC/MASTER 뱃지를 앨범아트 우측 상단에 오버레이 (타워 헤더에서 숨김) */
 body[data-layout="tower"] .tw-art-wrap .dksm{position:absolute;top:6px;right:6px;z-index:3;display:inline-flex;gap:3px;flex-shrink:0}
+body[data-layout="tower"] .tw-art-wrap .dksm-btn{background:rgba(8,8,8,.72);backdrop-filter:blur(2px)}
+body[data-layout="tower"] .tw-art-wrap .dksm-sync{background:rgba(255,255,255,.16);color:rgba(255,255,255,.82);border-color:rgba(255,255,255,.36)}
+body[data-layout="tower"] .tw-art-wrap .dksm-master{background:rgba(255,204,102,.18);color:rgba(255,218,140,.9);border-color:rgba(255,204,102,.42)}
 body[data-layout="tower"] .tw-head-btm .dksm{display:none}
 /* Tower: title/artist 앨범아트 수직 중앙 overlay */
 body[data-layout="tower"] .tw-title{position:absolute;inset:0;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;text-align:center;padding:6px 12px;box-sizing:border-box;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,.62) 50%,rgba(0,0,0,.35) 100%);pointer-events:none;z-index:2}
@@ -1068,8 +1080,8 @@ body[data-layout="tower"] .tw-title span[id^="dtn"]{font:700 12px var(--sn)!impo
 body[data-layout="tower"] .tw-title .dk-title-sep{display:none!important}
 body[data-layout="tower"] .tw-wf{display:flex;flex-direction:column;gap:4px}
 /* CDJ-3000 스타일: overview 높이 ↑ (하단 반파 + 상단 마커 밴드) — 디테일 +24% */
-body[data-layout="tower"] .tw-wf .dwov{height:38px;border-radius:3px;margin:0 0 4px 0}
-body[data-layout="tower"] .tw-wf .dwz-row{height:102px}
+body[data-layout="tower"] .tw-wf .dwov{height:52px;border-radius:3px;margin:0 0 3px 0}
+body[data-layout="tower"] .tw-wf .dwz-row{height:116px}
 body[data-layout="tower"] .tw-wf .dwz{height:100%;border-radius:3px;margin:0}
 body[data-layout="tower"] .tw-tc{text-align:center}
 /* 타임코드 +4pt (32→36px), BPM 행 폰트 +1~2pt */
@@ -1166,13 +1178,13 @@ body[data-layout="card"] .cd-body{padding:0!important;display:flex!important;fle
 
 /* 오버뷰 웨이브폼 — 큐포인트 표시 공간 확보 위해 60px */
 body[data-layout="card"] .cd-wf{display:flex!important;flex-direction:column!important;gap:0!important;margin:0!important;padding:0!important}
-body[data-layout="card"] .cd-wf .dwov{height:60px!important;border-radius:0!important;margin:0!important}
+body[data-layout="card"] .cd-wf .dwov{height:72px!important;border-radius:0!important;margin:0!important}
 /* 줌 웨이브폼 비활성 (Simple 컨셉) */
 body[data-layout="card"] .cd-wf .dwz-row,body[data-layout="card"] .cd-wf .dwz{display:none!important}
 
 /* 타임코드 + BPM/Key + 페이저 */
 body[data-layout="card"] .cd-tc-row{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;min-width:0!important;margin:0!important;padding:0!important}
-body[data-layout="card"] .cd-tc-row .dtc{font:300 26px var(--font-timecode)!important;color:var(--color-timecode)!important;-webkit-font-smoothing:antialiased!important;line-height:1!important;font-variant-numeric:tabular-nums!important;letter-spacing:.002em!important;flex:0 1 auto!important;text-align:left!important;white-space:nowrap!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-tc-row .dtc{font:300 35px var(--font-timecode)!important;color:var(--color-timecode)!important;-webkit-font-smoothing:antialiased!important;line-height:1!important;font-variant-numeric:tabular-nums!important;letter-spacing:.002em!important;flex:0 1 auto!important;text-align:left!important;white-space:nowrap!important;margin:0!important;padding:0!important}
 body[data-layout="card"] .cd-bpm-col{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:6px!important;min-width:140px!important;max-width:240px!important;height:auto!important;flex-shrink:0!important;flex-grow:0!important;margin:0!important;padding:0!important}
 body[data-layout="card"] .cd-bpm-row{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;justify-content:flex-end!important;flex-wrap:nowrap!important}
 body[data-layout="card"] .cd-bpm-row [id^="wfbpm"]{flex-wrap:nowrap!important;gap:4px!important}
@@ -1197,6 +1209,11 @@ body[data-layout="card"] .cd-ctl-sec{display:flex!important;flex-direction:colum
 body[data-layout="card"] .cd-ctl-lbl{display:none!important}
 body[data-layout="card"] .cd-ctl-row{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;height:28px!important;width:100%!important;margin:0!important;padding:0!important}
 body[data-layout="card"] .cd-ctl-row .dkbtn,body[data-layout="card"] .cd-ctl-row .dksm-btn{height:100%!important;border-radius:0!important;font-size:10.5px!important;letter-spacing:.04em!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important;min-height:0!important;padding:0!important;line-height:1!important}
+body[data-layout="card"] .cd-control-grid{display:grid!important;grid-template-columns:1fr 1fr 1fr!important;grid-template-rows:28px 28px!important;gap:5px!important;width:100%!important;margin:0!important;padding:0!important}
+body[data-layout="card"] .cd-control-grid .dkbtn,body[data-layout="card"] .cd-control-grid .dksm-btn{height:100%!important;border-radius:0!important;font-size:10.5px!important;letter-spacing:.04em!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important;min-height:0!important;padding:0!important;line-height:1!important}
+body[data-layout="card"] .cd-control-grid .cd-master{grid-column:3;grid-row:1}
+body[data-layout="card"] .cd-control-grid .cd-stop{grid-column:1 / span 2;grid-row:2}
+body[data-layout="card"] .cd-control-grid .cd-ab{grid-column:3;grid-row:2;display:grid!important;grid-template-columns:1fr 1fr!important;gap:5px!important;min-width:0}
 
 /* 시간 텍스트 — 작은 보조 라인 */
 body[data-layout="card"] .dk-tc-time{font:400 10px var(--mn)!important;color:var(--tx4)!important;text-align:right!important;margin:0!important;padding:2px 0 0 0!important;font-variant-numeric:tabular-nums!important}
@@ -1452,13 +1469,13 @@ body[data-layout="observatory"] .obs-wf{
   flex:1 1 auto;min-height:0;
 }
 body[data-layout="observatory"] .obs-wf .dwov{
-  height:50px!important;flex:0 0 50px!important;
+  height:58px!important;flex:0 0 58px!important;
   border:1px solid var(--obs-amber-dim)!important;
   background:var(--obs-void)!important;
   border-radius:0!important;margin:0!important;
 }
 body[data-layout="observatory"] .obs-wf .dwz-row{
-  flex:1 1 0!important;min-height:80px;
+  flex:1 1 0!important;min-height:96px;
   display:flex;
 }
 body[data-layout="observatory"] .obs-wf .dwz{
@@ -2099,13 +2116,20 @@ const WF_THEME_PRESETS = {
 };
 function _wfThemePreset(theme){ return WF_THEME_PRESETS[theme] || WF_THEME_PRESETS['rgb']; }
 // 비트 그리드 스타일 — 오버뷰/디테일 별도 설정.
-//   none / phrase / balanced(추천) / detailed / phrase-band / hybrid
+//   none / bar(4비트) / beat(1+4비트) / half(1/2+1+4비트)
 //   기존 단일 키 wf_beat_style 가 있으면 두 새 키의 기본값으로 마이그레이트 (BC).
-const _BEAT_STYLES=['none','phrase','balanced','detailed','phrase-band','hybrid'];
+const _BEAT_STYLES=['none','bar','beat','half'];
+function _normalizeBeatStyle(v){
+  if(_BEAT_STYLES.includes(v))return v;
+  if(v==='detailed')return 'beat';
+  if(v==='hybrid')return 'half';
+  if(v==='phrase'||v==='balanced'||v==='phrase-band')return 'bar';
+  return 'bar';
+}
 const _wfBeatStyleLegacy=_wfReadLS('wf_beat_style','balanced');
-let wfBeatStyleOverview=(v=>_BEAT_STYLES.includes(v)?v:'balanced')
+let wfBeatStyleOverview=_normalizeBeatStyle
   (_wfReadLS('wf_beat_style_overview',_wfBeatStyleLegacy));
-let wfBeatStyleDetail=(v=>_BEAT_STYLES.includes(v)?v:'balanced')
+let wfBeatStyleDetail=_normalizeBeatStyle
   (_wfReadLS('wf_beat_style_detail',_wfBeatStyleLegacy));
 // Phrase 표시 스타일 — none/margin/label(rekordbox PSSI mood)/cycle(색 cycling)
 const _PHRASE_STYLES=['none','margin','label','cycle'];
@@ -3314,44 +3338,18 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
       let col, h, w;
       if(mode==='regular'){ col='rgba(255,255,255,0.42)'; h=5; w=1; }
       else if(mode==='regular-faint'){ col='rgba(255,255,255,0.32)'; h=5; w=1; }
+      else if(mode==='half'){ col='rgba(255,255,255,0.20)'; h=3; w=1; }
       else if(mode==='downbeat'){ col='rgba(255,168,80,0.78)'; h=5; w=1.5; }
-      else if(mode==='phrase'){
-        // halo + main
-        ctx.fillStyle='rgba(95,200,218,0.35)';
-        ctx.fillRect(fpx-1.5, topY, 3, margH);
-        ctx.fillRect(fpx-1.5, H-margH, 3, margH);
-        col='#5fc8da'; h=margH; w=2;
-      }
-      else if(mode==='phrase-full'){ col='rgba(95,200,218,0.18)'; h=H-topY; w=1; }
       else return;
       ctx.fillStyle = col;
-      if(mode==='phrase-full'){
-        ctx.fillRect(fpx-w/2, topY, w, h);
-      } else {
-        // top margin
-        ctx.fillRect(fpx-w/2, topY, w, h);
-        // bottom margin
-        ctx.fillRect(fpx-w/2, H-h, w, h);
-      }
+      // top margin
+      ctx.fillRect(fpx-w/2, topY, w, h);
+      // bottom margin
+      ctx.fillRect(fpx-w/2, H-h, w, h);
     };
-    let beatIdx = 0;
-    const drawBeatAt=(bMs, isBar, idx)=>{
+    const drawBeatAt=(bMs, isBar, modeOverride)=>{
       const fpx=(bMs-viewL)/msPerPx;
-      const isPhrase = idx%16===0 && idx>0;
-      let mode=null;
-      if(wfBeatStyleDetail==='phrase'){ if(isPhrase) mode='phrase'; }
-      else if(wfBeatStyleDetail==='balanced'){
-        if(isPhrase) mode='phrase';
-        else if(isBar) mode='downbeat';
-        else mode='regular-faint';
-      }
-      else if(wfBeatStyleDetail==='detailed'){ if(isPhrase) mode='phrase'; else if(isBar) mode='downbeat'; else mode='regular'; }
-      else if(wfBeatStyleDetail==='phrase-band'){
-        if(isPhrase){ drawTickAt(fpx, 'phrase-full'); mode='phrase'; }
-      }
-      else if(wfBeatStyleDetail==='hybrid'){
-        if(isPhrase) mode='phrase'; else if(isBar) mode='downbeat'; else if(idx%2===0) mode='regular';
-      }
+      const mode=modeOverride||(isBar?'downbeat':(wfBeatStyleDetail==='bar'?null:'regular'));
       if(mode) drawTickAt(fpx, mode);
     };
     if(d._beatGrid&&d._beatGrid.length>0){
@@ -3360,7 +3358,12 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
       while(lo<hi){const mid2=(lo+hi)>>1;if(bg[mid2].timeMs<viewL)lo=mid2+1;else hi=mid2;}
       for(let i=Math.max(0,lo-1);i<bg.length;i++){
         const bt=bg[i];if(bt.timeMs>viewR)break;
-        drawBeatAt(bt.timeMs, bt.beatInBar===1, i);
+        drawBeatAt(bt.timeMs, bt.beatInBar===1);
+        if(wfBeatStyleDetail==='half'){
+          const next=bg[i+1];
+          const step=(next&&next.timeMs>bt.timeMs)?(next.timeMs-bt.timeMs):(60000/(bt.bpm||d.baseBpm||d.bpm));
+          drawBeatAt(bt.timeMs+step/2, false, 'half');
+        }
       }
     }else{
       const beatMs=60000/(d.baseBpm||d.bpm);
@@ -3369,7 +3372,8 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
       for(let b=firstB;b<=lastB;b++){
         const bMs=anchor+b*beatMs;
         const barNum=((b%4)+4)%4+1;
-        drawBeatAt(bMs, barNum===1, b);
+        drawBeatAt(bMs, barNum===1);
+        if(wfBeatStyleDetail==='half')drawBeatAt(bMs+beatMs/2, false, 'half');
       }
     }
   }
@@ -3454,10 +3458,10 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
   // 플레이헤드 — rekordbox 처럼 빨강 + 살짝 glow.
   // 웨이브폼은 sLow=midY*0.82 (위/아래 9% 마진) — 플레이헤드는 약간 더 길게 (위/아래 4% 마진)
   // 비트그리드 영역 (위 7~9px ≈ 7%) 은 보호.
-  const phY=Math.round(H*0.04);
-  const phH=Math.round(H*0.92);
-  ctx.fillStyle='rgba(255,255,255,.25)';ctx.fillRect(cX-1.5,phY,3,phH); // soft halo
-  ctx.fillStyle='#ff3030';ctx.fillRect(cX-.5,phY,1.5,phH); // 빨강 단선
+  const phY=Math.round(H*0.07);
+  const phH=Math.round(H*0.86);
+  ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(cX-1,phY,2,phH); // soft halo
+  ctx.fillStyle='#ff3030';ctx.fillRect(cX-.5,phY,1,phH); // 빨강 단선
 
   if(d._barBeat){
     ctx.font='bold 10px "DM Mono",monospace';
@@ -3470,6 +3474,8 @@ function _drawZoomOverlayLayers(slot,ctx,W,H,posMs,msPerPx,cX,clearFirst){
 
 function drawOverview(slot,prog){
   const d=DECKS[slot];if(!d)return;
+  const _ovGridOn = wfBeatStyleOverview!=='none';
+  const _ovGridFrac = _ovGridOn ? 0.24 : 0;
   // Overview playhead/overlay를 detail waveform과 동일한 시간축으로 맞춤
   const _wfDataOv=_wfRenderDataForDeck(d);
   const _wfDurOv=(_wfDataOv&&_wfLen(_wfDataOv)>1)?_wfDurMsForDeck(d,_wfDataOv):0;
@@ -3488,7 +3494,7 @@ function drawOverview(slot,prog){
       if(d.dur>0){
         const cpx=Math.round(pos*W);
         ctx.fillStyle='#ff3030';
-        ctx.fillRect(Math.max(0,cpx-1), 0, 2, H);
+        ctx.fillRect(Math.max(0,cpx-0.5), 0, 1, H);
       }
     }
     return;
@@ -3499,12 +3505,12 @@ function drawOverview(slot,prog){
     // (이전엔 !hasStrip 가드로 partial→final 전환 안 됐음 — resize 후에만 보이던 버그 원인).
     _wfBuildStripIfNeeded(d, slot);
     if(d.ovgl.hasStrip && d.ovgl.hasStrip()){
-      d.ovgl.drawStrip(pos);
+      d.ovgl.drawStrip(pos, _ovGridFrac);
     } else {
       // Fallback: 기존 4-band 셰이더 경로 (분석 진행 중 등 비트맵 빌드 실패 케이스).
       if(!d.ovgl._wfTex){const _wd=_wfRenderDataForDeck(d);if(_wd)d.ovgl.setData(_wd);}
       if(!d.ovgl._wfTex)return;
-      d.ovgl.draw(pos, _wfDataMode(d), wfSharpness, _wfThemeMode());
+      d.ovgl.draw(pos, _wfDataMode(d), wfSharpness, _wfThemeMode(), _ovGridFrac);
     }
     // Continue to draw overlay markers on separate canvas
   } else {
@@ -3582,51 +3588,44 @@ function drawOverview(slot,prog){
   }
   // 캔버스 좌표 (y=0 top). 오버뷰는 반파(상단 0~topM 마진, 파형은 topM~botM, CP는 하단 botM~H2).
   const topM = Math.max(10, Math.round(H2 * 0.20));
-  // 하단 마진(비트 그리드 전용 영역) - 캔버스 높이에 따라 8~12px 클램프, Tower(38px)는 11px 확보.
-  const _ovBandH = Math.max(8, Math.min(12, Math.round(H2 * 0.29)));
+  // 하단 마진(비트 그리드 전용 영역). Grid off 이면 마진도 제거한다.
+  const _ovBandH = _ovGridOn ? Math.max(10, Math.min(16, Math.round(H2 * _ovGridFrac))) : 0;
   const botM = H2 - _ovBandH;
 
   function _drawOverviewOverlayStatic(ctx){
     // ── 비트 그리드 (오버뷰 = 하단 마진 전용, 반파 특성) ──
-    if(wfBeatStyleOverview!=='none' && d._beatGrid && d._beatGrid.length>0 && _ovDur>0){
+    if(_ovGridOn && d._beatGrid && d._beatGrid.length>0 && _ovDur>0){
       const bg = d._beatGrid;
       const totalBeats = bg.length;
       const bandTop = botM, bandH = _ovBandH;
       ctx.save();
-      // 하단 마진 영역에 어두운 strip → 웨이브폼과 시각적 분리
-      ctx.fillStyle='rgba(0,0,0,0.55)';
-      ctx.fillRect(0, bandTop, W2, bandH);
       for(let i=0;i<totalBeats;i++){
         const t = bg[i].timeMs;
         if(t<0||t>=_ovDur) continue;
         const x = Math.round(t/_ovDur*W2);
         if(x<0||x>=W2) continue;
-        const isPhrase = (i % 16 === 0) && i>0;
-        const isDownbeat = (i % 4 === 0) && !isPhrase;
+        const isDownbeat = i % 4 === 0;
         let mode=null;
-        if(wfBeatStyleOverview==='phrase'){ if(isPhrase) mode='phrase'; }
-        else if(wfBeatStyleOverview==='balanced'){
-          if(isPhrase) mode='phrase';
-          else if(isDownbeat) mode='downbeat';
-          else mode='regular-faint';
-        }
-        else if(wfBeatStyleOverview==='detailed'){ if(isPhrase) mode='phrase'; else if(isDownbeat) mode='downbeat'; else mode='regular'; }
-        else if(wfBeatStyleOverview==='phrase-band'){
-          if(isPhrase){ ctx.fillStyle='rgba(95,200,218,0.18)'; ctx.fillRect(x-0.5,0,1,H2); mode='phrase'; }
-        }
-        else if(wfBeatStyleOverview==='hybrid'){ if(isPhrase) mode='phrase'; else if(isDownbeat) mode='downbeat'; else if(i%2===0) mode='regular'; }
+        if(isDownbeat) mode='downbeat';
+        else if(wfBeatStyleOverview!=='bar') mode='regular';
         if(!mode) continue;
         let col, h, w;
-        if(mode==='regular'){ col='rgba(255,255,255,0.42)'; h=Math.min(bandH,5); w=1; }
-        else if(mode==='regular-faint'){ col='rgba(255,255,255,0.32)'; h=Math.min(bandH,5); w=1; }
-        else if(mode==='downbeat'){ col='rgba(255,168,80,0.78)'; h=Math.min(bandH,5); w=1.5; }
-        else { /* phrase: 풀 마진 + 시안 글로우 halo */
-          ctx.fillStyle='rgba(95,200,218,0.35)';
-          ctx.fillRect(x-1.5, bandTop, 3, bandH);
-          col='#5fc8da'; h=bandH; w=2;
-        }
+        if(mode==='regular'){ col='rgba(255,255,255,0.46)'; h=Math.min(bandH,8); w=1; }
+        else if(mode==='downbeat'){ col='rgba(255,168,80,0.82)'; h=bandH; w=1.5; }
+        else continue;
         ctx.fillStyle=col;
         ctx.fillRect(x-w/2, bandTop+(bandH-h), w, h);
+        if(wfBeatStyleOverview==='half'){
+          const next=bg[i+1];
+          const step=(next&&next.timeMs>t)?(next.timeMs-t):0;
+          if(step>0){
+            const hx=Math.round((t+step/2)/_ovDur*W2);
+            if(hx>=0&&hx<W2){
+              ctx.fillStyle='rgba(255,255,255,0.22)';
+              ctx.fillRect(hx-0.5, bandTop+(bandH-Math.min(bandH,5)), 1, Math.min(bandH,5));
+            }
+          }
+        }
       }
       ctx.restore();
     }
@@ -3685,7 +3684,7 @@ function drawOverview(slot,prog){
   function _drawOverviewPlayhead(ctx){
     // 플레이헤드: 세로 1px 전체
     // Overview 플레이헤드 — 빨강 (rekordbox 스타일)
-    ctx.fillStyle='#ff3030';ctx.fillRect(Math.round(pos*W2)-.5,0,1.5,H2);
+    ctx.fillStyle='#ff3030';ctx.fillRect(Math.round(pos*W2)-.5,0,1,H2);
   }
 
   const _ovHasOffscreenCanvas=typeof OffscreenCanvas!=='undefined';
@@ -3907,7 +3906,7 @@ function drawZoomWaveform(slot,prog){
       if(d.dur>0){
         const cpx=Math.round(pos*W);
         ctx.fillStyle='#ff3030';
-        ctx.fillRect(Math.max(0,cpx-1), 0, 2, H);
+        ctx.fillRect(Math.max(0,cpx-0.5), 0, 1, H);
       }
     }
     return;
@@ -4159,9 +4158,10 @@ function switchMode(mode){
 }
 
 function addVirtualDeck(){
-  if(glMode==='hw'){alert('HW 모드에서는 버츄얼 덱을 추가할 수 없습니다.');return;}
+  const _t=(k,fb)=>window.t?window.t(k,fb):fb;
+  if(glMode==='hw'){alert(_t('alert_no_virtual_in_hw','HW 모드에서는 버츄얼 덱을 추가할 수 없습니다.'));return;}
   const slot=nextFreeSlot();
-  if(slot<0){alert('최대 6개');return;}
+  if(slot<0){alert(_t('alert_max_decks','최대 6개'));return;}
   DECKS[slot]=createDeck(slot,'virtual');
   if(E&&run) window.bridge.registerVirtualDeck(slot,'CDJ-3000');
   renderDecks();
@@ -4695,18 +4695,12 @@ function deckHTMLCard(slot){
         ${vuStrip}
         ${eqStrip}
       </div>
-      <div class="cd-ctl-sec">
-        <div class="cd-ctl-lbl">TRANSPORT</div>
-        <div class="cd-ctl-row">
-          <button class="dkbtn dkcue" ${cueAc}>CUE</button>
-          <button class="dkbtn dkplay" ${playAc}>${playBtnContent}</button>
-          <button class="dkbtn dkstop" ${stopAc}><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
-        </div>
-      </div>
-      <div class="cd-ctl-sec">
-        <div class="cd-ctl-lbl">SMPTE</div>
-        <div class="cd-ctl-row">
-          <span class="dksm-btn dksm-master${d.mtcMaster?' on':''}" id="dmst${slot}" data-a="mtc-master" data-i="${slot}">MASTER</span>
+      <div class="cd-control-grid">
+        <button class="dkbtn dkcue" ${cueAc}>CUE</button>
+        <button class="dkbtn dkplay" ${playAc}>${playBtnContent}</button>
+        <span class="dksm-btn dksm-master cd-master${d.mtcMaster?' on':''}" id="dmst${slot}" data-a="mtc-master" data-i="${slot}">MASTER</span>
+        <button class="dkbtn dkstop cd-stop" ${stopAc}><svg class="gi gi-prev"><use href="#i-prev"/></svg></button>
+        <div class="cd-ab">
           <button class="dkbtn dklyr dklyr-a${isLoaded&&_deckLayerAssigned(slot,'A')?' ac':''}" ${aAc}>A</button>
           <button class="dkbtn dklyr dklyr-b${isLoaded&&_deckLayerAssigned(slot,'B')?' ac':''}" ${bAc}>B</button>
         </div>
@@ -4935,8 +4929,24 @@ function bindDeck(slot){
     };
     _dwovEl.addEventListener('mousedown',e=>{
       e.preventDefault(); _wovDragging=true; _wovSeek(e);
+      const d2=DECKS[slot];
+      if(d2?.ld&&d2.type!=='hw'){
+        d2.scratch=true;
+        if(d2.au&&!d2.au.paused){try{d2.au.pause();}catch(_){}}
+      }
       const onMove=(ev)=>{ if(_wovDragging) _wovSeek(ev); };
-      const onUp=()=>{ _wovDragging=false; window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
+      const onUp=()=>{
+        _wovDragging=false;
+        const d3=DECKS[slot];
+        if(d3?.scratch){
+          d3.scratch=false;
+          if(d3.au){
+            d3.au.currentTime=(d3.pos||0)/1000;
+            if(d3.pl)d3.au.play().catch(()=>{});
+          }
+        }
+        window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp);
+      };
       window.addEventListener('mousemove',onMove);
       window.addEventListener('mouseup',onUp);
     });
@@ -5728,7 +5738,7 @@ function doEject(slot){
 function doSeek(slot,r){
   const d=DECKS[slot];if(!d?.au||!d.dur||d.type==='hw')return;
   const t=(r*d.dur)/1000;d.au.currentTime=t;
-  if(!d.pl)d.cp=t; // update cue point when seeking while stopped
+  d.pos=t*1000;
   _artForceResync?.();
 }
 
@@ -5993,7 +6003,7 @@ function tick(){
     // setAttribute/style 변경은 reflow 트리거 가능 → key 가드로 변동 시만 갱신.
     const _dt = d.type==='hw'?'hw':'virtual';
     if(d._lastDtAttr!==_dt){ d._lastDtAttr=_dt; el.setAttribute('data-type', _dt); }
-    const _dst = d._isLooping?'play':d._isReverse?'play':d.pl?'play':d.scratch?'play':d.cu?'cue':'stop';
+    const _dst = d._isLooping?'play':d._isReverse?'play':d.scratch?'scratch':d.pl?'play':d.cu?'cue':'stop';
     if(d._lastDstAttr!==_dst){ d._lastDstAttr=_dst; el.setAttribute('data-st', _dst); }
     // USB media color — deck border + glow via inline style (overrides data-st CSS).
     {
@@ -6173,10 +6183,10 @@ function tick(){
     const bg=d._els.dbg;
     if(bg){
       // HW/Virtual 동일한 상태 배지. textContent + className 둘 다 같은 상태에 의존 → key 가드.
-      const _bgKey = `${d._isLooping?'L':''}${d._isReverse?'R':''}${d.pl?'P':''}${d.scratch?'H':''}${d.cu?'C':''}`;
+      const _bgKey = `${d._isLooping?'L':''}${d._isReverse?'R':''}${d.pl?'P':''}${d.scratch?'S':''}${d.cu?'C':''}`;
       if(d._lastBgKey!==_bgKey){
         d._lastBgKey=_bgKey;
-        bg.textContent=d._isLooping?'LOOP':d._isReverse?'REV':d.pl?'PLAY':d.scratch?'HANDLING':d.cu?'CUE':'STOP';
+        bg.textContent=d._isLooping?'LOOP':d._isReverse?'REV':d.scratch?'SCRATCH':d.pl?'PLAY':d.cu?'CUE':'STOP';
         bg.className='dbadge '+(d._isLooping?'bg':d._isReverse?'br':d.pl?'bg':d.scratch?'bb':d.cu?'by':'bm');
       }
     }
@@ -6669,7 +6679,7 @@ function renderArtnet(){
       const r=await _artnetStart();
       _artEnabled=!!r?.ok;
       _updateArtnetUi(_artEnabled);
-      if(!r?.ok){e.target.checked=false;cfg.anEnabled=false;_saveCfg();alert('Art-Net 엔진 시작 실패: '+(r?.err||'unknown'));}
+      if(!r?.ok){e.target.checked=false;cfg.anEnabled=false;_saveCfg();alert((window.t?window.t('alert_artnet_fail','Art-Net 엔진 시작 실패'):'Art-Net 엔진 시작 실패')+': '+(r?.err||'unknown'));}
     } else {
       await window.bridge.artnetStop?.();
       _artEnabled=false;_updateArtnetUi(false);
@@ -6777,8 +6787,10 @@ function renderAblink(){
     const st=await window.bridge.linkSetEnabled?.(cfg.linkEnabled);
     _updateLinkUi(st);
     if(cfg.linkEnabled && st && !st.available){
-      alert('abletonlink 네이티브 모듈이 설치되어 있지 않습니다.\n\n'
-          + '  npm i abletonlink\n  npx electron-rebuild\n\n재시작 후 사용.');
+      const _t=(k,fb)=>window.t?window.t(k,fb):fb;
+      alert(_t('alert_link_missing','abletonlink 네이티브 모듈이 설치되어 있지 않습니다.')+'\n\n'
+          + '  npm i abletonlink\n  npx electron-rebuild\n\n'
+          + _t('alert_link_restart','그 후 BRIDGE+ 를 재시작하세요.'));
     }
   };
   // ─── Phase 정렬 버튼
@@ -7126,6 +7138,22 @@ if(E&&window.bridge?.onInterfaces){
 document.getElementById('mainBtn').onclick=()=>run?doStop():doStart();
 // Auto-start after 2 seconds
 if(E) setTimeout(()=>{if(!run) doStart();}, 2000);
+function showDemoExpiredOverlay(message){
+  const old=document.getElementById('demoExpiredOverlay');
+  if(old)old.remove();
+  const ov=document.createElement('div');
+  ov.id='demoExpiredOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,7,10,.82);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:22px';
+  ov.innerHTML=`
+    <div style="width:min(420px,calc(100vw - 44px));border:1px solid rgba(255,255,255,.16);background:linear-gradient(180deg,rgba(28,31,36,.96),rgba(13,15,19,.96));box-shadow:0 24px 80px rgba(0,0,0,.55);border-radius:8px;padding:22px 24px;text-align:center">
+      <div style="font:700 12px var(--lb);letter-spacing:.08em;color:var(--ylw);margin-bottom:10px">DEMO EXPIRED</div>
+      <div style="font:700 18px var(--sn);color:var(--tx);line-height:1.45;margin-bottom:10px">${_escHtml(message||'30일 데모가 종료되었습니다. 테스트 해주셔서 감사합니다.')}</div>
+      <div style="font:400 11px var(--mn);color:var(--tx3);line-height:1.5;margin-bottom:18px">Core bridge features are disabled in this demo build.</div>
+      <button class="mode-btn" id="demoExpiredClose" style="height:28px;padding:0 14px">OK</button>
+    </div>`;
+  document.body.appendChild(ov);
+  document.getElementById('demoExpiredClose')?.addEventListener('click',()=>ov.remove());
+}
 async function doStart(){
   if(E){
     // 저장된 인터페이스 IP 검증 — 존재하지 않는 IP면 자동(null)으로 폴백
@@ -7144,7 +7172,11 @@ async function doStart(){
       tcnetMode:cfg.tcnetMode||'auto',
       nodeName:cfg.nm||'BRIDGE29',
     });
-    if(!r.ok){alert('시작 실패: '+r.err);return;}
+    if(!r.ok){
+      if(r.licenseState==='expired')showDemoExpiredOverlay(r.err);
+      else alert('시작 실패: '+r.err);
+      return;
+    }
     pdjlPort=r.pdjlPort||null;
     if(r.nodeName) TC_NAME=r.nodeName;
     // re-register all existing virtual decks after start

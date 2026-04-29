@@ -32,10 +32,20 @@ function registerBridgeStartIpc(ipcMain, deps) {
     BridgeCore,
     getAllInterfaces, interfaceSignature,
     push,
+    licenseService,
   } = deps;
 
   ipcMain.handle('bridge:start', async (_, opts) => {
     try {
+      const licenseStatus = licenseService?.getStatus?.();
+      if (licenseStatus && licenseStatus.canRun === false) {
+        return {
+          ok: false,
+          err: licenseStatus.message || 'Demo expired. Core bridge features are disabled.',
+          licenseState: licenseStatus.state || 'expired',
+          daysRemaining: licenseStatus.daysRemaining ?? 0,
+        };
+      }
       const cur = getBridge();
       if (cur?.running) {
         cur.stop();

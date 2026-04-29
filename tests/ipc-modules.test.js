@@ -654,6 +654,31 @@ test('ipc-bridge-start: leaves incompatible waveform point shapes unpacked', () 
   assert.strictEqual(sent[0].d.pts, pts);
 });
 
+test('ipc-bridge-start: blocks core start when demo is expired', async () => {
+  const { registerBridgeStartIpc } = require(path.join(__dirname, '..', 'main', 'ipc-bridge-start'));
+  const handlers = {};
+  let constructed = false;
+  const fakeIpc = { handle: (ch, fn) => { handlers[ch] = fn; }, on: () => {} };
+  class FakeBridgeCore {
+    constructor(){ constructed = true; }
+  }
+  registerBridgeStartIpc(fakeIpc, {
+    setBridge: () => {}, getBridge: () => null,
+    setIfaceSig: () => {},
+    getIv: () => null, clearIv: () => {},
+    getWin: () => null,
+    BridgeCore: FakeBridgeCore,
+    getAllInterfaces: () => [], interfaceSignature: () => '',
+    push: () => {},
+    licenseService: { getStatus: () => ({ state: 'expired', canRun: false, message: 'Demo expired.' }) },
+  });
+  const res = await handlers['bridge:start'](null, {});
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.licenseState, 'expired');
+  assert.match(res.err, /expired/i);
+  assert.strictEqual(constructed, false, 'BridgeCore should not be constructed after demo expiry');
+});
+
 test('ipc-license: exports registerLicenseIpc + tolerates null service', () => {
   const mod = require(path.join(__dirname, '..', 'main', 'ipc-license'));
   assert.strictEqual(typeof mod.registerLicenseIpc, 'function');
