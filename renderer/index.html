@@ -3482,7 +3482,8 @@ function drawOverview(slot,prog){
   const _ovDur=(_wfDurOv>0)?_wfDurOv:(d.dur||0);
   const _posMsOv=(d.dur>0)?Math.max(0,Math.min(1,prog||0))*d.dur:0;
   const pos=(_ovDur>0)?Math.max(0,Math.min(1,_posMsOv/_ovDur)):Math.max(0,Math.min(1,prog||0));
-  // 웨이브폼 데이터 없어도 오버뷰 중앙선 + 커서 그려서 트랙 길이 감 유지
+  // 웨이브폼 데이터 없어도 오버뷰 중앙선 그려서 트랙 길이 감 유지.
+  // 플레이헤드는 별도 overlay canvas (wovol) 에서 그리므로 여기선 그리지 않음 — 중복 방지.
   if(!_wfDataOv){
     const wov=(d._els && d._els.wov && d._els.wov.isConnected) ? d._els.wov : document.getElementById('wov'+slot);
     if(wov && wov.getContext){
@@ -3491,11 +3492,6 @@ function drawOverview(slot,prog){
       ctx.clearRect(0,0,W,H);
       ctx.fillStyle='rgba(255,255,255,.08)';
       ctx.fillRect(0, Math.floor(H/2)-0.5, W, 1);
-      if(d.dur>0){
-        const cpx=Math.round(pos*W);
-        ctx.fillStyle='#ff3030';
-        ctx.fillRect(Math.max(0,cpx-0.5), 0, 1, H);
-      }
     }
     return;
   }
