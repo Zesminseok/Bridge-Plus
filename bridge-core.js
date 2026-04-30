@@ -397,6 +397,8 @@ class BridgeCore {
       this._dbKaSock=null;
       try{this._djmSubSock?.close();}catch(_){}
       this._djmSubSock=null;
+      try{this._djmSubAuxSock?.close();}catch(_){}
+      this._djmSubAuxSock=null;
       console.log('[BridgeCore] sockets closed');
     };
     // 250ms gives OS UDP buffer ample time to flush all OptOut bursts before socket close
@@ -539,6 +541,7 @@ class BridgeCore {
     this._djmJoinPending=false;
     if(this._djmSubSock){ try{this._djmSubSock.close();}catch(_){} this._djmSubSock=null; }
     this._djmSubSockReady=false;
+    if(this._djmSubAuxSock){ try{this._djmSubAuxSock.close();}catch(_){} this._djmSubAuxSock=null; }
 
     // Close existing PDJL sockets
     if(this._pdjlAnnSock && !this._pdjlSockets?.includes(this._pdjlAnnSock)){
@@ -804,8 +807,11 @@ class BridgeCore {
         this._pdjlAnnSock=s;
       }
     }
-    // DJM subscribe socket. Use a fixed source port for 0x57/0x55 traffic.
+    // DJM subscribe socket. Prefer the standard PDJL 50001 source port.
+    // Some DJM/macOS combinations ignore 0x57 when it is sent from the
+    // older dedicated 50006 helper, even though discovery packets are visible.
     if(this._djmSubSock && this._djmSubSock!==this._pdjlSocketByPort?.[50001]){ try{this._djmSubSock.close();}catch(_){} }
+    if(this._djmSubAuxSock){ try{this._djmSubAuxSock.close();}catch(_){} this._djmSubAuxSock=null; }
     this._djmSubSockReady=false;
     if(process.platform==='win32'){
       this._djmSubSock=this._pdjlSocketByPort?.[50001] || null;
@@ -815,19 +821,25 @@ class BridgeCore {
         console.warn('[PDJL] DJM subscribe socket unavailable on 50001');
       }
     }else{
-      this._djmSubSock=dgram.createSocket({type:'udp4',reuseAddr:true});
-      this._djmSubSock.on('error',e=>console.warn('[PDJL] DJM sub socket error:',e.message));
-      this._djmSubSock.on('message',(msg,rinfo)=>{
+      this._djmSubSock=this._pdjlSocketByPort?.[50001] || null;
+      if(this._djmSubSock){
+        this._djmSubSockReady=true;
+        console.log(`[PDJL] DJM subscribe socket active ${pdjlIP}:50001`);
+      }else{
+        console.warn('[PDJL] DJM subscribe socket unavailable on 50001');
+      }
+      this._djmSubAuxSock=dgram.createSocket({type:'udp4',reuseAddr:true});
+      this._djmSubAuxSock.on('error',e=>console.warn('[PDJL] DJM aux sub socket error:',e.message));
+      this._djmSubAuxSock.on('message',(msg,rinfo)=>{
         if(!liveSession()) return;
         this._onPDJL(msg, rinfo);
       });
       try{
-        this._djmSubSock.bind(50006, pdjlIP, ()=>{
-          this._djmSubSockReady=true;
-          console.log(`[PDJL] DJM subscribe socket active ${pdjlIP}:50006`);
+        this._djmSubAuxSock.bind(50006, pdjlIP, ()=>{
+          console.log(`[PDJL] DJM aux subscribe socket active ${pdjlIP}:50006`);
         });
       }catch(e){
-        console.warn('[PDJL] DJM sub socket bind failed:',e.message);
+        console.warn('[PDJL] DJM aux sub socket bind failed:',e.message);
       }
     }
 
@@ -964,14 +976,17 @@ class BridgeCore {
       const subSocks = process.platform==='win32'
         ? [this._pdjlSocketByPort?.[50001]].filter(Boolean)
         : this._djmSubSockReady
-        ? [this._djmSubSock]
+        ? [this._djmSubSock, this._djmSubAuxSock]
+            .filter(Boolean)
+            .filter((s,i,a)=>a.indexOf(s)===i)
         : [
             this._pdjlSocketByPort?.[50001],
+            this._djmSubAuxSock,
             this._pdjlSocketByPort?.[50000],
             this._pdjlSocketByPort?.[50002],
             this._pdjlSockets?.[0],
             this._pdjlAnnSock,
-          ].filter(Boolean).filter((s,i,a)=>a.indexOf(s)===i).slice(0,1);
+          ].filter(Boolean).filter((s,i,a)=>a.indexOf(s)===i).slice(0,2);
       if(!subSocks.length){ console.warn('[PDJL] 0x57: no socket available'); return; }
       const srcs=[];
       const masksSent=[];

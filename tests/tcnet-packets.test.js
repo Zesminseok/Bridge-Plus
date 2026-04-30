@@ -160,10 +160,12 @@ test('PDJL announce path stays on the selected interface broadcast only', () => 
   assert.strictEqual(source.includes("if(iface) return [iface.broadcast, '255.255.255.255'];"), false);
 });
 
-test('DJM subscribe sockets use platform-specific source ports', () => {
+test('DJM subscribe sockets preserve Windows path and add macOS 50001 primary fallback', () => {
   const source = fs.readFileSync(corePath, 'utf8');
-  assert.strictEqual(source.includes('this._djmSubSock.bind(50006, pdjlIP'), true);
+  assert.strictEqual(source.includes("process.platform==='win32'"), true);
   assert.strictEqual(source.includes('this._pdjlSocketByPort?.[50001]'), true);
+  assert.strictEqual(source.includes('this._djmSubAuxSock.bind(50006, pdjlIP'), true);
+  assert.strictEqual(source.includes('[this._djmSubSock, this._djmSubAuxSock]'), true);
 });
 
 test('Windows PDJL sockets bind to the selected interface IP', () => {
