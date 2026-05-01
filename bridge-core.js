@@ -43,6 +43,9 @@ const {
   readPDJLNameField,
 } = require('./pdjl/packets');
 
+const PDJL_PROMI_QUERY = Buffer.from('rqProMI:', 'ascii');
+const PDJL_PROMI_PORT = 3800;
+
 // ─────────────────────────────────────────────
 // Utilities
 // ─────────────────────────────────────────────
@@ -376,6 +379,7 @@ class BridgeCore {
     for(const _k of ['_djmRetryTimer','_pdjlAnnTimer','_djmSubTimer','_djmSubInterval','_bridgeNotifyTimer','_djmWatchTimer']){
       if(this[_k]){ try{clearInterval(this[_k]);}catch(_){} try{clearTimeout(this[_k]);}catch(_){} this[_k]=null; }
     }
+    if(this._pdjlProMiTimer){ try{clearInterval(this._pdjlProMiTimer);}catch(_){} this._pdjlProMiTimer=null; }
     // Delay socket close by 100ms to let OptOut UDP packets flush from OS buffer
     const closeSockets=()=>{
       const sockets = [this.txSocket,this.rxSocket,this._loRxSocket,this._ipRxSocket,this.lPortSocket,this._dataSocket];
@@ -393,6 +397,7 @@ class BridgeCore {
         try{this._pdjlAnnSock.close();}catch(_){}
       }
       this._pdjlAnnSock=null;
+      try{this._pdjlAnnTxSock?.close();}catch(_){}
       this._pdjlAnnTxSock=null;
       try{this._dbKaSock?.close();}catch(_){}
       this._dbKaSock=null;
@@ -400,6 +405,8 @@ class BridgeCore {
       this._djmSubSock=null;
       try{this._djmSubAuxSock?.close();}catch(_){}
       this._djmSubAuxSock=null;
+      try{this._pdjlProMiSock?.close();}catch(_){}
+      this._pdjlProMiSock=null;
       console.log('[BridgeCore] sockets closed');
     };
     // 250ms gives OS UDP buffer ample time to flush all OptOut bursts before socket close
@@ -535,7 +542,7 @@ class BridgeCore {
     // Invalidate delayed join/subscribe callbacks from the previous PDJL session.
     this._pdjlAnnounceSession = (this._pdjlAnnounceSession||0) + 1;
     this._joinCompleted = false;
-    for(const key of ['_djmRetryTimer','_djmSubTimer','_djmSubInterval','_djmWatchTimer','_bridgeNotifyTimer']){
+    for(const key of ['_djmRetryTimer','_djmSubTimer','_djmSubInterval','_djmWatchTimer','_bridgeNotifyTimer','_pdjlProMiTimer']){
       if(this[key]){ try{clearInterval(this[key]);}catch(_){} this[key]=null; }
     }
     this._joinInProgress=false;
@@ -543,12 +550,14 @@ class BridgeCore {
     if(this._djmSubSock){ try{this._djmSubSock.close();}catch(_){} this._djmSubSock=null; }
     this._djmSubSockReady=false;
     if(this._djmSubAuxSock){ try{this._djmSubAuxSock.close();}catch(_){} this._djmSubAuxSock=null; }
+    if(this._pdjlProMiSock){ try{this._pdjlProMiSock.close();}catch(_){} this._pdjlProMiSock=null; }
 
     // Close existing PDJL sockets
     if(this._pdjlAnnSock && !this._pdjlSockets?.includes(this._pdjlAnnSock)){
       try{this._pdjlAnnSock.close();}catch(_){}
     }
     this._pdjlAnnSock=null;
+    try{this._pdjlAnnTxSock?.close();}catch(_){}
     this._pdjlAnnTxSock=null;
     if(this._pdjlSockets){ this._pdjlSockets.forEach(s=>{try{s.close();}catch(_){}}); }
     else if(this.pdjlSocket){ try{this.pdjlSocket.close();}catch(_){} }
@@ -810,14 +819,31 @@ class BridgeCore {
       }
     } else {
       // macOS must keep port 50000 on INADDR_ANY for broadcast receive.
-      // Broadcast TX through the same shared socket matches native bridge apps
-      // and avoids splitting 50000 traffic across two sockets.
+      // RX stays on INADDR_ANY. Broadcast identity packets are sent through
+      // this socket as well as a selected-IP 50000 socket because macOS USB-C
+      // NICs can differ on which form reaches DJM broadcast listeners.
       this._pdjlAnnSock = this._pdjlSocketByPort?.[50000] || this._pdjlSockets?.[0] || null;
       if(!this._pdjlAnnSock){
         const s=dgram.createSocket({type:'udp4',reuseAddr:true});
         s.on('error',()=>{});
         s.bind(0,()=>{ try{s.setBroadcast(true);}catch(_){} });
         this._pdjlAnnSock=s;
+      }
+      this._pdjlAnnTxReady=false;
+      this._pdjlAnnTxSock=dgram.createSocket({type:'udp4',reuseAddr:true});
+      this._pdjlAnnTxSock.on('error',e=>console.warn('[PDJL] mac announce TX socket error:',e.message));
+      try{
+        this._pdjlAnnTxSock.bind(50000, pdjlIP, ()=>{
+          try{this._pdjlAnnTxSock.setBroadcast(true);}catch(_){}
+          this._pdjlAnnTxReady=true;
+          const a=this._pdjlAnnTxSock.address();
+          console.log(`[PDJL] mac announce TX socket active ${a.address}:${a.port}`);
+        });
+      }catch(e){
+        console.warn('[PDJL] mac announce TX bind failed:',e.message);
+        try{this._pdjlAnnTxSock.close();}catch(_){}
+        this._pdjlAnnTxSock=null;
+        this._pdjlAnnTxReady=false;
       }
     }
     // DJM subscribe socket. Prefer the standard PDJL 50001 source port.
@@ -848,7 +874,7 @@ class BridgeCore {
         this._onPDJL(msg, rinfo);
       });
       try{
-        this._djmSubAuxSock.bind(0, pdjlIP, ()=>{
+        this._djmSubAuxSock.bind(50006, pdjlIP, ()=>{
           const a=this._djmSubAuxSock.address();
           console.log(`[PDJL] DJM bridge subscribe socket active ${a.address}:${a.port}`);
         });
@@ -857,15 +883,64 @@ class BridgeCore {
       }
     }
 
+    let sendProMiQuery = null;
+    if(process.platform==='darwin'){
+      this._pdjlProMiSock=dgram.createSocket({type:'udp4',reuseAddr:true});
+      this._pdjlProMiSock.on('error',e=>console.warn('[PDJL] ProMI socket error:',e.message));
+      try{
+        this._pdjlProMiSock.bind(PDJL_PROMI_PORT, pdjlIP, ()=>{
+          try{this._pdjlProMiSock.setBroadcast(true);}catch(_){}
+          const a=this._pdjlProMiSock.address();
+          console.log(`[PDJL] ProMI query socket active ${a.address}:${a.port}`);
+        });
+      }catch(e){
+        console.warn('[PDJL] ProMI socket bind failed:',e.message);
+        try{this._pdjlProMiSock.close();}catch(_){}
+        this._pdjlProMiSock=null;
+      }
+      sendProMiQuery=()=>{
+        if(!liveSession()||!this._pdjlProMiSock) return;
+        for(const bc of allBCs){
+          for(let r=0;r<2;r++){
+            try{this._pdjlProMiSock.send(PDJL_PROMI_QUERY,0,PDJL_PROMI_QUERY.length,PDJL_PROMI_PORT,bc);}catch(_){}
+          }
+        }
+        if(!this._pdjlDiagProMi){
+          this._pdjlDiagProMi=true;
+          const a=(()=>{try{return this._pdjlProMiSock.address();}catch(_){return null;}})();
+          const src=a?`${a.address}:${a.port}`:'?';
+          console.log(`[PDJL-DIAG] mac ProMI src=${src} payload=${PDJL_PROMI_QUERY.toString('ascii')}`);
+        }
+      };
+      setTimeout(()=>{ try{sendProMiQuery?.();}catch(_){} }, 80);
+      this._pdjlProMiTimer=setInterval(()=>{ try{sendProMiQuery?.();}catch(_){} }, 7000);
+    }
+
+    const annTxSock = () => (this._pdjlAnnTxReady && this._pdjlAnnTxSock) ? this._pdjlAnnTxSock : this._pdjlAnnSock;
+    // 정식 macOS Pro DJ Link Bridge (really_final.pcapng) 는 keepalive 를
+    //   src=pdjlIP:50000 단일 소켓에서만 송신.
+    // 0.0.0.0 + pdjlIP 두 소켓에서 동시에 송신하면 DJM 이 같은 player=5 가
+    // 서로 다른 source IP (0.0.0.0/실제IP) 로 두 번 들어온 것으로 보고
+    // identity conflict 로 판단해 fader(0x39) 송신을 거부하는 정황.
+    const annBroadcastSocks = () => [annTxSock()].filter(Boolean);
     const sendAnn=()=>{
-      if(!liveSession()||!this._pdjlAnnSock) return;
+      const txSocks = annBroadcastSocks();
+      if(!liveSession()||!txSocks.length) return;
       const pkt=buildPdjlBridgeKeepalivePacket(pdjlIP, pdjlMAC, spoofPlayer);
       if(process.platform==='darwin' && !this._pdjlDiagKeepaliveHex){
         this._pdjlDiagKeepaliveHex = pkt.toString('hex');
-        console.log(`[PDJL-DIAG] mac keepalive ip=${pdjlIP} mac=${pdjlMAC} hex=${this._pdjlDiagKeepaliveHex}`);
+        const a=(()=>{try{return txSocks[0].address();}catch(_){return null;}})();
+        const src=a?`${a.address}:${a.port}`:'?';
+        const extra=txSocks.length>1?' + bound50000':'';
+        console.log(`[PDJL-DIAG] mac keepalive src=${src}${extra} ip=${pdjlIP} mac=${pdjlMAC} hex=${this._pdjlDiagKeepaliveHex}`);
       }
-      for(const bc of allBCs){
-        try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
+      const repeat = process.platform==='darwin' && txSocks.length===1 ? 2 : 1;
+      for(const txSock of txSocks){
+        for(const bc of allBCs){
+          for(let r=0;r<repeat;r++){
+            try{txSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
+          }
+        }
       }
     };
     // Build a claim(0x02) packet embedding the given interface's IP
@@ -874,7 +949,8 @@ class BridgeCore {
     };
 
     const _bridgeJoin=()=>{
-      if(!liveSession()||!this._pdjlAnnSock) return;
+      const txSocks = annBroadcastSocks();
+      if(!liveSession()||!txSocks.length) return;
       if(this._joinCompleted) return;
       if(this._joinInProgress){
         return;
@@ -882,33 +958,44 @@ class BridgeCore {
       this._joinInProgress = true;
       // Bridge join 시퀀스:
       //   Windows: 기존 검증값 유지 (Hello 14×110ms + Claim 22×150ms ≈ 4.8s).
-      //   macOS: STC 레퍼런스 매칭 (Hello 2×300ms + Claim 11×500ms ≈ 6.1s).
-      //          반복 송신은 DJM 식별자 충돌 가능 → 단일 송신.
+      //   macOS: ceo_2.pcapng 공식 Bridge 패턴에 맞춰 hello/claim 모두 2회씩 송신.
+      //          DJM 0x39는 0x57보다 먼저 열리므로 초기 identity claim이 핵심이다.
       const macJoin = process.platform==='darwin';
-      const HELLO_GAP = macJoin ? 300 : 110;
-      const CLAIM_GAP = macJoin ? 500 : 150;
-      const HELLO_N = macJoin ? 2 : 14;
+      const HELLO_GAP = macJoin ? 365 : 110;
+      const CLAIM_GAP = macJoin ? 345 : 150;
+      const HELLO_N = macJoin ? 6 : 14;
       const CLAIM_N = macJoin ? 11 : 22;
+      const REPEAT_N = macJoin ? 2 : 1;
       const helloEnd = HELLO_GAP*HELLO_N;
       for(let h=0;h<HELLO_N;h++){
         setTimeout(()=>{
-          if(!liveSession()||!this._pdjlAnnSock) return;
+          const socks = annBroadcastSocks();
+          if(!liveSession()||!socks.length) return;
           const p=buildPdjlBridgeHelloPacket(spoofPlayer);
-          for(const bc of allBCs){
-            try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}
+          for(const sock of socks){
+            for(const bc of allBCs){
+              for(let r=0;r<REPEAT_N;r++){
+                try{sock.send(p,0,p.length,50000,bc);}catch(_){}
+              }
+            }
           }
         }, h*HELLO_GAP);
       }
       for(let n=1;n<=CLAIM_N;n++){
         setTimeout(()=>{
-          if(!liveSession()||!this._pdjlAnnSock) return;
+          const socks = annBroadcastSocks();
+          if(!liveSession()||!socks.length) return;
           const cp = _buildClaim(n);
           if(process.platform==='darwin' && n===1 && !this._pdjlDiagClaimHex){
             this._pdjlDiagClaimHex = cp.toString('hex');
             console.log(`[PDJL-DIAG] mac claim#1 ip=${pdjlIP} mac=${pdjlMAC} hex=${this._pdjlDiagClaimHex}`);
           }
-          for(const bc of allBCs){
-            try{this._pdjlAnnSock.send(cp,0,cp.length,50000,bc);}catch(_){}
+          for(const sock of socks){
+            for(const bc of allBCs){
+              for(let r=0;r<REPEAT_N;r++){
+                try{sock.send(cp,0,cp.length,50000,bc);}catch(_){}
+              }
+            }
           }
           if(n===CLAIM_N){
             setTimeout(()=>{
@@ -916,6 +1003,7 @@ class BridgeCore {
               this._joinInProgress=false;
               this._joinCompleted=true;
               console.log('[PDJL] bridge join sequence complete');
+              try{ sendProMiQuery?.(); }catch(_){}
               // join 완료 직후 54B keepalive 즉시 시작 (DJM identity 등록용)
               // 0x57 subscribe는 54B 후 3초 대기 필요 — setTimeout(sendDjmSub, 9700) 에서 처리
               try{ sendAnn(); }catch(_){}
@@ -925,7 +1013,8 @@ class BridgeCore {
       }
     };
 
-    _bridgeJoin();
+    if(process.platform==='darwin') setTimeout(_bridgeJoin, 150);
+    else _bridgeJoin();
     // Periodic DJM reconnect: if DJM is known but hasn't sent 0x39 mixer data yet
     const _djmRetryT = setInterval(()=>{
       if(!liveSession()) return;
@@ -944,16 +1033,30 @@ class BridgeCore {
     // 95B keepalive — newer device firmware verifies the compatibility strings,
     // so they are required even for non-vendor implementations.
     // CRITICAL: DJM must NOT see this packet (player=5 conflicts with bridge player=0xF9)
-    this._dbKaSock = dgram.createSocket({type:'udp4',reuseAddr:true});
-    this._dbKaSock.on('error',()=>{});
-    this._dbKaSock.bind(0, pdjlIP, ()=>{});
-    const _dbKeepaliveSocket = this._dbKaSock;
+    // Windows 는 별도 ephemeral 소켓에서 95B 송신 (검증된 동작 유지).
+    // macOS 는 STC 와 일치 — 95B 도 _pdjlAnnSock(port 50000) 에서 송신해야
+    // CDJ 가 동일 bridge identity 로 인식. ephemeral source port 면 거부.
+    this._dbKaSock = process.platform==='darwin'
+      ? null
+      : dgram.createSocket({type:'udp4',reuseAddr:true});
+    if(this._dbKaSock){
+      this._dbKaSock.on('error',()=>{});
+      this._dbKaSock.bind(0, pdjlIP, ()=>{});
+    }
     const sendDbKeepalive=()=>{
+      const sock = process.platform==='darwin' ? annTxSock() : this._dbKaSock;
+      if(!sock) return;
       const pkt=buildDbServerKeepalivePacket(pdjlIP, pdjlMAC, spoofPlayer, process.platform);
+      if(process.platform==='darwin' && !this._pdjlDiag95Hex){
+        this._pdjlDiag95Hex = pkt.toString('hex');
+        const a=(()=>{try{return sock.address();}catch(_){return null;}})();
+        const src=a?`${a.address}:${a.port}`:'?';
+        console.log(`[PDJL-DIAG] mac 95B src=${src} hex=${this._pdjlDiag95Hex}`);
+      }
       // Unicast to each CDJ only (not DJM!)
       for(const[k,dev] of Object.entries(this.devices)){
         if(dev.type==='CDJ'&&dev.ip){
-          try{_dbKeepaliveSocket.send(pkt,0,pkt.length,50000,dev.ip);}catch(_){}
+          try{sock.send(pkt,0,pkt.length,50000,dev.ip);}catch(_){}
         }
       }
     };
@@ -964,11 +1067,15 @@ class BridgeCore {
     setTimeout(()=>{
       if(!liveSession()) return;
       sendAnn();
-      sendDbKeepalive();
+      // macOS official Pro DJ Link Bridge does NOT send the 95B unicast
+      // keepalive (really_final.pcapng has zero 95B packets). Sending it here
+      // appears to confuse DJM identity matching. Windows path keeps 95B.
+      if(process.platform!=='darwin') sendDbKeepalive();
       this._pdjlAnnTimer=setInterval(()=>{
         if(!liveSession()) return;
-        sendAnn();sendDbKeepalive();
-      },1500);
+        sendAnn();
+        if(process.platform!=='darwin') sendDbKeepalive();
+      },process.platform==='darwin' ? 1000 : 1500);
       // _timers.push 제거 — _pdjlAnnTimer 는 rebindPDJL/stop 에서 개별 clear (line 703, 1212).
       console.log('[PDJL] keepalive loop started (post-join)');
     }, 6700);
@@ -980,6 +1087,7 @@ class BridgeCore {
     };
     const sendBridgeNotifyToAll=()=>{
       if(!liveSession()) return;
+      if(process.platform==='darwin' && !this._joinCompleted) return;
       // Official macOS bridge captures send 0x55 notify from the bound aux
       // DJM source port (50006). Some DJM firmware appears to ignore the
       // notify when it comes from the generic 50001 listener.
@@ -1060,8 +1168,13 @@ class BridgeCore {
     setTimeout(()=>{
       if(!liveSession()) return;
       sendDjmSub();
+      // macOS official Bridge sends 0x57 exactly once (really_final.pcapng).
+      // Periodic re-subscribe disturbs DJM state; skip on darwin and rely on
+      // the single _subRetryT safety net at +25s only when no response.
       if(this._djmSubInterval) clearInterval(this._djmSubInterval);
-      this._djmSubInterval=setInterval(()=>{ if(liveSession()&&!this._hasRealFaders) sendDjmSub(); },2000);
+      if(process.platform!=='darwin'){
+        this._djmSubInterval=setInterval(()=>{ if(liveSession()&&!this._hasRealFaders) sendDjmSub(); },2000);
+      }
     }, 9700);
     const _subRetryT = setTimeout(()=>{
       if(!liveSession()) return;

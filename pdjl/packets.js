@@ -18,26 +18,34 @@ const PDJL = {
 
 // keepalive byte 0x24 identity — 검증된 고정값 (random 시도 시 Windows 연결 실패).
 //   Windows: 0xBD — DJM 연결 성공
-//   Mac    : 0xDA — 과거 정상 동작 이력 유지
+//   Mac    : 0xD4 — really_final.pcapng USB-LAN-only official bridge capture
 function pdjlBridgeAnnounceId(platform=process.platform){
-  return platform==='darwin' ? 0xDA : 0xBD;
+  return platform==='darwin' ? 0xD4 : 0xBD;
 }
 
 function pdjlIdentityByteFromMac(mac, platform=process.platform){
-  return platform==='darwin' ? 0xF9 : pdjlBridgeAnnounceId(platform);
+  // [정식 really_final.pcapng 캡처 일치]
+  //   macOS native Pro DJ Link Bridge keepalive[0x24] = 0xD4
+  //   Windows 는 검증된 0xBD 유지.
+  return platform==='darwin' ? 0xD4 : pdjlBridgeAnnounceId(platform);
 }
 
 function pdjlBridgeName(platform=process.platform){
   return 'TCS-SHOWKONTROL';
 }
 
-function pdjlClaimCheckByte(macLast, seqN, platform=process.platform){
+function pdjlClaimCheckByte(macLast, seqN, platform=process.platform, ipLast=0){
   const seq = seqN & 0xFF;
   const mac = macLast & 0xFF;
   if(platform==='darwin'){
-    // STC reference: byte 0x2E is a token whose exact value does not affect
-    // DJM fader activation — only the overall claim structure matters.
-    return (mac ^ ((seq * 3 + 0xFB) & 0xFF)) & 0xFF;
+    // Official macOS bridge claim tokens vary by link-local address. Prefer
+    // the USB-LAN-only capture used for current validation, with ceo_2 kept
+    // for the older 169.254.182.136 reference capture.
+    const finalSeq = [0x85,0x82,0x83,0x80,0x81,0x8E,0x8F,0x8C,0x8D,0x8A,0x8B];
+    const ceoSeq = [0x88,0x89,0xF6,0xF7,0xF4,0xF5,0xF2,0xF3,0xF0,0xF1,0xFE];
+    const table = (ipLast & 0xFF) === 0x88 ? ceoSeq : finalSeq;
+    if(seq >= 1 && seq <= table.length) return table[seq - 1];
+    return (mac ^ ((0x8C ^ seq) & 0xFF)) & 0xFF;
   }
   // Windows fullcap4/win-bridge: MAC[5] XOR (0x57 + seqN).
   return (mac ^ ((0x57 + seq) & 0xFF)) & 0xFF;
@@ -71,7 +79,7 @@ function buildPdjlBridgeClaimPacket(annIP, annMAC, seqN=1, deviceId=5, platform=
   p[0x23]=0x32;
   for(let i=0;i<4;i++) p[0x24+i]=cIP[i]||0;
   for(let i=0;i<6;i++) p[0x28+i]=cMAC[i]||0;
-  p[0x2E]=pdjlClaimCheckByte(cMAC[5]||0, seqN, platform);
+  p[0x2E]=pdjlClaimCheckByte(cMAC[5]||0, seqN, platform, cIP[3]||0);
   p[0x2F]=seqN&0xFF;
   // Set claim byte 0x30 to deviceId (observed compatible value, Mac/Windows 동일).
   p[0x30]=deviceId&0xFF;
@@ -96,9 +104,9 @@ function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=proc
   for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
   for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
   // Keepalive byte 0x30 — DJM stream role hint.
-  //   macOS native implementations use 0x03 with identity 0xF9.
-  //   Windows fullcap4: 0x08, keep unchanged because Windows mixer data works.
-  p[0x30]=platform==='darwin' ? 0x03 : 0x08;
+  //   macOS native Bridge (really_final.pcapng): 0x08
+  //   Windows fullcap4 (검증): 0x08
+  p[0x30]=0x08;
   p[0x34]=deviceId&0xFF;
   p[0x35]=0x20;
   return p;
@@ -111,10 +119,8 @@ function buildDjmSubscribePacket(platform=process.platform){
   Buffer.from(pdjlBridgeName(platform),'ascii').copy(p,11,0,15);
   p[31]=0x01;
   p[32]=0x00;
-  // Use the subscribe capability mask expected by target devices.
-  //   macOS native path: 0xFE (full fader + VU subscription)
-  //   Windows (fullcap4): 0xFF (전체 subscribe)
-  p[33]=platform==='darwin' ? 0xFE : 0xFF;
+  // macOS official bridge capture uses 0xE1; Windows keeps the verified 0xFF.
+  p[33]=platform==='darwin' ? 0xE1 : 0xFF;
   p[34]=0x00;
   p[35]=0x04;
   p[36]=0x01;

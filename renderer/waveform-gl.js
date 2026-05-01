@@ -1106,8 +1106,7 @@ void main() {
   float axisY = H * gridBand;
   float topLimit = H * 0.98;
 
-  float curX = u_pos * W;
-  if (abs(gl_FragCoord.x - curX) < 0.8) { fragColor = vec4(1.0); return; }
+  // Playhead 는 별도 overlay canvas (#wovol) 에서 빨강으로 그림 — shader 흰선 중복 제거.
   if (yG < axisY || yG > topLimit) { fragColor = vec4(BG, 1.0); return; }
 
   float frac = u_partialFrac > 0.0 ? u_partialFrac : 1.0;

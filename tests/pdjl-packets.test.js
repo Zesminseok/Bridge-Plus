@@ -25,8 +25,8 @@ test('PDJL: device type constants', () => {
 
 // ─── pdjlBridgeAnnounceId — 플랫폼별 identity byte ──────────────────────
 
-test('pdjlBridgeAnnounceId: macOS uses 0xDA', () => {
-  assert.strictEqual(pkt.pdjlBridgeAnnounceId('darwin'), 0xDA);
+test('pdjlBridgeAnnounceId: macOS uses 0xD4', () => {
+  assert.strictEqual(pkt.pdjlBridgeAnnounceId('darwin'), 0xD4);
 });
 
 test('pdjlBridgeAnnounceId: Windows uses 0xBD', () => {

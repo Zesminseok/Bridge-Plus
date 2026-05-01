@@ -113,13 +113,13 @@ test('MixerData channel block follows TCNet V3.5 field order', () => {
   assert.strictEqual(body[off + 13], 2);
 });
 
-test('DJM 0x57 subscribe matches native macOS bridge bitmask', () => {
+test('DJM 0x57 subscribe macOS matches official bridge bitmask', () => {
   const pkt = core.buildDjmSubscribePacket('darwin');
   assert.strictEqual(pkt.slice(0, 10).compare(core.PDJL.MAGIC), 0);
   assert.strictEqual(pkt[0x0A], 0x57);
   assert.strictEqual(pkt[0x1f], 0x01);
   assert.strictEqual(pkt[0x20], 0x00);
-  assert.strictEqual(pkt[0x21], 0xfe);
+  assert.strictEqual(pkt[0x21], 0xe1);
   assert.strictEqual(pkt[0x22], 0x00);
   assert.strictEqual(pkt[0x23], 0x04);
   assert.strictEqual(pkt[0x24], 0x01);
@@ -160,28 +160,45 @@ test('PDJL announce path stays on the selected interface broadcast only', () => 
   assert.strictEqual(source.includes("if(iface) return [iface.broadcast, '255.255.255.255'];"), false);
 });
 
-test('DJM subscribe sockets preserve Windows path and use macOS ephemeral bridge socket', () => {
+test('macOS PDJL announce TX binds to auto-detected link-local interface', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes('this._pdjlAnnTxSock.bind(50000, pdjlIP'), true);
+  assert.strictEqual(source.includes('this._pdjlAnnTxReady=true;'), true);
+  assert.strictEqual(source.includes("const annTxSock = () => (this._pdjlAnnTxReady && this._pdjlAnnTxSock) ? this._pdjlAnnTxSock : this._pdjlAnnSock;"), true);
+  assert.strictEqual(source.includes("if(process.platform==='darwin') setTimeout(_bridgeJoin, 150);"), true);
+});
+
+test('macOS sends native ProMI query on the selected PDJL interface', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes("const PDJL_PROMI_QUERY = Buffer.from('rqProMI:', 'ascii');"), true);
+  assert.strictEqual(source.includes('this._pdjlProMiSock.bind(PDJL_PROMI_PORT, pdjlIP'), true);
+  assert.strictEqual(source.includes('[PDJL-DIAG] mac ProMI src='), true);
+});
+
+test('DJM subscribe sockets preserve Windows path and use macOS official bridge source port', () => {
   const source = fs.readFileSync(corePath, 'utf8');
   assert.strictEqual(source.includes("process.platform==='win32'"), true);
   assert.strictEqual(source.includes('this._pdjlSocketByPort?.[50001]'), true);
-  assert.strictEqual(source.includes('this._djmSubAuxSock.bind(0, pdjlIP'), true);
+  assert.strictEqual(source.includes('this._djmSubAuxSock.bind(50006, pdjlIP'), true);
   assert.strictEqual(source.includes("process.platform==='darwin'\n        ? [this._djmSubAuxSock].filter(Boolean)"), true);
 });
 
 test('macOS bridge notify uses DJM bridge socket', () => {
   const source = fs.readFileSync(corePath, 'utf8');
   assert.strictEqual(source.includes("const notifySock = process.platform==='darwin'\n        ? this._djmSubAuxSock"), true);
+  assert.strictEqual(source.includes("if(process.platform==='darwin' && !this._joinCompleted) return;"), true);
   assert.strictEqual(source.includes('[PDJL-DIAG] mac 0x55 src='), true);
 });
 
-test('macOS bridge join timing matches STC reference capture pattern', () => {
+test('macOS bridge join timing matches official bridge capture pattern', () => {
   const source = fs.readFileSync(corePath, 'utf8');
   assert.strictEqual(source.includes("const macJoin = process.platform==='darwin';"), true);
-  assert.strictEqual(source.includes('const HELLO_GAP = macJoin ? 300 : 110;'), true);
-  assert.strictEqual(source.includes('const CLAIM_GAP = macJoin ? 500 : 150;'), true);
-  assert.strictEqual(source.includes('const HELLO_N = macJoin ? 2 : 14;'), true);
+  assert.strictEqual(source.includes('const HELLO_GAP = macJoin ? 365 : 110;'), true);
+  assert.strictEqual(source.includes('const CLAIM_GAP = macJoin ? 345 : 150;'), true);
+  assert.strictEqual(source.includes('const HELLO_N = macJoin ? 6 : 14;'), true);
   assert.strictEqual(source.includes('const CLAIM_N = macJoin ? 11 : 22;'), true);
-  assert.strictEqual(source.includes('},1500);'), true);
+  assert.strictEqual(source.includes('const REPEAT_N = macJoin ? 2 : 1;'), true);
+  assert.strictEqual(source.includes("},process.platform==='darwin' ? 1000 : 1500);"), true);
 });
 
 test('Windows PDJL sockets bind to the selected interface IP', () => {
@@ -224,14 +241,22 @@ test('PDJL bridge claim uses device id at byte 0x31', () => {
   assert.strictEqual(pkt.slice(0x28, 0x2e).toString('hex'), '020000000001');
 });
 
-test('PDJL bridge claim macOS check byte uses STC formula mac[5] XOR (counter*3 + 0xFB)', () => {
+test('PDJL bridge claim macOS check byte matches USB-LAN official bridge sequence', () => {
   const mac = '00:e0:4c:68:07:08';
-  const macLast = 0x08;
+  const expected = [0x85,0x82,0x83,0x80,0x81,0x8e,0x8f,0x8c,0x8d,0x8a,0x8b];
   for(let n=1;n<=11;n++){
-    const expected = (macLast ^ ((n*3 + 0xFB) & 0xFF)) & 0xFF;
-    const pkt = core.buildPdjlBridgeClaimPacket('169.254.182.136', mac, n, 5, 'darwin');
-    assert.strictEqual(pkt[0x2E], expected, `n=${n}`);
+    const pkt = core.buildPdjlBridgeClaimPacket('169.254.134.45', mac, n, 5, 'darwin');
+    assert.strictEqual(pkt[0x2E], expected[n-1], `n=${n}`);
     assert.strictEqual(pkt[0x2F], n);
+  }
+});
+
+test('PDJL bridge claim macOS keeps ceo_2 reference sequence for older capture IP', () => {
+  const mac = '00:e0:4c:68:07:08';
+  const expected = [0x88,0x89,0xf6,0xf7,0xf4,0xf5,0xf2,0xf3,0xf0,0xf1,0xfe];
+  for(let n=1;n<=11;n++){
+    const pkt = core.buildPdjlBridgeClaimPacket('169.254.182.136', mac, n, 5, 'darwin');
+    assert.strictEqual(pkt[0x2E], expected[n-1], `n=${n}`);
   }
 });
 
@@ -246,14 +271,12 @@ test('PDJL bridge claim preserves current Windows check-byte formula', () => {
   }
 });
 
-test('PDJL bridge keepalive matches native macOS bridge role bytes', () => {
-  // macOS native bridge path: identity byte 0xF9, byte 0x30=0x03,
-  // 0x34=playerNum, 0x35=0x20 device-type role.
+test('PDJL bridge keepalive macOS matches official bridge identity', () => {
   const pkt = core.buildPdjlBridgeKeepalivePacket('169.254.1.10', '02:00:00:00:00:01', 5, 'darwin');
   assert.strictEqual(pkt.length, 54);
   assert.strictEqual(pkt[0x0A], 0x06);
-  assert.strictEqual(pkt[0x24], 0xF9);
-  assert.strictEqual(pkt[0x30], 0x03);
+  assert.strictEqual(pkt[0x24], 0xD4);
+  assert.strictEqual(pkt[0x30], 0x08);
   assert.strictEqual(pkt[0x34], 0x05);
   assert.strictEqual(pkt[0x35], 0x20);
 });
