@@ -945,6 +945,10 @@ test('dbserver-io: dbReadResponse/dbReadFullResponse 함수 export', () => {
   const io = require(path.join(__dirname, '..', 'pdjl', 'dbserver-io'));
   assert.strictEqual(typeof io.dbReadResponse, 'function');
   assert.strictEqual(typeof io.dbReadFullResponse, 'function');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'pdjl', 'dbserver-io.js'), 'utf8');
+  assert.match(src, /const cleanup = \(\) => \{/);
+  assert.match(src, /sock\.removeListener\('error', onError\);/);
+  assert.match(src, /sock\.once\('error', onError\);/);
 });
 
 test('bridge-core: dbserver parser/IO 메서드는 wrapper (Phase 5.3a)', () => {

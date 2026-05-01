@@ -38,10 +38,9 @@
     "asar": true,
     "asarUnpack": [
       "**/*.node",
-      "node_modules/abletonlink/build/Release/**",
-      "node_modules/abletonlink/bin/**"
+      "vendor/abletonlink-mini/build/Release/**"
     ],
-    "artifactName": "${productName}-1.0.0.10-${os}-${arch}.${ext}",
+    "artifactName": "${productName}-1.0.0.12-${os}-${arch}.${ext}",
     "files": [
       "main.js",
       "main/**/*",
@@ -52,6 +51,10 @@
       "license-service.js",
       "preload.js",
       "renderer/**/*",
+      "vendor/abletonlink-mini/index.js",
+      "vendor/abletonlink-mini/index.d.ts",
+      "vendor/abletonlink-mini/package.json",
+      "vendor/abletonlink-mini/build/Release/abletonlink_mini.node",
       "default-album-artwork.png",
       "LICENSE",
       "NOTICE.md",
@@ -109,8 +112,17 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
         }
       ]
+    },
+    "portable": {
+      "artifactName": "${productName}-1.0.0.12-${os}-${arch}-portable.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -119,6 +131,7 @@
     }
   },
   "dependencies": {
-    "abletonlink": "^0.2.0-beta.0"
+    "bindings": "^1.5.0",
+    "node-addon-api": "^7.0.0"
   }
 }

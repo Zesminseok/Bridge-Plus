@@ -1,0 +1,13 @@
+{
+  "name": "abletonlink-mini",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal in-tree NAPI binding for Ableton Link — exposes only tempo/beat/phase/peers needed by BRIDGE+",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "gypfile": true,
+  "dependencies": {
+    "bindings": "^1.5.0",
+    "node-addon-api": "^7.0.0"
+  }
+}

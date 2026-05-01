@@ -24,11 +24,23 @@ function pdjlBridgeAnnounceId(platform=process.platform){
 }
 
 function pdjlIdentityByteFromMac(mac, platform=process.platform){
-  return pdjlBridgeAnnounceId(platform);
+  return platform==='darwin' ? 0xF9 : pdjlBridgeAnnounceId(platform);
 }
 
 function pdjlBridgeName(platform=process.platform){
   return 'TCS-SHOWKONTROL';
+}
+
+function pdjlClaimCheckByte(macLast, seqN, platform=process.platform){
+  const seq = seqN & 0xFF;
+  const mac = macLast & 0xFF;
+  if(platform==='darwin'){
+    // STC reference: byte 0x2E is a token whose exact value does not affect
+    // DJM fader activation — only the overall claim structure matters.
+    return (mac ^ ((seq * 3 + 0xFB) & 0xFF)) & 0xFF;
+  }
+  // Windows fullcap4/win-bridge: MAC[5] XOR (0x57 + seqN).
+  return (mac ^ ((0x57 + seq) & 0xFF)) & 0xFF;
 }
 
 function buildPdjlBridgeHelloPacket(deviceId=5, platform=process.platform){
@@ -59,11 +71,7 @@ function buildPdjlBridgeClaimPacket(annIP, annMAC, seqN=1, deviceId=5, platform=
   p[0x23]=0x32;
   for(let i=0;i<4;i++) p[0x24+i]=cIP[i]||0;
   for(let i=0;i<6;i++) p[0x28+i]=cMAC[i]||0;
-  // Set the claim checksum byte to the observed compatible value.
-  //   Mac/Win 공통 공식: MAC[5] XOR (0x57 + seqN)
-  //   예: MAC[5]=0xB2, seqN=1 → 0xB2^0x58 = 0xEA (win-bridge.pcapng 일치)
-  //   (0424_.pcapng 의 다른 공식은 세션마다 달라 신뢰 불가 — 과거 정상 동작 공식 유지)
-  p[0x2E]=((cMAC[5]||0) ^ ((0x57 + seqN) & 0xFF)) & 0xFF;
+  p[0x2E]=pdjlClaimCheckByte(cMAC[5]||0, seqN, platform);
   p[0x2F]=seqN&0xFF;
   // Set claim byte 0x30 to deviceId (observed compatible value, Mac/Windows 동일).
   p[0x30]=deviceId&0xFF;
@@ -87,11 +95,10 @@ function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=proc
   p[0x25]=0x00;
   for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
   for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
-  // Keepalive byte 0x30 — observed compatible value.
-  //   Mac (ceo_2): 0x07, (0424_/mac_pioneer): 0x08 — 세션마다 변동
-  //   Windows (fullcap4): 0x08
-  // 가장 최근 mac_pioneer (DJM 작동 확정) + Win = 0x08 → 통일.
-  p[0x30]=0x08;
+  // Keepalive byte 0x30 — DJM stream role hint.
+  //   macOS native implementations use 0x03 with identity 0xF9.
+  //   Windows fullcap4: 0x08, keep unchanged because Windows mixer data works.
+  p[0x30]=platform==='darwin' ? 0x03 : 0x08;
   p[0x34]=deviceId&0xFF;
   p[0x35]=0x20;
   return p;
@@ -105,9 +112,9 @@ function buildDjmSubscribePacket(platform=process.platform){
   p[31]=0x01;
   p[32]=0x00;
   // Use the subscribe capability mask expected by target devices.
-  //   Mac    (ceo_2):    0xE1 (fader + VU + onair)
+  //   macOS native path: 0xFE (full fader + VU subscription)
   //   Windows (fullcap4): 0xFF (전체 subscribe)
-  p[33]=platform==='darwin' ? 0xE1 : 0xFF;
+  p[33]=platform==='darwin' ? 0xFE : 0xFF;
   p[34]=0x00;
   p[35]=0x04;
   p[36]=0x01;
@@ -128,7 +135,7 @@ function buildDbServerKeepalivePacket(annIP, annMAC, deviceId=5, platform=proces
   p[0x24]=deviceId&0xFF;
   for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
   for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
-  p[0x35]=0x64;
+  p[0x35]=0x20;
   Buffer.from('PIONEER DJ CORP','ascii').copy(p,54,0,15);
   Buffer.from('PRODJLINK BRIDGE','ascii').copy(p,74,0,16);
   p[94]=0x43;
@@ -136,6 +143,8 @@ function buildDbServerKeepalivePacket(annIP, annMAC, deviceId=5, platform=proces
 }
 
 function buildBridgeNotifyPacket(deviceId=5, platform=process.platform){
+  // Single 44-byte 0x55 bridge notify (matches Pioneer Bridge captures + STC reference).
+  // Identical layout on macOS and Windows.
   const p=Buffer.alloc(44);
   PDJL.MAGIC.copy(p,0);
   p[0x0A]=0x55;
@@ -150,6 +159,10 @@ function buildBridgeNotifyPacket(deviceId=5, platform=process.platform){
   p[42]=0x03;
   p[43]=0x01;
   return p;
+}
+
+function buildBridgeNotifyPacketsForDevice(deviceId=5, platform=process.platform/*, dev */){
+  return [buildBridgeNotifyPacket(deviceId, platform)];
 }
 
 function hasPDJLMagic(msg){
@@ -176,6 +189,7 @@ module.exports={
   buildDjmSubscribePacket,
   buildDbServerKeepalivePacket,
   buildBridgeNotifyPacket,
+  buildBridgeNotifyPacketsForDevice,
   hasPDJLMagic,
   readPDJLNameField,
 };

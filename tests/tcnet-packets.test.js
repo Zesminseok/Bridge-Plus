@@ -113,13 +113,13 @@ test('MixerData channel block follows TCNet V3.5 field order', () => {
   assert.strictEqual(body[off + 13], 2);
 });
 
-test('DJM 0x57 subscribe matches official bridge macOS bitmask', () => {
+test('DJM 0x57 subscribe matches native macOS bridge bitmask', () => {
   const pkt = core.buildDjmSubscribePacket('darwin');
   assert.strictEqual(pkt.slice(0, 10).compare(core.PDJL.MAGIC), 0);
   assert.strictEqual(pkt[0x0A], 0x57);
   assert.strictEqual(pkt[0x1f], 0x01);
   assert.strictEqual(pkt[0x20], 0x00);
-  assert.strictEqual(pkt[0x21], 0xe1);
+  assert.strictEqual(pkt[0x21], 0xfe);
   assert.strictEqual(pkt[0x22], 0x00);
   assert.strictEqual(pkt[0x23], 0x04);
   assert.strictEqual(pkt[0x24], 0x01);
@@ -160,12 +160,28 @@ test('PDJL announce path stays on the selected interface broadcast only', () => 
   assert.strictEqual(source.includes("if(iface) return [iface.broadcast, '255.255.255.255'];"), false);
 });
 
-test('DJM subscribe sockets preserve Windows path and add macOS 50001 primary fallback', () => {
+test('DJM subscribe sockets preserve Windows path and use macOS ephemeral bridge socket', () => {
   const source = fs.readFileSync(corePath, 'utf8');
   assert.strictEqual(source.includes("process.platform==='win32'"), true);
   assert.strictEqual(source.includes('this._pdjlSocketByPort?.[50001]'), true);
-  assert.strictEqual(source.includes('this._djmSubAuxSock.bind(50006, pdjlIP'), true);
-  assert.strictEqual(source.includes('[this._djmSubSock, this._djmSubAuxSock]'), true);
+  assert.strictEqual(source.includes('this._djmSubAuxSock.bind(0, pdjlIP'), true);
+  assert.strictEqual(source.includes("process.platform==='darwin'\n        ? [this._djmSubAuxSock].filter(Boolean)"), true);
+});
+
+test('macOS bridge notify uses DJM bridge socket', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes("const notifySock = process.platform==='darwin'\n        ? this._djmSubAuxSock"), true);
+  assert.strictEqual(source.includes('[PDJL-DIAG] mac 0x55 src='), true);
+});
+
+test('macOS bridge join timing matches STC reference capture pattern', () => {
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes("const macJoin = process.platform==='darwin';"), true);
+  assert.strictEqual(source.includes('const HELLO_GAP = macJoin ? 300 : 110;'), true);
+  assert.strictEqual(source.includes('const CLAIM_GAP = macJoin ? 500 : 150;'), true);
+  assert.strictEqual(source.includes('const HELLO_N = macJoin ? 2 : 14;'), true);
+  assert.strictEqual(source.includes('const CLAIM_N = macJoin ? 11 : 22;'), true);
+  assert.strictEqual(source.includes('},1500);'), true);
 });
 
 test('Windows PDJL sockets bind to the selected interface IP', () => {
@@ -208,18 +224,43 @@ test('PDJL bridge claim uses device id at byte 0x31', () => {
   assert.strictEqual(pkt.slice(0x28, 0x2e).toString('hex'), '020000000001');
 });
 
-test('PDJL bridge keepalive matches official bridge capture role bytes', () => {
-  // identity byte (0x24): MAC 에서 derived (pdjlIdentityByteFromMac). 플랫폼별 fixed 가 아닌 deterministic.
-  // byte 0x30=0x08 (mac_pioneer + fullcap4 일치), 0x34=playerNum, 0x35=0x20 device-type role.
+test('PDJL bridge claim macOS check byte uses STC formula mac[5] XOR (counter*3 + 0xFB)', () => {
+  const mac = '00:e0:4c:68:07:08';
+  const macLast = 0x08;
+  for(let n=1;n<=11;n++){
+    const expected = (macLast ^ ((n*3 + 0xFB) & 0xFF)) & 0xFF;
+    const pkt = core.buildPdjlBridgeClaimPacket('169.254.182.136', mac, n, 5, 'darwin');
+    assert.strictEqual(pkt[0x2E], expected, `n=${n}`);
+    assert.strictEqual(pkt[0x2F], n);
+  }
+});
+
+test('PDJL bridge claim preserves current Windows check-byte formula', () => {
+  const ip = '169.254.56.19';
+  const mac = 'c8:4d:44:24:13:b2';
+  const expected = [0xea,0xeb,0xe8,0xe9,0xee,0xef,0xec,0xed];
+  for(let i=0;i<expected.length;i++){
+    const pkt = core.buildPdjlBridgeClaimPacket(ip, mac, i+1, 5, 'win32');
+    assert.strictEqual(pkt[0x2E], expected[i]);
+    assert.strictEqual(pkt[0x2F], i+1);
+  }
+});
+
+test('PDJL bridge keepalive matches native macOS bridge role bytes', () => {
+  // macOS native bridge path: identity byte 0xF9, byte 0x30=0x03,
+  // 0x34=playerNum, 0x35=0x20 device-type role.
   const pkt = core.buildPdjlBridgeKeepalivePacket('169.254.1.10', '02:00:00:00:00:01', 5, 'darwin');
   assert.strictEqual(pkt.length, 54);
   assert.strictEqual(pkt[0x0A], 0x06);
-  // identity byte 결정은 MAC 함수 결과 — 0 / 0xFF 가 아닌 정상값이면 통과.
-  assert.notStrictEqual(pkt[0x24], 0x00);
-  assert.notStrictEqual(pkt[0x24], 0xFF);
-  assert.strictEqual(pkt[0x30], 0x08);
+  assert.strictEqual(pkt[0x24], 0xF9);
+  assert.strictEqual(pkt[0x30], 0x03);
   assert.strictEqual(pkt[0x34], 0x05);
   assert.strictEqual(pkt[0x35], 0x20);
+});
+
+test('PDJL bridge keepalive preserves Windows role byte', () => {
+  const pkt = core.buildPdjlBridgeKeepalivePacket('169.254.1.10', '02:00:00:00:00:01', 5, 'win32');
+  assert.strictEqual(pkt[0x30], 0x08);
 });
 
 test('Windows dbserver keepalive uses TCS-SHOWKONTROL name (Pioneer pcap-verified)', () => {
@@ -235,14 +276,14 @@ test('Windows dbserver keepalive uses TCS-SHOWKONTROL name (Pioneer pcap-verifie
   assert.strictEqual(pkt[0x24], 0x05);
   assert.strictEqual(pkt.slice(0x26, 0x2c).toString('hex'), '020000000001');
   assert.strictEqual(pkt.slice(0x2c, 0x30).toString('hex'), 'a9fe010a');
-  assert.strictEqual(pkt[0x35], 0x64);
+  assert.strictEqual(pkt[0x35], 0x20);
   assert.strictEqual(pkt.toString('ascii', 54, 69), 'PIONEER DJ CORP');
   assert.strictEqual(pkt.toString('ascii', 74, 90), 'PRODJLINK BRIDGE');
   assert.strictEqual(pkt[94], 0x43);
 });
 
-test('PDJL bridge notify matches reference 0x55 layout', () => {
-  const pkt = core.buildBridgeNotifyPacket(5);
+test('PDJL bridge notify is a single 44B packet matching Pioneer Bridge / STC layout', () => {
+  const pkt = core.buildBridgeNotifyPacket(5, 'darwin');
   assert.strictEqual(pkt.length, 44);
   assert.strictEqual(pkt[0x0A], 0x55);
   assert.strictEqual(pkt[31], 0x01);
@@ -254,6 +295,16 @@ test('PDJL bridge notify matches reference 0x55 layout', () => {
   assert.strictEqual(pkt[41], 0x01);
   assert.strictEqual(pkt[42], 0x03);
   assert.strictEqual(pkt[43], 0x01);
+});
+
+test('bridge notify emits a single packet on both platforms (no darwin burst)', () => {
+  const macPkts = core.buildBridgeNotifyPacketsForDevice(5, 'darwin', {
+    name:'CDJ-3000', devType:0x03, state:{slot:0x03, trackType:0x03},
+  });
+  const winPkts = core.buildBridgeNotifyPacketsForDevice(5, 'win32', {});
+  assert.strictEqual(macPkts.length, 1);
+  assert.strictEqual(winPkts.length, 1);
+  assert.strictEqual(macPkts[0].toString('hex'), winPkts[0].toString('hex'));
 });
 
 test('renderer consumes dedicated DJM stereo master meter peaks', () => {
@@ -396,7 +447,7 @@ test('NXS2 backward beat anchor keeps predicted playhead for small snapbacks', (
   assert.strictEqual(shouldKeepPredictedBeatAnchor(10000, 9850, 133, true), false);
 });
 
-test('NXS2 status does not synthesize fraction from non-duration trackBeats field', () => {
+test('NXS2 status ignores non-duration trackBeats and missing position fraction', () => {
   const { parsePDJL } = loadPrivateBuilders();
   const pkt = Buffer.alloc(0x120);
   Buffer.from('Qspt1WmJOL', 'ascii').copy(pkt, 0);
@@ -414,6 +465,17 @@ test('NXS2 status does not synthesize fraction from non-duration trackBeats fiel
   const parsed = parsePDJL(pkt);
   assert.strictEqual(parsed.playerNum, 4);
   assert.strictEqual(parsed.isNXS2, true);
-  assert.strictEqual(parsed.trackBeats, 256);
+  assert.strictEqual(parsed._trackBeatsRaw, 256);
+  assert.strictEqual(parsed.trackBeats, 0);
   assert.strictEqual(parsed.positionFraction, 0);
+});
+
+test('NXS2 type 0x0b packet is not treated as CDJ-3000 precise position', () => {
+  const { parsePDJL } = loadPrivateBuilders();
+  const pkt = Buffer.from(
+    '5173707431576d4a4f4c0b43444a2d323030304e58533200000000000000000200ee00185900c507c500c500c500c1a9c500c500c500c5003aff3aff',
+    'hex'
+  );
+
+  assert.strictEqual(parsePDJL(pkt), null);
 });

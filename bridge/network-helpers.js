@@ -27,13 +27,17 @@ function findLocalIfaceForRemote(remoteIp, getAllInterfaces){
   return null;
 }
 
+function isAutoPdjlBind(pdjlBindAddr){
+  return !pdjlBindAddr || pdjlBindAddr==='auto' || pdjlBindAddr==='0.0.0.0';
+}
+
 // auto 모드일 때 PDJL 인터페이스 자동 선택.
-//   Windows: link-local 우선 (169.254.x — DJM 이 link-local 에 자주 있음)
+//   macOS/Windows: link-local 우선 (169.254.x — DJM 이 link-local 에 자주 있음)
 //   기타: localAddr 우선 → 첫 non-internal iface fallback
 function pickAutoPdjlIface(localAddr, getAllInterfaces){
   const ifaces = getAllInterfaces().filter(iface=>!iface.internal && iface.address && iface.address!=='127.0.0.1');
   if(!ifaces.length) return null;
-  if(process.platform==='win32'){
+  if(process.platform==='win32' || process.platform==='darwin'){
     const linkLocal = ifaces.find(iface=>isLinkLocalIp(iface.address));
     if(linkLocal) return linkLocal;
   }
@@ -44,14 +48,16 @@ function pickAutoPdjlIface(localAddr, getAllInterfaces){
   return ifaces[0] || null;
 }
 
-// Windows + auto 모드일 때 PDJL announce 를 약간 지연시킬지 — DJM/CDJ 발견 후 link-local 매칭.
+// macOS/Windows + auto 모드일 때 PDJL announce 를 약간 지연시킬지.
+// DJM/CDJ 발견 후 link-local 매칭으로 시작해 wrong-NIC join race 를 피한다.
 function shouldDelayWinAutoPdjl(pdjlBindAddr){
-  return process.platform==='win32'
-    && (!pdjlBindAddr || pdjlBindAddr==='auto' || pdjlBindAddr==='0.0.0.0');
+  return (process.platform==='win32' || process.platform==='darwin')
+    && isAutoPdjlBind(pdjlBindAddr);
 }
 
 module.exports = {
   isLinkLocalIp,
+  isAutoPdjlBind,
   findLocalIfaceForRemote,
   pickAutoPdjlIface,
   shouldDelayWinAutoPdjl,

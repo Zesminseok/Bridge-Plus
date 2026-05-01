@@ -44,23 +44,30 @@ function dbReadFullResponse(sock, idleMs=300){
     const chunks = [];
     let totalLen = 0;
     let timer = null;
+    let absTimer = null;
+    const cleanup = () => {
+      if(timer){ clearTimeout(timer); timer = null; }
+      if(absTimer){ clearTimeout(absTimer); absTimer = null; }
+      sock.removeListener('data', onData);
+      sock.removeListener('error', onError);
+    };
+    const onError = e => { cleanup(); rej(e); };
     const onData = d => {
       chunks.push(d);
       totalLen += d.length;
       if(totalLen > _DB_RESP_MAX){
-        if(timer) clearTimeout(timer);
-        sock.removeListener('data', onData);
+        cleanup();
         rej(new Error('dbserver full response too large')); return;
       }
       if(timer) clearTimeout(timer);
       timer = setTimeout(()=>{
-        sock.removeListener('data', onData);
+        cleanup();
         res(Buffer.concat(chunks));
       }, idleMs);
     };
     sock.on('data', onData);
-    sock.once('error', e=>{if(timer)clearTimeout(timer);rej(e);});
-    setTimeout(()=>{sock.removeListener('data',onData);if(timer)clearTimeout(timer);rej(new Error('full response timeout'));}, 8000);
+    sock.once('error', onError);
+    absTimer = setTimeout(()=>{cleanup();rej(new Error('full response timeout'));}, 8000);
   });
 }
 

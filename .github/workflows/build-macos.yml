@@ -19,6 +19,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: actions/setup-node@v4
         with:
@@ -27,14 +29,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Rebuild native modules for Electron
-        run: npx electron-rebuild --force --arch=${{ matrix.arch }}
+      - name: Build vendor/abletonlink-mini for Electron
+        run: npx electron-rebuild --force --arch=${{ matrix.arch }} --module-dir vendor/abletonlink-mini
 
-      - name: Verify abletonlink.node built
+      - name: Verify abletonlink_mini.node built
         run: |
-          found="$(find node_modules/abletonlink -name '*.node' -print)"
+          found="$(find vendor/abletonlink-mini -name '*.node' -print)"
           if [ -z "$found" ]; then
-            echo "abletonlink.node not found after rebuild" >&2
+            echo "abletonlink_mini.node not found after rebuild" >&2
             exit 1
           fi
           echo "$found"

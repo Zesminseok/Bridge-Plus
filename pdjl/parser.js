@@ -54,9 +54,12 @@ function parsePDJL(msg, hints){
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
     const barsRemain = msg.length>0xA5 ? msg.readUInt16BE(0xA4) : 0;
     const _trackBeatsRaw = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
-    const trackBeats = _trackBeatsRaw <= BEAT_MAX ? _trackBeatsRaw : 0;
-    // Playback position fraction 0x48-0x4B: uint32BE / 1000 = 0.0~1.0
-    // Available on CDJ-2000NXS2 and CDJ-3000 — gives absolute position for any track including BPM-less
+    // CDJ-2000NXS2 captures show 0xB4 as a constant-ish non-duration field
+    // (for example 256), so never feed it into track-length estimation.
+    const trackBeats = isNXS2 ? 0 : (_trackBeatsRaw <= BEAT_MAX ? _trackBeatsRaw : 0);
+    // Playback position fraction 0x48-0x4B: uint32BE / 1000 = 0.0~1.0.
+    // CDJ-2000NXS2 status packets observed in 421.pcapng keep this field at 0;
+    // treat it as a real fraction only when the device actually sends one.
     const posFracRaw = msg.length>0x4B ? msg.readUInt32BE(0x48) : 0;
     // Do not synthesize a fraction from beatNum/trackBeats on NXS2: 0xB4 is not a
     // reliable total-duration field here, and it creates timeline drift/jumps.
@@ -384,7 +387,13 @@ function parsePDJL(msg, hints){
     // 자체 분석: byte[0x21]=device type (0x02=mixer), byte[0x24]=playerNum (>=0x21=DJM)
     const devType = msg.length>0x21 ? msg[0x21] : 0;
     const isDjmType = devType===0x02 && playerNum>=0x21;
-    return{kind:'announce',name,playerNum,isDjmType};
+    return{
+      kind:'announce',name,playerNum,isDjmType,
+      devType,
+      devSlot: msg.length>0x25 ? msg[0x25] : 0,
+      devRole: msg.length>0x30 ? msg[0x30] : 0,
+      devCompat: msg.length>0x35 ? msg[0x35] : 0,
+    };
   }
   // CDJ-3000 Absolute Position (type 0x0b, port 50001, ~60B, ~30Hz pairs)
   // Compact position packet — current-gen players send pairs:
@@ -394,7 +403,8 @@ function parsePDJL(msg, hints){
   //          [44-47] pitch, [56-59] bpm×10.
   // bytes[36-37] are separate fields; only [38-39] uint16BE gives correct duration.
   // CDJ-3000 Precise Position (type 0x0b, exactly 60B, port 50001)
-  // IMPORTANT: NXS2 also sends type 0x0b with different structure — filter by name field
+  // IMPORTANT: NXS2 also sends type 0x0b, but 421.pcapng shows only control-ish
+  // bytes changing, not a sane ms position/duration layout — filter by name field.
   if(type===0x0b && msg.length>=60){
     const pNum = msg[33];
     if(pNum>=1 && pNum<=6){

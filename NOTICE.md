@@ -25,8 +25,16 @@ The following bundled assets are used under their respective licenses:
 
 - **Fonts** (`renderer/fonts/`): DSEG7 Classic and Noto Sans KR — both licensed under
   the SIL Open Font License Version 1.1. See `renderer/fonts/LICENSE.txt`.
-- **`abletonlink`** (npm dependency): Native binding for Ableton Link by 2bbb.
-  License terms in `node_modules/abletonlink/LICENSE` after install.
+- **Ableton Link** (vendored under `vendor/abletonlink-mini/third_party/link/`):
+  Tempo / beat synchronization library by Ableton AG, released under a
+  **dual license**: GNU General Public License v2.0 (GPL-2.0) **OR** a
+  separate commercial license available from Ableton AG. BRIDGE+ uses
+  Ableton Link via a thin in-tree wrapper (`vendor/abletonlink-mini/`) that
+  exposes only tempo, beat, phase, and peer count to enable BPM
+  synchronization with other Link-enabled software. Distributors of BRIDGE+
+  builds that include Ableton Link must comply with the chosen license.
+  See <https://github.com/Ableton/link/blob/master/LICENSE.md> and
+  <https://www.ableton.com/en/link/> for terms and certification details.
 - **Default placeholder artwork** (`default-album-artwork.png`, `renderer/assets/default-art.png`):
   Simple solid-color placeholders included with this project under Apache License 2.0.
 

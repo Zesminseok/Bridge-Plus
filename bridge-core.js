@@ -38,6 +38,7 @@ const {
   buildDjmSubscribePacket,
   buildDbServerKeepalivePacket,
   buildBridgeNotifyPacket,
+  buildBridgeNotifyPacketsForDevice,
   hasPDJLMagic,
   readPDJLNameField,
 } = require('./pdjl/packets');
@@ -372,7 +373,7 @@ class BridgeCore {
     // clear all intervals and timeouts
     this._timers.forEach(t=>{clearInterval(t);clearTimeout(t);}); this._timers=[];
     // 이름있는 PDJL 타이머는 _timers 와 분리 관리 (rebindPDJL 마다 개별 clear). stop() 에서도 명시 정리.
-    for(const _k of ['_djmRetryTimer','_pdjlAnnTimer','_djmSubTimer','_bridgeNotifyTimer','_djmWatchTimer']){
+    for(const _k of ['_djmRetryTimer','_pdjlAnnTimer','_djmSubTimer','_djmSubInterval','_bridgeNotifyTimer','_djmWatchTimer']){
       if(this[_k]){ try{clearInterval(this[_k]);}catch(_){} try{clearTimeout(this[_k]);}catch(_){} this[_k]=null; }
     }
     // Delay socket close by 100ms to let OptOut UDP packets flush from OS buffer
@@ -534,7 +535,7 @@ class BridgeCore {
     // Invalidate delayed join/subscribe callbacks from the previous PDJL session.
     this._pdjlAnnounceSession = (this._pdjlAnnounceSession||0) + 1;
     this._joinCompleted = false;
-    for(const key of ['_djmRetryTimer','_djmSubTimer','_djmWatchTimer','_bridgeNotifyTimer']){
+    for(const key of ['_djmRetryTimer','_djmSubTimer','_djmSubInterval','_djmWatchTimer','_bridgeNotifyTimer']){
       if(this[key]){ try{clearInterval(this[key]);}catch(_){} this[key]=null; }
     }
     this._joinInProgress=false;
@@ -720,8 +721,16 @@ class BridgeCore {
         const sock = dgram.createSocket({type:'udp4', reuseAddr:true});
         const bindAddr = process.platform==='win32' ? winBindIp : undefined;
         await new Promise((res,rej)=>{
-          sock.on('error',rej);
-          sock.bind(port, bindAddr, ()=>{ try{sock.setBroadcast(true);}catch(_){} res(); });
+          const onBindError = e => {
+            try{ sock.off('error', onBindError); }catch(_){}
+            rej(e);
+          };
+          sock.once('error', onBindError);
+          sock.bind(port, bindAddr, ()=>{
+            try{ sock.off('error', onBindError); }catch(_){}
+            try{sock.setBroadcast(true);}catch(_){}
+            res();
+          });
         });
         sock.on('message',(msg,rinfo)=>this._onPDJL(msg,rinfo));
         sock.on('error',()=>{});
@@ -746,6 +755,10 @@ class BridgeCore {
     this._joinInProgress = false;
     if(this._pdjlAnnTimer){ try{clearInterval(this._pdjlAnnTimer);}catch(_){} this._pdjlAnnTimer=null; }
     if(this._djmSubTimer){ try{clearTimeout(this._djmSubTimer);}catch(_){} this._djmSubTimer=null; }
+    this._pdjlDiagKeepaliveHex = null;
+    this._pdjlDiagClaimHex = null;
+    this._pdjlDiagSubHex = null;
+    this._pdjlDiagNotifyHex = null;
     // Determine the "primary" IP to embed in the PDJL keepalive packet.
     // CDJs use this IP to identify us on the network.
     // Priority: 1) pdjlBindAddr (user selected), 2) localAddr, 3) any available (including link-local)
@@ -796,9 +809,9 @@ class BridgeCore {
         this._pdjlAnnSock = s;
       }
     } else {
-      // [2026-04-19] 인덱스 하드코딩 제거 — 포트 50000 바인드 실패 시에도 안전
-      // Mac: 0.0.0.0:50000 RX 소켓 그대로 사용 (broadcast RX 유지). TX 시 OS 가
-      //      default route 결정 — link-local 통신은 link-local 인터페이스로 자동.
+      // macOS must keep port 50000 on INADDR_ANY for broadcast receive.
+      // Broadcast TX through the same shared socket matches native bridge apps
+      // and avoids splitting 50000 traffic across two sockets.
       this._pdjlAnnSock = this._pdjlSocketByPort?.[50000] || this._pdjlSockets?.[0] || null;
       if(!this._pdjlAnnSock){
         const s=dgram.createSocket({type:'udp4',reuseAddr:true});
@@ -835,8 +848,9 @@ class BridgeCore {
         this._onPDJL(msg, rinfo);
       });
       try{
-        this._djmSubAuxSock.bind(50006, pdjlIP, ()=>{
-          console.log(`[PDJL] DJM aux subscribe socket active ${pdjlIP}:50006`);
+        this._djmSubAuxSock.bind(0, pdjlIP, ()=>{
+          const a=this._djmSubAuxSock.address();
+          console.log(`[PDJL] DJM bridge subscribe socket active ${a.address}:${a.port}`);
         });
       }catch(e){
         console.warn('[PDJL] DJM aux sub socket bind failed:',e.message);
@@ -846,6 +860,10 @@ class BridgeCore {
     const sendAnn=()=>{
       if(!liveSession()||!this._pdjlAnnSock) return;
       const pkt=buildPdjlBridgeKeepalivePacket(pdjlIP, pdjlMAC, spoofPlayer);
+      if(process.platform==='darwin' && !this._pdjlDiagKeepaliveHex){
+        this._pdjlDiagKeepaliveHex = pkt.toString('hex');
+        console.log(`[PDJL-DIAG] mac keepalive ip=${pdjlIP} mac=${pdjlMAC} hex=${this._pdjlDiagKeepaliveHex}`);
+      }
       for(const bc of allBCs){
         try{this._pdjlAnnSock.send(pkt,0,pkt.length,50000,bc);}catch(_){}
       }
@@ -862,26 +880,33 @@ class BridgeCore {
         return;
       }
       this._joinInProgress = true;
-      // Bridge join 시퀀스 (Pioneer pcap 매칭):
-      //   Hello(0x0A) × 14 @ 110ms 간격 = 1540ms (pcap 타이밍과 일치)
-      //   Claim(0x02) × 22 @ 150ms 간격 = 3300ms
-      //   keepalive는 join 완료 후 시작
-      //
-      // 기존 2/11 카운트는 DJM이 bridge joining 상태로 인식 못 해
-      // 0x39 송신 거부하는 것으로 확인 (/tmp/ours.pcapng 분석 결과).
-      const HELLO_GAP = 110, CLAIM_GAP = 150, HELLO_N = 14, CLAIM_N = 22;
-      const helloEnd = HELLO_GAP*HELLO_N; // 1540ms
+      // Bridge join 시퀀스:
+      //   Windows: 기존 검증값 유지 (Hello 14×110ms + Claim 22×150ms ≈ 4.8s).
+      //   macOS: STC 레퍼런스 매칭 (Hello 2×300ms + Claim 11×500ms ≈ 6.1s).
+      //          반복 송신은 DJM 식별자 충돌 가능 → 단일 송신.
+      const macJoin = process.platform==='darwin';
+      const HELLO_GAP = macJoin ? 300 : 110;
+      const CLAIM_GAP = macJoin ? 500 : 150;
+      const HELLO_N = macJoin ? 2 : 14;
+      const CLAIM_N = macJoin ? 11 : 22;
+      const helloEnd = HELLO_GAP*HELLO_N;
       for(let h=0;h<HELLO_N;h++){
         setTimeout(()=>{
           if(!liveSession()||!this._pdjlAnnSock) return;
           const p=buildPdjlBridgeHelloPacket(spoofPlayer);
-          for(const bc of allBCs){try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}}
+          for(const bc of allBCs){
+            try{this._pdjlAnnSock.send(p,0,p.length,50000,bc);}catch(_){}
+          }
         }, h*HELLO_GAP);
       }
       for(let n=1;n<=CLAIM_N;n++){
         setTimeout(()=>{
           if(!liveSession()||!this._pdjlAnnSock) return;
           const cp = _buildClaim(n);
+          if(process.platform==='darwin' && n===1 && !this._pdjlDiagClaimHex){
+            this._pdjlDiagClaimHex = cp.toString('hex');
+            console.log(`[PDJL-DIAG] mac claim#1 ip=${pdjlIP} mac=${pdjlMAC} hex=${this._pdjlDiagClaimHex}`);
+          }
           for(const bc of allBCs){
             try{this._pdjlAnnSock.send(cp,0,cp.length,50000,bc);}catch(_){}
           }
@@ -955,15 +980,28 @@ class BridgeCore {
     };
     const sendBridgeNotifyToAll=()=>{
       if(!liveSession()) return;
-      const pkt = buildBridgeNotifyPacket(spoofPlayer);
-      const notifySock = this._djmSubSockReady
+      // Official macOS bridge captures send 0x55 notify from the bound aux
+      // DJM source port (50006). Some DJM firmware appears to ignore the
+      // notify when it comes from the generic 50001 listener.
+      const notifySock = process.platform==='darwin'
+        ? this._djmSubAuxSock
+        : this._djmSubSockReady
         ? this._djmSubSock
         : (this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock);
       if(!notifySock) return;
       for(const [, dev] of Object.entries(this.devices||{})){
         if(dev?.type!=='CDJ' || !dev.ip) continue;
+        const pkts = buildBridgeNotifyPacketsForDevice(spoofPlayer, process.platform, dev);
         try{
-          notifySock.send(pkt,0,pkt.length,50002,dev.ip);
+          for(const pkt of pkts){
+            notifySock.send(pkt,0,pkt.length,50002,dev.ip);
+            if(process.platform==='darwin' && !this._pdjlDiagNotifyHex){
+              const local=(()=>{try{return notifySock.address();}catch(_){return null;}})();
+              const src=local?`${local.address}:${local.port}`:'unknown';
+              this._pdjlDiagNotifyHex = pkt.toString('hex');
+              console.log(`[PDJL-DIAG] mac 0x55 src=${src} dst=${dev.ip}:50002 hex=${this._pdjlDiagNotifyHex}`);
+            }
+          }
         }catch(_){}
       }
     };
@@ -975,6 +1013,8 @@ class BridgeCore {
       // port 50001 소켓 우선 사용 (DJM이 선호하는 소스 포트)
       const subSocks = process.platform==='win32'
         ? [this._pdjlSocketByPort?.[50001]].filter(Boolean)
+        : process.platform==='darwin'
+        ? [this._djmSubAuxSock].filter(Boolean)
         : this._djmSubSockReady
         ? [this._djmSubSock, this._djmSubAuxSock]
             .filter(Boolean)
@@ -996,6 +1036,10 @@ class BridgeCore {
             subSock.send(pkt,0,pkt.length,50001,djmIp);
             const local=(()=>{try{return subSock.address();}catch(_){return null;}})();
             const src=local?`${local.address}:${local.port}`:'unknown';
+            if(process.platform==='darwin' && !this._pdjlDiagSubHex){
+              this._pdjlDiagSubHex = pkt.toString('hex');
+              console.log(`[PDJL-DIAG] mac 0x57 src=${src} dst=${djmIp}:50001 hex=${this._pdjlDiagSubHex}`);
+            }
             if(!srcs.includes(src)) srcs.push(src);
             const mask=`0x${pkt[33].toString(16)}`;
             if(!masksSent.includes(mask)) masksSent.push(mask);
@@ -1013,7 +1057,12 @@ class BridgeCore {
     // Send the mixer subscribe packet once, with a delayed retry only if needed.
     // 반복 subscribe 는 DJM 상태를 교란할 수 있어 제거. 15초 뒤 0x39/0x58 모두
     // 미수신일 때만 1회 재시도 fallback.
-    setTimeout(sendDjmSub, 9700);
+    setTimeout(()=>{
+      if(!liveSession()) return;
+      sendDjmSub();
+      if(this._djmSubInterval) clearInterval(this._djmSubInterval);
+      this._djmSubInterval=setInterval(()=>{ if(liveSession()&&!this._hasRealFaders) sendDjmSub(); },2000);
+    }, 9700);
     const _subRetryT = setTimeout(()=>{
       if(!liveSession()) return;
       if(this._hasRealFaders) return;
@@ -1213,10 +1262,13 @@ class BridgeCore {
           : (_msPrecise || wfLen || bgEstLen || beatBasedLen || ppLenMs || prevLayerLen);
 
         // ── CDJ-2000NXS2 timecode path ──
-        // No compatible type 0x0b precise_pos — prefer real 0x48 fraction when present,
-        // otherwise anchor on beat-grid/beatNum and interpolate by effective pitch.
+        // CDJ-2000NXS2 captures keep the status positionFraction at 0 and its
+        // type 0x0b packet does not match the CDJ-3000 ms-position layout.
+        // Use a real 0x48 fraction only if a unit actually sends one; otherwise
+        // anchor on waveform/beat-grid/cue metadata and interpolate by pitch.
         const pp = this._precisePos?.[p.playerNum];
         const hasPrecise = pp && (Date.now()-pp.time)<500;
+        let statusTotalLenMs = totalLenMs;
 
         const isEnded = (p.p1 === 0x0D || p.p1 === 0x11); // End / Ended p1 states
 
@@ -1231,7 +1283,12 @@ class BridgeCore {
         } else if(isEnded){
           // ── End/Ended state (both models): show last known position, clamp to totalLenMs ──
           const prev = this.layers[li]?.timecodeMs || 0;
-          timecodeMs = (totalLenMs > 0 && prev > totalLenMs) ? totalLenMs : (prev || totalLenMs);
+          if(p.isNXS2 && totalLenMs > 0 && prev > totalLenMs && prev - totalLenMs < 3000){
+            this._bgTrackLen = this._bgTrackLen || {};
+            this._bgTrackLen[p.playerNum] = prev;
+            statusTotalLenMs = prev;
+          }
+          timecodeMs = Math.max(prev || 0, statusTotalLenMs || 0);
           if(acc){
             acc._playStart=0; acc._anchorMs=null; acc._anchorTime=null;
             acc._noBeatAnchorTime=null; acc._noBeatAnchorMs=null;
@@ -1247,11 +1304,14 @@ class BridgeCore {
           // State transition: CUED/PAUSED/STOPPED → PLAYING 순간 accumulator 리셋.
           // (hot cue / play 버튼 모두 이 전환을 거치며, 점프 위치를 즉시 반영)
           const prevSt = acc._prevState;
+          const wasTransportActive = !!acc._transportActive;
           // ENDED 포함: NXS2 fw 1.87 은 hot cue 다중 누름 시 ENDED→PLAYING 직접 transition
           // (CUED 패킷 거치지 않음). ENDED 가 reset 트리거에 빠져있어 anchor 가 stale (totalLenMs)
           // 그대로 유지되어 timecode 가 즉시 끝으로 점프하던 버그 수정.
-          const wasStoppedLike = prevSt === STATE.CUEDOWN || prevSt === STATE.PAUSED ||
-            prevSt === STATE.STOPPED || prevSt === STATE.IDLE || prevSt === STATE.ENDED;
+          const wasStoppedLike = !wasTransportActive && (
+            prevSt === STATE.CUEDOWN || prevSt === STATE.PAUSED ||
+            prevSt === STATE.STOPPED || prevSt === STATE.IDLE || prevSt === STATE.ENDED
+          );
           if(wasStoppedLike){
             acc._fracMs = null; acc._fracAnchorTime = null;
             acc._anchorMs = null; acc._anchorTime = null;
@@ -1260,13 +1320,17 @@ class BridgeCore {
             acc.prevBn = 0;
           }
           acc._prevState = p.state;
+          acc._transportActive = true;
 
-          // NXS2 루프: TC forward 진행 + saved loop cue 매칭 시 wrap, 그 외 trackEnd 에서 clamp.
+          // NXS2 루프: TC forward 진행 + saved loop cue 매칭 시 wrap.
           if(p.isNXS2 && p.isLooping){
             const wasLooping = (this.layers[li]?.state === STATE.LOOPING);
+            const fracLoopMs = (p.positionFraction > 0 && totalLenMs > 0)
+              ? Math.round(p.positionFraction * totalLenMs)
+              : 0;
             if(!wasLooping){
               const lastTc = this.layers[li]?.timecodeMs || 0;
-              acc._loopAnchorMs = lastTc > 0 ? lastTc : (acc._fracMs || 0);
+              acc._loopAnchorMs = lastTc > 0 ? lastTc : (fracLoopMs || acc._fracMs || 0);
               acc._loopAnchorTime = Date.now();
             }
             let baseMs = acc._loopAnchorMs || 0;
@@ -1275,9 +1339,14 @@ class BridgeCore {
             let hasSaved = false;
             const cuePts = this._cuePoints?.[p.playerNum];
             if(cuePts){
+              const anchorMs = fracLoopMs || baseMs;
               const matchedLoop = cuePts.find(c =>
                 c.type === 'loop' && c.loopEndMs > c.timeMs &&
-                Math.abs(c.timeMs - baseMs) < beatMs * 2
+                anchorMs >= c.timeMs - beatMs * 2 &&
+                anchorMs <= c.loopEndMs + beatMs * 2
+              ) || cuePts.find(c =>
+                c.type === 'loop' && c.loopEndMs > c.timeMs &&
+                Math.abs(c.timeMs - anchorMs) < beatMs * 2
               );
               if(matchedLoop){
                 baseMs = matchedLoop.timeMs;
@@ -1292,10 +1361,10 @@ class BridgeCore {
               const loopMs = loopEndMs - baseMs;
               timecodeMs = Math.round(baseMs + (advance % Math.max(1, loopMs)));
             } else {
-              // unknown length: anchor 부터 forward, trackEnd 에서 clamp (past-end 방지)
-              const proposed = (acc._loopAnchorMs || baseMs) + advance;
-              const cap = totalLenMs > 0 ? totalLenMs - 50 : Infinity;
-              timecodeMs = Math.round(Math.min(proposed, cap));
+              // unknown loop: keep playback inside the inferred loop window.
+              // Clamping to track end makes the playhead leave the active loop on NXS2.
+              const loopMs = Math.max(1, loopEndMs - baseMs);
+              timecodeMs = Math.round(baseMs + (advance % loopMs));
             }
             acc._loopStartMs = Math.round(baseMs);
             acc._loopEndMs   = Math.round(loopEndMs);
@@ -1427,22 +1496,29 @@ class BridgeCore {
           // ── Stopped/Paused/Cued ──
           // state 트래킹 유지 (다음 playing 진입 때 transition 감지용)
           if(acc) acc._prevState = p.state;
+          if(acc) acc._transportActive = false;
           if(p.state === STATE.CUEDOWN){
-            // beatNum in CUEDOWN = current cue position. 비트그리드 우선 lookup.
-            // 큐 리스트 매칭은 transient mis-match 일으켜서 제거 (1비트 점프 버그).
-            const cueBeat = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
-            if(cueBeat > 0){
-              const bg = this._beatGrids?.[p.playerNum];
-              const beatIdx = cueBeat - 1;
-              if(bg && beatIdx >= 0 && beatIdx < bg.length){
-                timecodeMs = bg[beatIdx].timeMs;
-              } else if(p.bpmTrack > 0){
-                timecodeMs = Math.round((cueBeat - 1) * 60000 / p.bpmTrack);
-              } else {
-                timecodeMs = 0;
-              }
+            // NXS2 parked cue: prefer absolute fraction when available. beatNum can be
+            // unstable on CDJ-2000NXS2 and causes cue position jumps.
+            if(p.isNXS2 && p.positionFraction > 0 && totalLenMs > 0){
+              timecodeMs = Math.round(p.positionFraction * totalLenMs);
             } else {
-              timecodeMs = 0;
+              // beatNum in CUEDOWN = current cue position. 비트그리드 우선 lookup.
+              // 큐 리스트 매칭은 transient mis-match 일으켜서 제거 (1비트 점프 버그).
+              const cueBeat = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
+              if(cueBeat > 0){
+                const bg = this._beatGrids?.[p.playerNum];
+                const beatIdx = cueBeat - 1;
+                if(bg && beatIdx >= 0 && beatIdx < bg.length){
+                  timecodeMs = bg[beatIdx].timeMs;
+                } else if(p.bpmTrack > 0){
+                  timecodeMs = Math.round((cueBeat - 1) * 60000 / p.bpmTrack);
+                } else {
+                  timecodeMs = 0;
+                }
+              } else {
+                timecodeMs = this._cuePosMs?.[p.playerNum] || 0;
+              }
             }
           } else {
             if(this._cueEnterTime) delete this._cueEnterTime[p.playerNum];
@@ -1461,7 +1537,7 @@ class BridgeCore {
           // (CDJ-3000 은 0x0b precise_pos 가 별도 길이 정보 보내므로 그대로)
           const _len = (p.isNXS2 && !p.hasTrack)
             ? 0
-            : (totalLenMs || prev?.totalLength || 0);
+            : (statusTotalLenMs || prev?.totalLength || 0);
           this.updateLayer(li, {
             state:       p.state,
             timecodeMs,
@@ -1486,7 +1562,7 @@ class BridgeCore {
         }
         p.ip = rinfo.address;
         p.timecodeMs = timecodeMs;
-        p.totalLenMs = totalLenMs; // beat-based ms precision — renderer uses this for dk.dur
+        p.totalLenMs = statusTotalLenMs; // beat-based ms precision — renderer uses this for dk.dur
 
         // CUEDOWN 상태 = CDJ 가 현재 큐 포인트에 있음 → cuePosMs 캡쳐.
         // 주의: P1_TO_STATE[0x07]=CUEDOWN 이지만 0x07 은 "CUE 누른 채 재생(cuing)" 상태.
@@ -1695,7 +1771,7 @@ class BridgeCore {
         if(!this._ppDbg[p.playerNum]){
           this._ppDbg[p.playerNum]=true;
         }
-        // precise_pos는 CDJ-3000 전용 — 길이 우선순위:
+        // precise_pos는 CDJ-3000 layout 전용 — 길이 우선순위:
         //  1) 웨이브폼 디테일 길이 (rekordbox 분석 원본, 150 pts/sec)
         //  2) beat-grid 추정 길이 (last beat + 1 interval)
         //  3) 0x0b 정수 초 × 1000 (항상 .000 — 프로토콜 제약)
@@ -1784,13 +1860,19 @@ class BridgeCore {
       if(pn>0 && pn<=6){
         const key = `cdj${pn}`;
         if(!this.devices[key]){
-          this.devices[key]={type:'CDJ',playerNum:pn,name:p.name,ip:rinfo.address,lastSeen:Date.now()};
+          this.devices[key]={type:'CDJ',playerNum:pn,name:p.name,ip:rinfo.address,lastSeen:Date.now(),
+            devType:p.devType,devSlot:p.devSlot,devRole:p.devRole,devCompat:p.devCompat};
           this.onDeviceList?.(this.devices);
           // 자동 모드일 때 CDJ 서브넷 매칭으로 인터페이스 자동 선택
           this._autoSelectPdjlForRemote(rinfo.address);
         } else {
           this.devices[key].lastSeen=Date.now();
           this.devices[key].ip=rinfo.address; // update IP in case it changed
+          this.devices[key].name=p.name;
+          this.devices[key].devType=p.devType;
+          this.devices[key].devSlot=p.devSlot;
+          this.devices[key].devRole=p.devRole;
+          this.devices[key].devCompat=p.devCompat;
         }
       } else {
         const k=`dev_${rinfo.address}`;
@@ -1949,6 +2031,7 @@ module.exports = {
   mkDataMetrics, mkDataMeta, mkNotification, mkLowResArtwork,
   parsePDJL, pdjlBridgeAnnounceId, pdjlIdentityByteFromMac,
   buildPdjlBridgeHelloPacket, buildPdjlBridgeClaimPacket, buildPdjlBridgeKeepalivePacket,
-  buildDjmSubscribePacket, buildBridgeNotifyPacket, buildDbServerKeepalivePacket,
+  buildDjmSubscribePacket, buildBridgeNotifyPacket, buildBridgeNotifyPacketsForDevice,
+  buildDbServerKeepalivePacket,
   TC, PDJL, STATE, P1_TO_STATE, P1_NAME,
 };

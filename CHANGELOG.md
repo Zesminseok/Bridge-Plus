@@ -8,6 +8,29 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.0.0.12 — 2026-05-01
+
+30-day demo evaluation build.
+
+### Changed
+
+- **macOS Pro DJ Link bridge** — match STC reference packet shapes (`pkt[0x35]=0x20` in 95B keepalive, single 44B `0x55` notify, simplified claim check formula, single-shot hello/claim with STC timing 2×300ms + 11×500ms) for reliable DJM mixer data delivery on macOS.
+- **HW deck PCM-style waveform (A+C hybrid)** — hardware decks now render the rekordbox color/height waveform through the same oscilloscope path used by virtual decks, using `wfDetailNxs2` peak data when available and per-bin track colors directly.
+- **Ableton Link integration** — replaced upstream `abletonlink` npm dependency with a minimal in-tree NAPI wrapper (`vendor/abletonlink-mini/`) exposing only BPM / beat / phase / peer count, eliminating ThreadSafeFunction abort risk and simplifying Windows build maintenance.
+- **Build artifact naming** — `1.0.0.12` artifact names.
+- **Windows distribution** — added portable `.exe` target alongside the NSIS installer.
+
+## 1.0.0.11 — 2026-05-01
+
+30-day demo evaluation build.
+
+### Changed
+
+- **macOS DJM subscribe compatibility** — send bridge notify packets from the bound DJM aux source port (`50006`) to match the macOS bridge capture path.
+- **CDJ-2000NXS2 timecode stability** — stop treating NXS2 `trackBeats`/`positionFraction` status bytes as duration/position when captures show those fields are not valid, and keep inferred loop playback inside the active loop window.
+- **Observatory hardware deck visibility** — brighten VU meter, fader, and status indicators without dimming loaded hardware decks.
+- **Build artifact naming** — `1.0.0.11` artifact names.
+
 ## 1.0.0.10 — 2026-04-29
 
 30-day demo evaluation build. Full feature set, time-limited from first run.

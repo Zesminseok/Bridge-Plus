@@ -6,7 +6,10 @@ node_modules/
 package/
 .claude/
 .serena/
-.build-number
+
+# Vendored native modules — build outputs only; sources are tracked.
+vendor/abletonlink-mini/build/
+vendor/abletonlink-mini/node_modules/
 
 # Secrets / credentials
 .env

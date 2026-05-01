@@ -322,52 +322,35 @@ class LinkBridge{
     this._currentBpm=0;this._lastSentBpm=0;this._lastSentAt=0;
     this._available=false;
     try{
-      const AL=require('abletonlink');
-      this._LinkCtor=AL.default||AL;
+      const AL=require('./vendor/abletonlink-mini');
+      this._LinkCtor=AL.Link||AL.default||AL;
       this._available=true;
-      console.log('[LINK] abletonlink native module loaded');
+      console.log('[LINK] abletonlink-mini native module loaded');
     }catch(e){
-      console.log('[LINK] abletonlink not installed (stub mode). '
-                + 'Install: npm i abletonlink && npx electron-rebuild');
+      console.log('[LINK] abletonlink-mini not built (stub mode). '
+                + 'Run: npx electron-rebuild --force '
+                + '(--root=vendor/abletonlink-mini if needed)');
     }
   }
   isAvailable(){ return this._available; }
-  // Link 세션의 전역 beat 클럭과 quantum 내 phase 를 읽어 UI에 공급.
-  // API 변형 흡수: link.beat/phase(getter) · link.getBeat()/getPhase() · beat+quantum 기반 계산.
+  // mini 모듈은 항상 getBeat/getPhase/getNumPeers 메서드만 노출.
+  // ThreadSafeFunction 콜백 경로가 없어 abort 크래시 회피 분기도 불필요.
   _readBeat(){
-    const L=this._link;if(!L)return 0;
-    try{
-      if(typeof L.getBeat==='function') return L.getBeat();
-      if('beat' in L) return typeof L.beat==='function'?L.beat():L.beat;
-    }catch(_){}
-    return 0;
+    if(!this._link) return 0;
+    try{ return this._link.getBeat(); }catch(_){ return 0; }
   }
-  _readPhase(quantum){
-    const L=this._link;if(!L)return 0;
-    try{
-      if(typeof L.getPhase==='function') return L.getPhase();
-      if('phase' in L) return typeof L.phase==='function'?L.phase():L.phase;
-    }catch(_){}
-    // fallback: beat mod quantum
-    const b=this._readBeat();const q=quantum||4;
-    return ((b%q)+q)%q;
+  _readPhase(){
+    if(!this._link) return 0;
+    try{ return this._link.getPhase(); }catch(_){ return 0; }
   }
-  // peers 폴링 — setNumPeersCallback (ThreadSafeFunction) 경로를 회피.
-  // Link 내부 쓰레드에서 JS 콜백을 호출하다가 abort() 크래시가 발생해
-  // 콜백 등록을 제거하고 getStatus 폴링 시점에 동기 조회한다.
   _readPeers(){
-    const L=this._link;if(!L)return 0;
-    try{
-      if(typeof L.getNumPeers==='function') return L.getNumPeers()|0;
-      if(typeof L.numPeers==='function') return L.numPeers()|0;
-      if('numPeers' in L) return (L.numPeers|0);
-    }catch(_){}
-    return 0;
+    if(!this._link) return 0;
+    try{ return this._link.getNumPeers()|0; }catch(_){ return 0; }
   }
   getStatus(){
     const quantum=4;
     const beat=this._enabled?this._readBeat():0;
-    const phase=this._enabled?this._readPhase(quantum):0;
+    const phase=this._enabled?this._readPhase():0;
     const peers=this._enabled?this._readPeers():0;
     this._peers=peers;
     return {available:this._available,enabled:this._enabled,peers,bpm:this._currentBpm,lastSent:this._lastSentBpm,beat,phase,quantum};
@@ -377,10 +360,16 @@ class LinkBridge{
     if(this._enabled){
       if(this._available && !this._link){
         try{
-          this._link=new this._LinkCtor(120.0);
+          // 이전 setTempo() 가 disabled 동안 호출됐을 수 있어, 저장된 BPM 으로 초기화.
+          const initBpm=(this._currentBpm>=20 && this._currentBpm<=999)?this._currentBpm:120.0;
+          this._link=new this._LinkCtor(initBpm);
           this._link.enable(true);
+          // 생성자 BPM 이 무시되는 빌드 대비 — enable 직후 명시적으로 한 번 더 push.
+          if(initBpm!==120.0){
+            try{ this._link.setBpm(initBpm); this._lastSentBpm=initBpm; this._lastSentAt=Date.now(); }catch(_){}
+          }
           // 피어 수는 getStatus 폴링에서 동기 조회 (ThreadSafeFunction 콜백 abort 회피)
-          console.log('[LINK] session started (BPM-only mode)');
+          console.log(`[LINK] session started (BPM-only mode, init=${initBpm})`);
         }catch(e){
           console.warn('[LINK] start error:',e.message);
           this._link=null;
@@ -394,20 +383,13 @@ class LinkBridge{
       }
     }
   }
-  // 세션 beat 를 강제 정렬 (탭 다운비트 / 마스터 덱 정렬용)
-  // beat: 0=다운비트, 1=2번째 비트 … quantum-1=마지막 비트
-  // API 변형 흡수: setBeat / forceBeat / forceBeatAtTime / beat= 속성
+  // 세션 beat 를 강제 정렬 (탭 다운비트 / 마스터 덱 정렬용).
+  // beat: 0=다운비트, 1=2번째 비트 … quantum-1=마지막 비트.
   alignBeat(beat){
     if(!this._enabled||!this._link)return false;
     const b=Number.isFinite(+beat)?(+beat):0;
-    try{
-      const L=this._link;
-      if(typeof L.setBeat==='function'){ L.setBeat(b); return true; }
-      if(typeof L.forceBeat==='function'){ L.forceBeat(b); return true; }
-      if(typeof L.forceBeatAtTime==='function'){ L.forceBeatAtTime(b,0,4); return true; }
-      if('beat' in L){ L.beat=b; return true; }
-    }catch(e){ console.warn('[LINK] alignBeat err:',e.message); }
-    return false;
+    try{ this._link.setBeat(b); return true; }
+    catch(e){ console.warn('[LINK] alignBeat err:',e.message); return false; }
   }
   setTempo(bpm){
     const v=parseFloat(bpm);
@@ -418,9 +400,7 @@ class LinkBridge{
     const now=Date.now();
     if(Math.abs(v-this._lastSentBpm)<0.02 && (now-this._lastSentAt)<250) return;
     try{
-      if(typeof this._link.setBpm==='function') this._link.setBpm(v);
-      else if(typeof this._link.bpm==='function') this._link.bpm(v);
-      else if('bpm' in this._link) this._link.bpm=v;
+      this._link.setBpm(v);
       this._lastSentBpm=v;this._lastSentAt=now;
     }catch(e){ console.warn('[LINK] setBpm err:',e.message); }
   }
@@ -681,9 +661,8 @@ function doQuit(){
       console.log('[APP] cleanup done — force exiting via SIGKILL');
       try{if(splash&&!splash.isDestroyed())splash.destroy();}catch(_){}
       try{if(win&&!win.isDestroyed())win.destroy();}catch(_){}
-      // abletonlink native callback_handler thread (sleep_for 루프) 이 프로세스
-      // 종료 시점에도 살아있어 app.exit()/process.exit() 의 libc atexit/C++ dtor
-      // 경로에서 스레드 소유권 경합 → std::terminate → abort.
+      // Ableton Link 의 내부 peer-discovery 스레드는 dtor 경로에서 호출되는
+      // libc atexit + C++ static dtor 와 소유권 경합을 일으킬 수 있다.
       // SIGKILL 은 커널 레벨 즉시 회수 → dtor 경로 완전 우회 (cleanup 은 이미 완료).
       try{process.kill(process.pid,'SIGKILL');}catch(_){app.exit(0);}
     },500);
@@ -705,11 +684,7 @@ app.on('will-quit',()=>{
     try{_artSocket.close();}catch(_){}
     _cleaned=true;
   }
-  // abletonlink v0.2.0 NAPI 바인딩에 스레드 종료 API가 없어 native callback
-  // thread (sleep_for 루프) 가 프로세스 종료 시점에도 살아있다.
-  // app.exit()/process.exit() 도 내부적으로 libc exit → atexit → C++ static dtor
-  // → abletonlink 스레드 소유권 경합 → abort 발생.
-  // SIGKILL 은 커널이 즉시 프로세스 회수 → dtor 경로 건너뛰기 (cleanup 이미 끝).
+  // Ableton Link peer-discovery 스레드 dtor 경합 회피 — SIGKILL 즉시 회수.
   setTimeout(()=>{try{process.kill(process.pid,'SIGKILL');}catch(_){app.exit(0);}},300).unref();
 });
 app.on('activate',()=>{if(!_quitting&&BrowserWindow.getAllWindows().length===0)createWindow();});

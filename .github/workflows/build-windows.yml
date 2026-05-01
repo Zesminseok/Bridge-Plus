@@ -11,6 +11,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: actions/setup-node@v4
         with:
@@ -23,14 +25,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Rebuild native modules for Electron (Windows x64)
-        run: npx electron-rebuild --force --arch=x64
+      - name: Build vendor/abletonlink-mini for Electron (Windows x64)
+        run: npx electron-rebuild --force --arch=x64 --module-dir vendor/abletonlink-mini
 
-      - name: Verify abletonlink.node built for win32
+      - name: Verify abletonlink_mini.node built for win32
         shell: pwsh
         run: |
-          $found = Get-ChildItem -Path node_modules\abletonlink -Recurse -Filter *.node
-          if (-not $found) { throw "abletonlink.node not found after rebuild" }
+          $found = Get-ChildItem -Path vendor\abletonlink-mini -Recurse -Filter *.node
+          if (-not $found) { throw "abletonlink_mini.node not found after rebuild" }
           $found | ForEach-Object { Write-Host "Built: $($_.FullName)" }
 
       - name: Package Windows x64 installer
@@ -38,12 +40,13 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npx electron-builder --win --x64 --publish never
 
-      - name: Upload installer
+      - name: Upload installer + portable
         uses: actions/upload-artifact@v4
         with:
           name: BRIDGE-Plus-windows-x64
           path: |
             dist/*.exe
             dist/*.exe.blockmap
+            dist/*-portable.exe
             dist/latest*.yml
           if-no-files-found: error

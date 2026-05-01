@@ -36,9 +36,10 @@ function _wglWritePoint(px, row1, dstIdx, wfData, srcIdx) {
   const mi = Math.min(1, Math.max(0, p.g || 0));
   const hi = Math.min(1, Math.max(0, p.b || 0));
   const h = Math.min(1, Math.max(0, p.h || Math.max(lo, mi, hi)));
-  px[dst]     = encU(lo);
-  px[dst + 1] = encU(mi);
-  px[dst + 2] = encU(hi);
+  const gate = h > 0.0001 ? 1 : 0;
+  px[dst]     = encU(lo * gate);
+  px[dst + 1] = encU(mi * gate);
+  px[dst + 2] = encU(hi * gate);
   px[dst + 3] = encU(h);
   px[dstShape]     = enc(p.mn !== undefined ? p.mn : -h);
   px[dstShape + 1] = enc(p.mx !== undefined ? p.mx : h);
@@ -264,14 +265,17 @@ class WaveformGL {
   // image: HTMLCanvasElement | OffscreenCanvas | ImageBitmap (RGBA premul-mask).
   // durMs: 비트맵 전체가 표현하는 트랙 지속시간.
   // key:   재업로드 skip 키 (동일 데이터면 GPU 업로드 절약).
-  setStrip(image, durMs, key) {
+  setStrip(image, durMs, key, partialFrac = 1.0) {
     const gl = this.gl;
     if (!image) return;
     if (!this._stripProg || !gl.isProgram(this._stripProg)) {
       try { this._initStripPipeline(); } catch (e) { console.warn('[WGL] strip init failed:', e.message); return; }
     }
+    const frac = (partialFrac > 0 && partialFrac < 1) ? partialFrac : 1.0;
     if (key && this._stripKey === key && this._stripTex) {
       this._stripDurMs = durMs || 1;
+      this._stripPartialFrac = frac;
+      this._stripDirty = true;
       return;
     }
     if (this._stripTex) gl.deleteTexture(this._stripTex);
@@ -285,6 +289,7 @@ class WaveformGL {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this._stripDurMs = durMs || 1;
+    this._stripPartialFrac = frac;
     this._stripKey = key || '';
     this._stripDirty = true;
     this._stripDrawKey = '';
@@ -303,7 +308,8 @@ class WaveformGL {
     if (!this.gl.isProgram(this._stripProg)) { this._stripProg = null; this._stripTex = null; return; }
     const gl = this.gl;
     const cv = gl.canvas;
-    const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${this._stripDurMs}`;
+    const partialFrac = this._stripPartialFrac || 1.0;
+    const drawKey = `${cv.width}x${cv.height}|${posMs}|${zoomMs}|${centerX}|${this._stripDurMs}|${partialFrac}`;
     if (!this._stripDirty && this._stripDrawKey === drawKey) return;
     gl.viewport(0, 0, cv.width, cv.height);
     gl.useProgram(this._stripProg);
@@ -316,6 +322,7 @@ class WaveformGL {
     gl.uniform1f(this._stripLocs.durMs,   this._stripDurMs);
     gl.uniform2f(this._stripLocs.res,     cv.width, cv.height);
     gl.uniform1f(this._stripLocs.centerX, centerX);
+    if (this._stripLocs.partialFrac) gl.uniform1f(this._stripLocs.partialFrac, partialFrac);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this._stripDirty = false;
     this._stripDrawKey = drawKey;
@@ -342,6 +349,7 @@ class WaveformGL {
       durMs:   gl.getUniformLocation(this._stripProg, 'u_durMs'),
       res:     gl.getUniformLocation(this._stripProg, 'u_res'),
       centerX: gl.getUniformLocation(this._stripProg, 'u_centerX'),
+      partialFrac: gl.getUniformLocation(this._stripProg, 'u_partialFrac'),
     };
   }
 
@@ -679,6 +687,7 @@ float dec(float u) { return u * 2.0 - 1.003922; }
 
 float symMask(float y, float h, float aa) {
   float H = max(h, 0.0);
+  if (H <= 0.0001) return 0.0;
   float lower = smoothstep(-H - aa, -H + aa, y);
   float upper = 1.0 - smoothstep(H - aa, H + aa, y);
   return lower * upper;
@@ -786,6 +795,15 @@ void main() {
   float miEnv  = a.g;
   float hiEnv  = a.b;
   float airEnv = a.a;
+  if (u_mode == 4) {
+    float hAll = airEnv * sLow;
+    if (hAll < 0.001) { fragColor = BG; return; }
+    float mHw = symMask(yRel, hAll, AA);
+    if (mHw < 0.01) { fragColor = BG; return; }
+    vec3 hwCol = clamp(vec3(loEnv, miEnv, hiEnv), 0.0, 1.0);
+    fragColor = vec4(mix(BG.rgb, hwCol, mHw), 1.0);
+    return;
+  }
   // 4-band stack — 그리는 순서: BLUE (outermost) → ORANGE → BROWN → WHITE (innermost top).
   float hLow = clamp(loEnv,  0.0, 1.0) * sLow * 0.95;
   float hMid = clamp(miEnv,  0.0, 1.0) * sLow * 0.85;
@@ -797,6 +815,7 @@ void main() {
   hAir = min(hAir, sLow);
   // RGB/Mono 모드용: mono envelope (bass 우세, hi/air 기여 적음)
   float peakBand = max(max(loEnv, miEnv * 0.90), max(hiEnv * 0.55, airEnv * 0.32));
+  if (peakBand < 0.001) { fragColor = BG; return; }
 
   float mLow = symMask(yRel, hLow, AA);
   float mMid = symMask(yRel, hMid, AA);
@@ -960,6 +979,17 @@ void main() {
   float miEnv  = a.g;
   float hiEnv  = a.b;
   float airEnv = a.a;
+  if (u_mode == 4) {
+    vec3 base = (played ? BG_PLAYED : BG).rgb;
+    float hAll = airEnv * waveH * 0.92;
+    if (hAll < 0.001) { fragColor = vec4(base, 1.0); return; }
+    float mHw = 1.0 - smoothstep(hAll - AA, hAll + AA, yRel);
+    vec3 hwCol = clamp(vec3(loEnv, miEnv, hiEnv), 0.0, 1.0);
+    vec3 col = mix(base, hwCol, mHw);
+    if (played) col *= 0.6;
+    fragColor = vec4(col, 1.0);
+    return;
+  }
   // 4-band stack — 그리는 순서: BLUE (outermost) → ORANGE → BROWN → WHITE (innermost top).
   float hLow = clamp(loEnv,  0.0, 1.0) * waveH * 0.95;
   float hMid = clamp(miEnv,  0.0, 1.0) * waveH * 0.85;
@@ -971,6 +1001,7 @@ void main() {
   hAir = min(hAir, waveH);
   // mono/RGB 용 — bass+mid 우세
   float peakBand = max(max(loEnv, miEnv * 0.90), max(hiEnv * 0.55, airEnv * 0.32));
+  if (peakBand < 0.001) { fragColor = played ? BG_PLAYED : BG; return; }
   float mLow = 1.0 - smoothstep(hLow - AA, hLow + AA, yRel);
   float mMid = 1.0 - smoothstep(hMid - AA, hMid + AA, yRel);
   float mHi  = 1.0 - smoothstep(hHi  - AA, hHi  + AA, yRel);
@@ -1024,6 +1055,7 @@ uniform float u_zoomMs;
 uniform float u_durMs;
 uniform vec2  u_res;
 uniform float u_centerX;
+uniform float u_partialFrac;
 out vec4 fragColor;
 
 const vec3 BG = vec3(0.035, 0.040, 0.055);
@@ -1038,7 +1070,10 @@ void main() {
   float posMsSnap = floor(u_posMs / msPerPx + 0.5) * msPerPx;
   float pxMs = posMsSnap + (gl_FragCoord.x - cX) * msPerPx;
   if (pxMs < 0.0 || pxMs > u_durMs) { fragColor = vec4(BG, 1.0); return; }
-  float u = clamp(pxMs / max(u_durMs, 1.0), 0.0, 1.0);
+  float frac = u_partialFrac > 0.0 ? u_partialFrac : 1.0;
+  float trackU = pxMs / max(u_durMs, 1.0);
+  if (trackU > frac) { fragColor = vec4(BG, 1.0); return; }
+  float u = clamp(trackU / frac, 0.0, 1.0);
   float v = gl_FragCoord.y / H;
   vec4 s = texture(u_strip, vec2(u, v));
   // strip 의 alpha 는 envelope 마스크 — BG 위에 블렌드 (베이크된 색감 보존).

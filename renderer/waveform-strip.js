@@ -87,6 +87,7 @@
   // smoothstep AA 마스크 — 셰이더 symMask 와 동일.
   function symMask(yRel, h, aa) {
     const H = h < 0 ? 0 : h;
+    if (H <= 0.0001) return 0;
     if (H + aa < Math.abs(yRel)) return 0;
     if (Math.abs(yRel) < H - aa) return 1;
     // smoothstep 상하 결합

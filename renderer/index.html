@@ -1238,9 +1238,7 @@ body[data-layout="observatory"]{
 body[data-layout="observatory"] .deck-row{position:relative}
 body[data-layout="observatory"] .deck-row::after{
   content:'';position:absolute;inset:0;pointer-events:none;z-index:5;
-  background:
-    repeating-linear-gradient(180deg,rgba(255,255,255,.018) 0,rgba(255,255,255,.018) 1px,transparent 1px,transparent 3px),
-    radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.4) 100%);
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.012) 0,rgba(255,255,255,.012) 1px,transparent 1px,transparent 3px);
 }
 
 /* 4 채널 2×2 그리드 — 각 셀은 컨텐츠 자연 높이로 (auto-fit 행). */
@@ -1277,6 +1275,37 @@ body[data-layout="observatory"] .dk.obs-dk:nth-child(2n){border-right:none}
 body[data-layout="observatory"] .dk.obs-dk:nth-last-child(-n+2){border-bottom:none}
 body[data-layout="observatory"] .dk.obs-dk[data-st="play"]{border-color:var(--obs-amber-faint)!important;background:var(--obs-plate)!important}
 body[data-layout="observatory"] .dk.obs-dk[data-st="cue"]{border-color:var(--obs-amber-faint)!important;background:var(--obs-plate)!important}
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]){
+  opacity:1!important;
+  filter:none!important;
+  mix-blend-mode:normal!important;
+}
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-hdr,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-body,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-meta,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-center,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-right{
+  opacity:1!important;
+  filter:none!important;
+  mix-blend-mode:normal!important;
+}
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-num,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-name,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-model,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-track,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-artist,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-mini,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-mini *,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-flags,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-flags *,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-tc-stack,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-tc-stack *,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-smpte-row,
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-smpte-row *{
+  opacity:1!important;
+  filter:none!important;
+  mix-blend-mode:normal!important;
+}
 
 /* HEADER — 모든 패딩 8px 통일 (다른 셀과 일관). */
 body[data-layout="observatory"] .obs-hdr{
@@ -1291,12 +1320,12 @@ body[data-layout="observatory"] .obs-state-cell{
   display:flex;align-items:center;justify-content:center;
   width:60px;flex:0 0 60px;
   height:28px;
-  border:1px solid var(--obs-amber-dim);
-  background:var(--obs-void);
+  border:1px solid var(--obs-amber);
+  background:rgba(245,176,65,.08);
   box-sizing:border-box;
 }
 /* pill 자체는 wrapper 안에서 border 안 보이게 (wrapper 박스가 외곽선 역할) */
-body[data-layout="observatory"] .obs-state-cell .obs-state.dbadge.bm{
+body[data-layout="observatory"] .obs-state-cell .obs-state.dbadge{
   border:none!important;background:transparent!important;
   width:auto!important;min-width:auto!important;max-width:none!important;
   padding:2px 4px!important;
@@ -1315,19 +1344,39 @@ body[data-layout="observatory"] .obs-flags{display:flex;gap:5px}
 body[data-layout="observatory"] .obs-flags .obs-flag,
 body[data-layout="observatory"] .obs-flags .dksm-btn{
   padding:2px 6px 2px;
-  border:1px solid var(--obs-amber-dim);
+  border:1px solid var(--obs-amber);
   font:500 8.5px 'JetBrains Mono',monospace;
   letter-spacing:.18em;
-  color:var(--obs-amber-dim);
-  background:var(--obs-void);
+  color:var(--obs-amber);
+  background:rgba(245,176,65,.08);
   text-transform:uppercase;
   height:auto;border-radius:0!important;
 }
-body[data-layout="observatory"] .obs-flags .dksm-sync.on{background:var(--obs-amber);color:var(--obs-plate);border-color:var(--obs-amber)}
-body[data-layout="observatory"] .obs-flags .dksm-master.on{background:var(--obs-green);color:var(--obs-void);border-color:var(--obs-green)}
-body[data-layout="observatory"] .obs-flags .obs-air{background:var(--obs-void);color:var(--obs-amber-dim);border:1px solid var(--obs-amber-dim);padding:2px 6px}
-body[data-layout="observatory"] .obs-flags .obs-air:not(.off){background:var(--obs-red);color:var(--obs-void);border-color:var(--obs-red)}
+body[data-layout="observatory"] .obs-flags .dksm-sync.on{
+  background:var(--obs-amber)!important;
+  color:var(--obs-plate)!important;
+  border-color:var(--obs-amber)!important;
+  box-shadow:0 0 8px rgba(245,176,65,.35)!important;
+}
+body[data-layout="observatory"] .obs-flags .dksm-master.on{
+  background:var(--obs-green)!important;
+  color:var(--obs-void)!important;
+  border-color:var(--obs-green)!important;
+  box-shadow:0 0 8px rgba(107,255,169,.35)!important;
+}
+body[data-layout="observatory"] .obs-flags .obs-air{background:rgba(245,176,65,.08);color:var(--obs-amber);border:1px solid var(--obs-amber);padding:2px 6px}
+body[data-layout="observatory"] .obs-flags .obs-air:not(.off){
+  background:var(--obs-red)!important;
+  color:var(--obs-void)!important;
+  border-color:var(--obs-red)!important;
+  box-shadow:0 0 8px rgba(255,90,90,.35)!important;
+}
 body[data-layout="observatory"] .obs-flags .obs-air.off{display:inline-flex!important}
+body[data-layout="observatory"] .obs-flags .dksm-btn.on,
+body[data-layout="observatory"] .obs-flags .obs-air.on{
+  opacity:1!important;
+  filter:none!important;
+}
 body[data-layout="observatory"] .dk[data-type="virtual"] .dbadge.br.obs-air{display:inline-flex!important}
 
 /* MINI bars (state pill 옆) */
@@ -1335,30 +1384,34 @@ body[data-layout="observatory"] .obs-mini{
   display:flex;gap:3px;height:24px;align-items:stretch;
 }
 body[data-layout="observatory"] .obs-mini .col{
-  width:5px;border:1px solid var(--obs-amber-dim);
-  background:var(--obs-void);position:relative;overflow:hidden;
+  width:5px;border:1px solid var(--obs-amber);
+  background:rgba(245,176,65,.07);position:relative;overflow:hidden;
 }
 body[data-layout="observatory"] .obs-mini .dvu-hfill{
   position:absolute!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;
   width:auto!important;height:var(--vu-level,0%)!important;border-radius:0!important;
 }
-body[data-layout="observatory"] .obs-mini .col.fader .dvu-hfill{background:var(--obs-amber)!important}
+body[data-layout="observatory"] .obs-mini .col.fader .dvu-hfill{
+  background:var(--obs-amber)!important;
+  box-shadow:0 0 8px rgba(245,176,65,.45);
+}
 body[data-layout="observatory"] .obs-mini .col.vu .dvu-hfill{
   background:linear-gradient(0deg,var(--obs-green) 0%,var(--obs-green) 55%,var(--obs-amber) 78%,var(--obs-red) 95%)!important;
+  box-shadow:0 0 8px rgba(107,255,169,.35);
 }
 body[data-layout="observatory"] .obs-mini .col::after{
   content:'';position:absolute;inset:0;pointer-events:none;
-  background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(0,0,0,.5) 5px 6px);
+  background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(0,0,0,.22) 5px 6px);
 }
 
 /* STATE pill — 60px 완전 고정. !important 로 .dbadge 전역 padding 덮어 fix. */
-body[data-layout="observatory"] .obs-state.dbadge.bm{
+body[data-layout="observatory"] .obs-state.dbadge{
   font-family:'JetBrains Mono',monospace!important;
   font-weight:700!important;font-size:10px!important;letter-spacing:.08em!important;
-  color:var(--obs-amber);
+  color:var(--obs-amber)!important;
   padding:4px 0 5px!important;
-  border:1px solid var(--obs-amber-dim);
-  background:var(--obs-void);
+  border:1px solid var(--obs-amber)!important;
+  background:rgba(245,176,65,.08)!important;
   border-radius:0!important;
   text-transform:uppercase;
   display:inline-flex!important;align-items:center;justify-content:center;
@@ -1368,10 +1421,12 @@ body[data-layout="observatory"] .obs-state.dbadge.bm{
   flex:0 0 60px!important;
   box-sizing:border-box!important;
 }
-body[data-layout="observatory"] .dk.obs-dk[data-st="play"] .obs-state{color:var(--obs-green);border-color:var(--obs-green)}
-body[data-layout="observatory"] .dk.obs-dk[data-st="cue"] .obs-state{color:var(--obs-amber);border-color:var(--obs-amber)}
-body[data-layout="observatory"] .dk.obs-dk[data-st="loop"] .obs-state{color:var(--obs-cyan);border-color:var(--obs-cyan)}
-body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-state{color:var(--obs-ink-low);border-color:var(--obs-ink-low)}
+body[data-layout="observatory"] .dk.obs-dk[data-st="play"] .obs-state{color:var(--obs-green)!important;border-color:var(--obs-green)!important;background:rgba(107,255,169,.10)!important}
+body[data-layout="observatory"] .dk.obs-dk[data-st="cue"] .obs-state{color:var(--obs-amber)!important;border-color:var(--obs-amber)!important;background:rgba(245,176,65,.10)!important}
+body[data-layout="observatory"] .dk.obs-dk[data-st="loop"] .obs-state{color:var(--obs-cyan)!important;border-color:var(--obs-cyan)!important;background:rgba(80,214,255,.10)!important}
+body[data-layout="observatory"] .dk.obs-dk[data-st="stop"] .obs-state{color:var(--obs-amber)!important;border-color:var(--obs-amber)!important;background:rgba(245,176,65,.08)!important}
+body[data-layout="observatory"] .dk.obs-dk[data-st="empty"] .obs-state{color:var(--obs-ink-low)!important;border-color:var(--obs-ink-low)!important;background:transparent!important}
+body[data-layout="observatory"] .dk.obs-dk:not([data-st="empty"]) .obs-state{opacity:1!important;filter:none!important}
 
 /* BODY — meta(좌 84px, art 꽉 채움) | center(가변, 웨이브폼 폭↑) | right(180px) */
 body[data-layout="observatory"] .obs-body{
@@ -1395,7 +1450,7 @@ body[data-layout="observatory"] .obs-meta .dkart{
 }
 body[data-layout="observatory"] .obs-meta .dkart img{
   width:100%;height:100%;object-fit:cover;display:block;
-  filter:brightness(.7) saturate(.8);
+  filter:none;
 }
 body[data-layout="observatory"] .obs-meta-list{
   display:flex;flex-direction:column;gap:6px;
@@ -3001,16 +3056,18 @@ function _hwColorHeightToRgbWf(pts,heightDivisor){
     for(let i=0;i<n;i++){
       const o=i*2;
       const [r,g,b]=_cdjColorToRGB(pts[o]);
-      const h=pts[o+1]/div;
-      out[i]={r,g,b,h,mn:-h,mx:h};
+      const h=Math.max(0,Math.min(1,pts[o+1]/div));
+      const on=h>0.0001?1:0;
+      out[i]={r:r*on,g:g*on,b:b*on,h,mn:-h,mx:h};
     }
     return out;
   }
   for(let i=0;i<n;i++){
     const p=pts[i]||{};
     const [r,g,b]=_cdjColorToRGB(p.color);
-    const h=(p.height||0)/div;
-    out[i]={r,g,b,h,mn:-h,mx:h};
+    const h=Math.max(0,Math.min(1,(p.height||0)/div));
+    const on=h>0.0001?1:0;
+    out[i]={r:r*on,g:g*on,b:b*on,h,mn:-h,mx:h};
   }
   return out;
 }
@@ -3137,7 +3194,7 @@ function _wfBuildStripIfNeeded(d, slot){
   const partialFrac = (totalDur > 0 && dur > 0) ? Math.max(0.05, Math.min(1, dur / totalDur)) : 1.0;
   // 캐시 hit: 이미 빌드됨 → GL 텍스처만 재확인 후 'available' 으로 보고.
   if(d._stripKey === key && d._stripBitmap){
-    if(d.wgl && d.wgl.setStrip && !d.wgl.hasStrip()) d.wgl.setStrip(d._stripBitmap, dur, key);
+    if(d.wgl && d.wgl.setStrip) d.wgl.setStrip(d._stripBitmap, totalDur, key, partialFrac);
     // partialFrac 도 매번 갱신 (분석 진행 → frac 증가) — overview 가 정확한 진행 비율 표시.
     if(d.ovgl && d.ovgl.setStrip) d.ovgl.setStrip(d._stripBitmap, partialFrac, key);
     return true;
@@ -3158,7 +3215,7 @@ function _wfBuildStripIfNeeded(d, slot){
   if(!bm) return false;
   d._stripBitmap = bm;
   d._stripKey = key;
-  if(d.wgl && d.wgl.setStrip) d.wgl.setStrip(bm, dur, key);
+  if(d.wgl && d.wgl.setStrip) d.wgl.setStrip(bm, totalDur, key, partialFrac);
   if(d.ovgl && d.ovgl.setStrip) d.ovgl.setStrip(bm, partialFrac, key);
   console.log(`[strip] slot${slot} ${bm.width}x${bm.height} theme=${theme} hw=${isHw?1:0} ${(performance.now()-t0).toFixed(1)}ms`);
   return true;
@@ -3716,7 +3773,11 @@ function drawOverview(slot,prog){
 // → 메인 스레드 영향 미미하면서 줌/테마/시크 시 항상 native 해상도. 캐시 16384px 캡 블러 회피.
 function _drawPcmOscilloscope(slot, prog){
   const d=DECKS[slot];
-  if(!d?._pcm?.samples) return false;
+  if(!d) return false;
+  const isHw = d.type === 'hw';
+  // Virtual: real PCM samples required. HW: rgbWf(Detail) height envelope substitutes.
+  if(!isHw && !d._pcm?.samples) return false;
+  if(isHw && !d.dur) return false;
   // 매 frame × 4 deck × 120fps — d._els 캐시 사용 (stale 시 fallback).
   const wzov = (d._els && d._els.wzov && d._els.wzov.isConnected) ? d._els.wzov : document.getElementById('wzov'+slot);
   if(!wzov) return false;
@@ -3735,16 +3796,19 @@ function _drawPcmOscilloscope(slot, prog){
   // 1px 미만 변동은 동일 출력, 1px 변동은 정확히 1px 시각 shift (rekordbox 식 부드러운 스크롤).
   const posMs=Math.round(posMsRaw/msPerPx)*msPerPx;
   const viewL=posMs-cX*msPerPx;
-  const samples=d._pcm.samples, sr=d._pcm.sampleRate;
+  const samples=isHw?null:d._pcm.samples, sr=isHw?0:d._pcm.sampleRate;
+  const durationMs=isHw?d.dur:d._pcm.durationMs;
   const halfH=H*0.37, midY=H/2;
-  // Normalize gain — 트랙 전체 max abs 로 1회 계산 (rekordbox 처럼 envelope 가 마진까지 꽉 차게).
-  // 일반 음원은 ±0.5 정도라 halfH 영역의 절반만 차서 작아 보임. ±1 로 정규화하면 halfH 까지 도달.
-  if(!d._pcm._normGain){
-    let m=0; const s=samples;
-    for(let i=0;i<s.length;i++){const a=s[i]<0?-s[i]:s[i]; if(a>m)m=a;}
-    d._pcm._normGain = m>0.01 ? (1/m) : 1;
+  // Normalize gain — virtual deck 만 적용 (HW height 는 이미 0..1 정규화된 envelope).
+  let _ng=1;
+  if(!isHw){
+    if(!d._pcm._normGain){
+      let m=0; const s=samples;
+      for(let i=0;i<s.length;i++){const a=s[i]<0?-s[i]:s[i]; if(a>m)m=a;}
+      d._pcm._normGain = m>0.01 ? (1/m) : 1;
+    }
+    _ng=d._pcm._normGain;
   }
-  const _ng=d._pcm._normGain;
   // 색상 lookup: overview/strip 와 정확히 동일 데이터 소스 사용 (_wfRenderDataForDeck).
   const wfBand=_wfRenderDataForDeck(d);
   const bandLen=wfBand?_wfLen(wfBand):0;
@@ -3757,7 +3821,8 @@ function _drawPcmOscilloscope(slot, prog){
   // 3band: PCM 모양 mirror 가 아니라 Pioneer 스타일 stacked-band 렌더링 (lo/mi/hi/ai 누적 레이어).
   // mono:  주황 단일 hue 지만 강약(엔벨로프)으로 밝기 조절.
   // rgb:   PCM 모양 + band 색상 가중 합성 (기본).
-  if(themeMode==='3band'){
+  // HW: rgbWf 가 band amplitudes 가 아니라 (r,g,b,h) 시퀀스 → 3band 우회, mono/rgb 분기로 envelope 렌더.
+  if(themeMode==='3band' && !isHw){
     // 3band — PCM peak mn/mx 로 outer 모양 (RGB/Mono 와 동일 sharp envelope) + band 별 inner layer 로 색 stack.
     // 이전 코드는 band amplitude 만으로 그려 bar 형식처럼 boring. 이제 PCM 의 자연스러운 spike 모양 +
     // 각 band 가 그 envelope 안의 layer 로 stack (BLUE outer, ORANGE 중간, CREAM, WHITE inner).
@@ -3824,20 +3889,45 @@ function _drawPcmOscilloscope(slot, prog){
   // Jitter 완화: 인접 픽셀 sample 윈도우 25% 오버랩 → 픽셀 경계에서 peak 가 한 픽셀 튀는 현상 감소.
   const overlapMs=msPerPx*0.125;
   let _lastFillKey=-1; // fillStyle 변경 skip 용 (인접 픽셀 같은 색이면 string allocation 절감)
+  // HW peak-pool 윈도우 (1px 폭 + 인접 보강).
   for(let x=0;x<W;x++){
     const tMs=viewL+x*msPerPx;
-    if(tMs<0||tMs>d._pcm.durationMs)continue;
-    const sStart=Math.max(0, Math.floor((tMs-overlapMs)/1000*sr));
-    const sEnd=Math.min(samples.length, Math.floor((tMs+msPerPx+overlapMs)/1000*sr));
-    let mn=1, mx=-1;
-    for(let i=sStart;i<sEnd;i++){const v=samples[i];if(v<mn)mn=v;if(v>mx)mx=v;}
-    if(mn>mx)continue;
-    // 트랙 normalize — 3band 와 동일.
-    mn*=_ng; mx*=_ng;
+    if(tMs<0||tMs>durationMs)continue;
+    let mn, mx;
+    if(isHw){
+      // HW: wfBand height envelope 으로 mn/mx 합성. 한 픽셀이 여러 bin 에 걸치면 max 풀링.
+      if(bandLen<2 || bandRate<=0) continue;
+      const bf0=Math.max(0, (tMs-overlapMs)/1000*bandRate);
+      const bf1=Math.min(bandLen, Math.max(bf0+1, (tMs+msPerPx+overlapMs)/1000*bandRate));
+      const bI0=Math.floor(bf0), bI1=Math.ceil(bf1);
+      let h=0;
+      for(let bi=bI0; bi<bI1 && bi<bandLen; bi++){
+        const p=window.WFStrip.wfBin(wfBand, bi);
+        if(!p) continue;
+        const ph=p.h!=null?p.h:Math.max(p.r||0,p.g||0,p.b||0,p.a||0);
+        if(ph>h) h=ph;
+      }
+      if(h<=0.005) continue;
+      mn=-h; mx=h;
+    }else{
+      const sStart=Math.max(0, Math.floor((tMs-overlapMs)/1000*sr));
+      const sEnd=Math.min(samples.length, Math.floor((tMs+msPerPx+overlapMs)/1000*sr));
+      mn=1; mx=-1;
+      for(let i=sStart;i<sEnd;i++){const v=samples[i];if(v<mn)mn=v;if(v>mx)mx=v;}
+      if(mn>mx)continue;
+      // 트랙 normalize — 3band 와 동일.
+      mn*=_ng; mx*=_ng;
+    }
     if(mn<-1)mn=-1; if(mx>1)mx=1;
     const yMx=midY-mx*halfH, yMn=midY-mn*halfH;
     let lo=0.5, mid=0.5, hi=0.5, air=0.5;
-    if(bandLen>0){
+    let _hwCol=null;
+    if(isHw){
+      // HW: per-bin RGB 색을 그대로 사용 (CDJ 가 보낸 실제 트랙 색상).
+      const bI=Math.max(0, Math.min(bandLen-1, Math.floor(tMs/1000*bandRate)));
+      const p=window.WFStrip.wfBin(wfBand, bI);
+      if(p) _hwCol=window.WFColor.hwPointColor(p, !!d._pwv7);
+    }else if(bandLen>0){
       // overview 셰이더와 정확히 동치: 30ms MAX peak-pool + 4-tap 가중 보간 (CR4 근사).
       // 너무 넓은 MAX 윈도우는 kick + hat 가 같이 잡혀 모든 band 가 높아짐 → dominant 사라져 cyan 으로 빠짐.
       // 30ms = overview 의 per-texel pool 크기. 여기에 인접 4 bin 가중 평균으로 셰이더 CR4 와 맞춤.
@@ -3862,7 +3952,8 @@ function _drawPcmOscilloscope(slot, prog){
       lo=aLo; mid=aMi; hi=aHi; air=aAi;
     }
     // 색 inline — colorOfSample 의 배열 allocation 제거 + 동일 색 연속 시 fillStyle skip.
-    const _c = _wfPaintFn(lo, mid, hi, air);
+    // HW: per-bin RGB 직접 사용 (CDJ track color 보존). Virtual: theme paint fn 적용.
+    const _c = _hwCol || _wfPaintFn(lo, mid, hi, air);
     let r=(_c[0]*255+0.5)|0, g=(_c[1]*255+0.5)|0, b=(_c[2]*255+0.5)|0;
     if(r>255)r=255; if(r<0)r=0; if(g>255)g=255; if(g<0)g=0; if(b>255)b=255; if(b<0)b=0;
     const _key=(r<<16)|(g<<8)|b;
@@ -3882,7 +3973,9 @@ function drawZoomWaveform(slot,prog){
   const pos=Math.max(0,Math.min(1,prog||0));
   // Virtual deck: PCM 디코드 트리거 + oscilloscope 모드 (사용 가능 시)
   if(d.type!=='hw'&&!d._pcm&&!d._pcmPromise&&d._audioBlob){_decodePcmFor(d,slot);}
-  if(d.type!=='hw'&&d._pcm&&d.dur>0){
+  // PCM-style oscilloscope: virtual 은 decode 된 _pcm.samples, HW 는 wfDetail height envelope 사용 (A+C 하이브리드).
+  const _hwHasWf = d.type==='hw' && d.dur>0 && wfData && _wfLen(wfData)>=2;
+  if(((d.type!=='hw'&&d._pcm&&d.dur>0)) || _hwHasWf){
     if(_drawPcmOscilloscope(slot,prog)) return;
   }
   // 웨이브폼 데이터 없어도 중앙선은 그려서 트랙 길이 / 시간 감 유지
@@ -6063,8 +6156,13 @@ function tick(){
     // setAttribute/style 변경은 reflow 트리거 가능 → key 가드로 변동 시만 갱신.
     const _dt = d.type==='hw'?'hw':'virtual';
     if(d._lastDtAttr!==_dt){ d._lastDtAttr=_dt; el.setAttribute('data-type', _dt); }
-    const _dst = d._isLooping?'play':d._isReverse?'play':d.scratch?'scratch':d.pl?'play':d.cu?'cue':'stop';
+    const _dst = d._isLooping?'loop':d._isReverse?'play':d.scratch?'scratch':d.pl?'play':d.cu?'cue':'stop';
     if(d._lastDstAttr!==_dst){ d._lastDstAttr=_dst; el.setAttribute('data-st', _dst); }
+    if(document.body.dataset.layout==='observatory' && _dst!=='empty'){
+      el.style.opacity='1';
+      el.style.filter='none';
+      el.style.mixBlendMode='normal';
+    }
     // USB media color — deck border + glow via inline style (overrides data-st CSS).
     {
       const _MCOL=_MEDIA_COLORS;
@@ -6200,7 +6298,11 @@ function tick(){
         _vuBarEl(d._els.dvuL, d.vuL||0);
         // Fader bar (linear, not dB)
         const fEl=d._els.dvuF;
-        if(fEl){const h=Math.round((d._faderSmooth||0)*100);fEl.style.setProperty('--vu-level',h+'%');fEl.style.background='var(--pur)';}
+        if(fEl){
+          const h=Math.round((d._faderSmooth||0)*100);
+          fEl.style.setProperty('--vu-level',h+'%');
+          fEl.style.background=document.body.dataset.layout==='observatory'?'var(--obs-amber)':'var(--pur)';
+        }
       } else if(d.vuChs&&d.vuChs.length>0){
         const CH_IDS=['L','R','3','4','5','6','7','8'];
         d.vuChs.forEach((an,i)=>_vuBarEl('dvu'+(CH_IDS[i]||String(i+1))+slot, an._lvl||0));
@@ -6247,7 +6349,8 @@ function tick(){
       if(d._lastBgKey!==_bgKey){
         d._lastBgKey=_bgKey;
         bg.textContent=d._isLooping?'LOOP':d._isReverse?'REV':d.scratch?'SCRATCH':d.pl?'PLAY':d.cu?'CUE':'STOP';
-        bg.className='dbadge '+(d._isLooping?'bg':d._isReverse?'br':d.pl?'bg':d.scratch?'bb':d.cu?'by':'bm');
+        const obsClass = bg.classList.contains('obs-state') || document.body.dataset.layout==='observatory' ? ' obs-state' : '';
+        bg.className='dbadge '+(d._isLooping?'bg':d._isReverse?'br':d.pl?'bg':d.scratch?'bb':d.cu?'by':'bm')+obsClass;
       }
     }
     // ON AIR badge — always visible, toggle on/off classes (no layout reflow)
@@ -6269,7 +6372,8 @@ function tick(){
       const _didKey=`${d.type}|${d._mediaColor||0}|${d.scratch?1:0}|${d.pl?1:0}|${d.cu?1:0}`;
       if(d._lastDidKey!==_didKey){
         d._lastDidKey=_didKey;
-        did.style.color=usbC||(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)');
+        const _isObs=document.body.dataset.layout==='observatory';
+        did.style.color=usbC||(_isObs?'var(--obs-amber)':(d.type==='hw'?'var(--pur)':d.scratch?'var(--org)':d.pl?'var(--grn)':d.cu?'var(--ylw)':'var(--tx3)'));
       }
     }
     // CUE/PLAY button states — CDJ-3000 style. d._els 캐시 사용 (querySelector 8/frame 절감).

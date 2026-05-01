@@ -167,6 +167,36 @@ test('2d fallback cache uses signed min/max peaks', () => {
   assert.match(renderer, /bots2\[px\]=mid\+_shapePeak\(-mn\)\*mid\*0\.95/, 'fallback bottom contour is not signed');
 });
 
+test('detail strip masks unanalysed waveform tail', () => {
+  const glPath = path.join(__dirname, '..', 'renderer', 'waveform-gl.js');
+  const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
+  const gl = fs.readFileSync(glPath, 'utf8');
+  const renderer = fs.readFileSync(rendererPath, 'utf8');
+  const shader = shaderConst('_WGL_STRIP_DETAIL_FS');
+  assert.match(shader, /uniform float u_partialFrac;/, 'detail strip shader should accept partial fraction');
+  assert.match(shader, /if\s*\(trackU > frac\)\s*\{\s*fragColor = vec4\(BG, 1\.0\);\s*return;\s*\}/, 'detail strip should blank unavailable tail');
+  assert.match(shader, /trackU \/ frac/, 'detail strip should map partial data into analysed fraction only');
+  assert.match(gl, /setStrip\(image,\s*durMs,\s*key,\s*partialFrac = 1\.0\)/, 'WaveformGL.setStrip should accept partialFrac');
+  assert.match(renderer, /d\.wgl\.setStrip\(d\._stripBitmap,\s*totalDur,\s*key,\s*partialFrac\)/, 'detail strip cache hit should pass full duration and partialFrac');
+  assert.match(renderer, /d\.wgl\.setStrip\(bm,\s*totalDur,\s*key,\s*partialFrac\)/, 'detail strip upload should pass full duration and partialFrac');
+});
+
+test('waveform renderers blank true silence instead of anti-alias filling it', () => {
+  const stripPath = path.join(__dirname, '..', 'renderer', 'waveform-strip.js');
+  const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
+  const strip = fs.readFileSync(stripPath, 'utf8');
+  const renderer = fs.readFileSync(rendererPath, 'utf8');
+  const zoom = shaderConst('_WGL_ZOOM_FS');
+  const overview = shaderConst('_WGL_OV_FS');
+  assert.match(strip, /if\s*\(H <= 0\.0001\)\s*return 0;/, 'CPU strip symMask should return transparent for zero-height bins');
+  assert.match(zoom, /if\s*\(H <= 0\.0001\)\s*return 0\.0;/, 'detail WebGL symMask should return transparent for zero-height bins');
+  assert.match(zoom, /if\s*\(peakBand < 0\.001\)\s*\{\s*fragColor = BG;\s*return;\s*\}/, 'detail WebGL should blank zero-energy samples');
+  assert.match(overview, /if\s*\(peakBand < 0\.001\)\s*\{\s*fragColor = played \? BG_PLAYED : BG;\s*return;\s*\}/, 'overview WebGL should blank zero-energy samples');
+  assert.match(zoom, /if\s*\(u_mode == 4\)\s*\{[\s\S]*float hAll = airEnv \* sLow;[\s\S]*if\s*\(hAll < 0\.001\)/, 'detail WebGL HW legacy mode should use height alpha as envelope');
+  assert.match(overview, /if\s*\(u_mode == 4\)\s*\{[\s\S]*float hAll = airEnv \* waveH \* 0\.92;[\s\S]*if\s*\(hAll < 0\.001\)/, 'overview WebGL HW legacy mode should use height alpha as envelope');
+  assert.match(renderer, /const on=h>0\.0001\?1:0;[\s\S]*out\[i\]=\{r:r\*on,g:g\*on,b:b\*on,h,mn:-h,mx:h\};/, 'HW color conversion should gate RGB by height');
+});
+
 test('virtual waveform analysis mixes all decoded channels', () => {
   // Phase 2.5 이후 채널 수집/믹스 로직은 waveform-analysis.js + rgbwf-worker.js 로 이전.
   // analysis: getChannelData 로 각 채널 수집 → worker 로 transfer
