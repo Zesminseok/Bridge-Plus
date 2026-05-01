@@ -8,6 +8,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.0.2 — 2026-05-02
+
+30-day demo evaluation build.
+
+### Changed (vs 1.0.0.12)
+
+- **CDJ-3000 push parsers** — added beat grid (`0x56` sub=`0x03`) and color waveform (`0x56` sub=`0x35`/`0x28`/`0x2A`) parsers so beat/waveform data is available immediately when a track loads, before/independent of dbserver fetch. NXS2 path untouched (`name` guard).
+- **NXS2 abs pos packet (`0x0b`) recognition** — large-capture analysis confirmed NXS2 sends 60Hz `0x0b` packets during playback. Sub-counter at byte 0x2B (16Hz wrap) noted as auxiliary timing source for future precision improvements.
+- **Versioning** — switched to clean semver (`1.0.2`) and dropped the four-segment `1.0.0.NN` pattern.
+
 ## 1.0.0.12 — 2026-05-01
 
 30-day demo evaluation build.

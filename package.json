@@ -1,6 +1,6 @@
 {
   "name": "bridge-plus",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "BRIDGE+ — independent interoperability tool for compatible DJ, visual, lighting, and timecode workflows",
   "main": "main.js",
   "scripts": {
@@ -40,7 +40,7 @@
       "**/*.node",
       "vendor/abletonlink-mini/build/Release/**"
     ],
-    "artifactName": "${productName}-1.0.0.12-${os}-${arch}.${ext}",
+    "artifactName": "${productName}-1.0.2-${os}-${arch}.${ext}",
     "files": [
       "main.js",
       "main/**/*",
@@ -122,7 +122,7 @@
       ]
     },
     "portable": {
-      "artifactName": "${productName}-1.0.0.12-${os}-${arch}-portable.${ext}"
+      "artifactName": "${productName}-1.0.2-${os}-${arch}-portable.${ext}"
     },
     "nsis": {
       "oneClick": false,
