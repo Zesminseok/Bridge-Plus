@@ -372,7 +372,54 @@ function parsePDJL(msg, hints){
       }
       return{kind:'cdj_wf',playerNum:pNum,name,sub,seg,pts,wfType:'mono'};
     }
-    return null; // ignore beat grid (0x03) and others
+    if((sub===0x35 || sub===0x28 || sub===0x2a) && msg.length>0x50){
+      // CDJ-3000 color waveform push variants (verified on really_final.pcapng).
+      // Layout:
+      //   [0x34..0x37] uint32BE chunk start (ms)
+      //   [0x38..0x3B] uint32BE chunk length/end
+      //   [0x3C..0x3F] mode/slot bytes
+      //   [0x40..0x43] sentinel `03 05 00 00`
+      //   [0x44..]     2-byte stride: byte1=high nibble color (0-15)+low extra,
+      //                                byte2=height (0-255)
+      // Same shape as sub=0x25 but starts at 0x44 (after metadata header).
+      const isCdj3000 = typeof name==='string' && /CDJ-?3000/i.test(name);
+      if(!isCdj3000) return null;
+      const chunkStartMs = msg.length>0x37 ? msg.readUInt32BE(0x34) : 0;
+      const chunkLenMs   = msg.length>0x3B ? msg.readUInt32BE(0x38) : 0;
+      const sentinel0    = msg[0x40];
+      const sentinel1    = msg[0x41];
+      if(sentinel0!==0x03 || sentinel1!==0x05) return null;
+      const pts=[];
+      for(let i=0x44;i<msg.length-1;i+=2){
+        pts.push({color:(msg[i]>>4)&0xF, height:msg[i+1]});
+      }
+      return{kind:'cdj_wf',playerNum:pNum,name,sub,seg,pts,wfType:'color',
+             chunkStartMs,chunkLenMs,model:'CDJ-3000'};
+    }
+    if(sub===0x03 && msg.length>=0x44){
+      // Beat grid push — observed only from CDJ-3000 in really_final.pcapng.
+      // CDJ-2000NXS2 sends sub=0x01/0x02 only (no sub=0x03 in capture), so
+      // gate by model name to avoid mis-parsing if future NXS2 firmware reuses
+      // the same sub-type with a different layout.
+      // Layout (8-byte stride from 0x40):
+      //   [0..3]  uint32BE  position in ms
+      //   [4..5]  uint16BE  beat-in-bar (1=downbeat, 2..4)
+      //   [6]     0x32      bar marker constant
+      //   [7]     0x00
+      const isCdj3000 = typeof name==='string' && /CDJ-?3000/i.test(name);
+      if(!isCdj3000) return null;
+      const beats=[];
+      for(let i=0x40;i+8<=msg.length;i+=8){
+        const timeMs=msg.readUInt32BE(i);
+        const beatInBar=msg.readUInt16BE(i+4);
+        if(timeMs===0 && beatInBar===0) continue;
+        if(beatInBar<1 || beatInBar>4) continue;
+        beats.push({timeMs,beatInBar});
+      }
+      if(!beats.length) return null;
+      return{kind:'cdj_beat_grid',playerNum:pNum,name,seg,beats,model:'CDJ-3000'};
+    }
+    return null; // ignore other sub-types (0x06/0x28/0x2A/0x35 etc)
   }
   if(type===PDJL.ANN){
     // Media Slot Response (type 0x06, length > 0xA8) — contains USB color at 0xA8

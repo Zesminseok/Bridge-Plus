@@ -1928,6 +1928,42 @@ class BridgeCore {
     if(p.kind==='cdj_wf'){
       this.onWaveformPreview?.(p.playerNum, {seg:p.seg, pts:p.pts, wfType:p.wfType});
     }
+    if(p.kind==='cdj_beat_grid'){
+      // CDJ-3000 only — NXS2 fetches its beat grid from dbserver and never
+      // pushes 0x56 sub=0x03 (verified in really_final.pcapng).
+      //
+      // Source priority — dbserver fetch wins when available:
+      //   1) dbserver beat grid result (richer: tempo, bar markers) → marked
+      //      `_beatGridSource='dbserver'` upon fetch completion.
+      //   2) CDJ-3000 push (this path) — fills in early before fetch returns,
+      //      and ONLY overwrites if no dbserver result has arrived yet.
+      // This prevents the push from clobbering a more accurate dbserver grid
+      // when both paths produce data for the same deck (especially relevant
+      // when the CDJ-3000 deck is also the master and NXS2 follows it).
+      const pn = p.playerNum;
+      if(pn>=1 && pn<=6 && Array.isArray(p.beats)){
+        const prev = this._beatGrids[pn];
+        const prevFromDbserver = prev && prev._source === 'dbserver';
+        if(prevFromDbserver) {
+          // dbserver already populated — keep it.
+        } else if(!prev || prev.length < p.beats.length){
+          const beats = p.beats.map((b, i, arr) => {
+            let bpm = 0;
+            if(i+1<arr.length){
+              const dt = arr[i+1].timeMs - b.timeMs;
+              if(dt>50 && dt<2000) bpm = Math.round(60000/dt*100)/100;
+            } else if(i>0){
+              const dt = b.timeMs - arr[i-1].timeMs;
+              if(dt>50 && dt<2000) bpm = Math.round(60000/dt*100)/100;
+            }
+            return {timeMs:b.timeMs, beatInBar:b.beatInBar, bpm};
+          });
+          beats._source = 'cdj_push';
+          this._beatGrids[pn] = beats;
+          this.onBeatGrid?.(pn, {beats, baseBpm: beats[0]?.bpm || 0, source:'cdj_push'});
+        }
+      }
+    }
     if(p.kind==='announce'){
       const pn = p.playerNum;
       // Skip self-announce (bridge device) — double-check name and IP
