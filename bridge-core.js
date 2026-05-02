@@ -1616,10 +1616,39 @@ class BridgeCore {
         }
         p.cuePosMs = this._cuePosMs[p.playerNum] || 0;
 
-        // NXS2: 패킷에 loop 필드 없음 → positionFraction 역전으로 추론한 loop 경계 주입
+        // ── [NXS2 ONLY] 패킷에 loop 필드 없음 → positionFraction 역전으로 추론한 loop 경계 주입 ──
         if(p.isNXS2 && acc?._loopStartMs > 0 && acc?._loopEndMs > acc._loopStartMs){
           p.loopStartMs = acc._loopStartMs;
           p.loopEndMs   = acc._loopEndMs;
+        }
+
+        // ── [CDJ-3000 ONLY] inferred loop ──
+        // 3000 은 0x0a 에 loop fields 안 보냄 (캡처 분석 확인). timecodeMs wrap 으로 추정:
+        //   LOOP 진입 첫 packet → loopStart = timecodeMs.
+        //   동안 timecodeMs max 추적.
+        //   timecodeMs < start (wrap) 시 → loopEnd = 직전 max.
+        // NXS2 와 절대 acc field 공유 안 함 (사용자 요건: 두 모델 코드 분리).
+        if(!p.isNXS2 && acc){
+          if(p.isLooping){
+            if(acc._cdj3kLoopStart == null){
+              acc._cdj3kLoopStart = timecodeMs;
+              acc._cdj3kLoopMax = timecodeMs;
+              acc._cdj3kLoopEnd = 0;
+            }
+            if(timecodeMs > acc._cdj3kLoopMax) acc._cdj3kLoopMax = timecodeMs;
+            if(timecodeMs < acc._cdj3kLoopStart - 100){
+              acc._cdj3kLoopEnd = acc._cdj3kLoopMax;
+            }
+            const sEnd = acc._cdj3kLoopEnd > acc._cdj3kLoopStart ? acc._cdj3kLoopEnd : acc._cdj3kLoopMax;
+            if(sEnd > acc._cdj3kLoopStart){
+              p.loopStartMs = acc._cdj3kLoopStart;
+              p.loopEndMs   = sEnd;
+            }
+          } else {
+            acc._cdj3kLoopStart = null;
+            acc._cdj3kLoopEnd = 0;
+            acc._cdj3kLoopMax = 0;
+          }
         }
 
         // NXS2/CDJ 상세 로그 — 0.5s 간격 + 상태 전환마다. 타임코드 지터/점프/CP 추적용.
