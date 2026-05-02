@@ -160,19 +160,16 @@ test('PDJL announce path stays on the selected interface broadcast only', () => 
   assert.strictEqual(source.includes("if(iface) return [iface.broadcast, '255.255.255.255'];"), false);
 });
 
-test('DJM subscribe sockets — 모든 platform 50001 source 통일', () => {
-  // platform 분기 제거: subSocks 는 단일 [_pdjlSocketByPort[50001]] 로 통일.
+test('DJM subscribe uses shared 50001 socket — no separate TX sock', () => {
   const source = fs.readFileSync(corePath, 'utf8');
-  assert.strictEqual(source.includes('this._pdjlSocketByPort?.[50001]'), true);
-  assert.strictEqual(source.includes('const subSocks = [this._pdjlSocketByPort?.[50001]].filter(Boolean);'), true);
+  assert.strictEqual(source.includes("[this._pdjlSocketByPort?.[50001]].filter(Boolean)"), true);
+  assert.strictEqual(source.includes("_djmSubTxSock || this._djmSubAuxSock"), false);
 });
 
-test('macOS bridge notify uses 50001 source (Windows path 와 동일)', () => {
+test('bridge notify uses port 50006 socket first — STC reference port', () => {
   const source = fs.readFileSync(corePath, 'utf8');
-  // darwin path: 50001 우선 fallback → 50002 → annSock.
-  assert.strictEqual(source.includes(": (this._pdjlSocketByPort?.[50001] || this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock);"), true);
-  // Windows path 보존.
-  assert.strictEqual(source.includes("(this._djmSubSockReady ? this._djmSubSock : (this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock))"), true);
+  assert.strictEqual(source.includes("this._pdjlSocketByPort?.[50006]"), true);
+  assert.strictEqual(source.includes("[50000, 50001, 50002, 50003, 50004, 50006]"), true);
 });
 
 test('macOS bridge join timing matches STC reference capture pattern', () => {

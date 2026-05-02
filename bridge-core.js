@@ -400,6 +400,8 @@ class BridgeCore {
       this._djmSubSock=null;
       try{this._djmSubAuxSock?.close();}catch(_){}
       this._djmSubAuxSock=null;
+      try{this._djmSubTxSock?.close();}catch(_){}
+      this._djmSubTxSock=null;
       console.log('[BridgeCore] sockets closed');
     };
     // 250ms gives OS UDP buffer ample time to flush all OptOut bursts before socket close
@@ -543,6 +545,7 @@ class BridgeCore {
     if(this._djmSubSock){ try{this._djmSubSock.close();}catch(_){} this._djmSubSock=null; }
     this._djmSubSockReady=false;
     if(this._djmSubAuxSock){ try{this._djmSubAuxSock.close();}catch(_){} this._djmSubAuxSock=null; }
+    if(this._djmSubTxSock){ try{this._djmSubTxSock.close();}catch(_){} this._djmSubTxSock=null; }
 
     // Close existing PDJL sockets
     if(this._pdjlAnnSock && !this._pdjlSockets?.includes(this._pdjlAnnSock)){
@@ -716,7 +719,7 @@ class BridgeCore {
     const winBindIp = process.platform==='win32'
       ? ((this.pdjlBindAddr && this.pdjlBindAddr!=='auto' && this.pdjlBindAddr!=='0.0.0.0') ? this.pdjlBindAddr : (autoPdjlIface?.address || undefined))
       : undefined;
-    for(const port of [50000, 50001, 50002, 50003, 50004]){
+    for(const port of [50000, 50001, 50002, 50003, 50004, 50006]){
       try{
         const sock = dgram.createSocket({type:'udp4', reuseAddr:true});
         const bindAddr = process.platform==='win32' ? winBindIp : undefined;
@@ -820,41 +823,19 @@ class BridgeCore {
         this._pdjlAnnSock=s;
       }
     }
-    // DJM subscribe socket. Prefer the standard PDJL 50001 source port.
-    // Some DJM/macOS combinations ignore 0x57 when it is sent from the
-    // older dedicated 50006 helper, even though discovery packets are visible.
+    // DJM subscribe socket — shared 0.0.0.0:50001 RX socket.
+    // macOS: 0.0.0.0 bind 소켓에서 send 시 kernel 이 routing table 로 올바른 src IP 자동 설정.
+    //        별도 pdjlIP:50001 TX sock 은 broadcast 수신 간섭 → devices['djm'] 미감지 버그.
     if(this._djmSubSock && this._djmSubSock!==this._pdjlSocketByPort?.[50001]){ try{this._djmSubSock.close();}catch(_){} }
     if(this._djmSubAuxSock){ try{this._djmSubAuxSock.close();}catch(_){} this._djmSubAuxSock=null; }
+    if(this._djmSubTxSock){ try{this._djmSubTxSock.close();}catch(_){} this._djmSubTxSock=null; }
     this._djmSubSockReady=false;
-    if(process.platform==='win32'){
-      this._djmSubSock=this._pdjlSocketByPort?.[50001] || null;
-      if(this._djmSubSock){
-        console.log(`[PDJL] DJM subscribe socket active ${pdjlIP}:50001`);
-      }else{
-        console.warn('[PDJL] DJM subscribe socket unavailable on 50001');
-      }
+    this._djmSubSock=this._pdjlSocketByPort?.[50001] || null;
+    if(this._djmSubSock){
+      this._djmSubSockReady=true;
+      console.log(`[PDJL] DJM subscribe socket active (shared) ${pdjlIP}:50001`);
     }else{
-      this._djmSubSock=this._pdjlSocketByPort?.[50001] || null;
-      if(this._djmSubSock){
-        this._djmSubSockReady=true;
-        console.log(`[PDJL] DJM subscribe socket active ${pdjlIP}:50001`);
-      }else{
-        console.warn('[PDJL] DJM subscribe socket unavailable on 50001');
-      }
-      this._djmSubAuxSock=dgram.createSocket({type:'udp4',reuseAddr:true});
-      this._djmSubAuxSock.on('error',e=>console.warn('[PDJL] DJM aux sub socket error:',e.message));
-      this._djmSubAuxSock.on('message',(msg,rinfo)=>{
-        if(!liveSession()) return;
-        this._onPDJL(msg, rinfo);
-      });
-      try{
-        this._djmSubAuxSock.bind(0, pdjlIP, ()=>{
-          const a=this._djmSubAuxSock.address();
-          console.log(`[PDJL] DJM bridge subscribe socket active ${a.address}:${a.port}`);
-        });
-      }catch(e){
-        console.warn('[PDJL] DJM aux sub socket bind failed:',e.message);
-      }
+      console.warn('[PDJL] DJM subscribe socket unavailable on 50001');
     }
 
     const sendAnn=()=>{
@@ -980,11 +961,10 @@ class BridgeCore {
     };
     const sendBridgeNotifyToAll=()=>{
       if(!liveSession()) return;
-      // Windows: 기존 path 유지 (50002 src — Windows DJM 동작 검증됨).
-      // macOS: 50001 src 로 통일 (Windows 의 0x57 src 와 동일 → DJM 응답 일관성).
-      const notifySock = process.platform==='win32'
-        ? (this._djmSubSockReady ? this._djmSubSock : (this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock))
-        : (this._pdjlSocketByPort?.[50001] || this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock);
+      const notifySock = this._pdjlSocketByPort?.[50006]
+        || this._pdjlSocketByPort?.[50001]
+        || this._pdjlSocketByPort?.[50002]
+        || this._pdjlAnnSock;
       if(!notifySock) return;
       for(const [, dev] of Object.entries(this.devices||{})){
         if(dev?.type!=='CDJ' || !dev.ip) continue;
@@ -1007,8 +987,6 @@ class BridgeCore {
       const djmIp=this.devices?.['djm']?.ip;
       if(!djmIp){ return; }
       const pkts=buildSubPkts();
-      // port 50001 소켓 우선 사용 (DJM이 선호하는 소스 포트)
-      // Windows/macOS 통일: 50001 source 만 사용 (DJM 이 src=50001 응답 기대).
       const subSocks = [this._pdjlSocketByPort?.[50001]].filter(Boolean);
       if(!subSocks.length){ console.warn('[PDJL] 0x57: no socket available'); return; }
       const srcs=[];
@@ -1650,33 +1628,15 @@ class BridgeCore {
           p.loopEndMs   = acc._loopEndMs;
         }
 
-        // ── [CDJ-3000 ONLY] inferred loop ──
-        // 3000 은 0x0a 에 loop fields 안 보냄 (캡처 분석 확인). timecodeMs wrap 으로 추정:
-        //   LOOP 진입 첫 packet → loopStart = timecodeMs.
-        //   동안 timecodeMs max 추적.
-        //   timecodeMs < start (wrap) 시 → loopEnd = 직전 max.
-        // NXS2 와 절대 acc field 공유 안 함 (사용자 요건: 두 모델 코드 분리).
-        if(!p.isNXS2 && acc){
-          if(p.isLooping){
-            if(acc._cdj3kLoopStart == null){
-              acc._cdj3kLoopStart = timecodeMs;
-              acc._cdj3kLoopMax = timecodeMs;
-              acc._cdj3kLoopEnd = 0;
-            }
-            if(timecodeMs > acc._cdj3kLoopMax) acc._cdj3kLoopMax = timecodeMs;
-            if(timecodeMs < acc._cdj3kLoopStart - 100){
-              acc._cdj3kLoopEnd = acc._cdj3kLoopMax;
-            }
-            const sEnd = acc._cdj3kLoopEnd > acc._cdj3kLoopStart ? acc._cdj3kLoopEnd : acc._cdj3kLoopMax;
-            if(sEnd > acc._cdj3kLoopStart){
-              p.loopStartMs = acc._cdj3kLoopStart;
-              p.loopEndMs   = sEnd;
-            }
-          } else {
-            acc._cdj3kLoopStart = null;
-            acc._cdj3kLoopEnd = 0;
-            acc._cdj3kLoopMax = 0;
-          }
+        // ── [CDJ-3000 ONLY] LOOP 추적 비활성 ──
+        // 캡처 분석: 3000 은 LOOP 동안 beatNum 고정 (예: bn=390 unchanging) +
+        // 0x11C anchor 도 ±4ms 만 진동 → 어떤 신호로도 loop 길이 추론 불가.
+        // saved cue 가 있으면 renderer 의 cue list fallback (cue.type==='loop')
+        // 으로 표시. 없으면 LOOP 오버레이 표시 안 함 (잘못된 박스 X).
+        if(!p.isNXS2 && acc && !p.isLooping){
+          acc._cdj3kLoopMinBn = null;
+          acc._cdj3kLoopMaxBn = null;
+          acc._cdj3kLoopPrevBn = null;
         }
 
         // NXS2/CDJ 상세 로그 — 0.5s 간격 + 상태 전환마다. 타임코드 지터/점프/CP 추적용.
