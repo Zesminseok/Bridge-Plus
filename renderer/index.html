@@ -3204,9 +3204,15 @@ function _wfBuildStripIfNeeded(d, slot){
   if(d._stripLastTryAt && (now - d._stripLastTryAt) < 800) return false;
   d._stripLastTryAt = now;
   const t0 = now;
+  // GPU MAX_TEXTURE_SIZE 까지 (보통 16384) — HW raw detail (5분+ PWV7 = 45000pts) 보존.
+  let maxTexSize = 16384;
+  try {
+    const gl = d.wgl?.gl;
+    if (gl) maxTexSize = Math.min(16384, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 8192);
+  } catch (_) {}
   let bm;
   try {
-    bm = WFStrip.buildStrip({ wfData: wfD, theme, height: H, isHw, isPwv7 });
+    bm = WFStrip.buildStrip({ wfData: wfD, theme, height: H, isHw, isPwv7, maxWidth: maxTexSize });
   } catch(e) {
     console.warn('[strip] build failed', e);
     return false;

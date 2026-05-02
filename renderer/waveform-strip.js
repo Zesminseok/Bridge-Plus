@@ -57,21 +57,16 @@
 
   // 픽셀별 색 산출 — 셰이더 main() 과 동치.
   // theme: 0=3band, 1=RGB, 2=Mono.
-  // 반환: { hLow, hMid, hHi, hAir, hPeak, lowCol, midCol, hiCol, airCol, traceCol }
-  // (3band 는 layer 색이 고정 상수, RGB/Mono 는 traceCol 단일 사용)
+  // HW PWV7/3band (raw lo/mi/hi 가 r/g/b 슬롯, ai=0): virtual 과 동일 path 통과 → theme 작동.
+  // HW 1-byte palette (이미 색): 단일 색 path (theme 의미 없음).
   function colsForBin(p, theme, yLimit, isHw, isPwv7) {
-    let lo = p.r, mi = p.g, hi = p.b, ai = p.a;
-    // HW 모드 — band 슬롯 의미가 다름. PWV7 은 (low,mid,hi), 1-byte preview 는 이미 RGB.
-    // strip 렌더에서 HW 는 rekordbox 풍 4-band 가 아니라 단일 색 + 높이 (h) 로 표현.
-    if (isHw) {
-      const col = WFC.hwPointColor(p, isPwv7);
-      const hAll = (p.h || Math.max(lo, mi, hi)) * yLimit;
-      return {
-        mode: 'hw',
-        hAll,
-        col,
-      };
+    if (isHw && !isPwv7) {
+      // 1-byte palette: r/g/b 슬롯이 이미 0-1 RGB. theme 무시.
+      const col = WFC.hwLegacyColor(p.r || 0, p.g || 0, p.b || 0);
+      const hAll = (p.h || Math.max(p.r || 0, p.g || 0, p.b || 0)) * yLimit;
+      return { mode: 'hw', hAll, col };
     }
+    let lo = p.r || 0, mi = p.g || 0, hi = p.b || 0, ai = p.a || 0;
     const heights = WFC.bandHeights(lo, mi, hi, ai, yLimit);
     const pk = WFC.peakBand(lo, mi, hi, ai);
     if (theme === 1) {
@@ -125,7 +120,9 @@
     const wfData = opts.wfData;
     const theme  = opts.theme | 0;
     const H      = Math.max(8, opts.height | 0);
-    const maxW   = opts.maxWidth | 0 || 8192;
+    // GPU MAX_TEXTURE_SIZE 16384 까지 사용 — 이전 8192 한계는 5분+ HW PWV7
+    // (45000pts) 을 5.5:1 로 강제 다운샘플 → "해상도 떨어진다" 의 원인.
+    const maxW   = opts.maxWidth | 0 || 16384;
     const isHw   = !!opts.isHw;
     const isPwv7 = !!opts.isPwv7;
     const AA     = opts.aa != null ? +opts.aa : 0.9;
@@ -254,8 +251,8 @@
     }
 
     // 가로 1-pass 블러 ([1,2,1]/4) — rekordbox 풍 부드러움.
-    // 가로만 → envelope 수직 모양 보존. ImageData 직접 가공.
-    if (W >= 4) {
+    // HW 모드에서는 raw 데이터 보존을 위해 블러 skip ("원본 데이터에서 색만 입혀야" 요건).
+    if (!isHw && W >= 4) {
       const tmp = new Uint8ClampedArray(buf.length);
       for (let y = 0; y < H; y++) {
         const row = y * W * 4;
