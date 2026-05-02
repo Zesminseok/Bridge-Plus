@@ -35,10 +35,11 @@ function parsePDJL(msg, hints){
     // Effective pitch (includes jog wheel nudge) — model-specific:
     // CDJ-2000NXS2: offset 0x99 (3B) is reliable (jog nudge), fallback to 0x8D if zero
     // CDJ-3000: offset 0x99 is 0x000000 in cued/paused state → always use fader pitch 0x8D
+    const actualSpeedRaw = msg.length>0x9B ? msg.readUInt32BE(0x98) : 0;
     const v99 = isNXS2 && msg.length>0x9B ? (msg[0x99]*65536 + msg[0x9A]*256 + msg[0x9B]) : 0;
     const effPitchRaw = isNXS2
-      ? (v99 || pitchRaw)  // NXS2: 0x99 includes jog nudge
-      : pitchRaw;          // CDJ-3000: fader pitch only
+      ? (v99 || actualSpeedRaw || pitchRaw)
+      : (actualSpeedRaw || pitchRaw);
     const effPitch = (effPitchRaw-0x100000)/0x100000*100;
     // Effective BPM: trackBpm × (1 + effPitch/100)
     let bpmEff = trackBpm>0 ? Math.round(trackBpm*(1+effPitch/100)*100)/100 : 0;
@@ -89,13 +90,10 @@ function parsePDJL(msg, hints){
     // Reverse detection: FFRV state or backward vinyl mode (p3=0x0A)
     const isReverse = state===STATE.FFRV || p3===0x0A;
     const pitchMultiplier = effPitchRaw / 0x100000;  // 1.0 = normal speed
-    // Loop start/end from extended packet (NXS2 0x0a 후미 / CDJ-3000 0x0b 동등).
-    // raw 는 fixed-point: 1ms = 65536/1000 = 65.536 unit → ms = raw × 1000 / 65536.
-    // (이전 공식 raw × 65536 / 1000 은 역방향이라 실제 1-beat 루프도 65배 크게 보임 → "구간 크게 표현" 문제.)
     const loopStartRaw = msg.length>0x1C1 ? msg.readUInt32BE(0x1B6) : 0;
     const loopEndRaw   = msg.length>0x1C5 ? msg.readUInt32BE(0x1BE) : 0;
-    const loopStartMs  = loopStartRaw > 0 ? Math.round(loopStartRaw * 1000 / 65536) : 0;
-    const loopEndMs    = loopEndRaw   > 0 ? Math.round(loopEndRaw   * 1000 / 65536) : 0;
+    const loopStartMs  = loopStartRaw > 0 ? Math.round(loopStartRaw * 65536 / 1000) : 0;
+    const loopEndMs    = loopEndRaw   > 0 ? Math.round(loopEndRaw   * 65536 / 1000) : 0;
     // ── Playback position anchor (0x11C-0x11F LE uint32) ──
     // 캡처 분석 결과 NXS2/CDJ-3000 모두 0x0a status 의 0x11C 에 LE uint32 로 위치 정보 송신.
     // 단위: 1초 = 65,280 unit (0xFF00). ms = val × 1000 / 65280.

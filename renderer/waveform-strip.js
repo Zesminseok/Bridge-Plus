@@ -55,14 +55,11 @@
     return { r, g, b, a, h };
   }
 
-  // 픽셀별 색 산출 — 셰이더 main() 과 동치.
-  // theme: 0=3band, 1=RGB, 2=Mono.
-  // HW PWV7/3band (raw lo/mi/hi 가 r/g/b 슬롯, ai=0): virtual 과 동일 path 통과 → theme 작동.
-  // HW 1-byte palette (이미 색): 단일 색 path (theme 의미 없음).
   function colsForBin(p, theme, yLimit, isHw, isPwv7) {
-    if (isHw && !isPwv7) {
-      // 1-byte palette: r/g/b 슬롯이 이미 0-1 RGB. theme 무시.
-      const col = WFC.hwLegacyColor(p.r || 0, p.g || 0, p.b || 0);
+    if (isHw) {
+      const col = isPwv7
+        ? [p.r || 0, p.g || 0, p.b || 0]
+        : WFC.hwLegacyColor(p.r || 0, p.g || 0, p.b || 0);
       const hAll = (p.h || Math.max(p.r || 0, p.g || 0, p.b || 0)) * yLimit;
       return { mode: 'hw', hAll, col };
     }

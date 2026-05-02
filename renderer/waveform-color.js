@@ -106,11 +106,8 @@
     ];
   }
 
-  // ─── HW PWV7 (Pioneer high-res 4-byte) → RGB ───
-  // virtual rgbTraceColor 와 동일 path — 3-band raw 데이터를 air=0 으로 두고 통과시켜
-  // mac/HW 모드 색감을 virtual 과 동일한 vivid spectrum 으로 통일.
   function hwPwv7Color(low, mid, hi) {
-    return rgbTraceColor(low, mid, hi, 0);
+    return [low, mid, hi];
   }
 
   // ─── HW 1-byte (preview/detail) → RGB ───

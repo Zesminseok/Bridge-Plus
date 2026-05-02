@@ -1317,6 +1317,11 @@ class BridgeCore {
             acc._anchorMs = null; acc._anchorTime = null;
             acc._noBeatAnchorTime = null; acc._noBeatAnchorMs = null;
             acc._bwGuardCount = 0;
+            // NXS2 LOOP cycle state reset (PLAY 진입 시 이전 cycle 데이터 클리어).
+            acc._nxs2LoopMinBn = null; acc._nxs2LoopMaxBn = null;
+            acc._nxs2LoopPrevBn = null; acc._nxs2LoopLastBn = null;
+            acc._nxs2LoopBeatAnchorMs = null; acc._nxs2LoopBeatAnchorTime = null;
+            acc._loopDbgSrc = null;
             acc.prevBn = 0;
             // NXS2 한정: cue→play 시 첫 PLAYING status 의 beatNum 이 cue 위치 +1 로
             // 송신되는 펌웨어 동작 → 저장된 cuePos 를 anchor 로 미리 세팅.
@@ -1335,75 +1340,89 @@ class BridgeCore {
           acc._transportActive = true;
 
           // ── [NXS2 ONLY] LOOP path ── (3000 와 절대 공유 안 함)
-          // TC forward 진행 + 정확한 boundary wrap.
-          // 우선순위: (1) status 패킷의 loopStartMs/loopEndMs (parser 가 추출),
-          //           (2) saved loop cue 매칭, (3) BPM 기반 4-beat fallback.
+          // 핵심 신호: NXS2 LOOP 시 beatNum 이 cycle (예: 69→70→71→72→69→70...).
+          // 캡처 분석 (fullll.pcapng) 으로 확인: bn cycle 자체가 정확한 loop 신호.
+          //   - cycle min/max → loopStart/loopEnd beat
+          //   - bn 감소 (wrap) 시점 → 정확한 loop wrap
+          //   - timecodeMs = beatGrid[bn-1].timeMs (또는 (bn-1)*60000/bpm) + beat 사이 외삽
+          // saved cue / 4-beat default 의존 X — bn cycle 만으로 정확.
           if(p.isNXS2 && p.isLooping){
             const wasLooping = (this.layers[li]?.state === STATE.LOOPING);
-            const fracLoopMs = (p.positionFraction > 0 && totalLenMs > 0)
-              ? Math.round(p.positionFraction * totalLenMs)
-              : 0;
+            const bn = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
             const beatMs = p.bpm > 0 ? 60000/p.bpm : (p.bpmTrack > 0 ? 60000/p.bpmTrack : 60000/130);
-            let baseMs = 0;
-            let loopEndMs = 0;
-            let source = 'inferred';
+            const bg = this._beatGrids?.[p.playerNum];
+            const beatToMs = (b) => {
+              if(b <= 0) return 0;
+              if(bg && (b-1) >= 0 && (b-1) < bg.length) return bg[b-1].timeMs;
+              return p.bpmTrack > 0 ? Math.round((b-1) * 60000 / p.bpmTrack) : 0;
+            };
 
-            // (1) status 패킷의 loop fields — sanity check (총 길이 안, 1/16~32-beat 범위).
-            const minLoopMs = Math.max(50, beatMs * 0.0625);   // 1/16 beat
-            const maxLoopMs = beatMs * 64;                       // 64-beat 까지 허용
-            const sLen = (p.loopEndMs || 0) - (p.loopStartMs || 0);
-            const sValid = p.loopStartMs > 0 && p.loopEndMs > p.loopStartMs &&
-                           sLen >= minLoopMs && sLen <= maxLoopMs &&
-                           (totalLenMs === 0 || p.loopEndMs <= totalLenMs + beatMs);
-            if(sValid){
-              baseMs = p.loopStartMs;
-              loopEndMs = p.loopEndMs;
-              source = 'status';
+            // LOOP 진입 또는 새 cycle (bn=0 invalid 일 땐 skip).
+            if(!wasLooping || acc._nxs2LoopMinBn == null){
+              if(bn > 0){
+                acc._nxs2LoopMinBn = bn;
+                acc._nxs2LoopMaxBn = bn;
+                acc._nxs2LoopPrevBn = bn;
+                acc._nxs2LoopBeatAnchorMs = beatToMs(bn);
+                acc._nxs2LoopBeatAnchorTime = Date.now();
+                acc._nxs2LoopLastBn = bn;
+              }
+            }
+
+            // bn cycle 추적 — wrap 감지 + min/max 갱신.
+            let wrapped = false;
+            if(bn > 0 && acc._nxs2LoopPrevBn != null){
+              if(bn < acc._nxs2LoopPrevBn){
+                // 감소 = wrap. min 갱신 (루프 시작점).
+                wrapped = true;
+                if(bn < acc._nxs2LoopMinBn) acc._nxs2LoopMinBn = bn;
+              } else {
+                if(bn > acc._nxs2LoopMaxBn) acc._nxs2LoopMaxBn = bn;
+              }
+              acc._nxs2LoopPrevBn = bn;
+            }
+
+            // loopStart/loopEnd beat → ms.
+            const minBn = acc._nxs2LoopMinBn || bn || 1;
+            const maxBn = acc._nxs2LoopMaxBn || bn || 1;
+            const loopStartMsCalc = beatToMs(minBn);
+            const loopEndMsCalc   = beatToMs(maxBn + 1);   // wrap 시점 = 다음 beat
+            acc._loopStartMs = Math.round(loopStartMsCalc);
+            acc._loopEndMs   = Math.round(loopEndMsCalc > loopStartMsCalc ? loopEndMsCalc : loopStartMsCalc + beatMs);
+
+            // timecodeMs: bn 기반 + beat 사이 외삽. wrap 시 즉시 reset.
+            if(wrapped){
+              acc._nxs2LoopBeatAnchorMs = beatToMs(bn);
+              acc._nxs2LoopBeatAnchorTime = Date.now();
+              acc._nxs2LoopLastBn = bn;
+              timecodeMs = Math.round(acc._nxs2LoopBeatAnchorMs);
+            } else if(bn > 0 && acc._nxs2LoopLastBn !== bn){
+              // beat 크로싱 — anchor 갱신.
+              acc._nxs2LoopBeatAnchorMs = beatToMs(bn);
+              acc._nxs2LoopBeatAnchorTime = Date.now();
+              acc._nxs2LoopLastBn = bn;
+              timecodeMs = Math.round(acc._nxs2LoopBeatAnchorMs);
+            } else if(acc._nxs2LoopBeatAnchorMs != null){
+              // 같은 beat 안 — pitch 외삽 (loopEnd 넘지 않게 clamp).
+              const elapsed = Date.now() - (acc._nxs2LoopBeatAnchorTime || Date.now());
+              const advance = elapsed * (p.pitchMultiplier || 1);
+              const candidate = acc._nxs2LoopBeatAnchorMs + advance;
+              const lEnd = acc._loopEndMs;
+              timecodeMs = Math.round(candidate >= lEnd ? lEnd - 5 : candidate);
             } else {
-              // (2) saved cue 매칭.
-              if(!wasLooping){
-                const lastTc = this.layers[li]?.timecodeMs || 0;
-                acc._loopAnchorMs = lastTc > 0 ? lastTc : (fracLoopMs || acc._fracMs || 0);
-                acc._loopAnchorTime = Date.now();
-              }
-              baseMs = acc._loopAnchorMs || 0;
-              loopEndMs = baseMs + beatMs * 4;
-              const cuePts = this._cuePoints?.[p.playerNum];
-              if(cuePts){
-                const anchorMs = fracLoopMs || baseMs;
-                const matchedLoop = cuePts.find(c =>
-                  c.type === 'loop' && c.loopEndMs > c.timeMs &&
-                  anchorMs >= c.timeMs - beatMs * 2 &&
-                  anchorMs <= c.loopEndMs + beatMs * 2
-                ) || cuePts.find(c =>
-                  c.type === 'loop' && c.loopEndMs > c.timeMs &&
-                  Math.abs(c.timeMs - anchorMs) < beatMs * 2
-                );
-                if(matchedLoop){
-                  baseMs = matchedLoop.timeMs;
-                  loopEndMs = matchedLoop.loopEndMs;
-                  source = 'cue';
-                }
-              }
+              timecodeMs = this.layers[li]?.timecodeMs || 0;
             }
 
-            if(!wasLooping || source === 'status'){
-              acc._loopAnchorTime = Date.now();
-            }
-            const loopMs = Math.max(1, loopEndMs - baseMs);
-            const elapsed = Date.now() - (acc._loopAnchorTime || Date.now());
-            const advance = elapsed * (p.pitchMultiplier || 1);
-            timecodeMs = Math.round(baseMs + (advance % loopMs));
-            acc._loopStartMs = Math.round(baseMs);
-            acc._loopEndMs   = Math.round(loopEndMs);
-            // anchor 동기화 — 루프 풀릴 때 ms 점프 최소화.
+            // 외부 anchor 동기화 (루프 풀릴 때 ms 점프 최소화).
             acc._fracMs = timecodeMs;
             acc._fracAnchorTime = Date.now();
             acc._anchorMs = timecodeMs;
             acc._anchorTime = Date.now();
+            const source = bg ? 'bn-cycle+grid' : 'bn-cycle+bpm';
             if(!acc._loopDbgSrc || acc._loopDbgSrc !== source){
               acc._loopDbgSrc = source;
-              _dbgLog(`[NXS2-LOOP] P${p.playerNum} src=${source} [${baseMs.toFixed(0)}..${loopEndMs.toFixed(0)}]ms (${loopMs.toFixed(0)}ms ≈ ${(loopMs/beatMs).toFixed(2)} beat)`);
+              const lLen = acc._loopEndMs - acc._loopStartMs;
+              _dbgLog(`[NXS2-LOOP] P${p.playerNum} src=${source} bn[${minBn}..${maxBn}] [${acc._loopStartMs}..${acc._loopEndMs}]ms (${lLen}ms ≈ ${(lLen/beatMs).toFixed(2)} beat)`);
             }
           } else if(p.isNXS2 && p.positionFraction > 0 && totalLenMs > 0){
             // ── [NXS2 ONLY] positionFraction + 외삽 path ── (3000 와 절대 공유 안 함)
@@ -1473,6 +1492,14 @@ class BridgeCore {
             }
           } else {
             // BPM-less / trackBeats=0 fallback — beat 카운터 + pitch extrapolation
+            // NXS2 LOOP 해제 직후 cycle state cleanup (다음 LOOP 진입 시 새로 시작).
+            if(p.isNXS2 && acc._nxs2LoopMinBn != null && !p.isLooping){
+              acc._nxs2LoopMinBn = null; acc._nxs2LoopMaxBn = null;
+              acc._nxs2LoopPrevBn = null; acc._nxs2LoopLastBn = null;
+              acc._nxs2LoopBeatAnchorMs = null; acc._nxs2LoopBeatAnchorTime = null;
+              acc._loopStartMs = 0; acc._loopEndMs = 0;
+              acc._loopDbgSrc = null;
+            }
             const bg = this._beatGrids?.[p.playerNum];
             const beatNum = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
             const beatIdx = beatNum - 1;
