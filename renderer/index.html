@@ -3176,6 +3176,7 @@ function _wfRenderDataForStrip(d){
 }
 function _wfBuildStripIfNeeded(d, slot){
   if(!d || !window.WFStrip) return false;
+  if(d.type === 'hw') return false;
   const wfD = _wfRenderDataForStrip(d);
   const n = wfD ? _wfLen(wfD) : 0;
   if(n < 2) return false;
