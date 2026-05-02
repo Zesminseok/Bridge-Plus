@@ -16,30 +16,23 @@ const PDJL = {
   DJM_METER:0x58,  // DJM VU Metering (port 50001, 524B)
 };
 
-// keepalive byte 0x24 identity — 검증된 고정값 (random 시도 시 Windows 연결 실패).
-//   Windows: 0xBD — DJM 연결 성공
-//   Mac    : 0xDA — 과거 정상 동작 이력 유지
-function pdjlBridgeAnnounceId(platform=process.platform){
-  return platform==='darwin' ? 0xDA : 0xBD;
+// keepalive byte 0x24 identity — Windows 검증값 통일 (mac 도 동일).
+function pdjlBridgeAnnounceId(/*platform=process.platform*/){
+  return 0xBD;
 }
 
-function pdjlIdentityByteFromMac(mac, platform=process.platform){
-  return platform==='darwin' ? 0xF9 : pdjlBridgeAnnounceId(platform);
+function pdjlIdentityByteFromMac(/*mac, platform=process.platform*/){
+  return 0xBD;
 }
 
 function pdjlBridgeName(platform=process.platform){
   return 'TCS-SHOWKONTROL';
 }
 
-function pdjlClaimCheckByte(macLast, seqN, platform=process.platform){
+function pdjlClaimCheckByte(macLast, seqN /*, platform=process.platform */){
+  // Windows fullcap4 공식 통일 — macOS 도 동일.
   const seq = seqN & 0xFF;
   const mac = macLast & 0xFF;
-  if(platform==='darwin'){
-    // STC reference: byte 0x2E is a token whose exact value does not affect
-    // DJM fader activation — only the overall claim structure matters.
-    return (mac ^ ((seq * 3 + 0xFB) & 0xFF)) & 0xFF;
-  }
-  // Windows fullcap4/win-bridge: MAC[5] XOR (0x57 + seqN).
   return (mac ^ ((0x57 + seq) & 0xFF)) & 0xFF;
 }
 
@@ -95,10 +88,8 @@ function buildPdjlBridgeKeepalivePacket(annIP, annMAC, deviceId=5, platform=proc
   p[0x25]=0x00;
   for(let i=0;i<6;i++) p[0x26+i]=aMAC[i]||0;
   for(let i=0;i<4;i++) p[0x2C+i]=aIP[i]||0;
-  // Keepalive byte 0x30 — DJM stream role hint.
-  //   macOS native implementations use 0x03 with identity 0xF9.
-  //   Windows fullcap4: 0x08, keep unchanged because Windows mixer data works.
-  p[0x30]=platform==='darwin' ? 0x03 : 0x08;
+  // Keepalive byte 0x30 — Windows fullcap4 검증값으로 통일.
+  p[0x30]=0x08;
   p[0x34]=deviceId&0xFF;
   p[0x35]=0x20;
   return p;
@@ -112,9 +103,8 @@ function buildDjmSubscribePacket(platform=process.platform){
   p[31]=0x01;
   p[32]=0x00;
   // Use the subscribe capability mask expected by target devices.
-  //   macOS native path: 0xFE (full fader + VU subscription)
-  //   Windows (fullcap4): 0xFF (전체 subscribe)
-  p[33]=platform==='darwin' ? 0xFE : 0xFF;
+  // Windows fullcap4 0xFF 로 통일 (mac 도 동일).
+  p[33]=0xFF;
   p[34]=0x00;
   p[35]=0x04;
   p[36]=0x01;

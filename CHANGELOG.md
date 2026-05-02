@@ -8,6 +8,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.0.4 — 2026-05-03
+
+- macOS Pro DJ Link bridge 분기 통일 (mac/win 동일 byte 셋, 0x57 src port 50001)
+- NXS2 jog forward 튐 보정 (snap threshold ±1500 → ±150 대칭)
+- 짧은 음원 트랙 변경 시 stale preview waveform/길이 잔존 fix
+
 ## 1.0.3 — 2026-05-03
 
 - NXS2 cue→play 첫 비트 점프 보정 (`_cuePosMs` anchor pre-set)

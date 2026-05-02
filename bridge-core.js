@@ -980,13 +980,11 @@ class BridgeCore {
     };
     const sendBridgeNotifyToAll=()=>{
       if(!liveSession()) return;
-      // Official macOS bridge captures send 0x55 notify from the bound aux
-      // DJM source port (50006).
-      const notifySock = process.platform==='darwin'
-        ? this._djmSubAuxSock
-        : this._djmSubSockReady
-        ? this._djmSubSock
-        : (this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock);
+      // Windows: 기존 path 유지 (50002 src — Windows DJM 동작 검증됨).
+      // macOS: 50001 src 로 통일 (Windows 의 0x57 src 와 동일 → DJM 응답 일관성).
+      const notifySock = process.platform==='win32'
+        ? (this._djmSubSockReady ? this._djmSubSock : (this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock))
+        : (this._pdjlSocketByPort?.[50001] || this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock);
       if(!notifySock) return;
       for(const [, dev] of Object.entries(this.devices||{})){
         if(dev?.type!=='CDJ' || !dev.ip) continue;
@@ -1010,22 +1008,8 @@ class BridgeCore {
       if(!djmIp){ return; }
       const pkts=buildSubPkts();
       // port 50001 소켓 우선 사용 (DJM이 선호하는 소스 포트)
-      const subSocks = process.platform==='win32'
-        ? [this._pdjlSocketByPort?.[50001]].filter(Boolean)
-        : process.platform==='darwin'
-        ? [this._djmSubAuxSock].filter(Boolean)
-        : this._djmSubSockReady
-        ? [this._djmSubSock, this._djmSubAuxSock]
-            .filter(Boolean)
-            .filter((s,i,a)=>a.indexOf(s)===i)
-        : [
-            this._pdjlSocketByPort?.[50001],
-            this._djmSubAuxSock,
-            this._pdjlSocketByPort?.[50000],
-            this._pdjlSocketByPort?.[50002],
-            this._pdjlSockets?.[0],
-            this._pdjlAnnSock,
-          ].filter(Boolean).filter((s,i,a)=>a.indexOf(s)===i).slice(0,2);
+      // Windows/macOS 통일: 50001 source 만 사용 (DJM 이 src=50001 응답 기대).
+      const subSocks = [this._pdjlSocketByPort?.[50001]].filter(Boolean);
       if(!subSocks.length){ console.warn('[PDJL] 0x57: no socket available'); return; }
       const srcs=[];
       const masksSent=[];
@@ -1416,12 +1400,11 @@ class BridgeCore {
               const elapsedA = now - acc._anchorTime;
               const expected = acc._anchorMs + elapsedA * p.pitchMultiplier;
               const delta = rawFracMs - expected;
-              // Snap 조건 — 실제 jump 만:
-              //   delta < -100ms      : 역방향 (hot cue back / loop / seek)
-              //   delta > 1500ms      : 큰 전방 jump (hot cue forward / seek)
-              //   p.isLooping         : 루프 경계
-              //   |delta| > 600 AND 누적 drift 의심 (pitch 오차 장기 축적)
-              if(delta < -100 || delta > 1500 || p.isLooping){
+              // Snap 조건 — backward/forward 대칭 (이전엔 forward 만 1500 → jog forward 누적
+              // 시 anchor 가 늦게 따라잡아 갑자기 튐. backward 는 -100 즉시라 부드러웠음).
+              //   |delta| > 150ms : seek / hot cue / jog 단계 — 즉시 anchor follow.
+              //   p.isLooping     : 루프 경계 wrap.
+              if(delta < -150 || delta > 150 || p.isLooping){
                 acc._anchorMs = rawFracMs;
                 acc._anchorTime = now;
               }

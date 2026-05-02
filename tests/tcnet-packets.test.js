@@ -113,13 +113,13 @@ test('MixerData channel block follows TCNet V3.5 field order', () => {
   assert.strictEqual(body[off + 13], 2);
 });
 
-test('DJM 0x57 subscribe matches native macOS bridge bitmask', () => {
+test('DJM 0x57 subscribe macOS uses Windows fullcap4 bitmask 0xFF (platform 통일)', () => {
   const pkt = core.buildDjmSubscribePacket('darwin');
   assert.strictEqual(pkt.slice(0, 10).compare(core.PDJL.MAGIC), 0);
   assert.strictEqual(pkt[0x0A], 0x57);
   assert.strictEqual(pkt[0x1f], 0x01);
   assert.strictEqual(pkt[0x20], 0x00);
-  assert.strictEqual(pkt[0x21], 0xfe);
+  assert.strictEqual(pkt[0x21], 0xff);
   assert.strictEqual(pkt[0x22], 0x00);
   assert.strictEqual(pkt[0x23], 0x04);
   assert.strictEqual(pkt[0x24], 0x01);
@@ -160,18 +160,19 @@ test('PDJL announce path stays on the selected interface broadcast only', () => 
   assert.strictEqual(source.includes("if(iface) return [iface.broadcast, '255.255.255.255'];"), false);
 });
 
-test('DJM subscribe sockets preserve Windows path and use macOS ephemeral bridge socket', () => {
+test('DJM subscribe sockets — 모든 platform 50001 source 통일', () => {
+  // platform 분기 제거: subSocks 는 단일 [_pdjlSocketByPort[50001]] 로 통일.
   const source = fs.readFileSync(corePath, 'utf8');
-  assert.strictEqual(source.includes("process.platform==='win32'"), true);
   assert.strictEqual(source.includes('this._pdjlSocketByPort?.[50001]'), true);
-  assert.strictEqual(source.includes('this._djmSubAuxSock.bind(0, pdjlIP'), true);
-  assert.strictEqual(source.includes("process.platform==='darwin'\n        ? [this._djmSubAuxSock].filter(Boolean)"), true);
+  assert.strictEqual(source.includes('const subSocks = [this._pdjlSocketByPort?.[50001]].filter(Boolean);'), true);
 });
 
-test('macOS bridge notify uses DJM bridge socket', () => {
+test('macOS bridge notify uses 50001 source (Windows path 와 동일)', () => {
   const source = fs.readFileSync(corePath, 'utf8');
-  assert.strictEqual(source.includes("const notifySock = process.platform==='darwin'\n        ? this._djmSubAuxSock"), true);
-  assert.strictEqual(source.includes('[PDJL-DIAG] mac 0x55 src='), true);
+  // darwin path: 50001 우선 fallback → 50002 → annSock.
+  assert.strictEqual(source.includes(": (this._pdjlSocketByPort?.[50001] || this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock);"), true);
+  // Windows path 보존.
+  assert.strictEqual(source.includes("(this._djmSubSockReady ? this._djmSubSock : (this._pdjlSocketByPort?.[50002] || this._pdjlAnnSock))"), true);
 });
 
 test('macOS bridge join timing matches STC reference capture pattern', () => {
@@ -224,11 +225,11 @@ test('PDJL bridge claim uses device id at byte 0x31', () => {
   assert.strictEqual(pkt.slice(0x28, 0x2e).toString('hex'), '020000000001');
 });
 
-test('PDJL bridge claim macOS check byte uses STC formula mac[5] XOR (counter*3 + 0xFB)', () => {
+test('PDJL bridge claim macOS uses Windows fullcap4 formula (platform 통일)', () => {
   const mac = '00:e0:4c:68:07:08';
   const macLast = 0x08;
   for(let n=1;n<=11;n++){
-    const expected = (macLast ^ ((n*3 + 0xFB) & 0xFF)) & 0xFF;
+    const expected = (macLast ^ ((0x57 + n) & 0xFF)) & 0xFF;
     const pkt = core.buildPdjlBridgeClaimPacket('169.254.182.136', mac, n, 5, 'darwin');
     assert.strictEqual(pkt[0x2E], expected, `n=${n}`);
     assert.strictEqual(pkt[0x2F], n);
@@ -246,14 +247,13 @@ test('PDJL bridge claim preserves current Windows check-byte formula', () => {
   }
 });
 
-test('PDJL bridge keepalive matches native macOS bridge role bytes', () => {
-  // macOS native bridge path: identity byte 0xF9, byte 0x30=0x03,
-  // 0x34=playerNum, 0x35=0x20 device-type role.
+test('PDJL bridge keepalive macOS uses Windows fullcap4 role bytes (platform 통일)', () => {
+  // macOS 가 Windows 와 동일한 byte 셋 사용 — DJM mixer 연결 OS-agnostic.
   const pkt = core.buildPdjlBridgeKeepalivePacket('169.254.1.10', '02:00:00:00:00:01', 5, 'darwin');
   assert.strictEqual(pkt.length, 54);
   assert.strictEqual(pkt[0x0A], 0x06);
-  assert.strictEqual(pkt[0x24], 0xF9);
-  assert.strictEqual(pkt[0x30], 0x03);
+  assert.strictEqual(pkt[0x24], 0xBD);
+  assert.strictEqual(pkt[0x30], 0x08);
   assert.strictEqual(pkt[0x34], 0x05);
   assert.strictEqual(pkt[0x35], 0x20);
 });

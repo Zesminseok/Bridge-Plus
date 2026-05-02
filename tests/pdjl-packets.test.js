@@ -23,18 +23,11 @@ test('PDJL: device type constants', () => {
   assert.strictEqual(pkt.PDJL.ANN, 0x06);
 });
 
-// ─── pdjlBridgeAnnounceId — 플랫폼별 identity byte ──────────────────────
+// ─── pdjlBridgeAnnounceId — Windows fullcap4 검증값으로 통일 (mac 도 동일) ──
 
-test('pdjlBridgeAnnounceId: macOS uses 0xDA', () => {
-  assert.strictEqual(pkt.pdjlBridgeAnnounceId('darwin'), 0xDA);
-});
-
-test('pdjlBridgeAnnounceId: Windows uses 0xBD', () => {
+test('pdjlBridgeAnnounceId: 모든 platform 0xBD 통일', () => {
+  assert.strictEqual(pkt.pdjlBridgeAnnounceId('darwin'), 0xBD);
   assert.strictEqual(pkt.pdjlBridgeAnnounceId('win32'), 0xBD);
-});
-
-test('pdjlBridgeAnnounceId: Linux falls back to Windows ID', () => {
-  // 기본적으로 darwin 외 모두 0xBD.
   assert.strictEqual(pkt.pdjlBridgeAnnounceId('linux'), 0xBD);
 });
 

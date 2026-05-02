@@ -7451,12 +7451,16 @@ if(E){
         // (새 pos 가 old waveform/dur 에 잘못 투영되는 것 방지)
         dk._trackChangePending=true;
         dk._smoothPos=null; dk._inferredSpeed=null;
+        // 짧은 음원 대응: stale waveform/길이 즉시 무효화. 새 데이터 도착 전까지 빈 상태로 보임 — confirm(3-packet) 까지 기다려도 detail/preview 가 이전 트랙 모양으로 보이는 문제 해결.
+        dk.rgbWf=null; dk.rgbWfDetail=null; dk._hwWfSegs=null; dk._hwWfImg=null; dk._wfCache=null; dk._ovOverlayCache=null; dk.dur=0;
       }else{
         dk._tidChangeCount=(dk._tidChangeCount||0)+1;
       }
       if(dk._tidChangeCount>=3){
         console.log(`[UI] P${status.playerNum} track change confirmed: ${oldTid} → ${newTid}`);
-        dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk._loadToken=(dk._loadToken||0)+1;dk._audioBlob=null;dk.rgbWfDetail=null;dk._wfCache=null;dk._ovOverlayCache=null;dk._pcm=null;dk._pcmPromise=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;
+        // 짧은 음원에서 stale 잔존 방지: rgbWf(preview)/dur 도 함께 reset.
+        // 이전엔 rgbWfDetail 만 reset → preview waveform/길이 가 이전 트랙 그대로 보였음.
+        dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.artUrl='';dk.art=null;dk._hwWfSegs=null;dk._hwWfImg=null;dk._loadToken=(dk._loadToken||0)+1;dk._audioBlob=null;dk.rgbWf=null;dk.rgbWfDetail=null;dk.dur=0;dk._wfCache=null;dk._ovOverlayCache=null;dk._pcm=null;dk._pcmPromise=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;dk._pwv7=false;
         dk.baseBpm=0;dk.bpm=0;dk.key='';dk._beatTime=0;dk._metaBaseBpm=false;
         dk._trackId=newTid;dk._tidChangeCount=0;dk._tidChangeTo=0;
         dk._trackChangePending=false; dk._smoothPos=null;
@@ -7500,7 +7504,7 @@ if(E){
       if(dk._noTrackCount>=3 && dk.ld){
         console.log(`[UI] P${status.playerNum} track ejected`);
         dk.ld=false;dk.tn='';dk.ar='';dk.pos=0;dk._posTime=0;dk._inferredSpeed=null;dk.pl=false;dk.bpm=0;
-        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk._loadToken=(dk._loadToken||0)+1;dk._audioBlob=null;dk.rgbWfDetail=null;dk._wfCache=null;dk._ovOverlayCache=null;dk._pcm=null;dk._pcmPromise=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
+        dk.artUrl='';dk._hwWfSegs=null;dk._hwWfImg=null;dk._loadToken=(dk._loadToken||0)+1;dk._audioBlob=null;dk.rgbWf=null;dk.rgbWfDetail=null;dk.dur=0;dk._wfCache=null;dk._ovOverlayCache=null;dk._pcm=null;dk._pcmPromise=null;dk.cuePoints=null;dk._beatGrid=null;dk.wfCapability=null;dk._pwv7=false;dk.baseBpm=0;dk.key='';dk._trackId=0;dk._metaBaseBpm=false;
         patchDeck(layerIndex);
       }
       return;

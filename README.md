@@ -3,7 +3,7 @@
 > Independent desktop bridge for synchronizing compatible DJ hardware, virtual decks, visual software, lighting systems, DAWs, and timecode workflows.
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.3-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.4-orange.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
 BRIDGE+ listens to compatible DJ network state and translates timing, transport, metadata, and deck information into practical outputs for visual, lighting, and production environments.
@@ -44,8 +44,8 @@ This release is a **30-day demo test build**. The demo period starts on first la
 
 Download the native package for your operating system from [Releases](../../releases):
 
-- **macOS**: `BRIDGE+-1.0.3-mac-x64.dmg` / `-mac-arm64.dmg`
-- **Windows**: `BRIDGE+-1.0.3-win-x64.exe`
+- **macOS**: `BRIDGE+-1.0.4-mac-x64.dmg` / `-mac-arm64.dmg`
+- **Windows**: `BRIDGE+-1.0.4-win-x64.exe`
 
 Install or run the downloaded package. No separate runtime installation is required for normal use.
 
@@ -109,8 +109,8 @@ BRIDGE+는 바이너리 애플리케이션으로 배포됩니다. 일부 상호�
 
 [Releases](../../releases)에서 운영체제에 맞는 네이티브 패키지를 다운로드하세요.
 
-- **macOS**: `BRIDGE+-1.0.3-mac-x64.dmg` / `-mac-arm64.dmg`
-- **Windows**: `BRIDGE+-1.0.3-win-x64.exe`
+- **macOS**: `BRIDGE+-1.0.4-mac-x64.dmg` / `-mac-arm64.dmg`
+- **Windows**: `BRIDGE+-1.0.4-win-x64.exe`
 
 다운로드한 패키지를 설치하거나 실행하면 됩니다. 일반 사용에는 별도 런타임 설치가 필요하지 않습니다.
 
