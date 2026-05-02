@@ -58,7 +58,7 @@
   function colsForBin(p, theme, yLimit, isHw, isPwv7) {
     if (isHw) {
       const col = isPwv7
-        ? [p.r || 0, p.g || 0, p.b || 0]
+        ? WFC.hwPwv7Color(p.r || 0, p.g || 0, p.b || 0)
         : WFC.hwLegacyColor(p.r || 0, p.g || 0, p.b || 0);
       const hAll = (p.h || Math.max(p.r || 0, p.g || 0, p.b || 0)) * yLimit;
       return { mode: 'hw', hAll, col };

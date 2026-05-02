@@ -107,7 +107,8 @@
   }
 
   function hwPwv7Color(low, mid, hi) {
-    return [low, mid, hi];
+    const m = Math.max(low, mid, hi, 0.001);
+    return [low / m, mid / m, hi / m];
   }
 
   // ─── HW 1-byte (preview/detail) → RGB ───

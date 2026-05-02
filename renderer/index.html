@@ -3089,7 +3089,8 @@ function _hwPackedPtsToObjects(pts){
 //   R = highRatio, G = 0.45 + highRatio*0.55, B = 1.0
 // 자체 bias 0.45 튜닝으로 중음대 명시성 확보 (GPU 셰이더와 동일 공식).
 function _hwPwv7ToRGB(low,mid,hi){
-  return [low, mid, hi];
+  const m = Math.max(low, mid, hi, 0.001);
+  return [low/m, mid/m, hi/m];
 }
 // Standard CDJ 1-byte preview (height 5-bit + color 3-bit)는 이미 _cdjColorToRGB()로 전처리됨.
 // HW 덱에서만 적용되는 포인트 → RGB 컨버터 단일 진입점

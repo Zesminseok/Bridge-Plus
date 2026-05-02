@@ -1308,11 +1308,12 @@ class BridgeCore {
           // ENDED 포함: NXS2 fw 1.87 은 hot cue 다중 누름 시 ENDED→PLAYING 직접 transition
           // (CUED 패킷 거치지 않음). ENDED 가 reset 트리거에 빠져있어 anchor 가 stale (totalLenMs)
           // 그대로 유지되어 timecode 가 즉시 끝으로 점프하던 버그 수정.
-          const wasStoppedLike = !wasTransportActive && (
+          const wasStoppedLike = (
             prevSt === STATE.CUEDOWN || prevSt === STATE.PAUSED ||
             prevSt === STATE.STOPPED || prevSt === STATE.IDLE || prevSt === STATE.ENDED
           );
-          if(wasStoppedLike){
+          const isFirstPlayPacket = prevSt !== STATE.PLAYING && p.state === STATE.PLAYING;
+          if(wasStoppedLike && isFirstPlayPacket){
             acc._fracMs = null; acc._fracAnchorTime = null;
             acc._anchorMs = null; acc._anchorTime = null;
             acc._noBeatAnchorTime = null; acc._noBeatAnchorMs = null;
