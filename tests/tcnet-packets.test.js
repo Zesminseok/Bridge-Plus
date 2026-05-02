@@ -168,6 +168,16 @@ test('macOS PDJL announce TX binds to auto-detected link-local interface', () =>
   assert.strictEqual(source.includes("if(process.platform==='darwin') setTimeout(_bridgeJoin, 150);"), true);
 });
 
+test('macOS PDJL RX uses INADDR_ANY only (no selected-IP duplicate socket)', () => {
+  // selected-IP 두 번째 RX socket 은 macOS 에서 broadcast 수신을 nondeterministic
+  // 으로 만들어 DJM 0x03 broadcast 수신 실패 → DJM 미등록 → 0x57 미송신.
+  // INADDR_ANY 만 사용하는 1.0.0.12 동작 유지.
+  const source = fs.readFileSync(corePath, 'utf8');
+  assert.strictEqual(source.includes("this._startDarwinPdjlSelectedIpRx(pdjlIP);"), false);
+  assert.strictEqual(source.includes("this._configureDarwinPdjlSocket(sock, pdjlIP"), false);
+  assert.strictEqual(source.includes("const bindAddr = process.platform==='win32' ? winBindIp : undefined;"), true);
+});
+
 test('macOS does NOT send ProMI query — official Bridge packet shape match', () => {
   const source = fs.readFileSync(corePath, 'utf8');
   assert.strictEqual(source.includes('this._pdjlProMiSock.bind(PDJL_PROMI_PORT, pdjlIP'), false);

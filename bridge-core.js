@@ -387,11 +387,14 @@ class BridgeCore {
       const _pdjlSnap = this._pdjlSockets ? [...this._pdjlSockets] : null;
       if(this._pdjlSockets) this._pdjlSockets.forEach(s=>sockets.push(s));
       else if(this.pdjlSocket) sockets.push(this.pdjlSocket);
+      if(this._pdjlSelectedIpRx) this._pdjlSelectedIpRx.forEach(s=>sockets.push(s));
       sockets.forEach(s=>{try{s?.close();}catch(_){}});
       this.txSocket=null; this.rxSocket=null; this._loRxSocket=null;
       this._ipRxSocket=null; this.lPortSocket=null; this._dataSocket=null; this.pdjlSocket=null;
       try{this._ownPorts?.clear();}catch(_){}
       this._pdjlSockets=[];
+      this._pdjlSelectedIpRx=[];
+      this._pdjlSelectedIpRxIP=null;
       // _pdjlAnnSock 가 snapshot 안에 없을 때만 close (snap 안에 있으면 이미 위 forEach 에서 close 됨).
       if(this._pdjlAnnSock && !(_pdjlSnap && _pdjlSnap.includes(this._pdjlAnnSock))){
         try{this._pdjlAnnSock.close();}catch(_){}
@@ -561,6 +564,8 @@ class BridgeCore {
     this._pdjlAnnTxSock=null;
     if(this._pdjlSockets){ this._pdjlSockets.forEach(s=>{try{s.close();}catch(_){}}); }
     else if(this.pdjlSocket){ try{this.pdjlSocket.close();}catch(_){} }
+    if(this._pdjlSelectedIpRx){ this._pdjlSelectedIpRx.forEach(s=>{try{s.close();}catch(_){}}); }
+    this._pdjlSelectedIpRx=[]; this._pdjlSelectedIpRxIP=null;
     this._pdjlSockets=[]; this.pdjlSocket=null; this.pdjlPort=null;
     // Clear PDJL announce timer
     if(this._pdjlAnnTimer){ clearInterval(this._pdjlAnnTimer); this._pdjlAnnTimer=null; }
@@ -793,6 +798,11 @@ class BridgeCore {
     if(!pdjlIP){ console.warn('[PDJL] no interface found for keep-alive'); return; }
     // auto-select 비교용 현재 IP 저장. 장비 발견 시 서브넷 매칭으로 교체 판단.
     this._currentPdjlIP = pdjlIP;
+    // macOS: selected-IP 두 번째 RX socket 비활성화 — INADDR_ANY socket 과
+    // specific-IP socket 이 같은 포트에 bind 되면 macOS kernel 이 broadcast
+    // 를 둘 중 하나로만 deliver (또는 specific-IP 가 broadcast 를 못 받아 결과적
+    // 으로 둘 다 못 받음). DJM 의 0x03 broadcast 수신 실패 → DJM 미등록 →
+    // 0x57 subscribe 미송신 → mixer 미작동. 0.0.0.0 RX 만 사용 (1.0.0.12 동작).
 
     // Collect ALL non-internal broadcast addresses so every subnet (including Arena's) receives the keepalive
     const allBCs = pdjlBroadcastTargets(pdjlIP);
@@ -1907,42 +1917,6 @@ class BridgeCore {
     }
     if(p.kind==='cdj_wf'){
       this.onWaveformPreview?.(p.playerNum, {seg:p.seg, pts:p.pts, wfType:p.wfType});
-    }
-    if(p.kind==='cdj_beat_grid'){
-      // CDJ-3000 only — NXS2 fetches its beat grid from dbserver and never
-      // pushes 0x56 sub=0x03 (verified in really_final.pcapng).
-      //
-      // Source priority — dbserver fetch wins when available:
-      //   1) dbserver beat grid result (richer: tempo, bar markers) → marked
-      //      `_beatGridSource='dbserver'` upon fetch completion.
-      //   2) CDJ-3000 push (this path) — fills in early before fetch returns,
-      //      and ONLY overwrites if no dbserver result has arrived yet.
-      // This prevents the push from clobbering a more accurate dbserver grid
-      // when both paths produce data for the same deck (especially relevant
-      // when the CDJ-3000 deck is also the master and NXS2 follows it).
-      const pn = p.playerNum;
-      if(pn>=1 && pn<=6 && Array.isArray(p.beats)){
-        const prev = this._beatGrids[pn];
-        const prevFromDbserver = prev && prev._source === 'dbserver';
-        if(prevFromDbserver) {
-          // dbserver already populated — keep it.
-        } else if(!prev || prev.length < p.beats.length){
-          const beats = p.beats.map((b, i, arr) => {
-            let bpm = 0;
-            if(i+1<arr.length){
-              const dt = arr[i+1].timeMs - b.timeMs;
-              if(dt>50 && dt<2000) bpm = Math.round(60000/dt*100)/100;
-            } else if(i>0){
-              const dt = b.timeMs - arr[i-1].timeMs;
-              if(dt>50 && dt<2000) bpm = Math.round(60000/dt*100)/100;
-            }
-            return {timeMs:b.timeMs, beatInBar:b.beatInBar, bpm};
-          });
-          beats._source = 'cdj_push';
-          this._beatGrids[pn] = beats;
-          this.onBeatGrid?.(pn, {beats, baseBpm: beats[0]?.bpm || 0, source:'cdj_push'});
-        }
-      }
     }
     if(p.kind==='announce'){
       const pn = p.playerNum;
