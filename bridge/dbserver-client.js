@@ -621,8 +621,6 @@ async function dbserverBeatGrid(core, ip, slot, trackId, playerNum, trackType){
         }
         const baseBpm=bpmCount>0?Math.round(totalBpm/bpmCount*100)/100:0;
         if(beats.length>0){
-          // Mark source so the CDJ-3000 0x56 push path knows not to overwrite.
-          beats._source = 'dbserver';
           core._beatGrids[playerNum] = beats;
           // Estimate track end: last beat timeMs + one beat interval (best available for NXS2)
           const lastB = beats[beats.length-1];
