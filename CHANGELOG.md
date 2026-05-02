@@ -8,6 +8,13 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.0.5 — 2026-05-03
+
+- NXS2 jog forward EMA blend (천천히/빨리 조그 모두 부드럽게 추적)
+- HW PWV7/3band 색을 virtual rgbTraceColor 와 통일 (vivid spectrum)
+- NXS2 loop ms 공식 fix (역방향 → 정상) + status loop fields 우선
+- NXS2 loop wrap 정확한 boundary 사용 (4-beat default 의존 제거)
+
 ## 1.0.4 — 2026-05-03
 
 - macOS Pro DJ Link bridge 분기 통일 (mac/win 동일 byte 셋, 0x57 src port 50001)

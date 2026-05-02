@@ -76,12 +76,13 @@ function parsePDJL(msg, hints){
     // Reverse detection: FFRV state or backward vinyl mode (p3=0x0A)
     const isReverse = state===STATE.FFRV || p3===0x0A;
     const pitchMultiplier = effPitchRaw / 0x100000;  // 1.0 = normal speed
-    // Loop start/end from CDJ-3000 512B extended packet.
-    // Pioneer 포맷: raw 는 position_ms × 1000 / 65536 으로 저장 → 역변환 ms = raw * 65536 / 1000.
+    // Loop start/end from extended packet (NXS2 0x0a 후미 / CDJ-3000 0x0b 동등).
+    // raw 는 fixed-point: 1ms = 65536/1000 = 65.536 unit → ms = raw × 1000 / 65536.
+    // (이전 공식 raw × 65536 / 1000 은 역방향이라 실제 1-beat 루프도 65배 크게 보임 → "구간 크게 표현" 문제.)
     const loopStartRaw = msg.length>0x1C1 ? msg.readUInt32BE(0x1B6) : 0;
     const loopEndRaw   = msg.length>0x1C5 ? msg.readUInt32BE(0x1BE) : 0;
-    const loopStartMs  = loopStartRaw > 0 ? Math.round(loopStartRaw * 65536 / 1000) : 0;
-    const loopEndMs    = loopEndRaw   > 0 ? Math.round(loopEndRaw   * 65536 / 1000) : 0;
+    const loopStartMs  = loopStartRaw > 0 ? Math.round(loopStartRaw * 1000 / 65536) : 0;
+    const loopEndMs    = loopEndRaw   > 0 ? Math.round(loopEndRaw   * 1000 / 65536) : 0;
     return{
       kind:'cdj', playerNum:pNum, name, deviceName:name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,

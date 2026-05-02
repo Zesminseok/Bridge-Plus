@@ -219,5 +219,6 @@ test('virtual rekordbox PWV7 import preserves waveform height in signed envelope
   const wfAnalysisPath = path.join(__dirname, '..', 'renderer', 'waveform-analysis.js');
   const renderer = fs.readFileSync(rendererPath, 'utf8') + '\n' + (fs.existsSync(wfAnalysisPath)?fs.readFileSync(wfAnalysisPath,'utf8'):'');
   assert.match(renderer, /const h=Math\.max\(p\.low\|\|0,p\.mid\|\|0,p\.hi\|\|0\)\/255;/, 'PWV7 import does not compute normalized height');
-  assert.match(renderer, /return\{h,mn:-h,mx:h,r:\(p\.low\|\|0\)\/255,g:\(p\.mid\|\|0\)\/255,b:\(p\.hi\|\|0\)\/255\};/, 'PWV7 import does not copy height into signed envelope');
+  // air:0 명시로 shader rgbTraceColor 가 raw 3-band 만 보고 색 도출 (HW/virtual 색 통일).
+  assert.match(renderer, /return\{h,mn:-h,mx:h,r:\(p\.low\|\|0\)\/255,g:\(p\.mid\|\|0\)\/255,b:\(p\.hi\|\|0\)\/255,air:0\};/, 'PWV7 import does not set air=0 (3-band only) for color unification');
 });

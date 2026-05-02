@@ -28,7 +28,10 @@ function _wglWritePoint(px, row1, dstIdx, wfData, srcIdx) {
     px[dstShape + 3] = wfData[src + 7];
     return;
   }
-  // HW path: {r:low, g:mid, b:hi} band amplitudes -> symmetric envelope contract
+  // HW path: {r:low, g:mid, b:hi} band amplitudes -> symmetric envelope contract.
+  // air slot (byte 3): PWV7 는 3-band 만 있어 air 데이터 없음 → 0.
+  // Legacy 1-byte HW path (palette RGB) 는 height 가 envelope mask 로 필요 → fallback h.
+  // 이전엔 PWV7 도 byte 3 에 height 저장 → shader rgbTraceColor 가 ai 로 잘못 해석해 B=ai*3.00 dominant → 모든 sample 푸르스름.
   const p = wfData[srcIdx] || {};
   const enc = v => Math.max(0, Math.min(255, Math.round((Math.max(-1, Math.min(1, v)) + 1) * 127.5)));
   const encU = v => Math.max(0, Math.min(255, Math.round(Math.max(0, Math.min(1, v)) * 255)));
@@ -37,10 +40,11 @@ function _wglWritePoint(px, row1, dstIdx, wfData, srcIdx) {
   const hi = Math.min(1, Math.max(0, p.b || 0));
   const h = Math.min(1, Math.max(0, p.h || Math.max(lo, mi, hi)));
   const gate = h > 0.0001 ? 1 : 0;
+  const ai = (p.air !== undefined) ? Math.min(1, Math.max(0, p.air)) : h;
   px[dst]     = encU(lo * gate);
   px[dst + 1] = encU(mi * gate);
   px[dst + 2] = encU(hi * gate);
-  px[dst + 3] = encU(h);
+  px[dst + 3] = encU(ai * gate);
   px[dstShape]     = enc(p.mn !== undefined ? p.mn : -h);
   px[dstShape + 1] = enc(p.mx !== undefined ? p.mx : h);
   px[dstShape + 2] = encU(h);

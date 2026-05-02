@@ -3089,9 +3089,8 @@ function _hwPackedPtsToObjects(pts){
 //   R = highRatio, G = 0.45 + highRatio*0.55, B = 1.0
 // 자체 bias 0.45 튜닝으로 중음대 명시성 확보 (GPU 셰이더와 동일 공식).
 function _hwPwv7ToRGB(low,mid,hi){
-  const total = low + mid + hi + 0.001;
-  const hiR   = hi / total;
-  return [hiR, 0.45 + hiR*0.55, 1.0];
+  // virtual rgbTraceColor 와 동일 path — air=0 으로 raw 3-band → vivid spectrum.
+  return window.WFColor.rgbTraceColor(low, mid, hi, 0);
 }
 // Standard CDJ 1-byte preview (height 5-bit + color 3-bit)는 이미 _cdjColorToRGB()로 전처리됨.
 // HW 덱에서만 적용되는 포인트 → RGB 컨버터 단일 진입점
@@ -7606,14 +7605,16 @@ if(E){
     const pts=d.pts instanceof Uint8Array?null:d.pts;
     const ptsLen=_hwPtsLen(d.pts);
     if(d.pts&&ptsLen>0){
-      if(d.pwv7||d.wfType==='pwv7'){
+      if(d.pwv7||d.wfType==='pwv7'||d.wfType==='nxs2_3band'){
+        // Raw 3-band envelope (low/mid/hi) → r/g/b 슬롯에 그대로. air=0 명시 (3-band 만 존재 — air 데이터 없음, shader rgbTraceColor 가 ai*3.00 으로 푸르게 오염되던 문제 fix).
         const objPts=pts||_hwPackedPtsToObjects(d.pts);
         dk.rgbWf=objPts.map(p=>{
           const h=Math.max(p.low||0,p.mid||0,p.hi||0)/255;
-          return{h,mn:-h,mx:h,r:(p.low||0)/255,g:(p.mid||0)/255,b:(p.hi||0)/255};
+          return{h,mn:-h,mx:h,r:(p.low||0)/255,g:(p.mid||0)/255,b:(p.hi||0)/255,air:0};
         });
         dk._pwv7=true;dk.wfCapability='pwv7';
-      } else if(d.wfType==='nxs2_3band'||d.wfType==='mono'){
+      } else if(d.wfType==='mono'){
+        // Mono 1-band: height 만 사용, 색 정보 없음 — palette RGB 0 유지.
         const objPts=pts||_hwPackedPtsToObjects(d.pts);
         dk.rgbWf=objPts.map(p=>{
           const h=Math.max(p.low||0,p.mid||0,p.hi||0,(p.height||0)/31);
@@ -7702,24 +7703,15 @@ if(E){
     const pts=d.pts instanceof Uint8Array?null:d.pts;
     const ptsLen=_hwPtsLen(d.pts);
     if(d.pts&&ptsLen>0){
-      if(d.pwv7||d.wfType==='pwv7'){
-        // PWV7 3-band: raw bass/mid/treble bytes (0-255 each)
+      if(d.pwv7||d.wfType==='pwv7'||d.wfType==='nxs2_3band'){
+        // Raw 3-band envelope (low/mid/hi) → r/g/b. air=0 명시 (3-band 만 — air 없음).
+        // 이전엔 byte 3=h 로 저장되어 shader rgbTraceColor 가 ai*3.00 dominant 로 푸르게 칠함.
         const objPts=pts||_hwPackedPtsToObjects(d.pts);
         dk.rgbWfDetail=objPts.map(p=>{
           const h=Math.max(p.low||0,p.mid||0,p.hi||0)/255;
-          return{h,mn:-h,mx:h,r:(p.low||0)/255,g:(p.mid||0)/255,b:(p.hi||0)/255};
+          return{h,mn:-h,mx:h,r:(p.low||0)/255,g:(p.mid||0)/255,b:(p.hi||0)/255,air:0};
         });
         dk._pwv7=true;dk.wfCapability='pwv7';
-      } else if(d.wfType==='nxs2_3band'){
-        // NXS2 3-band: low/mid/hi 각 band 진폭을 r/g/b 로 매핑 → shader 가 RGB 색상 합성.
-        // 이전엔 r=g=b=0 으로 두어 모든 sample 이 단색(파랑)으로 보이던 버그 수정.
-        const objPts=pts||_hwPackedPtsToObjects(d.pts);
-        dk.rgbWfDetail=objPts.map(p=>{
-          const r=p.low||0, g=p.mid||0, b=p.hi||0;
-          const h=Math.max(r,g,b,(p.height||0)/31);
-          return{r,g,b,h,mn:-h,mx:h};
-        });
-        dk._pwv7=true;dk.wfCapability='pwv7'; // 3-band 처리는 PWV7 와 동일
       } else if(d.wfType==='mono'){
         const objPts=pts||_hwPackedPtsToObjects(d.pts);
         dk.rgbWfDetail=objPts.map(p=>{

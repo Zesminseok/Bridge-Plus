@@ -1317,57 +1317,76 @@ class BridgeCore {
           acc._prevState = p.state;
           acc._transportActive = true;
 
-          // NXS2 루프: TC forward 진행 + saved loop cue 매칭 시 wrap.
+          // NXS2 루프: TC forward 진행 + 정확한 boundary wrap.
+          // 우선순위: (1) status 패킷의 loopStartMs/loopEndMs (parser 가 추출),
+          //           (2) saved loop cue 매칭, (3) BPM 기반 4-beat fallback.
           if(p.isNXS2 && p.isLooping){
             const wasLooping = (this.layers[li]?.state === STATE.LOOPING);
             const fracLoopMs = (p.positionFraction > 0 && totalLenMs > 0)
               ? Math.round(p.positionFraction * totalLenMs)
               : 0;
-            if(!wasLooping){
-              const lastTc = this.layers[li]?.timecodeMs || 0;
-              acc._loopAnchorMs = lastTc > 0 ? lastTc : (fracLoopMs || acc._fracMs || 0);
-              acc._loopAnchorTime = Date.now();
-            }
-            let baseMs = acc._loopAnchorMs || 0;
             const beatMs = p.bpm > 0 ? 60000/p.bpm : (p.bpmTrack > 0 ? 60000/p.bpmTrack : 60000/130);
-            let loopEndMs = baseMs + beatMs * 4;
-            let hasSaved = false;
-            const cuePts = this._cuePoints?.[p.playerNum];
-            if(cuePts){
-              const anchorMs = fracLoopMs || baseMs;
-              const matchedLoop = cuePts.find(c =>
-                c.type === 'loop' && c.loopEndMs > c.timeMs &&
-                anchorMs >= c.timeMs - beatMs * 2 &&
-                anchorMs <= c.loopEndMs + beatMs * 2
-              ) || cuePts.find(c =>
-                c.type === 'loop' && c.loopEndMs > c.timeMs &&
-                Math.abs(c.timeMs - anchorMs) < beatMs * 2
-              );
-              if(matchedLoop){
-                baseMs = matchedLoop.timeMs;
-                loopEndMs = matchedLoop.loopEndMs;
-                hasSaved = true;
+            let baseMs = 0;
+            let loopEndMs = 0;
+            let source = 'inferred';
+
+            // (1) status 패킷의 loop fields — sanity check (총 길이 안, 1/16~32-beat 범위).
+            const minLoopMs = Math.max(50, beatMs * 0.0625);   // 1/16 beat
+            const maxLoopMs = beatMs * 64;                       // 64-beat 까지 허용
+            const sLen = (p.loopEndMs || 0) - (p.loopStartMs || 0);
+            const sValid = p.loopStartMs > 0 && p.loopEndMs > p.loopStartMs &&
+                           sLen >= minLoopMs && sLen <= maxLoopMs &&
+                           (totalLenMs === 0 || p.loopEndMs <= totalLenMs + beatMs);
+            if(sValid){
+              baseMs = p.loopStartMs;
+              loopEndMs = p.loopEndMs;
+              source = 'status';
+            } else {
+              // (2) saved cue 매칭.
+              if(!wasLooping){
+                const lastTc = this.layers[li]?.timecodeMs || 0;
+                acc._loopAnchorMs = lastTc > 0 ? lastTc : (fracLoopMs || acc._fracMs || 0);
+                acc._loopAnchorTime = Date.now();
+              }
+              baseMs = acc._loopAnchorMs || 0;
+              loopEndMs = baseMs + beatMs * 4;
+              const cuePts = this._cuePoints?.[p.playerNum];
+              if(cuePts){
+                const anchorMs = fracLoopMs || baseMs;
+                const matchedLoop = cuePts.find(c =>
+                  c.type === 'loop' && c.loopEndMs > c.timeMs &&
+                  anchorMs >= c.timeMs - beatMs * 2 &&
+                  anchorMs <= c.loopEndMs + beatMs * 2
+                ) || cuePts.find(c =>
+                  c.type === 'loop' && c.loopEndMs > c.timeMs &&
+                  Math.abs(c.timeMs - anchorMs) < beatMs * 2
+                );
+                if(matchedLoop){
+                  baseMs = matchedLoop.timeMs;
+                  loopEndMs = matchedLoop.loopEndMs;
+                  source = 'cue';
+                }
               }
             }
+
+            if(!wasLooping || source === 'status'){
+              acc._loopAnchorTime = Date.now();
+            }
+            const loopMs = Math.max(1, loopEndMs - baseMs);
             const elapsed = Date.now() - (acc._loopAnchorTime || Date.now());
             const advance = elapsed * (p.pitchMultiplier || 1);
-            if(hasSaved){
-              // saved loop: 정확한 길이 wrap
-              const loopMs = loopEndMs - baseMs;
-              timecodeMs = Math.round(baseMs + (advance % Math.max(1, loopMs)));
-            } else {
-              // unknown loop: keep playback inside the inferred loop window.
-              // Clamping to track end makes the playhead leave the active loop on NXS2.
-              const loopMs = Math.max(1, loopEndMs - baseMs);
-              timecodeMs = Math.round(baseMs + (advance % loopMs));
-            }
+            timecodeMs = Math.round(baseMs + (advance % loopMs));
             acc._loopStartMs = Math.round(baseMs);
             acc._loopEndMs   = Math.round(loopEndMs);
-            // acc._fracMs / _anchor 도 동기화 (루프 풀릴 때 ms 점프 최소화)
+            // anchor 동기화 — 루프 풀릴 때 ms 점프 최소화.
             acc._fracMs = timecodeMs;
             acc._fracAnchorTime = Date.now();
             acc._anchorMs = timecodeMs;
             acc._anchorTime = Date.now();
+            if(!acc._loopDbgSrc || acc._loopDbgSrc !== source){
+              acc._loopDbgSrc = source;
+              _dbgLog(`[NXS2-LOOP] P${p.playerNum} src=${source} [${baseMs.toFixed(0)}..${loopEndMs.toFixed(0)}]ms (${loopMs.toFixed(0)}ms ≈ ${(loopMs/beatMs).toFixed(2)} beat)`);
+            }
           } else if(p.isNXS2 && p.positionFraction > 0 && totalLenMs > 0){
             // NXS2 ONLY: positionFraction (status 0x48) 은 beatNum/trackBeats 비율 → BEAT 단위로 quantize
             // 되어 있다 (128BPM 에서 ~469ms 간격). beat 사이에는 rawFracMs 가
@@ -1400,12 +1419,22 @@ class BridgeCore {
               const elapsedA = now - acc._anchorTime;
               const expected = acc._anchorMs + elapsedA * p.pitchMultiplier;
               const delta = rawFracMs - expected;
-              // Snap 조건 — backward/forward 대칭 (이전엔 forward 만 1500 → jog forward 누적
-              // 시 anchor 가 늦게 따라잡아 갑자기 튐. backward 는 -100 즉시라 부드러웠음).
-              //   |delta| > 150ms : seek / hot cue / jog 단계 — 즉시 anchor follow.
-              //   p.isLooping     : 루프 경계 wrap.
-              if(delta < -150 || delta > 150 || p.isLooping){
+              const absDelta = Math.abs(delta);
+              // 조그 속도 비례 catch-up: 작은 delta(천천히 조그/jitter)는 부드럽게,
+              // 큰 delta(빠른 조그/seek/hot cue)는 즉시. 고정 threshold 는 천천히
+              // 조그 시 누적되다가 갑자기 튀는 비대칭 발생 → EMA blend 로 해결.
+              //   blend = 0.30 + |delta|/1000, 1.0 cap.
+              //   delta=5(jitter)   → 1.5ms 만 catch  (거의 무시 → smooth)
+              //   delta=50(slow jog)→ 17ms catch        (부드럽게 추적)
+              //   delta=200(fast)   → 100ms catch       (빠르게 추적)
+              //   delta>=700        → 즉시 raw 로 snap  (seek/hot cue)
+              // 루프 경계는 wrap 즉시 잡혀야 하므로 hard snap.
+              if(p.isLooping){
                 acc._anchorMs = rawFracMs;
+                acc._anchorTime = now;
+              } else if(absDelta > 0){
+                const blend = Math.min(1.0, 0.30 + absDelta / 1000);
+                acc._anchorMs = expected + delta * blend;
                 acc._anchorTime = now;
               }
               // else: anchor 유지, pitch extrapolation 이 TC 를 연속적으로 생성.
