@@ -1255,13 +1255,28 @@ class BridgeCore {
 
         const isEnded = (p.p1 === 0x0D || p.p1 === 0x11); // End / Ended p1 states
 
+        // ═══════════════════════════════════════════════════════════════════
+        // CDJ-3000 vs CDJ-2000NXS2 — 사용자 요건: 절대 코드 분기 분리.
+        // 두 모델은 packet 동작 방식이 완전히 다른 장비. 각자 독립 path.
+        //   3000:  ms 데이터 (0x0b precise_pos / 0x11C anchor) 우선 — 더 정확.
+        //   NXS2:  beatNum + bpm 외삽 (positionFraction=0, 0x11C 1초 anchor 만).
+        // ═══════════════════════════════════════════════════════════════════
+
         if(!p.isNXS2 && hasPrecise){
-          // ── CDJ-3000: direct ms from type 0x0b packet (highest accuracy) ──
+          // ── [CDJ-3000] path #1: 0x0b precise position (가장 정확) ──
+          // 3000 만의 path. NXS2 는 0x0b 를 다른 의미로 보내므로 절대 진입 안 함.
           timecodeMs = pp.playbackMs;
-          // Capture exact track length when CDJ-3000 reaches end of track
           if(isEnded && pp.playbackMs > (this._bgTrackLen?.[p.playerNum] || 0)){
             this._bgTrackLen = this._bgTrackLen || {};
             this._bgTrackLen[p.playerNum] = pp.playbackMs;
+          }
+        } else if(!p.isNXS2 && p.anchorMs > 0){
+          // ── [CDJ-3000] path #2: 0x11C anchor ms (0x0b 없는 fallback) ──
+          // 3000 만의 path. NXS2 는 0x11C 가 ~1초 update 라 외삽 path 사용.
+          timecodeMs = p.anchorMs;
+          if(isEnded && p.anchorMs > (this._bgTrackLen?.[p.playerNum] || 0)){
+            this._bgTrackLen = this._bgTrackLen || {};
+            this._bgTrackLen[p.playerNum] = p.anchorMs;
           }
         } else if(isEnded){
           // ── End/Ended state (both models): show last known position, clamp to totalLenMs ──
@@ -1284,6 +1299,20 @@ class BridgeCore {
         } else if(p.isPlaying || p.isLooping){
           // ── Playing/Looping: CDJ-2000NXS2 interpolation (+ CDJ-3000 fallback without 0x0b) ──
           if(!acc) this._tcAcc[li] = acc = { prevBn:0, elapsedMs:0, trackId:p.trackId, dbgCount:0, metaRequested:false };
+          // ── NXS2 ONLY: 핫큐 토글 안정화 ──
+          // 핫큐 누르고 있는 동안 p1=0x07(CUEDOWN preview-play) ↔ 0x06(CUE) ~100ms 토글 →
+          // TCNet 출력에서 PLAY/PAUSE 깜빡임 (Arena 가 PAUSE 표기 보고 받음).
+          // 200ms 안에 0x07 한 번이라도 봤으면 PLAYING 상태로 hold (state 변환).
+          // CDJ-3000 은 핫큐 동작 패턴 다름 → 적용 안 함.
+          if(p.isNXS2){
+            const now = Date.now();
+            if(p.p1 === 0x07) acc._nxs2HotCueLast = now;
+            if(acc._nxs2HotCueLast && (now - acc._nxs2HotCueLast) < 200){
+              p.state = STATE.PLAYING;
+              p.isPlaying = true;
+              p.p1Name = 'HOTCUE_PLAY';
+            }
+          }
           // State transition: CUED/PAUSED/STOPPED → PLAYING 순간 accumulator 리셋.
           // (hot cue / play 버튼 모두 이 전환을 거치며, 점프 위치를 즉시 반영)
           const prevSt = acc._prevState;
@@ -1317,7 +1346,8 @@ class BridgeCore {
           acc._prevState = p.state;
           acc._transportActive = true;
 
-          // NXS2 루프: TC forward 진행 + 정확한 boundary wrap.
+          // ── [NXS2 ONLY] LOOP path ── (3000 와 절대 공유 안 함)
+          // TC forward 진행 + 정확한 boundary wrap.
           // 우선순위: (1) status 패킷의 loopStartMs/loopEndMs (parser 가 추출),
           //           (2) saved loop cue 매칭, (3) BPM 기반 4-beat fallback.
           if(p.isNXS2 && p.isLooping){
@@ -1387,12 +1417,13 @@ class BridgeCore {
               acc._loopDbgSrc = source;
               _dbgLog(`[NXS2-LOOP] P${p.playerNum} src=${source} [${baseMs.toFixed(0)}..${loopEndMs.toFixed(0)}]ms (${loopMs.toFixed(0)}ms ≈ ${(loopMs/beatMs).toFixed(2)} beat)`);
             }
-          } else if(p.isNXS2 && p.positionFraction > 0 && totalLenMs > 0){
-            // NXS2 ONLY: positionFraction (status 0x48) 은 beatNum/trackBeats 비율 → BEAT 단위로 quantize
-            // 되어 있다 (128BPM 에서 ~469ms 간격). beat 사이에는 rawFracMs 가
-            // 정지하므로 내부적으로 extrapolation 필요. "beat 크로싱" 감지 시에만
-            // anchor 갱신하고 연속성을 보존해야 뚝뚝 끊기는 현상 제거.
-            const rawFracMs = Math.round(p.positionFraction * totalLenMs);
+          } else if(p.isNXS2 && (p.anchorMs > 0 || (p.positionFraction > 0 && totalLenMs > 0))){
+            // ── [NXS2 ONLY] anchor + 외삽 path ── (3000 와 절대 공유 안 함)
+            // 0x11C anchor (~1초 update) 우선, positionFraction (legacy) fallback.
+            // anchor 는 1초마다만 들어오므로 매 packet 마다 pitch 외삽 필요.
+            const rawFracMs = p.anchorMs > 0
+              ? p.anchorMs
+              : Math.round(p.positionFraction * totalLenMs);
             const prevRaw = acc._prevRawFrac ?? -1;
             const rawChanged = rawFracMs !== prevRaw;
             const now = Date.now();

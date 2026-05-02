@@ -53,10 +53,23 @@ function parsePDJL(msg, hints){
     const beatNum   = _beatNumRaw <= BEAT_MAX ? _beatNumRaw : 0;
     const beatInBar = msg.length>0xA6 ? msg[0xA6] : 0;
     const barsRemain = msg.length>0xA5 ? msg.readUInt16BE(0xA4) : 0;
-    const _trackBeatsRaw = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
-    // CDJ-2000NXS2 captures show 0xB4 as a constant-ish non-duration field
-    // (for example 256), so never feed it into track-length estimation.
-    const trackBeats = isNXS2 ? 0 : (_trackBeatsRaw <= BEAT_MAX ? _trackBeatsRaw : 0);
+    // trackBeats — model 별 별도 offset (사용자 요건: NXS2/3000 분기 분리).
+    // NXS2: 0x0a 의 0x114 가 실제 trackBeats (캡처 fullll.pcapng 로 확인, 0x70d=1805).
+    //       0xB4 는 의미 불명 (256 고정 같은 상수) → 사용 안 함.
+    // CDJ-3000: 0x114 도 동일 위치에 trackBeats 있음 (캡처 확인). 0xB4 는 historic.
+    const _trackBeatsBe_B4  = msg.length>0xB7 ? msg.readUInt32BE(0xB4) : 0;
+    const _trackBeatsBe_114 = msg.length>0x117 ? msg.readUInt32BE(0x114) : 0;
+    let trackBeats = 0;
+    if(isNXS2){
+      // NXS2 전용: 0x114 만 사용.
+      trackBeats = (_trackBeatsBe_114 > 0 && _trackBeatsBe_114 <= BEAT_MAX) ? _trackBeatsBe_114 : 0;
+    } else {
+      // CDJ-3000 전용: 0x114 우선, 없으면 0xB4 fallback.
+      trackBeats = (_trackBeatsBe_114 > 0 && _trackBeatsBe_114 <= BEAT_MAX)
+        ? _trackBeatsBe_114
+        : ((_trackBeatsBe_B4 <= BEAT_MAX) ? _trackBeatsBe_B4 : 0);
+    }
+    const _trackBeatsRaw = isNXS2 ? _trackBeatsBe_114 : _trackBeatsBe_B4;  // 디버그 호환
     // Playback position fraction 0x48-0x4B: uint32BE / 1000 = 0.0~1.0.
     // CDJ-2000NXS2 status packets observed in 421.pcapng keep this field at 0;
     // treat it as a real fraction only when the device actually sends one.
@@ -83,6 +96,13 @@ function parsePDJL(msg, hints){
     const loopEndRaw   = msg.length>0x1C5 ? msg.readUInt32BE(0x1BE) : 0;
     const loopStartMs  = loopStartRaw > 0 ? Math.round(loopStartRaw * 1000 / 65536) : 0;
     const loopEndMs    = loopEndRaw   > 0 ? Math.round(loopEndRaw   * 1000 / 65536) : 0;
+    // ── Playback position anchor (0x11C-0x11F LE uint32) ──
+    // 캡처 분석 결과 NXS2/CDJ-3000 모두 0x0a status 의 0x11C 에 LE uint32 로 위치 정보 송신.
+    // 단위: 1초 = 65,280 unit (0xFF00). ms = val × 1000 / 65280.
+    // Update 빈도: ~1초마다 big jump (+65,536 ≈ 1004ms). 매 packet 정밀도는 X.
+    // → 외삽 anchor 보정용 (누적 drift 제거).
+    const _anchorRaw = msg.length>0x11F ? msg.readUInt32LE(0x11C) : 0;
+    const anchorMs   = _anchorRaw > 0 ? Math.round(_anchorRaw * 1000 / 65280) : 0;
     return{
       kind:'cdj', playerNum:pNum, name, deviceName:name, p1, state,
       p1Name: P1_NAME[p1]||`0x${p1.toString(16)}`,
@@ -92,6 +112,7 @@ function parsePDJL(msg, hints){
       isLooping: state===STATE.LOOPING,
       isReverse,
       loopStartMs, loopEndMs,
+      anchorMs,  // 0x11C 추출. ~1초마다 jump. 외삽 누적 drift 보정용.
       bpm:bpmEff, bpmTrack:baseBpm, bpmEffective:bpmEff,
       pitch, effectivePitch:effPitch, pitchMultiplier,
       isNXS2,

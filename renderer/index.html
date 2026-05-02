@@ -3331,8 +3331,9 @@ function _drawZoomActiveLoopOverlay(ctx,d,W,H,posMs,msPerPx,cX){
     ctx.fillStyle=active?'rgba(255,245,0,.62)':'rgba(255,220,0,.28)';
     ctx.fillRect(lx,0,rx-lx,2);ctx.fillRect(lx,H-2,rx-lx,2);
   };
-  // 1) CDJ active loop from status packet (0x0A 512B — 가장 정확한 경로)
-  if(d._loopStartMs>0&&d._loopEndMs>d._loopStartMs){
+  // 1) CDJ active loop from status packet — 트랙 시작(0ms) loop 도 표시.
+  // 이전엔 _loopStartMs>0 가드 → 0ms 위치 loop 은 영원히 안 보임 ("루프 오버레이 사라짐" 보고).
+  if(d._loopStartMs>=0&&d._loopEndMs>d._loopStartMs&&d._loopEndMs>0){
     drawRange(d._loopStartMs,d._loopEndMs,!!d._isLooping);
     return;
   }
@@ -3685,7 +3686,7 @@ function drawOverview(slot,prog){
     }
 
     // 루프 오버레이 (노랑) - 전체 높이
-    if(_ovDur>0&&d._loopStartMs>0&&d._loopEndMs>d._loopStartMs){
+    if(_ovDur>0&&d._loopStartMs>=0&&d._loopEndMs>d._loopStartMs&&d._loopEndMs>0){
       const sx=Math.round(d._loopStartMs/_ovDur*W2);
       const ex=Math.round(d._loopEndMs  /_ovDur*W2);
       if(ex>sx){

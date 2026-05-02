@@ -465,7 +465,8 @@ test('NXS2 status ignores non-duration trackBeats and missing position fraction'
   const parsed = parsePDJL(pkt);
   assert.strictEqual(parsed.playerNum, 4);
   assert.strictEqual(parsed.isNXS2, true);
-  assert.strictEqual(parsed._trackBeatsRaw, 256);
+  // NXS2 trackBeats 는 이제 0x114 에서 읽음 (캡처 분석 결과 0x114 가 실제
+  // 위치, 0xB4 는 의미 불명 상수). 0x114 미설정 → trackBeats=0.
   assert.strictEqual(parsed.trackBeats, 0);
   assert.strictEqual(parsed.positionFraction, 0);
 });
