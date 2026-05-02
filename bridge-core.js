@@ -1317,6 +1317,18 @@ class BridgeCore {
             acc._noBeatAnchorTime = null; acc._noBeatAnchorMs = null;
             acc._bwGuardCount = 0;
             acc.prevBn = 0;
+            // NXS2 한정: cue→play 시 첫 PLAYING status 의 beatNum 이 cue 위치 +1 로
+            // 송신되는 펌웨어 동작 → 저장된 cuePos 를 anchor 로 미리 세팅.
+            // prevBn 도 첫 beatNum 으로 미리 채워 line 1437 의 beat-jump 분기 회피.
+            // CDJ-3000 은 hasPrecise(=pp.playbackMs) 사용으로 이 분기 안 탐.
+            if(p.isNXS2){
+              const cuePos = this._cuePosMs?.[p.playerNum] || 0;
+              if(cuePos > 0){
+                acc._anchorMs = cuePos;
+                acc._anchorTime = Date.now();
+                acc.prevBn = (p.beatNum > 0 && p.beatNum < 0xFFFFFF) ? p.beatNum : 0;
+              }
+            }
           }
           acc._prevState = p.state;
           acc._transportActive = true;

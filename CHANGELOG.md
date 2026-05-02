@@ -8,6 +8,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.0.3 — 2026-05-03
+
+- NXS2 cue→play 첫 비트 점프 보정 (`_cuePosMs` anchor pre-set)
+- 1.0.0.12 timecode/loop 동작 복원 + NXS2 분기 가드 강화
+- overview waveform shader 흰색 playhead 제거 (overlay 빨강 단일화)
+
 ## 1.0.2 — 2026-05-02
 
 - macOS Pro DJ Link bridge byte-perfect (DJM 호환성 개선)
