@@ -1299,20 +1299,8 @@ class BridgeCore {
         } else if(p.isPlaying || p.isLooping){
           // ── Playing/Looping: CDJ-2000NXS2 interpolation (+ CDJ-3000 fallback without 0x0b) ──
           if(!acc) this._tcAcc[li] = acc = { prevBn:0, elapsedMs:0, trackId:p.trackId, dbgCount:0, metaRequested:false };
-          // ── NXS2 ONLY: 핫큐 토글 안정화 ──
-          // 핫큐 누르고 있는 동안 p1=0x07(CUEDOWN preview-play) ↔ 0x06(CUE) ~100ms 토글 →
-          // TCNet 출력에서 PLAY/PAUSE 깜빡임 (Arena 가 PAUSE 표기 보고 받음).
-          // 200ms 안에 0x07 한 번이라도 봤으면 PLAYING 상태로 hold (state 변환).
-          // CDJ-3000 은 핫큐 동작 패턴 다름 → 적용 안 함.
-          if(p.isNXS2){
-            const now = Date.now();
-            if(p.p1 === 0x07) acc._nxs2HotCueLast = now;
-            if(acc._nxs2HotCueLast && (now - acc._nxs2HotCueLast) < 200){
-              p.state = STATE.PLAYING;
-              p.isPlaying = true;
-              p.p1Name = 'HOTCUE_PLAY';
-            }
-          }
+          // 핫큐 누를 때 p1=0x07/0x06 토글 — 공식 program 도 CUEDOWN/PAUSE 송출이 정상.
+          // 우리도 그대로 흘려보냄 (이전 PLAYING 강제 hold 시도 → 사용자 지적: 공식이 PAUSE 가 맞다 → 롤백).
           // State transition: CUED/PAUSED/STOPPED → PLAYING 순간 accumulator 리셋.
           // (hot cue / play 버튼 모두 이 전환을 거치며, 점프 위치를 즉시 반영)
           const prevSt = acc._prevState;
@@ -1417,13 +1405,13 @@ class BridgeCore {
               acc._loopDbgSrc = source;
               _dbgLog(`[NXS2-LOOP] P${p.playerNum} src=${source} [${baseMs.toFixed(0)}..${loopEndMs.toFixed(0)}]ms (${loopMs.toFixed(0)}ms ≈ ${(loopMs/beatMs).toFixed(2)} beat)`);
             }
-          } else if(p.isNXS2 && (p.anchorMs > 0 || (p.positionFraction > 0 && totalLenMs > 0))){
-            // ── [NXS2 ONLY] anchor + 외삽 path ── (3000 와 절대 공유 안 함)
-            // 0x11C anchor (~1초 update) 우선, positionFraction (legacy) fallback.
-            // anchor 는 1초마다만 들어오므로 매 packet 마다 pitch 외삽 필요.
-            const rawFracMs = p.anchorMs > 0
-              ? p.anchorMs
-              : Math.round(p.positionFraction * totalLenMs);
+          } else if(p.isNXS2 && p.positionFraction > 0 && totalLenMs > 0){
+            // ── [NXS2 ONLY] positionFraction + 외삽 path ── (3000 와 절대 공유 안 함)
+            // 캡처 분석: NXS2 의 positionFraction(0x48) = 0 항상 → 이 path 거의 안 들어옴.
+            // 0x11C anchor 사용 시도 → 1초마다 +1004ms jump 가 우리 외삽과 충돌해서
+            // 시각적 점프 발생 → 진입 조건에서 제거 (사용자 지적).
+            // 정상 NXS2 처리는 아래 BPM-less fallback (beat counter + pitch 외삽).
+            const rawFracMs = Math.round(p.positionFraction * totalLenMs);
             const prevRaw = acc._prevRawFrac ?? -1;
             const rawChanged = rawFracMs !== prevRaw;
             const now = Date.now();
