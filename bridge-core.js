@@ -883,38 +883,11 @@ class BridgeCore {
       }
     }
 
-    let sendProMiQuery = null;
-    if(process.platform==='darwin'){
-      this._pdjlProMiSock=dgram.createSocket({type:'udp4',reuseAddr:true});
-      this._pdjlProMiSock.on('error',e=>console.warn('[PDJL] ProMI socket error:',e.message));
-      try{
-        this._pdjlProMiSock.bind(PDJL_PROMI_PORT, pdjlIP, ()=>{
-          try{this._pdjlProMiSock.setBroadcast(true);}catch(_){}
-          const a=this._pdjlProMiSock.address();
-          console.log(`[PDJL] ProMI query socket active ${a.address}:${a.port}`);
-        });
-      }catch(e){
-        console.warn('[PDJL] ProMI socket bind failed:',e.message);
-        try{this._pdjlProMiSock.close();}catch(_){}
-        this._pdjlProMiSock=null;
-      }
-      sendProMiQuery=()=>{
-        if(!liveSession()||!this._pdjlProMiSock) return;
-        for(const bc of allBCs){
-          for(let r=0;r<2;r++){
-            try{this._pdjlProMiSock.send(PDJL_PROMI_QUERY,0,PDJL_PROMI_QUERY.length,PDJL_PROMI_PORT,bc);}catch(_){}
-          }
-        }
-        if(!this._pdjlDiagProMi){
-          this._pdjlDiagProMi=true;
-          const a=(()=>{try{return this._pdjlProMiSock.address();}catch(_){return null;}})();
-          const src=a?`${a.address}:${a.port}`:'?';
-          console.log(`[PDJL-DIAG] mac ProMI src=${src} payload=${PDJL_PROMI_QUERY.toString('ascii')}`);
-        }
-      };
-      setTimeout(()=>{ try{sendProMiQuery?.();}catch(_){} }, 80);
-      this._pdjlProMiTimer=setInterval(()=>{ try{sendProMiQuery?.();}catch(_){} }, 7000);
-    }
+    // ProMI query (port 3800 broadcast) 비활성화 — 정식 macOS Pro DJ Link
+    // Bridge (really_final.pcapng) 는 이 packet 을 송신하지 않음. 추가 송신은
+    // DJM 의 bridge identity 인식에 conflict 가능성 있어 정식과 packet 분포
+    // 일치시킨다.
+    const sendProMiQuery = null;
 
     const annTxSock = () => (this._pdjlAnnTxReady && this._pdjlAnnTxSock) ? this._pdjlAnnTxSock : this._pdjlAnnSock;
     // 정식 macOS Pro DJ Link Bridge (really_final.pcapng) 는 keepalive 를
@@ -934,7 +907,11 @@ class BridgeCore {
         const extra=txSocks.length>1?' + bound50000':'';
         console.log(`[PDJL-DIAG] mac keepalive src=${src}${extra} ip=${pdjlIP} mac=${pdjlMAC} hex=${this._pdjlDiagKeepaliveHex}`);
       }
-      const repeat = process.platform==='darwin' && txSocks.length===1 ? 2 : 1;
+      // 정식 macOS Bridge (PDJB_22.pcapng) 는 keepalive 를 단일 송신.
+      // 우리가 darwin 에서 repeat=2 로 보내면 DJM 이 동일 identity 의 두 번째
+      // keepalive 를 conflicting bridge 로 인식해 0x39 fader 송신 거부.
+      // 정식과 동일하게 1회만 송신.
+      const repeat = 1;
       for(const txSock of txSocks){
         for(const bc of allBCs){
           for(let r=0;r<repeat;r++){
@@ -960,12 +937,15 @@ class BridgeCore {
       //   Windows: 기존 검증값 유지 (Hello 14×110ms + Claim 22×150ms ≈ 4.8s).
       //   macOS: ceo_2.pcapng 공식 Bridge 패턴에 맞춰 hello/claim 모두 2회씩 송신.
       //          DJM 0x39는 0x57보다 먼저 열리므로 초기 identity claim이 핵심이다.
+      // 정식 macOS Bridge (PDJB_22.pcapng) 일치:
+      //   hello 7회 단일 송신, ~300ms 간격
+      //   claim 11회 단일 송신, ~300ms 간격
       const macJoin = process.platform==='darwin';
-      const HELLO_GAP = macJoin ? 365 : 110;
-      const CLAIM_GAP = macJoin ? 345 : 150;
-      const HELLO_N = macJoin ? 6 : 14;
+      const HELLO_GAP = macJoin ? 300 : 110;
+      const CLAIM_GAP = macJoin ? 300 : 150;
+      const HELLO_N = macJoin ? 7 : 14;
       const CLAIM_N = macJoin ? 11 : 22;
-      const REPEAT_N = macJoin ? 2 : 1;
+      const REPEAT_N = 1;  // 정식 Bridge 는 단일 송신 — 중복 시 DJM identity conflict
       const helloEnd = HELLO_GAP*HELLO_N;
       for(let h=0;h<HELLO_N;h++){
         setTimeout(()=>{

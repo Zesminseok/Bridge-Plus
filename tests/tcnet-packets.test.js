@@ -168,11 +168,9 @@ test('macOS PDJL announce TX binds to auto-detected link-local interface', () =>
   assert.strictEqual(source.includes("if(process.platform==='darwin') setTimeout(_bridgeJoin, 150);"), true);
 });
 
-test('macOS sends native ProMI query on the selected PDJL interface', () => {
+test('macOS does NOT send ProMI query — official Bridge packet shape match', () => {
   const source = fs.readFileSync(corePath, 'utf8');
-  assert.strictEqual(source.includes("const PDJL_PROMI_QUERY = Buffer.from('rqProMI:', 'ascii');"), true);
-  assert.strictEqual(source.includes('this._pdjlProMiSock.bind(PDJL_PROMI_PORT, pdjlIP'), true);
-  assert.strictEqual(source.includes('[PDJL-DIAG] mac ProMI src='), true);
+  assert.strictEqual(source.includes('this._pdjlProMiSock.bind(PDJL_PROMI_PORT, pdjlIP'), false);
 });
 
 test('DJM subscribe sockets preserve Windows path and use macOS official bridge source port', () => {
@@ -190,15 +188,14 @@ test('macOS bridge notify uses DJM bridge socket', () => {
   assert.strictEqual(source.includes('[PDJL-DIAG] mac 0x55 src='), true);
 });
 
-test('macOS bridge join timing matches official bridge capture pattern', () => {
+test('macOS bridge join timing matches PDJB_22 official Bridge capture', () => {
   const source = fs.readFileSync(corePath, 'utf8');
   assert.strictEqual(source.includes("const macJoin = process.platform==='darwin';"), true);
-  assert.strictEqual(source.includes('const HELLO_GAP = macJoin ? 365 : 110;'), true);
-  assert.strictEqual(source.includes('const CLAIM_GAP = macJoin ? 345 : 150;'), true);
-  assert.strictEqual(source.includes('const HELLO_N = macJoin ? 6 : 14;'), true);
+  assert.strictEqual(source.includes('const HELLO_GAP = macJoin ? 300 : 110;'), true);
+  assert.strictEqual(source.includes('const CLAIM_GAP = macJoin ? 300 : 150;'), true);
+  assert.strictEqual(source.includes('const HELLO_N = macJoin ? 7 : 14;'), true);
   assert.strictEqual(source.includes('const CLAIM_N = macJoin ? 11 : 22;'), true);
-  assert.strictEqual(source.includes('const REPEAT_N = macJoin ? 2 : 1;'), true);
-  assert.strictEqual(source.includes("},process.platform==='darwin' ? 1000 : 1500);"), true);
+  assert.strictEqual(source.includes('const REPEAT_N = 1;'), true);
 });
 
 test('Windows PDJL sockets bind to the selected interface IP', () => {
