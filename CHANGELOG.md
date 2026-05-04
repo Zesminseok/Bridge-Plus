@@ -17,10 +17,15 @@ Release build — 30-day demo test build.
 - macOS DJM mixer subscribe / keepalive identity 안정화
 - Windows GitHub Actions native Ableton Link rebuild 경로 유지
 - HW waveform theme rendering, marker/grid cleanup, and smoother playhead rendering
+- HW detail waveform strip cache 안정화: 10초 주기/다른 덱 로드 시 재렌더로 모양이 바뀌던 문제 수정
+- HW detail waveform 색상 경로를 overview waveform 과 통일
+- 2000NXS2 overview playhead/TCNet 출력이 스무딩된 위치를 사용하도록 수정
+- 2000NXS2 loop mode 에서 정밀 MS 없는 모델만 루프 구간 보간 적용
 - External implementation/capture reference comments cleaned from source
 
 ### Build artifacts
 
+- `BRIDGE-Plus-windows-x64-portable.zip` (Windows x64 portable)
 - `BRIDGE-Plus-windows-x64.zip` (Windows x64 installer + portable)
 - `BRIDGE+-1.0.6-mac-arm64.dmg` / `BRIDGE+-1.0.6-mac-arm64.zip`
 - `BRIDGE+-1.0.6-mac-x64.dmg` / `BRIDGE+-1.0.6-mac-x64.zip`
