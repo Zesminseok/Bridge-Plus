@@ -8,6 +8,23 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.0.6 — 2026-05-04
+
+Release build — 30-day demo test build.
+
+### New / Improved
+
+- macOS DJM mixer subscribe / keepalive identity 안정화
+- Windows GitHub Actions native Ableton Link rebuild 경로 유지
+- HW waveform theme rendering, marker/grid cleanup, and smoother playhead rendering
+- External implementation/capture reference comments cleaned from source
+
+### Build artifacts
+
+- `BRIDGE-Plus-windows-x64.zip` (Windows x64 installer + portable)
+- `BRIDGE+-1.0.6-mac-arm64.dmg` / `BRIDGE+-1.0.6-mac-arm64.zip`
+- `BRIDGE+-1.0.6-mac-x64.dmg` / `BRIDGE+-1.0.6-mac-x64.zip`
+
 ## 1.0.0-demo.0 — 2026-04-29
 
 Demo build — 30-day evaluation. Full feature set, time-limited from first run.

@@ -3,7 +3,7 @@
 > Independent desktop bridge — connects compatible DJ hardware to visual / lighting / DAW software.
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.00__demo-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.6-orange.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 [![Releases](https://img.shields.io/badge/download-Releases-brightgreen.svg)](../../releases)
 
@@ -19,9 +19,9 @@ Get the native package for your OS from [Releases](../../releases):
 
 | Platform | File |
 |---|---|
-| **macOS** (Intel) | `BRIDGE+-1.0.0.00_demo-mac-x64.dmg` |
-| **macOS** (Apple Silicon) | `BRIDGE+-1.0.0.00_demo-mac-arm64.dmg` |
-| **Windows** (portable) | `BRIDGE+-1.0.0.00_demo-win-x64.exe` |
+| **macOS** (Apple Silicon) | `BRIDGE+-1.0.6-mac-arm64.dmg` / `BRIDGE+-1.0.6-mac-arm64.zip` |
+| **macOS** (Intel) | `BRIDGE+-1.0.6-mac-x64.dmg` / `BRIDGE+-1.0.6-mac-x64.zip` |
+| **Windows** (x64) | `BRIDGE-Plus-windows-x64.zip` (installer + portable) |
 
 No runtime installation required. Open the package and run.
 
