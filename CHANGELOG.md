@@ -26,9 +26,9 @@ Release build — 30-day demo test build.
 
 ### Build artifacts
 
-- `BRIDGE-Plus-windows-x64-portable.zip` (Windows x64 portable)
-- `BRIDGE+-1.0.6-mac-arm64.zip`
-- `BRIDGE+-1.0.6-mac-x64.zip`
+- `BRIDGE+-1.0.6-win-x64-portable.exe`
+- `BRIDGE+-1.0.6-mac-arm64.dmg`
+- `BRIDGE+-1.0.6-mac-x64.dmg`
 
 ## 1.0.0-demo.0 — 2026-04-29
 
