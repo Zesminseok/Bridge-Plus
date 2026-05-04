@@ -19,10 +19,9 @@ Get the native package for your OS from [Releases](../../releases):
 
 | Platform | File |
 |---|---|
-| **macOS** (Apple Silicon) | `BRIDGE+-1.0.6-mac-arm64.dmg` / `BRIDGE+-1.0.6-mac-arm64.zip` |
-| **macOS** (Intel) | `BRIDGE+-1.0.6-mac-x64.dmg` / `BRIDGE+-1.0.6-mac-x64.zip` |
+| **macOS** (Apple Silicon) | `BRIDGE+-1.0.6-mac-arm64.zip` |
+| **macOS** (Intel) | `BRIDGE+-1.0.6-mac-x64.zip` |
 | **Windows** (x64 portable) | `BRIDGE-Plus-windows-x64-portable.zip` |
-| **Windows** (x64 bundle) | `BRIDGE-Plus-windows-x64.zip` (installer + portable) |
 
 No runtime installation required. Open the package and run.
 
