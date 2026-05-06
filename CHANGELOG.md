@@ -8,6 +8,26 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.0.7 — 2026-05-06
+
+Release build — 30-day demo test build.
+
+### New / Improved
+
+- Settings 화면을 별도 고정폭 창 기준으로 정리하고 언어/라이선스/웨이브폼/출력 설정 배치를 다듬음
+- 설정 항목과 옵션 라벨의 다국어 번역 범위를 확장하고 불필요한 waveform sharpness 설정 제거
+- BPM Link 출력에서 Ableton Link 와 OSC 출력을 독립 선택 가능하도록 분리하고 OSC host/broadcast 설정 UI 개선
+- HW overview waveform 에 좌우 패딩, 하단 진행바, 1분 마커를 추가하고 재생 완료 영역 dimming 제거
+- HW detail waveform grid 옵션을 4비트 / 1비트 / 세로줄 모드로 정리하고 grid 두께와 길이를 조정
+- HW detail waveform 색상 경로를 overview 와 더 가깝게 맞추고 bar counter 위치/표시 기준 보정
+- Windows 글꼴 렌더링과 앱 아이콘/스플래시 아이콘 표시를 정리
+
+### Build artifacts
+
+- `BRIDGE+-1.0.7-win-x64-portable.exe`
+- `BRIDGE+-1.0.7-mac-arm64.dmg`
+- `BRIDGE+-1.0.7-mac-x64.dmg`
+
 ## 1.0.6 — 2026-05-04
 
 Release build — 30-day demo test build.

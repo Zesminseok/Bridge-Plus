@@ -3,7 +3,7 @@
 > Independent desktop bridge — connects compatible DJ hardware to visual / lighting / DAW software.
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.6-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.7-orange.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 [![Releases](https://img.shields.io/badge/download-Releases-brightgreen.svg)](../../releases)
 
@@ -19,9 +19,9 @@ Get the native package for your OS from [Releases](../../releases):
 
 | Platform | File |
 |---|---|
-| **macOS** (Apple Silicon) | `BRIDGE+-1.0.6-mac-arm64.dmg` |
-| **macOS** (Intel) | `BRIDGE+-1.0.6-mac-x64.dmg` |
-| **Windows** (x64 portable) | `BRIDGE+-1.0.6-win-x64-portable.exe` |
+| **macOS** (Apple Silicon) | `BRIDGE+-1.0.7-mac-arm64.dmg` |
+| **macOS** (Intel) | `BRIDGE+-1.0.7-mac-x64.dmg` |
+| **Windows** (x64 portable) | `BRIDGE+-1.0.7-win-x64-portable.exe` |
 
 No runtime installation required. Open the package and run.
 
@@ -34,7 +34,7 @@ No runtime installation required. Open the package and run.
 - **Compatible DJ network receiver** — deck state, tempo, beat, position, track metadata, cue points, beat grids, phrase data, artwork
 - **TCNet output** — visual software sync (up to 6 layers, bidirectional metadata)
 - **Art-Net Timecode · LTC · MIDI Clock · MTC** — lighting consoles, DAWs, sequencers
-- **Ableton Link integration** — wireless tempo / phase sync (native `abletonlink` C++ binding)
+- **Optional Ableton Link integration** — wireless tempo / phase sync when a user-installed compatible Link module is available
 - **Virtual Deck** — local 6-deck playback (MP3 · WAV · FLAC · AAC · OGG · M4A · AIFF)
 - **Hardware waveform** — color preview · detail waveform · 3-band visualization
 - **Auto idle reduction** — display refresh native when visible, 1Hz timer when hidden
@@ -74,7 +74,7 @@ Users are responsible for ensuring that their use of BRIDGE+ complies with appli
 
 BRIDGE+ 는 호환 DJ 하드웨어 (CDJ · DJM 등) 의 네트워크 상태를 감지해 비주얼 소프트웨어 (Resolume Arena/Wire), 조명 콘솔 (grandMA·QLC+), DAW (Ableton Live 등) 와 동기화하는 독립 데스크톱 도구입니다.
 
-주요 출력: **TCNet · Art-Net Timecode · LTC · MIDI Clock·MTC · Ableton Link** (네이티브 C++ binding).
+주요 출력: **TCNet · Art-Net Timecode · LTC · MIDI Clock·MTC · 선택적 Ableton Link**.
 
 본 빌드는 **30일 데모**입니다. [Releases](../../releases) 에서 OS 에 맞는 네이티브 패키지 다운로드 후 바로 실행하세요.
 
