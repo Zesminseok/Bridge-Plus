@@ -33,7 +33,13 @@ No runtime installation required. Open the package and run.
 
 BRIDGE+ release packages do **not** bundle Ableton Link source code, the Ableton Link SDK, or an Ableton Link native binary. Link output stays disabled unless the user installs a compatible module separately. The default BRIDGE+ binary distribution is kept separate from Ableton Link's GPL-2.0 / commercial dual-license terms.
 
-BRIDGE+ looks for the optional module in this order:
+BRIDGE+ 1.0.7 runs on Electron 33. A compatible optional module must be built for:
+
+- your operating system (`win32` or `darwin`)
+- your CPU architecture (`x64` or `arm64`)
+- Electron 33's native module ABI
+
+Install the **whole module folder**, not only the `.node` file. BRIDGE+ looks for the optional module in this order:
 
 1. `BRIDGE_ABLETON_LINK_MODULE`
 2. The OS-specific application support folder below
@@ -41,34 +47,89 @@ BRIDGE+ looks for the optional module in this order:
 
 The module folder must be loadable by Node/Electron, usually with `package.json` or `index.js` at the folder root. It must expose a `Link` constructor compatible with BRIDGE+ (`enable`, `setBpm`, `getBpm`, `getBeat`, `getPhase`, `getNumPeers`, and `setBeat`). Its native `.node` binary must match your OS, CPU architecture, and Electron ABI.
 
+After installation, restart BRIDGE+, open **BPM Link**, enable **Ableton Link**, and check the status. OSC BPM output can still be used without Ableton Link.
+
 **Windows**
 
-Place the compatible module folder here:
+Recommended install path:
 
 ```powershell
 %APPDATA%\BRIDGE+\abletonlink-mini
 ```
 
-Or set an explicit path:
+Create the folder if it does not exist:
+
+```powershell
+mkdir "$env:APPDATA\BRIDGE+\abletonlink-mini"
+```
+
+Expected shape:
+
+```text
+%APPDATA%\BRIDGE+\abletonlink-mini\
+  package.json
+  index.js
+  bin\win32-x64-<electron-abi>\abletonlink-mini.node
+```
+
+If your module package already contains `package.json`, `index.js`, and `bin\...`, copy that package folder's contents into `%APPDATA%\BRIDGE+\abletonlink-mini`.
+
+Or set an explicit module path:
 
 ```powershell
 setx BRIDGE_ABLETON_LINK_MODULE "C:\Path\To\abletonlink-mini"
 ```
 
+Restart BRIDGE+ after changing the environment variable.
+
 **macOS**
 
-Place the compatible module folder here:
+Recommended install path:
 
 ```sh
 ~/Library/Application Support/BRIDGE+/abletonlink-mini
 ```
 
-Or launch with an explicit path:
+Create the folder if it does not exist:
+
+```sh
+mkdir -p "$HOME/Library/Application Support/BRIDGE+/abletonlink-mini"
+```
+
+Expected shape:
+
+```text
+~/Library/Application Support/BRIDGE+/abletonlink-mini/
+  package.json
+  index.js
+  bin/darwin-arm64-<electron-abi>/abletonlink-mini.node
+  # or bin/darwin-x64-<electron-abi>/abletonlink-mini.node
+```
+
+If your module package already contains `package.json`, `index.js`, and `bin/...`, copy that package folder's contents into `~/Library/Application Support/BRIDGE+/abletonlink-mini`.
+
+Or launch BRIDGE+ with an explicit module path. Finder-launched apps do not inherit normal shell environment variables, so the application support folder above is usually the simplest option. For a temporary shell launch:
 
 ```sh
 export BRIDGE_ABLETON_LINK_MODULE="$HOME/Library/Application Support/BRIDGE+/abletonlink-mini"
 open -a "BRIDGE+"
 ```
+
+For a persistent GUI environment variable:
+
+```sh
+launchctl setenv BRIDGE_ABLETON_LINK_MODULE "$HOME/Library/Application Support/BRIDGE+/abletonlink-mini"
+```
+
+Then quit and reopen BRIDGE+.
+
+Troubleshooting checklist:
+
+- The folder path points to the module root, not directly to the `.node` file.
+- `package.json` or `index.js` exists at the module root.
+- The `.node` binary matches the current BRIDGE+ release's Electron major version.
+- Windows uses `win32-x64`; Apple Silicon uses `darwin-arm64`; Intel Mac uses `darwin-x64`.
+- If Ableton Link stays unavailable, remove the env var and use the OS-specific application support folder first.
 
 If you build, install, bundle, or redistribute an optional Ableton Link module, you are responsible for complying with that module's license and Ableton Link's GPL-2.0 or commercial license terms. The optional module is a separate component and is not covered by BRIDGE+'s Apache-2.0 license.
 
