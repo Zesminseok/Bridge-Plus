@@ -49,6 +49,14 @@ The module folder must be loadable by Node/Electron, usually with `package.json`
 
 After installation, restart BRIDGE+, open **BPM Link**, enable **Ableton Link**, and check the status. OSC BPM output can still be used without Ableton Link.
 
+Where to get the module:
+
+- Official Ableton Link cross-platform source: <https://github.com/Ableton/link>
+- Ableton Link developer documentation: <https://ableton.github.io/link/>
+- Ableton license information: <https://github.com/Ableton/link/blob/master/LICENSE.md>
+
+Ableton's official repository provides the Link source library, not a BRIDGE+ ready-made Electron native module. To use it with BRIDGE+, install a compatible Node/Electron wrapper module that you built yourself or obtained from a source whose license terms you have checked. BRIDGE+ does not endorse or redistribute third-party prebuilt Link binaries.
+
 **Windows**
 
 Recommended install path:
