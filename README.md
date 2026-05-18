@@ -3,7 +3,7 @@
 > Independent desktop bridge for synchronizing compatible DJ hardware, virtual decks, visual software, lighting systems, DAWs, and timecode workflows.
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.1.5-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.6-orange.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
 BRIDGE+ listens to compatible DJ network state and translates timing, transport, metadata, and deck information into practical outputs for visual, lighting, and production environments.
@@ -16,7 +16,7 @@ BRIDGE+ listens to compatible DJ network state and translates timing, transport,
 
 BRIDGE+ release packages are distributed as desktop binaries for macOS and Windows.
 
-This release is a **30-day demo release**. The demo period starts on first launch. After the demo period ends, core bridge features are disabled while the app remains available for status and license information.
+This release is a **60-day demo release**. The demo period starts on first launch. After the demo period ends, BRIDGE+ continues basic Pro DJ Link to TCNet output for timecode, faders, track metadata, and artwork; extended features are disabled.
 
 ---
 
@@ -44,9 +44,9 @@ This release is a **30-day demo release**. The demo period starts on first launc
 
 Download the native package for your operating system from [Releases](../../releases):
 
-- **macOS Apple Silicon**: `BRIDGE+-1.1.5-mac-arm64.dmg`
-- **macOS Intel**: `BRIDGE+-1.1.5-mac-x64.dmg`
-- **Windows x64**: `BRIDGE+-1.1.5-win-x64.exe`
+- **macOS Apple Silicon**: `BRIDGE+-1.1.6-mac-arm64.dmg`
+- **macOS Intel**: `BRIDGE+-1.1.6-mac-x64.dmg`
+- **Windows x64**: `BRIDGE+-1.1.6-win-x64.exe`
 
 Install or run the downloaded package. No separate runtime installation is required for normal use.
 
@@ -88,7 +88,7 @@ BRIDGE+는 호환 DJ 네트워크 상태를 수신하고, 타이밍 / 재생 상
 
 BRIDGE+ 릴리스 패키지는 macOS 및 Windows용 데스크톱 바이너리로 배포됩니다.
 
-이 릴리스는 **30일 데모 릴리스**입니다. 데모 기간은 첫 실행일부터 시작됩니다. 데모 기간이 종료되면 핵심 브리지 기능은 비활성화되며, 앱은 상태 및 라이선스 정보를 확인할 수 있도록 계속 열립니다.
+이 릴리스는 **60일 데모 릴리스**입니다. 데모 기간은 첫 실행일부터 시작됩니다. 데모 기간이 종료되면 타임코드, 페이더, 곡 메타데이터, 앨범아트의 기본 Pro DJ Link → TCNet 출력만 계속 작동하고 확장 기능은 비활성화됩니다.
 
 ### 주요 기능
 
@@ -110,9 +110,9 @@ BRIDGE+ 릴리스 패키지는 macOS 및 Windows용 데스크톱 바이너리로
 
 [Releases](../../releases)에서 운영체제에 맞는 네이티브 패키지를 다운로드하세요.
 
-- **macOS Apple Silicon**: `BRIDGE+-1.1.5-mac-arm64.dmg`
-- **macOS Intel**: `BRIDGE+-1.1.5-mac-x64.dmg`
-- **Windows x64**: `BRIDGE+-1.1.5-win-x64.exe`
+- **macOS Apple Silicon**: `BRIDGE+-1.1.6-mac-arm64.dmg`
+- **macOS Intel**: `BRIDGE+-1.1.6-mac-x64.dmg`
+- **Windows x64**: `BRIDGE+-1.1.6-win-x64.exe`
 
 다운로드한 패키지를 설치하거나 실행하면 됩니다. 일반 사용에는 별도 런타임 설치가 필요하지 않습니다.
 

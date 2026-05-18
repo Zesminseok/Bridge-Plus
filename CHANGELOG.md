@@ -8,6 +8,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.1.6 — 2026-05-18
+
+- 기능 추가
+  - Web Viewer 추가
+  - 하드웨어 웨이브폼 테마 및 표시 옵션 개선
+
+- 버그 픽스
+  - Web Viewer 웨이브폼, 큐 마커, 진행 표시 오류 수정
+  - 프로그램 프리뷰/디테일 웨이브폼 표시 오류 수정
+  - CDJ-2000NXS2 / CDJ-3000 메타데이터, 큐, 비트 그리드, 웨이브폼 수신 안정화
+  - macOS / Windows 네트워크 인터페이스 변경 후 플레이어/믹서 연결 오류 수정
+
 ## 1.1.5 — 2026-05-17
 
 - 기능 추가
