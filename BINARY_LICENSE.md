@@ -26,11 +26,12 @@ BRIDGE+ release builds may operate as time-limited demo builds. Unless a
 separate written license says otherwise, the demo period is 60 days from first
 launch.
 
-After the demo period ends, BRIDGE+ may continue to provide only basic
+The end of the demo period does not block BRIDGE+ from launching. After the
+demo period ends, BRIDGE+ continues in limited mode and provides only basic
 Pro DJ Link to TCNet output for timecode, fader values, track title, artist,
 and album artwork. Extended features, including waveform display, Web Viewer,
 OSC output, advanced mixer controls, virtual decks, and other non-basic
-features, may be disabled.
+features, are disabled unless a separate written license says otherwise.
 
 ## 3. Restrictions
 
@@ -130,8 +131,8 @@ agreement states otherwise.
   제작은 금지됩니다.
 - 앱 자체의 리버스 엔지니어링, 디컴파일, 디스어셈블, 패킷 처리 로직/라이선스
   로직 추출 시도는 금지됩니다. 단, 관할 법률상 제한할 수 없는 권리는 제외됩니다.
-- 60일 데모 종료 후에는 기본 Pro DJ Link to TCNet 출력만 남고 확장 기능은
-  비활성화될 수 있습니다.
+- 60일 데모 종료 후에도 BRIDGE+ 실행 자체는 차단되지 않습니다. 제한 모드에서
+  기본 Pro DJ Link to TCNet 출력만 계속 작동하고 확장 기능은 비활성화됩니다.
 - 도네이션/후원은 개발 지원이며, 라이선스 구매나 기능 해금, 소유권 이전,
   보증, 지원 의무, 재배포 권한을 의미하지 않습니다.
 - BRIDGE+는 독립 상호운용성 도구이며, 언급된 제조사 또는 소프트웨어 회사와
