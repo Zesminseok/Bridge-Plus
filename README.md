@@ -2,7 +2,7 @@
 
 > Independent desktop bridge for synchronizing compatible DJ hardware, virtual decks, visual software, lighting systems, DAWs, and timecode workflows.
 
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/license-proprietary-red.svg)](BINARY_LICENSE.md)
 [![Version](https://img.shields.io/badge/version-1.1.6-orange.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
@@ -15,8 +15,13 @@ BRIDGE+ listens to compatible DJ network state and translates timing, transport,
 ## Distribution Model
 
 BRIDGE+ release packages are distributed as desktop binaries for macOS and Windows.
+The public GitHub repository contains documentation for the released packages; application source code is maintained separately.
 
 This release is a **60-day demo release**. The demo period starts on first launch. After the demo period ends, BRIDGE+ continues basic Pro DJ Link to TCNet output for timecode, faders, track metadata, and artwork; extended features are disabled.
+
+BRIDGE+ binaries may not be copied, modified, redistributed, mirrored, sold, sublicensed, or reverse engineered except where applicable law cannot restrict those rights.
+
+Donations and sponsorships are voluntary development support. They do not purchase a license, unlock features, transfer ownership, create warranty or support obligations, or grant redistribution, modification, trademark, reverse-engineering, or source-code rights unless a separate written agreement says so.
 
 ---
 
@@ -66,9 +71,12 @@ Detect compatible DJ players and mixers on the network, then forward timing, tra
 
 ## Legal Notes
 
-- **Source license:** [Apache License 2.0](LICENSE)
+- **Public repository license:** [BRIDGE+ Public Repository License](LICENSE)
+- **Binary license:** [BRIDGE+ Binary License Agreement](BINARY_LICENSE.md)
 - **Trademark, third-party asset, and disclaimer notices:** [NOTICE.md](NOTICE.md)
 - **Release history:** [CHANGELOG.md](CHANGELOG.md)
+
+GitHub's automatically generated "Source code" archives contain this public documentation repository only. Installable BRIDGE+ packages are the release assets listed above.
 
 BRIDGE+ is an independent interoperability implementation based on observed network behavior and publicly available information. No proprietary source code, firmware, or confidential materials from any manufacturer were used to develop this project.
 
@@ -87,8 +95,13 @@ BRIDGE+는 호환 DJ 네트워크 상태를 수신하고, 타이밍 / 재생 상
 ### 배포 모델
 
 BRIDGE+ 릴리스 패키지는 macOS 및 Windows용 데스크톱 바이너리로 배포됩니다.
+공개 GitHub 저장소에는 릴리스 패키지 설명을 위한 문서만 포함되며, 애플리케이션 소스 코드는 별도로 관리됩니다.
 
 이 릴리스는 **60일 데모 릴리스**입니다. 데모 기간은 첫 실행일부터 시작됩니다. 데모 기간이 종료되면 타임코드, 페이더, 곡 메타데이터, 앨범아트의 기본 Pro DJ Link → TCNet 출력만 계속 작동하고 확장 기능은 비활성화됩니다.
+
+BRIDGE+ 바이너리는 관련 법률상 제한할 수 없는 경우를 제외하고 복사, 수정, 재배포, 미러링, 판매, 재라이선스, 리버스 엔지니어링이 금지됩니다.
+
+도네이션과 후원은 자발적인 개발 지원입니다. 별도 서면 계약이 없는 한 라이선스 구매, 기능 해금, 소유권 이전, 보증/지원 의무, 재배포 권한, 수정 권한, 상표 권한, 리버스 엔지니어링 권한, 소스 코드 권한을 의미하지 않습니다.
 
 ### 주요 기능
 
@@ -128,9 +141,12 @@ BRIDGE+ 릴리스 패키지는 macOS 및 Windows용 데스크톱 바이너리로
 
 ### 법적 고지
 
-- **소스 라이선스:** [Apache License 2.0](LICENSE)
+- **공개 저장소 라이선스:** [BRIDGE+ Public Repository License](LICENSE)
+- **바이너리 라이선스:** [BRIDGE+ Binary License Agreement](BINARY_LICENSE.md)
 - **상표, 서드파티 자산, 면책 고지:** [NOTICE.md](NOTICE.md)
 - **릴리스 내역:** [CHANGELOG.md](CHANGELOG.md)
+
+GitHub가 자동 생성하는 "Source code" 압축 파일에는 이 공개 문서 저장소만 포함됩니다. BRIDGE+ 설치 파일은 위에 표시된 릴리스 파일을 다운로드해 사용하세요.
 
 BRIDGE+는 관찰된 네트워크 동작과 공개 정보를 기반으로 한 독립 상호운용성 구현입니다. 이 프로젝트를 개발하는 과정에서 어떤 제조사의 비공개 소스 코드, 펌웨어, 기밀 자료도 사용하지 않았습니다.
 
