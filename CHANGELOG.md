@@ -8,6 +8,26 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.1.8 — 2026-06-07
+
+### English
+
+- Added
+  - Improved CDJ-2000NXS2 transport handling for cue, hot cue, jog, and short loop playback.
+
+- Fixed
+  - Fixed short CDJ-2000NXS2 loop handoff when loop-start packets arrive before loop-end packets.
+  - Reduced CDJ-2000NXS2 cue, hot cue, and platter-position jumps in TCNet output.
+
+### 한국어
+
+- 기능 추가
+  - CDJ-2000NXS2 큐, 핫큐, 조그, 짧은 루프 재생 처리 개선
+
+- 버그 픽스
+  - loop-start 패킷이 loop-end보다 먼저 들어오는 짧은 CDJ-2000NXS2 루프 처리 수정
+  - CDJ-2000NXS2 큐, 핫큐, 플래터 조작 중 TCNet 위치 튐 완화
+
 ## 1.1.7 — 2026-05-24
 
 ### English
