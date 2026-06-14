@@ -8,6 +8,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.1.9 — 2026-06-14
+
+### English
+
+- Added
+  - Improved CDJ-2000NXS2 transport handling for cue, hot cue, memory cue, jog, and sub-beat loop workflows.
+
+- Fixed
+  - Fixed stale cue anchoring on short CDJ-2000NXS2 samples.
+  - Improved mixer/player discovery on variable IP network setups.
+  - Stabilized TCNet timing output independently from UI frame-rate settings.
+  - Reduced track-load metadata and waveform refresh stalls.
+
+### 한국어
+
+- 기능 추가
+  - CDJ-2000NXS2 큐, 핫큐, 메모리 큐, 조그, 1비트 미만 루프 처리 개선
+
+- 버그 픽스
+  - 짧은 CDJ-2000NXS2 샘플에서 이전 큐 위치를 잘못 기준점으로 잡는 문제 수정
+  - IP가 바뀌는 네트워크 환경에서 믹서/플레이어 감지 안정화
+  - UI 프레임레이트 설정과 별개로 TCNet 타이밍 출력 안정화
+  - 곡 로드 중 메타데이터와 웨이브폼 갱신 시 버벅임 완화
+
 ## 1.1.8 — 2026-06-07
 
 ### English

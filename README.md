@@ -3,7 +3,7 @@
 > Independent desktop bridge for synchronizing compatible DJ hardware, virtual decks, visual software, lighting systems, DAWs, and timecode workflows.
 
 [![License: Proprietary](https://img.shields.io/badge/license-proprietary-red.svg)](BINARY_LICENSE.md)
-[![Version](https://img.shields.io/badge/version-1.1.8-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.9-orange.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
 BRIDGE+ listens to compatible DJ network state and translates timing, transport, metadata, and deck information into practical outputs for visual, lighting, and production environments.
@@ -49,9 +49,9 @@ Donations and sponsorships are voluntary development support. They do not purcha
 
 Download the native package for your operating system from [Releases](../../releases):
 
-- **macOS Apple Silicon**: `BRIDGE+-1.1.8-mac-arm64.dmg`
-- **macOS Intel**: `BRIDGE+-1.1.8-mac-x64.dmg`
-- **Windows x64**: `BRIDGE+-1.1.8-win-x64.exe`
+- **macOS Apple Silicon**: `BRIDGE+-1.1.9-mac-arm64.dmg`
+- **macOS Intel**: `BRIDGE+-1.1.9-mac-x64.dmg`
+- **Windows x64**: `BRIDGE+-1.1.9-win-x64.exe`
 
 Install or run the downloaded package. No separate runtime installation is required for normal use.
 
@@ -125,9 +125,9 @@ BRIDGE+ 바이너리는 관련 법률상 제한할 수 없는 경우를 제외�
 
 [Releases](../../releases)에서 운영체제에 맞는 네이티브 패키지를 다운로드하세요.
 
-- **macOS Apple Silicon**: `BRIDGE+-1.1.8-mac-arm64.dmg`
-- **macOS Intel**: `BRIDGE+-1.1.8-mac-x64.dmg`
-- **Windows x64**: `BRIDGE+-1.1.8-win-x64.exe`
+- **macOS Apple Silicon**: `BRIDGE+-1.1.9-mac-arm64.dmg`
+- **macOS Intel**: `BRIDGE+-1.1.9-mac-x64.dmg`
+- **Windows x64**: `BRIDGE+-1.1.9-win-x64.exe`
 
 다운로드한 패키지를 설치하거나 실행하면 됩니다. 일반 사용에는 별도 런타임 설치가 필요하지 않습니다.
 
