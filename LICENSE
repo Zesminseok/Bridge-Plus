@@ -1,0 +1,51 @@
+BRIDGE+ PUBLIC REPOSITORY LICENSE
+
+Copyright (c) 2026 Zesminseok.
+All rights reserved.
+
+This public repository is provided only for BRIDGE+ release documentation,
+not for distribution of BRIDGE+ application source code.
+
+Permission is granted to view and link to the documentation in this
+repository for personal, evaluation, compatibility, and informational use.
+No other rights are granted unless expressly stated in writing by the
+copyright holder.
+
+You may not, without prior written permission:
+
+- copy, redistribute, mirror, sell, sublicense, or republish this repository
+  or any substantial portion of it outside GitHub's normal viewing and
+  release-download functionality;
+- modify, translate, adapt, or create derivative works from the documentation
+  for public distribution;
+- use BRIDGE+ names, logos, screenshots, release text, or documentation in a
+  way that suggests endorsement, sponsorship, certification, or affiliation;
+- use this public repository license as a license to BRIDGE+ application
+  binaries, private source code, protocol implementations, trademarks, or
+  bundled third-party materials.
+
+BRIDGE+ desktop binaries are governed by BINARY_LICENSE.md and by any license
+terms shown in the application or release materials.
+
+Third-party names, trademarks, fonts, libraries, and other components remain
+subject to their respective owners' rights and license terms. See NOTICE.md.
+
+THE DOCUMENTATION IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. TO THE MAXIMUM
+EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT HOLDER SHALL NOT BE LIABLE
+FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM OR RELATED TO THIS
+REPOSITORY, THE DOCUMENTATION, OR USE OF BRIDGE+.
+
+KOREAN SUMMARY / 한국어 요약
+
+이 공개 저장소는 BRIDGE+ 릴리스 문서 제공을 위한 저장소이며, BRIDGE+
+애플리케이션 소스 코드 배포용 저장소가 아닙니다. 문서는 개인 확인,
+평가, 호환성 확인, 정보 제공 목적의 열람과 링크만 허용됩니다.
+
+저작권자의 사전 서면 허가 없이 문서 또는 저장소의 실질적 부분을 복사,
+재배포, 미러링, 판매, 재라이선스, 공개 수정, 번역, 2차 저작물로 배포할
+수 없습니다.
+
+BRIDGE+ 데스크톱 바이너리는 BINARY_LICENSE.md 및 앱/릴리스 자료에 표시된
+조건의 적용을 받습니다.
