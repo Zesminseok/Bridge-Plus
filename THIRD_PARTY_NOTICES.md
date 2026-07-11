@@ -37,9 +37,17 @@ used only to describe protocol compatibility and interoperability.
 
 ## Runtime Components
 
-BRIDGE+ is built as an Electron desktop application. Electron and its bundled
-runtime components remain subject to their respective third-party licenses and
-notices.
+BRIDGE+ is built as an Electron desktop application (Electron 33.x). Electron
+(MIT) bundles Chromium, Node.js, V8, ICU, and the FFmpeg library, among other
+components; their license texts are distributed with the application as
+`LICENSE.electron.txt` and `LICENSES.chromium.html`.
+
+The bundled FFmpeg library is licensed under the GNU Lesser General Public
+License and is distributed as an unmodified, dynamically linked library from
+the official Electron distribution. Its corresponding source code is available
+from the Electron and Chromium open-source projects
+(https://github.com/electron/electron/releases). The BRIDGE+ binary license
+does not restrict rights granted by the LGPL for this component.
 
 Runtime dependency:
 

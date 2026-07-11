@@ -78,6 +78,15 @@ itself. Nothing in this agreement is intended to restrict rights that cannot be
 restricted under applicable law, including any non-waivable interoperability or
 reverse-engineering rights that may apply in your jurisdiction.
 
+The restrictions in this agreement also do not limit any rights you hold under
+the licenses of bundled third-party components. In particular, components of
+the Electron runtime distributed with BRIDGE+ (such as the FFmpeg library)
+are licensed under the GNU Lesser General Public License, which permits
+modification of those components for your own use and reverse engineering for
+debugging such modifications; those rights are unaffected by this agreement.
+See LICENSE.electron.txt and LICENSES.chromium.html distributed with the
+application.
+
 ## 5. Donations and Sponsorship
 
 Donations, sponsorships, tips, or similar payments are voluntary support for
@@ -137,6 +146,11 @@ agreement states otherwise.
   제작은 금지됩니다.
 - 앱 자체의 리버스 엔지니어링, 디컴파일, 디스어셈블, 패킷 처리 로직/라이선스
   로직 추출 시도는 금지됩니다. 단, 관할 법률상 제한할 수 없는 권리는 제외됩니다.
+- 본 계약의 제한은 번들된 서드파티 구성요소 라이선스가 부여하는 권리를
+  제한하지 않습니다. 특히 Electron 런타임의 FFmpeg 등 LGPL 구성요소에 대해
+  해당 라이선스가 허용하는 수정 및 디버깅 목적 리버스 엔지니어링 권리는 본
+  계약의 영향을 받지 않습니다 (앱에 동봉된 LICENSE.electron.txt,
+  LICENSES.chromium.html 참조).
 - 60일 데모 종료 후에도 BRIDGE+ 실행 자체는 차단되지 않습니다. 제한 모드에서
   기본 Pro DJ Link to TCNet 출력만 계속 작동하고 확장 기능은 비활성화됩니다.
 - 도네이션/후원은 개발 지원이며, 라이선스 구매나 기능 해금, 소유권 이전,
