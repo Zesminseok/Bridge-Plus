@@ -1,12 +1,30 @@
 # Changelog
 
-All notable changes to BRIDGE+ are documented in this file.
+All notable changes to ORVIK are documented in this file.
 
 The version history below begins at **1.0.0-beta.0** — earlier internal builds are
 not archived. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+
+## 1.3.6 — 2026-07-12
+
+### English
+
+- Renamed the app: BRIDGE+ is now **ORVIK**, with a new icon. Functionality is unchanged.
+- Settings, license activation state, and player colors migrate automatically from a previous BRIDGE+ install on first launch.
+- Existing license keys (`BPLUS1.…`) remain valid — no reactivation needed.
+- On the network, the TCNet node now appears as `Orvik01` (vendor/device `ORVIK`) in Resolume Arena and other TCNet clients. PRO DJ LINK behavior toward players and mixers is byte-identical to 1.3.5.
+- Fixed a leftover "60-day demo" line in the README — this build has no demo time limit.
+
+### 한국어
+
+- 앱 이름 변경: BRIDGE+ 가 **ORVIK** 이 되었습니다 (새 아이콘 포함). 기능 변경 없음
+- 기존 BRIDGE+ 설치의 설정·라이선스 활성화 상태·플레이어 색상은 첫 실행 시 자동 이전
+- 기존 라이선스 키(`BPLUS1.…`) 그대로 유효 — 재활성화 불필요
+- 네트워크에서 TCNet 노드는 Resolume Arena 등에 `Orvik01`(벤더/디바이스 `ORVIK`)로 표시. 플레이어·믹서를 향한 PRO DJ LINK 동작은 1.3.5 와 바이트 단위 동일
+- README 의 "60일 데모" 잔여 문구 수정 — 이 빌드는 데모 시간제한이 없습니다
 
 ## 1.3.5 — 2026-07-12
 
@@ -172,14 +190,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Overview 하단 진행바를 흰색으로 변경하고, 종료 30초 전부터 현재 진행 구간과 남은 구간이 번갈아 표시되도록 수정
 - Detail/Overview loop overlay 가 비트 그리드와 하단 진행바를 침범하지 않도록 waveform 영역 안으로 제한
 - Overview loop 구간 시작/끝에 세로 경계선을 추가해 루프 범위를 더 명확하게 표시
-- Release assets: `BRIDGE+-1.0.9.1-win-x64.exe`, `BRIDGE+-1.0.9.1-mac-arm64.dmg`, `BRIDGE+-1.0.9.1-mac-x64.dmg`
+- Release assets: `ORVIK-1.0.9.1-win-x64.exe`, `ORVIK-1.0.9.1-mac-arm64.dmg`, `ORVIK-1.0.9.1-mac-x64.dmg`
 
 ## 1.0.9 — 2026-05-08
 
 - 창 숨김/전체화면 전환 후에도 TCNet/타임코드 송신이 렌더러 FPS 절감 상태에 묶이지 않도록 idle downshift 동작 제거
 - HW detail waveform bar counter 표시를 10진 소수 대신 1bar=4beat 표기 기준으로 보정
 - 남은 memory cue bar counter 는 `-8.4` → `-8.3` → `-8.2` → `-8.1` 형식으로 표시
-- Release assets: `BRIDGE+-1.0.9-win-x64.exe`, `BRIDGE+-1.0.9-mac-arm64.dmg`, `BRIDGE+-1.0.9-mac-x64.dmg`
+- Release assets: `ORVIK-1.0.9-win-x64.exe`, `ORVIK-1.0.9-mac-arm64.dmg`, `ORVIK-1.0.9-mac-x64.dmg`
 
 ## 1.0.8 — 2026-05-07
 
@@ -187,7 +205,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - 본체 저장소에서 비활성화된 외부 동기화 모듈과 관련 빌드 단계를 제거
 - README / NOTICE 에서 비활성화된 외부 sync 모듈 설치 안내와 고지를 제거
 - OSC BPM 출력은 BPM 변화가 있을 때만 송신하도록 유지해 불필요한 반복 패킷을 줄임
-- Release assets: `BRIDGE+-1.0.8-win-x64-portable.exe`, `BRIDGE+-1.0.8-mac-arm64.dmg`, `BRIDGE+-1.0.8-mac-x64.dmg`
+- Release assets: `ORVIK-1.0.8-win-x64-portable.exe`, `ORVIK-1.0.8-mac-arm64.dmg`, `ORVIK-1.0.8-mac-x64.dmg`
 
 ## 1.0.7 — 2026-05-06
 
@@ -199,8 +217,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - HW detail waveform 색상 경로를 overview 와 더 가깝게 맞추고 bar counter 위치/표시 기준 보정
 - Windows 글꼴 렌더링과 앱 아이콘/스플래시 아이콘 표시를 정리
 - OSC/Art-Net 포트 충돌 방지와 main process IPC 입력 검증 강화
-- cleanup zombies 기능이 BRIDGE+ 계열 프로세스만 정리하도록 제한해 다른 앱 강제 종료 위험 축소
-- Release assets: `BRIDGE+-1.0.7-win-x64-portable.exe`, `BRIDGE+-1.0.7-mac-arm64.dmg`, `BRIDGE+-1.0.7-mac-x64.dmg`
+- cleanup zombies 기능이 ORVIK 계열 프로세스만 정리하도록 제한해 다른 앱 강제 종료 위험 축소
+- Release assets: `ORVIK-1.0.7-win-x64-portable.exe`, `ORVIK-1.0.7-mac-arm64.dmg`, `ORVIK-1.0.7-mac-x64.dmg`
 
 ## 1.0.6 — 2026-05-04
 
@@ -214,7 +232,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - HW detail waveform 색상 경로를 overview waveform 과 통일
 - 2000NXS2 overview playhead/TCNet 출력이 스무딩된 위치를 사용하도록 수정
 - 2000NXS2 loop mode 에서 정밀 MS 없는 모델만 루프 구간 보간 적용
-- Release assets: `BRIDGE+-1.0.6-win-x64-portable.exe`, `BRIDGE+-1.0.6-mac-arm64.dmg`, `BRIDGE+-1.0.6-mac-x64.dmg`
+- Release assets: `ORVIK-1.0.6-win-x64-portable.exe`, `ORVIK-1.0.6-mac-arm64.dmg`, `ORVIK-1.0.6-mac-x64.dmg`
 - External implementation/capture reference comments cleaned from source
 
 ## 1.0.5 — 2026-05-03
@@ -290,9 +308,9 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Build artifacts
 
-- `BRIDGE+-1.0.0.10-mac-x64.dmg` / `-mac-arm64.dmg` (Intel / Apple Silicon)
+- `ORVIK-1.0.0.10-mac-x64.dmg` / `-mac-arm64.dmg` (Intel / Apple Silicon)
 - `.zip` 버전 동시 제공
-- `BRIDGE+-1.0.0.10-win-x64.exe` (Windows installer)
+- `ORVIK-1.0.0.10-win-x64.exe` (Windows installer)
 
 ---
 

@@ -1,35 +1,35 @@
-# BRIDGE+
+# ORVIK
 
 > Independent desktop bridge for synchronizing compatible DJ hardware, virtual decks, visual software, lighting systems, DAWs, and timecode workflows.
 
 [![License: Proprietary](https://img.shields.io/badge/license-proprietary-red.svg)](BINARY_LICENSE.md)
-[![Version](https://img.shields.io/badge/version-1.3.5-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.6-orange.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 
-BRIDGE+ listens to compatible DJ network state and translates timing, transport, metadata, and deck information into practical outputs for visual, lighting, and production environments.
+ORVIK listens to compatible DJ network state and translates timing, transport, metadata, and deck information into practical outputs for visual, lighting, and production environments.
 
 ## Preview
 
 <p>
-  <img src="docs/media/program_gif.gif" alt="BRIDGE+ Deck theme" width="520">
+  <img src="docs/media/program_gif.gif" alt="ORVIK Deck theme" width="520">
   &nbsp;
-  <img src="docs/media/webviewgif.gif" alt="BRIDGE+ Web Viewer on mobile" width="240">
+  <img src="docs/media/webviewgif.gif" alt="ORVIK Web Viewer on mobile" width="240">
 </p>
 
 > Demonstration on the developer's own hardware. UI, track names, and colors are examples.
 
-> **Trademark and affiliation notice:** BRIDGE+ is an independent third-party project. It is not affiliated with, endorsed by, sponsored by, approved by, licensed by, certified by, or otherwise officially connected to any hardware, software, or protocol owner mentioned in this repository. Product names, protocol names, and trademarks are used only to describe compatibility and interoperability. See [NOTICE.md](NOTICE.md).
+> **Trademark and affiliation notice:** ORVIK is an independent third-party project. It is not affiliated with, endorsed by, sponsored by, approved by, licensed by, certified by, or otherwise officially connected to any hardware, software, or protocol owner mentioned in this repository. Product names, protocol names, and trademarks are used only to describe compatibility and interoperability. See [NOTICE.md](NOTICE.md).
 
 ---
 
 ## Distribution Model
 
-BRIDGE+ release packages are distributed as desktop binaries for macOS and Windows.
+ORVIK release packages are distributed as desktop binaries for macOS and Windows.
 The public GitHub repository contains documentation for the released packages; application source code is maintained separately.
 
-This release is a **demo build with no time limit at this time**. All features are available. A time-limited demo may be introduced in a future release; if that happens, BRIDGE+ will still launch and continue in a limited mode with basic Pro DJ Link to TCNet output.
+This release is a **demo build with no time limit at this time**. All features are available. A time-limited demo may be introduced in a future release; if that happens, ORVIK will still launch and continue in a limited mode with basic Pro DJ Link to TCNet output.
 
-BRIDGE+ binaries may not be copied, modified, redistributed, mirrored, sold, sublicensed, or reverse engineered except where applicable law cannot restrict those rights.
+ORVIK binaries may not be copied, modified, redistributed, mirrored, sold, sublicensed, or reverse engineered except where applicable law cannot restrict those rights.
 
 Donations and sponsorships are voluntary development support. They do not purchase a license, unlock features, transfer ownership, create warranty or support obligations, or grant redistribution, modification, trademark, reverse-engineering, or source-code rights unless a separate written agreement says so.
 
@@ -67,9 +67,9 @@ TCNet output (Resolume Arena), PRO DJ LINK input (CDJ-3000 / CDJ-2000NXS2 / DJM-
 
 Download the native package for your operating system from [Releases](../../releases):
 
-- **macOS Apple Silicon**: `BRIDGE+-1.3.5-mac-arm64.dmg`
-- **macOS Intel**: `BRIDGE+-1.3.5-mac-x64.dmg`
-- **Windows x64**: `BRIDGE+-1.3.5-win-x64.exe`
+- **macOS Apple Silicon**: `ORVIK-1.3.6-mac-arm64.dmg`
+- **macOS Intel**: `ORVIK-1.3.6-mac-x64.dmg`
+- **Windows x64**: `ORVIK-1.3.6-win-x64.exe`
 
 Install or run the downloaded package. No separate runtime installation is required for normal use.
 
@@ -89,18 +89,18 @@ Detect compatible DJ players and mixers on the network, then forward timing, tra
 
 ## Legal Notes
 
-- **Public repository license:** [BRIDGE+ Public Repository License](LICENSE)
-- **Binary license:** [BRIDGE+ Binary License Agreement](BINARY_LICENSE.md)
+- **Public repository license:** [ORVIK Public Repository License](LICENSE)
+- **Binary license:** [ORVIK Binary License Agreement](BINARY_LICENSE.md)
 - **Trademark, protocol, third-party asset, and disclaimer notices:** [NOTICE.md](NOTICE.md), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - **Release history:** [CHANGELOG.md](CHANGELOG.md)
 
-GitHub's automatically generated "Source code" archives contain this public documentation repository only. Installable BRIDGE+ packages are the release assets listed above.
+GitHub's automatically generated "Source code" archives contain this public documentation repository only. Installable ORVIK packages are the release assets listed above.
 
-BRIDGE+ is an independent interoperability implementation based on observed network behavior and publicly available information. No proprietary source code, firmware, or confidential materials from any manufacturer were used to develop this project.
+ORVIK is an independent interoperability implementation based on observed network behavior and publicly available information. No proprietary source code, firmware, or confidential materials from any manufacturer were used to develop this project.
 
-BRIDGE+ is not AlphaTheta's official PRO DJ LINK Bridge application, is not a PRO DJ LINK licensed company product, and is not certified by AlphaTheta, Pioneer DJ, TC Supply, Event Imagineering Group, ShowKontrol, or any related party.
+ORVIK is not AlphaTheta's official PRO DJ LINK Bridge application, is not a PRO DJ LINK licensed company product, and is not certified by AlphaTheta, Pioneer DJ, TC Supply, Event Imagineering Group, ShowKontrol, or any related party.
 
-Users are responsible for ensuring that their use of BRIDGE+ complies with applicable laws, third-party licenses, device terms, and venue or production requirements in their jurisdiction.
+Users are responsible for ensuring that their use of ORVIK complies with applicable laws, third-party licenses, device terms, and venue or production requirements in their jurisdiction.
 
 ---
 
@@ -108,18 +108,18 @@ Users are responsible for ensuring that their use of BRIDGE+ complies with appli
 
 > 호환 DJ 하드웨어, Virtual Deck, 비주얼 소프트웨어, 조명 시스템, DAW, 타임코드 워크플로를 동기화하기 위한 독립 데스크톱 브리지입니다.
 
-BRIDGE+는 호환 DJ 네트워크 상태를 수신하고, 타이밍 / 재생 상태 / 메타데이터 / 덱 정보를 비주얼, 조명, 프로덕션 환경에서 사용할 수 있는 출력으로 변환합니다.
+ORVIK는 호환 DJ 네트워크 상태를 수신하고, 타이밍 / 재생 상태 / 메타데이터 / 덱 정보를 비주얼, 조명, 프로덕션 환경에서 사용할 수 있는 출력으로 변환합니다.
 
-> **상표 및 비제휴 고지:** BRIDGE+는 독립 서드파티 프로젝트입니다. 이 저장소에 언급된 어떤 하드웨어, 소프트웨어 또는 프로토콜 권리자와도 제휴, 승인, 후원, 라이선스, 인증 또는 공식 연결 관계가 없습니다. 제품명, 프로토콜명, 상표는 호환성 및 상호운용성 설명을 위한 목적으로만 사용됩니다. 자세한 내용은 [NOTICE.md](NOTICE.md)를 확인하세요.
+> **상표 및 비제휴 고지:** ORVIK는 독립 서드파티 프로젝트입니다. 이 저장소에 언급된 어떤 하드웨어, 소프트웨어 또는 프로토콜 권리자와도 제휴, 승인, 후원, 라이선스, 인증 또는 공식 연결 관계가 없습니다. 제품명, 프로토콜명, 상표는 호환성 및 상호운용성 설명을 위한 목적으로만 사용됩니다. 자세한 내용은 [NOTICE.md](NOTICE.md)를 확인하세요.
 
 ### 배포 모델
 
-BRIDGE+ 릴리스 패키지는 macOS 및 Windows용 데스크톱 바이너리로 배포됩니다.
+ORVIK 릴리스 패키지는 macOS 및 Windows용 데스크톱 바이너리로 배포됩니다.
 공개 GitHub 저장소에는 릴리스 패키지 설명을 위한 문서만 포함되며, 애플리케이션 소스 코드는 별도로 관리됩니다.
 
-이 릴리스는 **현재 기간 제한이 없는 데모 빌드**입니다. 모든 기능을 사용할 수 있습니다. 향후 릴리스에서 기간 제한 데모가 도입될 수 있으며, 그 경우에도 BRIDGE+ 실행 자체는 차단되지 않고 기본 Pro DJ Link → TCNet 출력의 제한 모드로 계속 작동합니다.
+이 릴리스는 **현재 기간 제한이 없는 데모 빌드**입니다. 모든 기능을 사용할 수 있습니다. 향후 릴리스에서 기간 제한 데모가 도입될 수 있으며, 그 경우에도 ORVIK 실행 자체는 차단되지 않고 기본 Pro DJ Link → TCNet 출력의 제한 모드로 계속 작동합니다.
 
-BRIDGE+ 바이너리는 관련 법률상 제한할 수 없는 경우를 제외하고 복사, 수정, 재배포, 미러링, 판매, 재라이선스, 리버스 엔지니어링이 금지됩니다.
+ORVIK 바이너리는 관련 법률상 제한할 수 없는 경우를 제외하고 복사, 수정, 재배포, 미러링, 판매, 재라이선스, 리버스 엔지니어링이 금지됩니다.
 
 도네이션과 후원은 자발적인 개발 지원입니다. 별도 서면 계약이 없는 한 라이선스 구매, 기능 해금, 소유권 이전, 보증/지원 의무, 재배포 권한, 수정 권한, 상표 권한, 리버스 엔지니어링 권한, 소스 코드 권한을 의미하지 않습니다.
 
@@ -149,9 +149,9 @@ TCNet 출력(Resolume Arena), PRO DJ LINK 입력(CDJ-3000 / CDJ-2000NXS2 / DJM-9
 
 [Releases](../../releases)에서 운영체제에 맞는 네이티브 패키지를 다운로드하세요.
 
-- **macOS Apple Silicon**: `BRIDGE+-1.3.5-mac-arm64.dmg`
-- **macOS Intel**: `BRIDGE+-1.3.5-mac-x64.dmg`
-- **Windows x64**: `BRIDGE+-1.3.5-win-x64.exe`
+- **macOS Apple Silicon**: `ORVIK-1.3.6-mac-arm64.dmg`
+- **macOS Intel**: `ORVIK-1.3.6-mac-x64.dmg`
+- **Windows x64**: `ORVIK-1.3.6-win-x64.exe`
 
 다운로드한 패키지를 설치하거나 실행하면 됩니다. 일반 사용에는 별도 런타임 설치가 필요하지 않습니다.
 
@@ -167,15 +167,15 @@ TCNet 출력(Resolume Arena), PRO DJ LINK 입력(CDJ-3000 / CDJ-2000NXS2 / DJM-9
 
 ### 법적 고지
 
-- **공개 저장소 라이선스:** [BRIDGE+ Public Repository License](LICENSE)
-- **바이너리 라이선스:** [BRIDGE+ Binary License Agreement](BINARY_LICENSE.md)
+- **공개 저장소 라이선스:** [ORVIK Public Repository License](LICENSE)
+- **바이너리 라이선스:** [ORVIK Binary License Agreement](BINARY_LICENSE.md)
 - **상표, 프로토콜, 서드파티 자산, 면책 고지:** [NOTICE.md](NOTICE.md), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - **릴리스 내역:** [CHANGELOG.md](CHANGELOG.md)
 
-GitHub가 자동 생성하는 "Source code" 압축 파일에는 이 공개 문서 저장소만 포함됩니다. BRIDGE+ 설치 파일은 위에 표시된 릴리스 파일을 다운로드해 사용하세요.
+GitHub가 자동 생성하는 "Source code" 압축 파일에는 이 공개 문서 저장소만 포함됩니다. ORVIK 설치 파일은 위에 표시된 릴리스 파일을 다운로드해 사용하세요.
 
-BRIDGE+는 관찰된 네트워크 동작과 공개 정보를 기반으로 한 독립 상호운용성 구현입니다. 이 프로젝트를 개발하는 과정에서 어떤 제조사의 비공개 소스 코드, 펌웨어, 기밀 자료도 사용하지 않았습니다.
+ORVIK는 관찰된 네트워크 동작과 공개 정보를 기반으로 한 독립 상호운용성 구현입니다. 이 프로젝트를 개발하는 과정에서 어떤 제조사의 비공개 소스 코드, 펌웨어, 기밀 자료도 사용하지 않았습니다.
 
-BRIDGE+는 AlphaTheta의 공식 PRO DJ LINK Bridge 애플리케이션이 아니며, PRO DJ LINK 라이선스 회사 제품이 아니고, AlphaTheta, Pioneer DJ, TC Supply, Event Imagineering Group, ShowKontrol 또는 관련 당사자의 인증을 받은 제품이 아닙니다.
+ORVIK는 AlphaTheta의 공식 PRO DJ LINK Bridge 애플리케이션이 아니며, PRO DJ LINK 라이선스 회사 제품이 아니고, AlphaTheta, Pioneer DJ, TC Supply, Event Imagineering Group, ShowKontrol 또는 관련 당사자의 인증을 받은 제품이 아닙니다.
 
-사용자는 BRIDGE+ 사용이 본인 관할 지역의 관련 법률, 제3자 라이선스, 장비 약관, 공연장 또는 프로덕션 요구사항을 준수하는지 직접 확인할 책임이 있습니다.
+사용자는 ORVIK 사용이 본인 관할 지역의 관련 법률, 제3자 라이선스, 장비 약관, 공연장 또는 프로덕션 요구사항을 준수하는지 직접 확인할 책임이 있습니다.
