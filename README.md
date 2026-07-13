@@ -3,7 +3,7 @@
 > DJ hardware → visuals · lighting · DAW sync (TCNet · Art-Net · LTC · MIDI)
 
 [![License: Proprietary](https://img.shields.io/badge/license-proprietary-red.svg)](BINARY_LICENSE.md)
-[![Version](https://img.shields.io/badge/version-1.3.8-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.9-orange.svg)](CHANGELOG.md)
 [![Status: Beta](https://img.shields.io/badge/status-beta-yellow.svg)]()
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)]()
 

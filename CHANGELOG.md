@@ -8,6 +8,20 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.3.9 — 2026-07-13
+
+### English
+
+- Fixed missing translations: Japanese/Spanish (connection labels), German (deck color settings), French (deck colors, "no time limit" license label) — all six languages now have complete coverage.
+- The startup/shutdown splash now follows your manually selected language instead of always using the system locale (applies from the next launch after changing the language).
+- Added a **GPU safe rendering** toggle in Settings (shown on Windows): for machines that show ghosting/afterimage or glitch artifacts. Enables conservative compositing on next launch — same remedy as the previous `BRIDGE_SAFE_RENDER` environment variable, now one click.
+
+### 한국어
+
+- 번역 누락 수정: 일본어/스페인어(연결 라벨), 독일어(덱 컬러 설정), 프랑스어(덱 컬러, "기간 제한 없음" 라벨) — 6개 언어 전부 완전한 번역 커버리지.
+- 시작/종료 스플래시가 항상 시스템 언어로 나오던 것을 수동 선택한 언어를 따르도록 수정 (언어 변경 후 다음 실행부터 적용).
+- 설정에 **GPU 안전 렌더링** 토글 추가 (Windows 에서 표시): 잔상이나 글리치가 보이는 머신용. 다음 실행부터 보수적 합성 모드로 동작 — 기존 `BRIDGE_SAFE_RENDER` 환경변수와 동일한 대응을 클릭 한 번으로.
+
 ## 1.3.8 — 2026-07-13
 
 ### English
