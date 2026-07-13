@@ -1,7 +1,9 @@
 <p align="center">
-  <img src="docs/media/orvik-logo.png" alt="ORVIK" width="128">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/orvik-wordmark-dark.png">
+    <img src="docs/media/orvik-wordmark-light.png" alt="ORVIK" width="340">
+  </picture>
 </p>
-<h1 align="center">ORVIK</h1>
 
 > DJ hardware → visuals · lighting · DAW sync (TCNet · Art-Net · LTC · MIDI)
 
