@@ -1,4 +1,4 @@
-<p align="center">
+<p align="left">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/orvik-wordmark-dark.png">
     <img src="docs/media/orvik-wordmark-light.png" alt="ORVIK" width="340">
