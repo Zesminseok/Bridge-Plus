@@ -17,9 +17,9 @@ Independent desktop bridge that reads a compatible Pioneer DJ network and turns 
 > ⚠️ **Beta** — built from independent packet-capture research, not a manufacturer SDK. Bugs are expected. Please report them via [Issues](../../issues).
 
 <p>
-  <img src="docs/media/program_gif.gif" alt="ORVIK Deck theme" height="400">
+  <img src="docs/media/program_gif.gif" alt="ORVIK Deck theme" height="350">
   &nbsp;
-  <img src="docs/media/webviewgif.gif" alt="ORVIK Web Viewer on mobile" height="400">
+  <img src="docs/media/webviewgif.gif" alt="ORVIK Web Viewer on mobile" height="350">
 </p>
 
 ## Outputs
