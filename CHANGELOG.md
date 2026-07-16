@@ -11,6 +11,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### English
 
+- Fixed a startup crash on some Windows and macOS machines (app now launches reliably).
 - Updated the app runtime for better performance and security (Chromium/Electron refresh).
 - Security: hardened handling of track title/artist text from hardware.
 - Fixed a brief color flash when the app starts.
@@ -22,6 +23,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### 한국어
 
+- 일부 Windows·macOS 에서 앱이 실행되지 않던 시작 크래시 수정 (이제 정상 실행).
 - 앱 런타임 갱신 — 성능·보안 향상 (Chromium/Electron 리프레시).
 - 보안: 하드웨어에서 오는 곡 제목·아티스트 텍스트 처리 강화.
 - 앱 시작 시 잠깐 보이던 색 플래시 수정.
