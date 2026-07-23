@@ -7,6 +7,22 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## 1.4.3 — 2026-07-24
+
+### English
+
+- Faster track loading — waveforms, cue points and beat grids appear right after loading.
+- Detail waveform: native resolution, progressive drawing, and stability fixes.
+- Fixed ghosting and blurry text on some Windows GPUs.
+- Hover tooltips on main controls, REPORT (Instagram DM) button, UI Drawing FPS now applies everywhere, translation fixes.
+
+### 한국어
+
+- 곡 로드 속도 개선 — 웨이브폼·큐 포인트·비트 그리드가 로드 직후 표시됩니다.
+- 디테일 웨이브폼: 네이티브 해상도, 점진 드로잉, 안정성 수정.
+- 일부 Windows GPU 의 잔상·글씨 뭉개짐 수정.
+- 주요 버튼 설명 툴팁, REPORT(Instagram DM) 버튼, UI Drawing FPS 전면 적용, 번역 수정.
+
 ## 1.4.2 — 2026-07-19
 
 ### English
